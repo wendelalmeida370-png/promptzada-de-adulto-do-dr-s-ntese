@@ -556,6 +556,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         // (and turned to it: the hands read the drawn heading, which turns and never snaps — D-357, regra 120 —, a few frames; T-1405)
         G.Avatar.place(px, py); __E.f(6); G.Avatar.state().yaw = Math.atan2(y - v.y, x - v.x); __E.f(4); return true; };
       const R = {};
+      // (the body's tools — 20g, D-426: the body works with what is its own; the test's hand puts in its bag the axe and the pick its
+      // people would give the trades, as the player would take them at the store — T-1473)
+      G.inSim++; try { for (const kind of ['machado', 'picareta']) { const k = G.Inv.made(kind, v); if (k && G.Inv.count(v, k) < 1) G.Depot.make('m:' + v.id, k, 1, { code: 'teste', by: v.id }); } } finally { G.inSim--; }
       if (tr && near(tr.x, tr.y)) {
         v.carry = null; // (empty hands for the axe: a woodcutter taken with a full load is told "your hands are full")
         const chop0 = tr.chop; let swings = 0;
@@ -1112,7 +1115,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       let tr = null;
       for (const t of near.slice(0, 12)) { const p = G.W.findPath(b.x, b.y, t.x, t.y, true, 30000); const e = p && p.length ? p[p.length - 1] : [t.x, t.y]; const d = Math.hypot(e[0] - t.x, e[1] - t.y) || 1;
         if ([0.3, 0.4, 0.22, 0.5].some(k => G.Avatar.place(t.x + (e[0] - t.x) / d * k, t.y + (e[1] - t.y) / d * k))) { tr = t; break; } }
-      if (tr) { __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null; __E.f(4); // (the drawn heading turns to it: T-1405)
+      if (tr) { __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null;
+        // (the body's own axe — 20g, D-426: without one no tree is felled; the test's hand puts its people's in the bag, T-1473)
+        G.inSim++; try { const k = G.Inv.made('machado', b); if (k && G.Inv.count(b, k) < 1) G.Depot.make('m:' + b.id, k, 1, { code: 'teste', by: b.id }); } finally { G.inSim--; }
+        __E.f(4); // (the drawn heading turns to it: T-1405)
         const c0 = tr.chop; const r = G.Interact.run({ id: 'arvore', t: { tr, X: tr.x * TL, Z: tr.y * TL } }); G.Modes.menu(true); __E.f(90); const during = tr.chop; G.Modes.menu(false); __E.until(() => !G.Avatar.busy(), 200); __E.f(2);
         out.stroke = { ran: !!(r && r.ok), during: +(during - c0).toFixed(3), after: +(tr.chop - c0).toFixed(3), tree: tr.id, nearer: near.indexOf(tr), msg: r && !r.ok ? r.msg : undefined }; } }
     // 3. a load carried to the store: drawn in the hands while the world has it in them, never after

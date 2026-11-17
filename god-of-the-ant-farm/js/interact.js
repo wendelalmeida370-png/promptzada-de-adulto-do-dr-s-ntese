@@ -227,19 +227,15 @@
   const face = (ctx, X, Z) => Math.atan2(Z - ctx.Z, X - ctx.X);
   // The hands of the body change the world as anyone's do: what an act does is asked at its contact and done by the world in
   // its own step (Avatar.act's op, through Possess.apply), and it lasts the world seconds the same work lasts for anyone of the
-  // world — the woodcutter's stroke and the dt × workMul it adds to the tree, the quarryman's load of stone in 3.8 s, a load of
-  // berries in 2.2 s, a meal at the store in 1.6 s, a prayer at the temple in 5 s (villagers.js), a try of the hands in the
-  // shallows in the cast of anyone fishing with the hands (G.Pesca.castDur — L-212; without the fishing module, the people's
-  // old 4 to 7 s), a lift and a setting down in the docker's own gestures (G.Act.ANIM): the player's presence gives no work for
-  // free. Only the hands' own gestures — a word, a wave, a hug's arms — keep the body's own seconds
-  const WT = { chop: 0.55, mine: 0.6, mineLoad: 3.8, gather: 2.2, eat: 1.6, pray: 5, fish: 5.5 };
+  // world — a meal at the store in 1.6 s, a prayer at the temple in 5 s (villagers.js), a lift and a setting down in the docker's
+  // own gestures (G.Act.ANIM): the player's presence gives no work for free. Only the hands' own gestures — a word, a wave, a
+  // hug's arms — keep the body's own seconds. (The work of the hands — the axe, the pick, the berries, the fish — and its
+  // seconds are the trades', G.Trabalho: trabalho.js, D-461)
+  const WT = { eat: 1.6, pray: 5 };
   I.WT = WT;
   // (the gestures of the hands as the world's people make them — seconds of the world, the contact where the world passes the
   // thing: C1's Act.ANIM —, for the body too: it never lifts a load faster than the docker)
   const AN = k => (G.Act && G.Act.ANIM && G.Act.ANIM[k]) || { act: 'lift', dur: 1, contact: 0.6 };
-  const wm = v => G.Vg.workMul(v);
-  // (the body's own count of the work at a rock, as the quarryman keeps his in his errand — nothing of the world, nothing saved)
-  let mineW = null; G.worldHooks.push(() => { mineW = null; });
   // the hands' way to a point of the world through an act (only seen): reaching it in the body's own half second, holding there
   // until the world has answered, coming back after — with the load the world put in them, or without the one it took; on a
   // refusal, back as they were. P: the point (metres), or a function of the act giving it
@@ -954,155 +950,9 @@
     return { kind: 'building', id: b.id, name: 'Cemitério', sub: 'As lápides', desc: g.length ? '' : 'Ainda não há ninguém enterrado aqui.', rows: g.map(t => ['†', t]) };
   }
 
-  // ============================== work with the hands ==============================
-  const hands = v => v.age >= 10 && !(v.lost && v.lost.armL && v.lost.armR);
-  // a tree: felled the woodcutters' way (Nature.fellTree), then its wood taken in loads the size of the body (Vg.cap)
-  I.add({
-    id: 'arvore', prio: 3, reach: 2.4,
-    find(ctx) {
-      const out = []; const S = G.S; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const id = S.treeAt[W.idx(x, y)]; const t = id && S.trees.get(id); if (t && t.stage !== 'stump' && t.stage !== 'fall') out.push({ tr: t, X: t.x * L(), Z: t.y * L() }); }
-      return out;
-    },
-    label(ctx, t) { const tr = t.tr; return tr.stage === 'log' ? 'Pegar lenha do tronco' : tr.kind === 'cactus' ? 'Examinar o cacto' : G.Nature.isChoppable(tr) ? 'Cortar a árvore' : 'Examinar a árvore'; },
-    can(ctx, t) {
-      const tr = t.tr; const v = ctx.v;
-      if (!G.S.trees.has(tr.id)) return { ok: false, why: 'A árvore não está mais aqui.' };
-      if (!G.Nature.isChoppable(tr)) return { ok: true };
-      if (!hands(v)) return { ok: false, why: 'Você não tem força nem mãos para isso.' };
-      if (tr.claim && tr.claim !== v.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${Who(v, o)} já está cortando esta árvore.` }; }
-      if (v.carry && v.carry.n > 0 && (v.carry.k !== 'wood' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias: guarde a carga no armazém.' };
-      if (G.S.fire[W.idx(tr.x, tr.y)] > 0) return { ok: false, why: 'Está pegando fogo!' };
-      return { ok: true };
-    },
-    run(ctx, t) {
-      const tr = t.tr; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      if (!G.Nature.isChoppable(tr)) { deed('exame'); return { ok: true, card: treeCard(tr) }; }
-      if (tr.stage === 'log') {
-        // (the wood off the trunk into the arms, as the woodcutter takes his load: the empty hands go down to it, the world puts
-        // the load in them, and it comes up with the body)
-        const g = AN('levantar');
-        G.Avatar.act({ world: true, anim: 'carry', dur: g.dur, contact: g.contact, face: f, vact: g.act, reach: reachTo(toward(ctx, t.X, t.Z, 0.16), 0.5, 0.45),
-          op: w => {
-            if (!G.S.trees.has(tr.id) || tr.stage !== 'log') return { ok: false, why: 'A lenha não está mais aqui.' };
-            if (w.carry && w.carry.n > 0 && w.carry.k !== 'wood') return { ok: false, why: 'Suas mãos já estão cheias.' };
-            const had = w.carry && w.carry.k === 'wood' ? w.carry.n : 0; const n = Math.min(G.Vg.cap(w) - had, tr.wood);
-            if (n <= 0) return { ok: false, why: 'Não cabe mais lenha nos seus braços: leve-a ao armazém.' };
-            tr.wood -= n; if (tr.wood <= 0) { tr.stage = 'stump'; tr.t = 0; tr.claim = 0; }
-            w.carry = { k: 'wood', n: had + n }; G.Vg.emote(w, 'wood', 1.5); return { ok: true };
-          }, then: () => say('Você junta a lenha nos braços.'), fail: deny });
-        return { ok: true };
-      }
-      // (the strokes: each one is the woodcutter's work of its time — dt × workMul — on the same counter the woodcutters fill, done
-      // by the world at the blow; the tree falls when it is full)
-      G.Avatar.act({ world: true, anim: 'swing', dur: WT.chop, contact: WT.chop * 0.62, face: f, vact: 'chop',
-        op: w => {
-          if (!G.S.trees.has(tr.id) || (tr.stage !== 'grow' && tr.stage !== 'burnt') || !G.Nature.isChoppable(tr)) return { ok: false, why: 'A árvore não está mais de pé.' };
-          if (tr.claim && tr.claim !== w.id) { const o = G.S.villagers.get(tr.claim); if (o && o.task && o.task.id === tr.id) return { ok: false, why: `${Who(w, o)} já está cortando esta árvore.` }; }
-          if (G.S.fire[W.idx(tr.x, tr.y)] > 0) return { ok: false, why: 'Está pegando fogo!' };
-          const need = 3 * Math.max(0.5, tr.size); tr.claim = w.id; tr.chop += WT.chop * wm(w);
-          if (tr.chop >= need) { G.Nature.fellTree(tr, w.face); P.deed('lenha'); tr.claim = 0; return { ok: true, fell: true }; }
-          return { ok: true, pct: Math.min(99, Math.round(tr.chop / need * 100)) };
-        },
-        then: r => { G.Audio && G.Audio.at(tr.x, tr.y, 'chop'); G.FX && G.FX.chips(tr.x, tr.y, '#c9a26b'); say(r.fell ? 'Madeira! A árvore cai.' : `Golpe no tronco (${r.pct}%)`, 1.4); },
-        fail: deny });
-      return { ok: true };
-    },
-  });
-  function treeCard(tr) {
-    const NAME = { oak: 'Carvalho', apple: 'Macieira', mulberry: 'Amoreira', olive: 'Oliveira', cacao: 'Cacaueiro', coffee: 'Cafeeiro', pepper: 'Pimenteira', birch: 'Bétula', willow: 'Salgueiro', pine: 'Pinheiro', snowpine: 'Pinheiro da neve', jungle: 'Árvore da selva', acacia: 'Acácia', baobab: 'Baobá', cactus: 'Cacto', incense: 'Árvore do incenso', palm: 'Palmeira', date: 'Tamareira', acai: 'Açaizeiro', banana: 'Bananeira' };
-    const st = { grow: tr.size < 0.6 ? 'nova demais para o machado' : 'adulta', burnt: 'queimada', log: 'caída, esperando quem leve a lenha', stump: 'um toco' }[tr.stage] || tr.stage;
-    return { kind: 'thing', name: NAME[tr.kind] || 'Árvore', sub: st, rows: [['Lenha', tr.stage === 'log' ? Math.round(tr.wood) : tr.stage === 'grow' && tr.size >= 0.6 ? '≈ ' + Math.round(G.Nature.treeWood ? G.Nature.treeWood(tr) : 4) : '—']] };
-  }
-  // a bush: the berries picked; eaten on the spot when hungry, or carried home
-  I.add({
-    id: 'arbusto', prio: 3, reach: 2.2,
-    find(ctx) {
-      const out = []; const S = G.S; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const o = S.objAt[W.idx(x, y)]; const b = o && S.bushes.get(o); if (b) out.push({ bu: b, X: b.x * L(), Z: b.y * L() }); }
-      return out;
-    },
-    label(ctx, t) { return t.bu.berries >= 1 ? (ctx.v.hunger > 40 ? 'Comer frutas do arbusto' : 'Colher frutas') : 'Examinar o arbusto'; },
-    can(ctx, t) {
-      const b = t.bu; const v = ctx.v; if (!G.S.bushes.has(b.id)) return { ok: false, why: 'Não está mais aqui.' };
-      if (b.berries < 1) return { ok: true };
-      if (b.claim && b.claim !== v.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${Who(v, o)} está colhendo aqui.` }; }
-      if (v.hunger <= 40 && v.carry && v.carry.n > 0 && (v.carry.k !== 'food' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias.' };
-      return { ok: true };
-    },
-    run(ctx, t) {
-      const b = t.bu; const v = ctx.v; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      if (b.berries < 1) { deed('exame'); return { ok: true, card: { kind: 'thing', name: 'Arbusto', sub: b.burnt > 0 ? 'queimado' : 'sem frutas agora', rows: [] } }; }
-      // (the picker's time for a load — 2.2 s of the world ÷ workMul —, and the picker's load; hungry, two eaten off the bush)
-      const eat = v.hunger > 40; const dur = WT.gather / wm(v);
-      G.Avatar.act({ world: true, anim: 'low', dur, face: f, vact: 'gather',
-        op: w => {
-          if (!G.S.bushes.has(b.id) || b.berries < 1) return { ok: false, why: 'Não sobrou fruta neste arbusto.' };
-          if (b.claim && b.claim !== w.id) { const o = G.S.villagers.get(b.claim); if (o && o.task && o.task.id === b.id) return { ok: false, why: `${Who(w, o)} está colhendo aqui.` }; }
-          if (eat) { const n = Math.min(b.berries, 2); b.berries -= n; w.hunger = Math.max(0, w.hunger - 32 * n); G.Vg.emote(w, 'food', 1.5); P.deed('frutas'); return { ok: true, ate: n }; }
-          const had = w.carry && w.carry.k === 'food' ? w.carry.n : 0; if (w.carry && w.carry.n > 0 && w.carry.k !== 'food') return { ok: false, why: 'Suas mãos já estão cheias.' };
-          const n = Math.min(G.Vg.cap(w) - had, b.berries); if (n <= 0) return { ok: false, why: 'Suas mãos já estão cheias.' };
-          b.berries -= n; w.carry = { k: 'food', n: had + n, berries: 1 }; P.deed('frutas'); return { ok: true, n };
-        }, then: r => say(r.ate ? 'Você come as frutas.' : 'Você colhe as frutas.'), fail: deny });
-      return { ok: true };
-    },
-  });
-  // a rock: broken the quarrymen's way (its stone leaves it; the last stone takes the rock away)
-  I.add({
-    id: 'pedra', prio: 3, reach: 2.6,
-    find(ctx) {
-      const out = []; const S = G.S; const x0 = Math.floor(ctx.x), y0 = Math.floor(ctx.y);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = x0 + dx, y = y0 + dy; if (!W.inb(x, y)) continue; const o = S.objAt[W.idx(x, y)]; const r = o && S.rocks.get(o); if (r) out.push({ r, X: r.x * L(), Z: r.y * L() }); }
-      return out;
-    },
-    label() { return 'Quebrar pedra'; },
-    can(ctx, t) {
-      const r = t.r; const v = ctx.v; if (!G.S.rocks.has(r.id) || r.stone < 1) return { ok: false, why: 'Não sobrou pedra aqui.' };
-      if (!hands(v)) return { ok: false, why: 'Você não tem força nem mãos para isso.' };
-      if (r.claim && r.claim !== v.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${Who(v, o)} está trabalhando nesta pedra.` }; }
-      if (v.carry && v.carry.n > 0 && (v.carry.k !== 'stone' || v.carry.n >= G.Vg.cap(v))) return { ok: false, why: 'Suas mãos já estão cheias.' };
-      return { ok: true };
-    },
-    run(ctx, t) {
-      const r = t.r; const P = G.Possess; const f = face(ctx, t.X, t.Z);
-      // (the strokes of the pick: each one the quarryman's work of its time — dt × workMul —, counted by the body at this rock as
-      // the quarryman counts his; at his 3.8 the rock gives the load the hands can hold. Done by the world at the blow)
-      G.Avatar.act({ world: true, anim: 'swing', dur: WT.mine, contact: WT.mine * 0.62, face: f, vact: 'mine',
-        op: w => {
-          if (!G.S.rocks.has(r.id) || r.stone < 1) { mineW = null; return { ok: false, why: 'Não sobrou pedra aqui.' }; }
-          if (r.claim && r.claim !== w.id) { const o = G.S.villagers.get(r.claim); if (o && o.task && o.task.id === r.id) return { ok: false, why: `${Who(w, o)} está trabalhando nesta pedra.` }; }
-          const had = w.carry && w.carry.k === 'stone' ? w.carry.n : 0; if ((w.carry && w.carry.n > 0 && w.carry.k !== 'stone') || had >= G.Vg.cap(w)) return { ok: false, why: 'Suas mãos já estão cheias.' };
-          if (!mineW || mineW.id !== r.id || mineW.v !== w.id) mineW = { id: r.id, v: w.id, w: 0 };
-          mineW.w += WT.mine * wm(w);
-          if (mineW.w <= WT.mineLoad) return { ok: true, pct: Math.min(99, Math.round(mineW.w / WT.mineLoad * 100)) };
-          mineW.w -= WT.mineLoad; const n = Math.min(G.Vg.cap(w) - had, r.stone); // (the stroke's work past the load goes to the next)
-          r.stone -= n; if (r.stone <= 0) G.Nature.removeRock(r);
-          w.carry = { k: 'stone', n: had + n }; P.deed('pedra', n); return { ok: true, got: n };
-        },
-        then: res => { G.Audio && G.Audio.at(r.x, r.y, 'mine'); G.FX && G.FX.chips(r.x, r.y, '#a9a9a9'); say(res.got ? `Você solta ${res.got} ${res.got > 1 ? 'pedras' : 'pedra'} da rocha.` : `Golpe na pedra (${res.pct}%)`, 1.4); },
-        fail: deny });
-      return { ok: true };
-    },
-  });
-  // gold on the ground (the god's Chuva de Ouro, a dragon's hoard): picked up before the others get to it
-  I.add({
-    id: 'ouro', prio: 3.5, reach: 2.4,
-    find(ctx) { const out = []; const R = 2.6 / L(); for (const q of G.Powers.goldPiles()) if (Math.abs(q.x - ctx.x) < R && Math.abs(q.y - ctx.y) < R) out.push({ q, X: q.x * L(), Z: q.y * L() }); return out; },
-    label(ctx, t) { const n = Math.max(1, Math.round(t.q.n)); return `Catar ${n} ${n > 1 ? 'moedas' : 'moeda'} de ouro`; },
-    can(ctx, t) {
-      const v = ctx.v; if (!G.Powers.goldPiles().includes(t.q)) return { ok: false, why: 'Alguém catou primeiro.' };
-      if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
-      if (!G.Powers.coinage(v) && v.carry && v.carry.n > 0 && v.carry.k !== 'ouro') return { ok: false, why: 'Suas mãos já estão cheias.' };
-      return { ok: true };
-    },
-    run(ctx, t) {
-      const f = face(ctx, t.X, t.Z); const id = t.q.id;
-      G.Avatar.act({ anim: 'low', dur: 1.1, face: f, contact: 0.5,
-        op: w => { const r = G.Powers.takeGold(w, id); if (!r) return { ok: false, why: 'Alguém catou primeiro.' }; G.Possess.deed('ouro', r.n); return { ok: true, home: G.Powers.coinage(w) }; },
-        then: r => { G.Audio && G.Audio.play && G.Audio.play('coin'); say(r.home ? 'Você cata as moedas: vão para a sua casa.' : 'Você cata o ouro: leve-o ao armazém.'); }, fail: deny });
-      return { ok: true };
-    },
-  });
+  // (the work with the hands — a tree, a bush, a rock, the gold on the ground, the fish of the shallows — is the trades': the
+  // providers live in trabalho.js, G.Trabalho, registered by I.add — D-461)
+
   // a building going up: what one carries goes into it, as the builders' loads do (Vg's build: need, then the stock)
   I.add({
     id: 'obra', prio: 4.5, reach: 3.4,
@@ -1270,59 +1120,6 @@
         // (the world counts the drink at the mouth — the contact —; the breath comes back with it)
         contact: 1.2, op: () => { G.Possess.deed('agua'); return { ok: true }; }, then: () => G.Avatar.rest() });
       return { ok: true, msg: 'Você bebe da água fresca.' };
-    },
-  });
-  // a fish caught by hand, standing in the shallows (a ford, a lake's edge, the sea at the beach): the world's own catch
-  // of that water — a trout in a cold river, sardines in a mild sea, a piranha's bite in the jungle's — into the hands,
-  // to be taken to the store like any fisher's. It slips away as often as not
-  I.add({
-    id: 'peixe', prio: 3.2, reach: 1.6, here: true, // (here: always a stride straight before the body, wherever it looks)
-    find(ctx) {
-      const w = G.Avatar.wade(); if (w < 0.12) return [];
-      const X = ctx.X + Math.cos(ctx.yaw) * 0.7, Z = ctx.Z + Math.sin(ctx.yaw) * 0.7; const S = G.S, T = G.T; const x = X / L(), y = Z / L();
-      if (!W.inb(x, y)) return []; const i = W.idx(x, y); const t = S.type[i];
-      if (!(t === T.RIVER || t <= T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) return [];
-      return [{ X, Z, x, y, sea: t <= T.SEA }];
-    },
-    label() { return 'Pescar com as mãos'; },
-    can(ctx, t) {
-      const v = ctx.v; if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
-      if (v.carry && v.carry.n > 0 && !v.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
-      if (v.carry && v.carry.n >= 8) return { ok: false, why: 'Não cabe mais peixe nas mãos: leve ao armazém.' };
-      void t; return { ok: true };
-    },
-    run(ctx, t) {
-      const v = ctx.v; const f = ctx.yaw;
-      const splash = () => { const p = G.Avatar.pos(); if (p && G.FX3D) for (let k = 0; k < 10; k++) G.FX3D.spawn({ x: t.X + G.vrr(-0.2, 0.2), y: G.Avatar.waterAt(t.X, t.Z) + 0.05, z: t.Z + G.vrr(-0.2, 0.2), vx: G.vrr(-0.8, 0.8), vy: G.vrr(1, 2.2), vz: G.vrr(-0.8, 0.8), life: 0.7, s0: 0.07, s1: 0.03, c: [0.86, 0.94, 1], a: 0.8, sh: 1, grav: 9 }); G.Audio && G.Audio.play && G.Audio.play('splash'); };
-      // (a try of the world's time — the hands' cast of anyone of the world, G.Pesca.castDur, with its gesture's contact: L-212 —,
-      // its luck and its fish the world's, drawn by the world at the grab)
-      const Pg = G.Pesca && G.Pesca.gesture('maos'); const dur = Pg ? G.Pesca.castDur(v, 'maos') : WT.fish / wm(v);
-      G.Avatar.act({ world: true, anim: 'low', dur, contact: Pg ? dur * Pg.contact / Pg.dur : dur * 0.55, face: f, vact: 'fish',
-        op: w => {
-          if (w.carry && w.carry.n > 0 && !w.carry.fish) return { ok: false, why: 'Suas mãos já estão cheias.' };
-          // (the water may have frozen or gone meanwhile — the god's winter, the sea opened)
-          { const S = G.S, i = W.idx(t.x, t.y); if (!(S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) || (S.ice && S.ice[i]) || (S.dry && S.dry[i])) return { ok: false, why: 'A água não está mais ali.' }; }
-          // (the world's own fishing, act-pesca.js: that water's fish, counted out of its ground, by the hands' way and the
-          // fisher's hand — the hands are slower than a line —, the world's dice, into the hands through the ledger ('pesca');
-          // another kind with no hand for it goes back to the water, and to its ground)
-          if (G.Pesca) {
-            const r = G.Pesca.cast(w, t.x, t.y, { how: 'maos' });
-            const nm = r.name ? (/a$/.test(r.name) ? 'uma ' : 'um ') + r.name : 'um peixe';
-            if (!r.ok) return r.miss ? { ok: false, why: 'Escapou entre os dedos…', slip: 1 } : { ok: false, why: r.other ? `Você pegou ${nm}, mas não tem mão para ele: solta de volta.` : r.why || 'Escapou entre os dedos…', slip: r.other ? 1 : 0 };
-            G.Possess.deed('pesca'); return { ok: true, nm };
-          }
-          // (the world's dice: the hands are slower than a line; and what bites is that water's own fish)
-          if (G.R() < 0.55) return { ok: false, why: 'Escapou entre os dedos…', slip: 1 };
-          const c = G.Waters ? G.Waters.catchCarry(w, t.x, t.y, 1) : { k: 'food', n: 1, fish: 'carpa' };
-          if (!G.S.villagers.has(w.id)) return { ok: false, why: '' };
-          const F = G.Waters && G.Waters.FISH[c.fish]; const nm = F ? (/a$/.test(F.name) ? 'uma ' : 'um ') + F.name : 'um peixe';
-          // (one load in the hands: the same catch piles up; another kind of fish has no hand left, and goes back to the water)
-          if (w.carry && w.carry.n > 0 && w.carry.k !== c.k) return { ok: false, why: `Você pegou ${nm}, mas não tem mão para ele: solta de volta.` };
-          if (w.carry && w.carry.n > 0) w.carry.n += c.n; else w.carry = c;
-          G.Possess.deed('pesca'); return { ok: true, nm };
-        },
-        then: r => { splash(); say(`Você pegou ${r.nm}! Leve ao armazém.`, 3); }, fail: r => { if (r.slip) splash(); deny(r); } });
-      return { ok: true, msg: t.sea ? 'Você se abaixa e espera um peixe passar entre as pernas…' : 'Você se abaixa na água rasa, as mãos em concha…' };
     },
   });
   // a tame beast near (a dog, a cat, a hen, the herd): stroked — it leans into the hand, a little heart over it
