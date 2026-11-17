@@ -1144,8 +1144,8 @@ vec3 gxGrade( vec3 c ) {
     if (part === 'ground') {
       // (21b: the faces of cliff carved in their layers, by the Geo3D; the land's own picture leaves their tiles out)
       const G3 = G.Geo3D; const skip = G3 ? G3.skipOf(x0, y0, C) : null;
-      addMesh(grp, terrainGeo(x0, y0, C, C, 0.5, { skip }), MAT.land, { recv: true });
-      if (skip) addMesh(grp, G3.carveGeo(x0, y0, C, G3.mouthsIn(x0 - 2, y0 - 2, C + 4).filter(m => m.carve)), MAT.land, { cast: true, recv: true });
+      const tg = terrainGeo(x0, y0, C, C, 0.5, { skip });
+      addMesh(grp, skip ? G3.merge(tg, G3.carveGeo(x0, y0, C, G3.mouthsIn(x0 - 2, y0 - 2, C + 4).filter(m => m.carve))) : tg, MAT.land, { recv: true });
       const wg = waterGeo(x0, y0, C, C, false); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 });
       addMesh(grp, roadGeo(x0, y0, C, C, false), MAT.solid, { cast: true, recv: true });
     } else if (part === 'flora') {

@@ -40,6 +40,9 @@
     qa('geoForm', { baixa: 0, media: 80, alta: 240, ultra: 400 });
     qa('geoFar', { baixa: 2, media: 1, alta: 1, ultra: 0.5 });
     qa('geoHor', { baixa: 1, media: 2, alta: 2, ultra: 3 });
+    // geoKit: how many shapes of each piece of the kit (each shape a draw: the Média one of each, the stones, the blocks and the boulders
+    // only — the columns and the arches are the higher presets' — to stay within its tenth more of draws)
+    qa('geoKit', { baixa: 1, media: 1, alta: 3, ultra: 3 });
   };
   G3D.qual();
   const Q = () => (G.Realm && G.Realm.Q ? G.Realm.Q() : {});
@@ -134,6 +137,16 @@
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(NR, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3)); geo.setIndex(I); geo.computeBoundingSphere();
     geo.userData.tiles = tiles; G3D.stats.carved = tiles; G3D.stats.tris = I.length / 3; return geo;
   }
+
+  // (the land's own picture of a chunk and its carved faces in one geometry: one draw for the chunk's ground, as the BIBLE asks of a chunk —
+  // a material, a geometry; the faces of cliff do not cast the sun's shadow, as the ground does not)
+  G3D.merge = function (a, b) {
+    if (!b) return a; if (!a) return b; const na = a.attributes.position.count; const g = new THREE.BufferGeometry();
+    for (const k of ['position', 'normal', 'color']) { const A = a.attributes[k].array, B = b.attributes[k].array; const o = new Float32Array(A.length + B.length); o.set(A); o.set(B, A.length); g.setAttribute(k, new THREE.BufferAttribute(o, 3)); }
+    const IA = a.index.array, IB = b.index.array; const I = (na + b.attributes.position.count) > 65535 ? new Uint32Array(IA.length + IB.length) : new Uint16Array(IA.length + IB.length);
+    I.set(IA); for (let k = 0; k < IB.length; k++) I[IA.length + k] = IB[k] + na; g.setIndex(new THREE.BufferAttribute(I, 1)); g.computeBoundingSphere();
+    a.dispose(); b.dispose(); return g;
+  };
 
   // ------------------------------ the mouths of the caves ------------------------------
   // (a mouth cut into the hill: its arch in the plane across the way in, and whether a point is inside it — the hole in the carved face)
@@ -297,6 +310,7 @@
       // (the shape is the Space's: the feet stand on these very faces — the meteor's black stone kept black)
       const rock = r.meteor ? 4 : g.rockAt(i); for (const st of G.Space.stones(r)) { piece(list, 'pedra0', st.X, st.Y, st.Z, st.ry, st.sx, st.sy, st.sz, rock, i); if (r.meteor) list[list.length - 1].c = [0.42, 0.32, 0.3]; }
     }
+    const nk = Math.max(1, Math.min(3, Q().geoKit | 0 || 3)); // (the shapes of each piece the preset draws)
     if (G3D.formsOn(x0, y0, n, eye)) {
       // (the stones broken off each boulder lying round its foot, sunk in the ground — never on a road; only near, as the plants' finest
       // things: 40 m × the preset's lod, the reach they had when the forest drew them)
@@ -308,10 +322,10 @@
       }
       for (const fm of g.forms(Math.floor(x0 / g.R), Math.floor(y0 / g.R))) {
         if (fm.x < x0 || fm.y < y0 || fm.x >= x0 + n || fm.y >= y0 + n) continue; const v = G.hash(fm.i * 3 + 1);
-        if (fm.kind === 'bloco') piece(list, 'bloco' + (Math.floor(v * 3) % 3), fm.X, fm.Y, fm.Z, fm.yaw + Math.PI / 2, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
-        else if (fm.kind === 'pilar') piece(list, fm.rock === 4 ? 'pilar' + (Math.floor(v * 2) % 2) : 'toco0', fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
-        else if (fm.kind === 'matacao') piece(list, 'matacao' + (Math.floor(v * 3) % 3), fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
-        else if (fm.kind === 'arco') piece(list, 'arco0', fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz * 4, fm.rock, fm.i);
+        if (fm.kind === 'bloco') piece(list, 'bloco' + (Math.floor(v * 3) % nk), fm.X, fm.Y, fm.Z, fm.yaw + Math.PI / 2, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
+        else if (fm.kind === 'pilar' && nk > 1) piece(list, fm.rock === 4 ? 'pilar' + (Math.floor(v * 2) % 2) : 'toco0', fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
+        else if (fm.kind === 'matacao') piece(list, 'matacao' + (Math.floor(v * 3) % nk), fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz, fm.rock, fm.i);
+        else if (fm.kind === 'arco' && nk > 1) piece(list, 'arco0', fm.X, fm.Y, fm.Z, fm.yaw, fm.sx, fm.sy, fm.sz * 4, fm.rock, fm.i);
       }
       // (the lip of each mouth: rounded stones of the place round its arch, half sunk into the hill — the broken rim of an opening, never a
       // doorway of blocks)
@@ -319,7 +333,7 @@
         const c = Math.cos(m.yaw), s = Math.sin(m.yaw);
         for (let j = 0; j < 9; j++) { const a = j / 8 * Math.PI; const across = Math.cos(a) * m.w * 0.58, up = Math.sin(a) * m.h * 1.02; const X = m.X - 0.2 * c - across * s, Z = m.Z - 0.2 * s + across * c;
           const gy = W.hAt(X / TL, Z / TL) * HM; const sz = 0.45 + G.hash(j * 3 + m.X) * 0.4; const Y = j === 0 || j === 8 ? gy - sz * 0.45 : Math.max(m.Y + up - sz * 0.55, gy - sz * 0.45);
-          piece(list, 'matacao' + (j % 3), X, Y, Z, m.yaw + j * 1.3, sz * 1.25, sz, sz * 1.1, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1))); }
+          piece(list, 'matacao' + (j % nk), X, Y, Z, m.yaw + j * 1.3, sz * 1.25, sz, sz * 1.1, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1))); }
       }
     }
     return list;

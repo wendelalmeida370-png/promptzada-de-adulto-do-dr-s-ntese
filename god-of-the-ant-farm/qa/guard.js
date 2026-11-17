@@ -1341,9 +1341,9 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 { const g3 = (src['geo3d.js'] || []).join('\n'), a3 = (src['arvore3d.js'] || []).join('\n');
   if (g3 && !/G\.Space\.stones\(r\)/.test(g3)) fails.push('a pedra do mundo: o geo3d.js não desenha as pedras do mundo pela forma do G.Space.stones (D-493)');
   if (a3 && /g\.put\(SH\.dode,[^\n]*ROCK/.test(a3)) fails.push('a pedra do mundo: o arvore3d.js ainda desenha as pedras do mundo (são do relevo, geo3d.js; D-493)'); }
-// 179. "o relevo pelas qualidades sem mexer na tabela" (D-498): os campos do relevo (geoCarve, geoCarveR, geoForm, geoFar, geoHor) entram nas
+// 179. "o relevo pelas qualidades sem mexer na tabela" (D-498): os campos do relevo (geoCarve, geoCarveR, geoForm, geoFar, geoHor, geoKit) entram nas
 // qualidades pelo G.Realm.qualAdd do geo3d.js
-{ const g3 = (src['geo3d.js'] || []).join('\n'); for (const k of ['geoCarve', 'geoCarveR', 'geoForm', 'geoFar', 'geoHor']) if (g3 && !new RegExp("qa\\('" + k + "'").test(g3)) fails.push(`as qualidades do relevo: o geo3d.js não acrescenta o campo ${k} pelo qualAdd (D-498)`); }
+{ const g3 = (src['geo3d.js'] || []).join('\n'); for (const k of ['geoCarve', 'geoCarveR', 'geoForm', 'geoFar', 'geoHor', 'geoKit']) if (g3 && !new RegExp("qa\\('" + k + "'").test(g3)) fails.push(`as qualidades do relevo: o geo3d.js não acrescenta o campo ${k} pelo qualAdd (D-498)`); }
 // 180. "a terra além da borda é a do mapa" (D-467, D-497): só os mapas de continente e de istmo têm terra desenhada além da borda (a das
 // ilhas acaba no mar, como as expedições contam); só o desenho pergunta por ela (G.Geo.beyondH no geo3d.js)
 { const ge = (src['geo.js'] || []).join('\n');
