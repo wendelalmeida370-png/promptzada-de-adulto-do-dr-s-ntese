@@ -554,7 +554,7 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   { float r0 = k00 == 10.0 ? w00 : 0.0, r1 = k10 == 10.0 ? w10 : 0.0, r2 = k01 == 10.0 ? w01 : 0.0, r3 = k11 == 10.0 ? w11 : 0.0; float rs = r0 + r1 + r2 + r3;
     if (rs > 0.003) gAdd(M3_GRAVEL, (c00 * r0 + c10 * r1 + c01 * r2 + c11 * r3) / rs, rs * 0.55); }
   // (21b: the scree at the foot of a face, in the mean colour of its rock — over the grass and the earth, under the snow)
-  if (gTal > 0.02) gAdd(M3_STONY, GRMEAN[int(clamp(gRD, 0.0, GROCKS - 1.0))] * 1.05, smoothstep(0.0, 0.8, gTal) * 1.1 * (1.0 - gStp));
+  if (gTal > 0.02) gAdd(M3_STONY, GRMEAN[int(clamp(gRD, 0.0, GROCKS - 1.0))] * 0.88, smoothstep(0.0, 0.8, gTal) * 0.8 * (1.0 - gStp));
   // (the swash of a shore: the stones the waves roll, standing out of the sand)
   if (gWL > 0.01) gAdd(M3_PEBBLES, gPeb(cAll), gWL * 1.7);
   // (a steep face is bare rock, whatever the tiles say — in the bands of its rock: 21b)

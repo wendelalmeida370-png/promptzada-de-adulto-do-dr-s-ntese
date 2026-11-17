@@ -399,8 +399,9 @@
         void main() {
           vec3 n = normalize(vN); vec3 a = vC;
           // (the snow over its line, off the steep faces; the glaciers in the high hollows — a blue-white tongue)
-          float sl = vH.x + (texture2D(uCN, vT.xz / 900.0).r - 0.5) * 140.0;
-          float sn = smoothstep(sl - 25.0, sl + 25.0, vT.y) * smoothstep(0.42, 0.7, n.y + vH.y * 0.25);
+          float sl = vH.x + (texture2D(uCN, vT.xz / 900.0).r - 0.5) * 160.0 + (texture2D(uCN, vT.xz / 230.0).g - 0.5) * 60.0;
+          float sn = smoothstep(sl - 20.0, sl + 20.0, vT.y) * smoothstep(0.5, 0.75, n.y + vH.y * 0.25 + (texture2D(uCN, vT.xz / 97.0).r - 0.5) * 0.3);
+          a *= 0.78 + 0.22 * smoothstep(0.0, 0.6, 1.0 - vH.y); // (the hollows a little darker: less sky reaches them)
           float gl = smoothstep(sl - 90.0, sl + 10.0, vT.y) * vH.y * smoothstep(0.55, 0.8, n.y);
           a = mix(a, vec3(0.62, 0.74, 0.86), clamp(gl, 0.0, 1.0) * 0.8); a = mix(a, vec3(0.8, 0.84, 0.9), clamp(sn, 0.0, 1.0));
           float nl = dot(n, uSunD); float dl = smoothstep(-0.06, 0.4, nl) * 0.8 + clamp(nl, 0.0, 1.0) * 0.2;
@@ -431,8 +432,10 @@
       const ax = P[vr * 3] - P[vl * 3], ay = P[vr * 3 + 1] - P[vl * 3 + 1], az = P[vr * 3 + 2] - P[vl * 3 + 2], bx = P[vu * 3] - P[vd * 3], by = P[vu * 3 + 1] - P[vd * 3 + 1], bz = P[vu * 3 + 2] - P[vd * 3 + 2];
       let nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; } const l = Math.hypot(nx, ny, nz) || 1; NR[v * 3] = nx / l; NR[v * 3 + 1] = ny / l; NR[v * 3 + 2] = nz / l;
       const X = P[v * 3], Z = P[v * 3 + 2]; const side = g.sideOf(X, Z); const bi = g.beyondBiome(side); const up = hh[v] - sea; const steep = 1 - G.smooth(0.55, 0.85, ny / l);
-      let c = G.lerpColor(LOWC[bi] || LOWC[0], FORC[bi] || FORC[0], G.smooth(25, 90, up) * (1 - G.smooth(260, 420, up)));
-      c = G.lerpColor(c, [118, 112, 104], Math.max(steep, G.smooth(300, 520, up)));
+      // (the coast's green, the forest's dark up the hills in patches, bare rock on the steep and the high — each place a little its own)
+      const pn = G.hash(Math.round(X / 37) * 7919 + Math.round(Z / 37) * 31); const low = bi === 1 ? FORC[2] : LOWC[bi] || LOWC[0];
+      let c = G.lerpColor(low, bi === 1 ? FORC[2] : FORC[bi] || FORC[0], G.clamp(G.smooth(8, 40, up) * (0.55 + pn * 0.6), 0, 1) * (1 - G.smooth(300, 480, up)));
+      c = G.lerpColor(c, [112 + pn * 26, 106 + pn * 22, 100 + pn * 18], Math.max(G.smooth(0.25, 0.6, steep), G.smooth(320, 560, up)));
       C[v * 3] = lin(c[0]); C[v * 3 + 1] = lin(c[1]); C[v * 3 + 2] = lin(c[2]);
       // (aHor: the snow's line of the side, how hollow the place is — a glacier's bed —, -, -)
       const hol = G.clamp(((hh[vl] + hh[vr] + hh[vd] + hh[vu]) / 4 - hh[v]) / 18, 0, 1);

@@ -343,20 +343,24 @@
     return rid / 1.96;
   }
   // the height of the land beyond the edge at a point (metres, the world's own scale; under the sea where there is none): a shore some
-  // tens of metres out, hills, then the ranges — rows of crests that grow with the distance, a thousand metres and more a few kilometres
-  // out (D-467: far off they may be grand, they spend no ground of the world). Inside the map: -Infinity (the map's own land)
+  // 150–220 m out, low hills along the coast, and behind them, from some 700 m out, the ranges — rows of crests that grow with the distance
+  // to a thousand metres and more a few kilometres out (D-467: far off they may be grand, they spend no ground of the world). Inside the
+  // map: -Infinity (the map's own land)
   Ge.beyondH = function (X, Z) {
     const L = N * TL; if (X >= 0 && Z >= 0 && X <= L && Z <= L) return -Infinity; noises();
     const sea = G.SEA * HM; const t = landToward(X, Z); if (t.land <= 0.005) return sea - 8;
-    const d = t.d; const shore = 50 + 40 * (G.fbm(nzA, X / 220, Z / 220, 2) + 0.5);
-    const up = G.smooth(shore - 30, shore + 160, d);
+    const d = t.d; const shore = 150 + 70 * (G.fbm(nzA, X / 260, Z / 260, 2) + 0.5);
+    const up = G.smooth(shore - 40, shore + 220, d); if (up <= 0) return sea - 8;
     // (the ridges of the side or the two sides the point faces, weighed as the land toward it is)
     const ox = X < 0 ? -X : X > L ? X - L : 0, oz = Z < 0 ? -Z : Z > L ? Z - L : 0; const wx = ox / (ox + oz || 1);
     const rid = (ox > 0 ? ridges(Z, ox, X < 0 ? 0 : 1) * wx : 0) + (oz > 0 ? ridges(X, oz, Z < 0 ? 2 : 3) * (1 - wx) : 0);
     // (the great massifs here and there along the edge: the ranges higher in some stretches than in others)
-    const mass = 0.7 + 0.6 * (G.fbm(nzE, X / 2600 + 3.1, Z / 2600 - 1.7, 2) + 0.5);
-    const lift = 24 + Math.min(1500, d * 0.34) * mass; const land = G.smooth(0.05, 0.65, t.land);
-    return sea - 8 + up * land * (20 + lift * rid * (0.45 + 0.55 * G.smooth(0.2, 0.9, t.land)));
+    const mass = 0.7 + 0.6 * (G.fbm(nzE, X / 2600 + 3.1, Z / 2600 - 1.7, 2) + 0.5); const land = G.smooth(0.05, 0.65, t.land);
+    // (the coast's hills: low, broken over a hundred metres; then the ranges rise behind them)
+    const hills = 10 + 26 * (G.fbm(nzC, X / 140, Z / 140, 3) + 0.5);
+    const range = Math.min(1500, Math.max(0, d - 650) * 0.36) * mass * rid * (0.45 + 0.55 * G.smooth(0.2, 0.9, t.land));
+    const grain = 7 * G.fbm(nzD, X / 70, Z / 70, 2) * G.smooth(0, 300, d - shore);
+    return sea - 8 + up * land * (hills + range + grain);
   };
   // (the snow's line beyond the edge, metres: low over a cold side, high over a hot one — by the biome the side's land mostly is)
   Ge.snowLine = function (side) { const b = Ge.beyondBiome(side); return b === 1 ? 70 : b === 2 ? 160 : b === 6 || b === 5 ? 720 : b === 4 || b === 3 ? 640 : 380; };
