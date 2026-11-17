@@ -66,8 +66,11 @@ const matOf = k => (k ? G.Itens.def(k).mat : null);
 
 // ================================================================ o1 the deposits
 if (on('o1')) {
-  const raw = (() => { const data = {}; const got = G.Ready.got; G.Ready.got = (k, s) => { data[k] = s; }; try { M.run('worlds/cidade.js'); } finally { G.Ready.got = got; } return JSON.parse(data.cidade); })();
-  open(); const bad = [];
+  // (a save from before the deposits of the bronze — the old save of the proofs, read only: the ready worlds are made again with
+  // them in, T-1499 —: the load gives it the ones it lacks, and its iron and gold stay where they were)
+  const raw = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8'));
+  const bad = []; if (raw.oresV || (raw.ores || []).some(o => o.kind === 'cobre' || o.kind === 'estanho')) bad.push('o save antigo já tem as jazidas do bronze');
+  M.abrir(JSON.parse(JSON.stringify(raw))); S = G.S; M.viver(1);
   const by = k => S.ores.filter(o => o.kind === k);
   const cu = by('cobre'), sn = by('estanho');
   if (S.oresV !== 2) bad.push('a versão das jazidas ' + S.oresV);
@@ -83,7 +86,7 @@ if (on('o1')) {
   if (k1 !== k2) bad.push('a mesma semente, outras jazidas');
   M.salvarCarregar(); const k3 = JSON.stringify(G.S.ores.map(o => [o.kind, o.x, o.y, o.max])); if (k3 !== k2 || G.S.oresV !== 2) bad.push('o save mudou as jazidas');
   const kinds = {}; for (const o of G.S.ores) kinds[o.kind] = (kinds[o.kind] || 0) + 1;
-  ok('o1 as jazidas: o cobre das colinas, o estanho raro, onde a pedra os põe', !bad.length && !errs(), `cidade (save de antes): ${cu.length} de cobre, ${sn.length} de estanho, o ferro e o ouro onde estavam; mundo novo (ilha 64): ${JSON.stringify(kinds)}, iguais na mesma semente e depois do save${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+  ok('o1 as jazidas: o cobre das colinas, o estanho raro, onde a pedra os põe', !bad.length && !errs(), `o save antigo das provas (de antes das jazidas): ${cu.length} de cobre, ${sn.length} de estanho, o ferro e o ouro onde estavam; mundo novo (ilha 64): ${JSON.stringify(kinds)}, iguais na mesma semente e depois do save${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ o2 the mine
@@ -209,34 +212,38 @@ if (on('o5')) {
 // ================================================================ o6, o7, o8: the beer, the fishing village, the dish
 if (on('o6') || on('o8')) {
   open();
-  const tv = tavern();
+  // (the tavern chosen by the situation the case needs, not by a people's name — the ready worlds are made again, T-1499 —: a
+  // people whose vat brews the beer now (its drink, or the beer that stands in for a first drink it does not have), and a shelf
+  // that holds a round of fish and the vat's grain beside it)
+  const beerOf = q => { const d = G.Tavern.DRINK[q.civ] || G.Tavern.DRINK.classico; return d.k === 'cerveja' || (d.alt === 'cerveja' && (q.stock[d.k] || 0) < 2); };
+  const tv = (() => { for (const q of facs()) { if (!beerOf(q)) continue; const b = tavern(q); if (!b) continue; clear('b:' + b.id, 'food'); if (D.room('b:' + b.id, 'food') >= 8) return b; } return null; })();
   const f = tv ? G.Fac.get(V.facOfSet(tv.set)) : null; const ref = tv ? 'b:' + tv.id : null;
-  if (!tv || !f) { if (on('o6')) ok('o6 a cerveja', false, 'nenhuma taverna'); }
+  if (!tv || !f) { if (on('o6')) ok('o6 a cerveja', false, 'nenhuma taverna de um povo da cerveja com lugar na prateleira'); }
   else {
-    const R = Of.trade(tv); const cereal = O.CEREAL;
+    const R = Of.trade(tv); const cereal = O.CEREAL; const room = D.room(ref, 'food'), nf = Math.max(1, Math.min(6, room - 6)), n = Math.min(6, room - nf - 2); // (the fish, the vat's grain — four at least — and the room the batch asks for its input, as the shelf holds)
     // (the shelf with fish only: the vat does not begin; the town fed enough not to hold the vat back)
-    give('f:' + f.id, 'food', 200, 'trigo'); clear(ref, 'food'); give(ref, 'food', 6, 'peixe');
+    give('f:' + f.id, 'food', 200, 'trigo'); clear(ref, 'food'); give(ref, 'food', nf, 'peixe');
     for (const op of Of.batches(tv)) god(() => Of.cut(op, 'prova'));
     const p0 = R.pick(tv, f); const dish0 = G.Taverna.dish(tv);
-    give(ref, 'food', 6, 'cevada'); const p1 = R.pick(tv, f); const dish1 = G.Taverna.dish(tv);
+    give(ref, 'food', n, 'cevada'); const p1 = R.pick(tv, f); const dish1 = G.Taverna.dish(tv);
     if (on('o8')) {
       clear(ref, 'food'); give(ref, 'food', 4, 'cevada'); const dish2 = G.Taverna.dish(tv);
       const bad8 = []; if (dish0 !== 'um prato de peixe') bad8.push('com peixe: ' + dish0); if (/peixe/.test(dish2)) bad8.push('sem peixe: ' + dish2);
       ok('o8 o prato de peixe só onde há peixe', !bad8.length, `com peixe na prateleira: «${dish0}»; só com cevada: «${dish2}»${bad8.length ? ' — FALHOU: ' + bad8.join(' | ') : ''}`);
-      clear(ref, 'food'); give(ref, 'food', 6, 'peixe'); give(ref, 'food', 6, 'cevada');
+      clear(ref, 'food'); give(ref, 'food', nf, 'peixe'); give(ref, 'food', n, 'cevada');
     }
     if (on('o6')) {
       const bad = [];
       if (p0) bad.push('a cuba começou com peixe: ' + p0); if (p1 !== 'cerveja' && p1 !== 'pulque') bad.push('com cevada: ' + p1);
       // (the batch: the soaking takes the grain of the shelf, never the fish)
       const fish0 = O.amount(ref, 'food', 'peixe'), grain0 = O.amount(ref, 'food', cereal);
-      const op = p1 ? god(() => Of.start(tv, p1, null)) : null; let used = 0;
+      const op = p1 ? god(() => Of.start(tv, p1, null)) : null; let used = 0, at = '', why = '';
       if (op) {
         const k = G.Taverna.keeperOf(tv) || people(x => x.set === tv.set && grown(x))[0];
-        for (let i = 0; i < 400 && A.live(op) && op.data.s < 2; i++) { M.viver(0.1); const s = Of.stage(op); if (s && s.kind === 'mao' && k) { const r = god(() => Of.unit(op, k)); if (r.ok) used++; } }
+        for (let i = 0; i < 400 && A.live(op) && op.data.s < 2; i++) { M.viver(0.1); const s = Of.stage(op); at = s ? s.id : at; if (s && s.kind === 'mao' && k) { const r = god(() => Of.unit(op, k)); if (r.ok) used++; else why = r.why || why; } }
       }
       const fish1 = O.amount(ref, 'food', 'peixe'), grain1 = O.amount(ref, 'food', cereal);
-      if (!op || !used || !(grain0 - grain1 > 0.5) || Math.abs(fish1 - fish0) > 1e-6) bad.push(`a fornada: ${used} unidade(s), cereal ${grain0} → ${grain1}, peixe ${fish0} → ${fish1}`);
+      if (!op || !used || !(grain0 - grain1 > 0.5) || Math.abs(fish1 - fish0) > 1e-6) bad.push(`a fornada: ${used} unidade(s) (na etapa «${at}»${why ? ', ' + why : ''}; ${op ? op.st : 'não começou'}), cereal ${grain0} → ${grain1}, peixe ${fish0} → ${fish1}`);
       ok('o6 a cerveja só de cereal: com peixe a cuba não começa; com cevada começa e gasta a cevada, o peixe fica', !bad.length && !errs(), `${f.name}: só peixe → ${p0 || 'nada'}; com cevada → ${p1}; a cuba gastou cereal ${Math.round(grain0 * 100) / 100} → ${Math.round(grain1 * 100) / 100}, o peixe ${fish0} → ${fish1}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
     }
   }
