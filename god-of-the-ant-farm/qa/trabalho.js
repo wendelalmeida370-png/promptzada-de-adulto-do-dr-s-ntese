@@ -101,7 +101,7 @@ function act1(id, t, n) {
 }
 // (strokes again and again — E held — until c(), or n frames)
 function strike(id, t, c, n) { let k = 0; for (; k < (n || 4000); k++) { if (c()) break; if (!G.Avatar.busy()) { const r = E(id, t); if (r && !r.ok) return { k, r }; } frame(); } return { k, r: null }; }
-const freshTree = (pred) => [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim && !t.chop && (!pred || pred(t))).sort((a, b) => a.id - b.id).find(t => bodyAt(t.x, t.y, 0.42));
+const freshTree = (pred) => [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.8 && !t.claim && !t.chop && (!pred || pred(t))).sort((a, b) => a.id - b.id).find(t => bodyAt(t.x, t.y, 0.34)); // (1.36 m: where the axe's blade lands — farther, the body steps up first, t2)
 // (the test's hand keeps the beasts that kill away from a place of the water for the case — by the one door out, G.Animals.remove:
 // a crocodile of the river took the body of an earlier run, and the next run's place was another — T-1471)
 const safe = (x, y) => { for (const a of [...S.animals.values()]) if (!a.dead && G.Meio && G.Meio.DANGER.has(a.kind) && Math.hypot(a.x - x, a.y - y) < 30) god(() => G.Animals.remove(a)); };
@@ -133,7 +133,7 @@ function fellWith(key) {
   const tr = freshTree(); const v = Po.body(); if (!tr || !v) return null;
   give(v, key); const wm = G.Vg.workMul(v); const tl = Tr.tool(v, 'cortar'); const T = { tr, X: tr.x * L, Z: tr.y * L };
   const c0 = tr.chop, t0 = S.clock; let felled = false, k = 0, durs = new Set(), heldAx = false;
-  for (; k < 6000 && !felled; k++) { if (!G.Avatar.busy()) { const r = E('arvore', T); if (r && !r.ok) break; const a = G.Avatar.actNow(); if (a) durs.add(+a.dur.toFixed(3)); } frame(); if (Inv.held(v).mao === key) heldAx = true; if (tr.stage !== 'grow') felled = true; }
+  for (; k < 6000 && !felled; k++) { if (!G.Avatar.busy()) { const r = E('arvore', T); if (r && !r.ok) break; const a = G.Avatar.actNow(); if (a && a.world) durs.add(+a.dur.toFixed(3)); } frame(); if (Inv.held(v).mao === key) heldAx = true; if (tr.stage !== 'grow') felled = true; }
   const dw = S.clock - t0, done = (felled ? 3 * Math.max(0.5, tr.size) : tr.chop) - c0;
   return { tr, v, tl, wm, rate: done / dw / wm, felled, k, durs: [...durs], heldAx, dw };
 }
@@ -157,7 +157,15 @@ if (on('t2')) {
     ok('t2 a lenha do tronco vem pelo livro («lenha»), na carga que os braços levantam, e sai do tronco', !!r && r.ok && v.carry && v.carry.k === 'wood' && lines2.length === 1 && lines2[0][8] === 'lenha' && Math.abs(w0 - tr.wood - v.carry.n) < 1e-6 && v.carry.n <= Math.floor(D.room('v:' + v.id, 'wood') + v.carry.n + 1e-9),
       `${v.carry ? v.carry.n + ' de ' + v.carry.k : 'nada'} nas mãos; o livro: ${lines2.map(e => e[6] + ' ' + e[8]).join(', ') || 'nada'}; o tronco ${w0} → ${tr.wood}`);
     clearHands(v);
-  } }
+  }
+  // (from farther than the blade reaches — 2.4 m, in the E's reach —: a step or two up to the trunk, the body's own walk, and then the
+  // stroke from its own start, by itself; the body stops where the blade lands, 1.4 m from the trunk — the axe cut the air, D-428)
+  { const tr = freshTree(); const v = Po.body(); let o = null;
+    if (tr && v) { const far = bodyAt(tr.x, tr.y, 0.6); if (far) { give(far, 'machado.bronze'); const T = { tr, X: tr.x * L, Z: tr.y * L }; const b0 = G.Avatar.state(); const d0 = Math.hypot(T.X - b0.X, T.Z - b0.Z); const c0 = tr.chop;
+      const r = E('arvore', T); const a0 = G.Avatar.actNow(); let a1 = null; for (let k = 0; k < 400 && !a1; k++) { frame(); const a = G.Avatar.actNow(); if (a && a !== a0 && a.world) a1 = a; }
+      until(() => !G.Avatar.busy(), 600); const b1 = G.Avatar.state(); o = { ok: !!(r && r.ok), d0: +d0.toFixed(2), walk: !!(a0 && !a0.world && a0.to), stroke: a1 ? a1.anim : null, d1: +Math.hypot(T.X - b1.X, T.Z - b1.Z).toFixed(2), cut: +(tr.chop - c0).toFixed(3) }; } }
+    ok('t2 de longe, um passo até o tronco e o golpe sozinho depois, onde o fio do machado alcança', !!o && o.ok && o.walk && o.stroke === 'machado' && Math.abs(o.d1 - 1.4) < 0.3 && o.cut > 0, JSON.stringify(o)); }
+}
 
 // ------------------------------ t3: breaking stone ------------------------------
 function breakWith(key) {

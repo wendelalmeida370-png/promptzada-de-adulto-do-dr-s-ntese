@@ -34,7 +34,8 @@
     shown = o; if (s === sig) return; sig = s;
     const rate = o.toolKey && Math.abs(o.mul - 1) > 0.02 ? `<em class="${o.mul < 1 ? 'slow' : 'fast'}">${o.mul < 1 ? 'mais devagar' : 'mais depressa'} · ×${num(o.mul)}</em>` : '';
     const tool = o.toolKey ? `<span class="iw-tool"><i class="ic">${sign(o.toolKey)}</i>${esc(G.cap(o.tool))}${rate}</span>` : o.why ? '' : `<span class="iw-tool bare">com as mãos${o.mul < 1 - 0.02 ? ` <em class="slow">mais devagar · ×${num(o.mul)}</em>` : ''}</span>`;
-    el.innerHTML = `<div class="iw-head"><b>${esc(o.titulo || o.nome)}</b>${o.chain ? '<small>sem parar</small>' : ''}</div>${tool}`
+    // (a work that cannot be done is not under way: its name as the E says it, «Cortar a árvore», not «Cortando»)
+    el.innerHTML = `<div class="iw-head"><b>${esc(o.why ? o.label || o.nome : o.titulo || o.nome)}</b>${o.chain ? '<small>sem parar</small>' : ''}</div>${tool}`
       + (o.pct !== null && o.pct !== undefined && !o.why ? `<div class="iw-bar"><b style="width:${Math.round(Math.max(0, Math.min(1, o.pct)) * 100)}%"></b></div>` : '')
       + (o.falta ? `<div class="iw-row">${esc(o.falta)}</div>` : '') + (o.rende ? `<div class="iw-row iw-yield">${esc(o.rende)}</div>` : '')
       + (o.why ? `<div class="iw-warn">${esc(o.why)}</div>` : o.slow ? `<div class="iw-warn soft">${esc(o.slow)}</div>` : '');

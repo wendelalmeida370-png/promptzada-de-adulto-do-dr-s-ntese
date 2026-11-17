@@ -142,6 +142,16 @@
   // The op is the world's: the tool asked again, put in the hand, then the work — or nothing, with the reason
   function stroke(spec) {
     const id = spec.id, g = GEST[spec.gest || id] || ['interact', '']; const t0 = spec.t;
+    // (a step or two up to it first, where the gesture lands — the axe's blade is 1.3 m before the feet: from farther it cut the
+    // air —, the body's own walk in an act of its own; then the stroke from its own start, as 20e's stepUp. Cut, no stroke)
+    if (spec.near && spec.at) {
+      const p = G.Avatar.state(), X = spec.at[0], Z = spec.at[1], d = Math.hypot(X - p.X, Z - p.Z);
+      if (d > spec.near + 0.25) {
+        const f = Math.atan2(Z - p.Z, X - p.X), go = G.clamp((d - spec.near) / (G.Possess.caps(G.Possess.body()).walk * 1.1), 0.25, 1.6);
+        const r = G.Avatar.act({ anim: 'interact', dur: go, to: [X - Math.cos(f) * spec.near, Z - Math.sin(f) * spec.near], toT: go, face: f, done: () => stroke(Object.assign({}, spec, { near: 0 })) });
+        cur = r ? { id, t: spec.target, p: spec.p, t0: G.S.clock, dur: spec.dur, act: G.Avatar.actNow() } : null; return r;
+      }
+    }
     cur = { id, t: spec.target, p: spec.p, t0: G.S.clock, dur: spec.dur };
     // (the tool to the hand as the gesture begins — the world's next step, by the inventory's door: the axe is in the hands when
     // it is raised, not only when it lands; the stroke's own op asks again)
@@ -177,7 +187,7 @@
     // (the player pushes the body to walk — the stick, the keys: read, never written —, or it walks: the work held is let go when
     // the stroke under way ends; the feet are the player's. A panel open waits)
     const IN = G.Avatar.input, st = G.Avatar.state();
-    if ((IN && Math.abs(IN.mx || 0) + Math.abs(IN.mz || 0) > 0.2) || (st && st.speed > 0.6)) { chain = null; return false; }
+    if ((IN && Math.abs(IN.mx || 0) + Math.abs(IN.mz || 0) > 0.2) || (st && st.speed > 0.6 && !G.Avatar.busy())) { chain = null; return false; } // (the step up to the trunk is the hands' own, not the player's)
     if (G.Avatar.busy()) return false;
     if (G.Modes && G.Modes.panel && G.Modes.panel()) return false;
     if (c.until && c.until(ctx)) { chain = null; return false; }
@@ -200,7 +210,7 @@
     if (!p || !p.work || !p.info) return null;
     const o = p.info(ctx, t); if (!o) return null;
     const tl = Tr.tool(ctx.v, o.work || p.work);
-    return Object.assign({ id: p.id, work: o.work || p.work, nome: WORKS[o.work || p.work].nome, tool: Tr.toolName(tl), toolKey: tl.key, mul: tl.mul, slow: tl.key ? (tl.share < 1 ? WORKS[o.work || p.work].pior || '' : '') : tl.slow || '', why: tl.why || '', busy: !!cur, chain: !!chain }, o);
+    return Object.assign({ id: p.id, work: o.work || p.work, nome: WORKS[o.work || p.work].nome, label: p.label ? p.label(ctx, t) : '', tool: Tr.toolName(tl), toolKey: tl.key, mul: tl.mul, slow: tl.key ? (tl.share < 1 ? WORKS[o.work || p.work].pior || '' : '') : tl.slow || '', why: tl.why || '', busy: !!cur, chain: !!chain }, o);
   };
   // (the strokes still wanted at a counter: what is left ÷ what a stroke does)
   const strokesLeft = (left, per) => (per > EPS ? Math.max(1, Math.ceil(left / per - 1e-9)) : Infinity);
@@ -256,7 +266,7 @@
         return { ok: true };
       }
       const tl = Tr.tool(v, 'cortar');
-      stroke({ id: 'cortar', p: 'arvore', target: t, t: tl, dur: WT.chop, contact: WT.chop * 0.62, f,
+      stroke({ id: 'cortar', p: 'arvore', target: t, t: tl, dur: WT.chop, contact: WT.chop * 0.62, f, near: 1.4, at: [t.X, t.Z],
         op: (w, k) => {
           if (!G.S.trees.has(tr.id) || (tr.stage !== 'grow' && tr.stage !== 'burnt') || !G.Nature.isChoppable(tr)) return { ok: false, why: 'A árvore não está mais de pé.' };
           { const o = busyBy(w, tr.claim, tr.id); if (o) return { ok: false, why: `${Who(w, o)} já está cortando esta árvore.` }; }

@@ -1269,9 +1269,10 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\()|Math\.random|\bD(epot)?\.(move|make|use|drop|swap)\(|\.carry\s*=(?!=)|Possess\.apply\(|\.coin\b/.test(c)) fails.push(`a tela do trabalho: trabalho-ui.js:${k + 1} tira do acaso do mundo, move bens, pede ao mundo ou lê as moedas de uma casa (só lê: D-432): ${l.trim().slice(0, 110)}`); }); }
 // 157. "o golpe do trabalho dura o tempo do mundo" (D-035, D-429): no js/trabalho.js todo ato das mãos é do relógio do mundo (world:
-// true — o stroke os faz assim), a não ser o catar do ouro do chão, um gesto das próprias mãos; e os clipes do js/trabalho-clips.js
+// true — o stroke os faz assim), a não ser o catar do ouro do chão, um gesto das próprias mãos, e o passo até o alvo antes do golpe
+// (o andar do corpo, sem op: o golpe vem depois, no seu ato do mundo); e os clipes do js/trabalho-clips.js
 // não leem o mundo nem tiram de acaso (só se veem, como os do anim-clips.js — regra 113)
-{ (src['trabalho.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Avatar\.act\(\{/.test(c) && !/world: true/.test(c) && !/anim: 'low', dur: 1\.1, face: f, contact: 0\.5/.test(c)) fails.push(`o tempo do trabalho: trabalho.js:${k + 1} faz um ato das mãos fora do relógio do mundo (world: true — D-035): ${l.trim().slice(0, 110)}`); });
+{ (src['trabalho.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Avatar\.act\(\{/.test(c) && !/world: true/.test(c) && !/anim: 'low', dur: 1\.1, face: f, contact: 0\.5/.test(c) && !(/anim: 'interact', dur: go, to: /.test(c) && !/\bop:/.test(c))) fails.push(`o tempo do trabalho: trabalho.js:${k + 1} faz um ato das mãos fora do relógio do mundo (world: true — D-035): ${l.trim().slice(0, 110)}`); });
   (src['trabalho-clips.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\()|Math\.random|\bDate\b|performance\.now|\bG\.(Act|Depot|Possess|Inv|Vg)\b/.test(c)) fails.push(`os gestos dos ofícios: trabalho-clips.js:${k + 1} lê o mundo ou tira de um acaso (os clipes só se veem — regra 113): ${l.trim().slice(0, 110)}`); }); }
 // 158. "o verificador e a prova do trabalho" (D-433): o qa/trabalho-inv.js está no bloco do qa/qa.js (o junta-inv.js o lista) e o
 // qa/trabalho.js existe — a regra que se lê no código tem a sua prova que se vive
