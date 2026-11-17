@@ -818,5 +818,7 @@ destaque); a 20f e a 20g registram os seus verbos assim desde já.
   **faça commit de cada passo que passar**, logo; prefira provas que terminem em menos de meia hora (as partes por `ONLY=`); guarde
   o que cada medição deu num arquivo da sua pasta de rascunho; depois de um reinício, retome do último commit.
 - O navegador só pela fila (`bash qa/navegador.sh …`), duas vezes no máximo na máquina inteira.
-- O tempo do mundo do corpo (D-015, a proposta D-365 da 20b: `Space.TIME` de 0,35 para 0,27) **fica como está** nesta onda (D-464):
-  o dono decide depois de sentir a versão 9.
+- O tempo do mundo do corpo (D-015, a proposta D-365 da 20b: `Space.TIME` de 0,35 para 0,27) ficou como estava no começo da onda
+  (D-464); **o dono aprovou depois de sentir a versão 9, e o número é 0,27** (D-365 aplicada): as pessoas andam a 1,5–1,6 m/s no
+  desenho (1,9 nas estradas), o dia do corpo dura 12,3 min e o trabalho do corpo, que dura os segundos do mundo, 30% mais no relógio
+  — uma prova que espera o mundo por quadros contados conta com isso; o trote e a disparada não mudam (D-357).

@@ -49,7 +49,7 @@ O jogo salva automaticamente no `localStorage` do navegador (a cada 45 s e ao fe
 
 ## Modo Encarnado: descer ao mundo
 
-Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a câmera do deus desce até a pessoa, o mundo ganha profundidade e você passa a viver a vida dela **em terceira pessoa, em 3D de verdade**. Não é outro mundo: é **o mesmo** — as mesmas ruas, casas, árvores, rios, o mesmo mar, os mesmos navios, as mesmas pessoas (cada uma com o seu nome, a sua roupa de ofício, a sua família), a mesma guerra, a mesma economia. Enquanto você anda, o resto do mundo continua vivendo (no passo de uma pessoa: o tempo corre a 0,35× do Modo Deus; dormindo, uma noite passa em segundos).
+Selecione qualquer habitante (com 6 anos ou mais) e clique em **Encarnar**: a câmera do deus desce até a pessoa, o mundo ganha profundidade e você passa a viver a vida dela **em terceira pessoa, em 3D de verdade**. Não é outro mundo: é **o mesmo** — as mesmas ruas, casas, árvores, rios, o mesmo mar, os mesmos navios, as mesmas pessoas (cada uma com o seu nome, a sua roupa de ofício, a sua família), a mesma guerra, a mesma economia. Enquanto você anda, o resto do mundo continua vivendo (no passo de uma pessoa: o tempo corre a 0,27× do Modo Deus; dormindo, uma noite passa em segundos).
 
 | Ação | Controle |
 |---|---|

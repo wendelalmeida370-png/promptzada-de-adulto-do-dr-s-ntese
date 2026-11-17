@@ -197,7 +197,7 @@ if (want('m6')) {
   const towns = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id));
   const s = towns[0]; const doors = [...S.buildings.values()].filter(b => b.set === s.id && b.built && !b.ruin).map(b => G.Vg.door(b)).filter(d => d && W.walkableXY(d[0], d[1]));
   const v = G.Possess.body() || v0; const x0 = doors[0]; live(v0, x0[0], x0[1], 0);
-  let walked = 0, stalls = 0, legs = 0, frames = 0, corners0 = st().corner || 0, worst = '', fell = 0, inWall = 0, jumps = 0;
+  let walked = 0, stalls = 0, legs = 0, frames = 0, corners0 = st().corner || 0, worst = '', fell = 0, inWall = 0, jumps = 0, wallAt = '', wet = 0;
   const order = doors.slice(1).sort((a, b) => (a[0] * 31 + a[1] * 17) % 53 - (b[0] * 31 + b[1] * 17) % 53);
   for (const d of order) {
     if (legs >= 10 || walked > 900) break;
@@ -211,7 +211,12 @@ if (want('m6')) {
       // (a ledge squarely in the way — the world walks across a plinth the feet do not step up —: a player jumps at it, D-360)
       if (st().block === 'ledge' && still === 12) { IN.jump = true; jumps++; }
       C3.yaw = Math.atan2(dy, dx); IN.mz = 1; IN.mx = 0; IN.run = k % 300 > 200; frame(); frames++;
-      if (!W.walkableXY(b.x, b.y)) inWall++;
+      // (inside what one does not tread: a building, a wall, a cliff — G.Space.surface, the body's own rule —, past what a building's
+      // plan lets it stand on, a doorstep, the steps: G.Possess.onPlan, as m9 counts it; the first spot said. The water is not a
+      // solid: a straight leg between two points of the world's way can cut a hand into a river's corner, where a player wades and
+      // the world pulls the body out (the verifier's rule) — counted apart, T-1396)
+      { const sf = G.Space.surface(b.x * TL, b.y * TL);
+        if (!sf.walk && !G.Possess.onPlan(b)) { if (sf.kind === 'deep') wet++; else if (!inWall++) { const ob = S.occ[sf.i] && S.buildings.get(S.occ[sf.i]); wallAt = ` (o primeiro em ${b.x.toFixed(2)},${b.y.toFixed(2)}: ${ob ? ob.type + '#' + ob.id : sf.kind})`; } } }
       const m = G.dist(b.x, b.y, last[0], last[1]) * TL; walked += m; last = [b.x, b.y];
       if (m < 0.004) { if (++still === 45) { stalls++; worst = `${s.name}: parado em ${b.x.toFixed(2)},${b.y.toFixed(2)} indo a ${w[0].toFixed(1)},${w[1].toFixed(1)} (${st().block || '-'})`; } } else still = 0;
       if (still > 120) break;
@@ -220,7 +225,7 @@ if (want('m6')) {
     stop(); for (let q = 0; q < 10; q++) frame();
   }
   const corners = (st().corner || 0) - corners0;
-  ok('m6 uma volta pelas ruas de uma cidade pronta sem parar numa quina', legs >= 4 && walked > 250 && !stalls && !inWall, `${legs} trechos, ${Math.round(walked)} m em ${(frames / 60).toFixed(0)} s; paradas ${stalls}${worst ? ' — ' + worst : ''}; quinas contornadas ${corners}; pulos numa borda ${jumps}; dentro do que não se pisa ${inWall}`);
+  ok('m6 uma volta pelas ruas de uma cidade pronta sem parar numa quina', legs >= 4 && walked > 250 && !stalls && !inWall, `${legs} trechos, ${Math.round(walked)} m em ${(frames / 60).toFixed(0)} s; paradas ${stalls}${worst ? ' — ' + worst : ''}; quinas contornadas ${corners}; pulos numa borda ${jumps}; dentro do que não se pisa ${inWall}${wallAt}; na água de uma margem ${wet}`);
   void v; void fell;
 }
 
@@ -235,6 +240,9 @@ if (want('m7')) {
     const out = [];
     for (const off of [0, 0.12, -0.3]) for (const yaw of [0, Math.PI / 2]) {
       const X0 = tr.x - Math.cos(yaw) * 2.2 - Math.sin(yaw) * off / TL, Y0 = tr.y - Math.sin(yaw) * 2.2 + Math.cos(yaw) * off / TL;
+      // (and no beast at the trunk: the proof is the tree's — a beast standing by it in the metropole made after the merge stopped the
+      // body 178 frames, «blk: beast», a stop the world's rule makes: T-1397)
+      { let n = 0; for (const a of [...S.animals.values()]) if (G.dist(a.x, a.y, tr.x, tr.y) < 4) { G.Animals.remove(a); n++; } if (n) G.debug.step(0.3); }
       if (!W.walkableXY(X0, Y0)) continue; live(v0, X0, Y0, yaw); C3.yaw = yaw; IN.mz = 1; let k = 0, still = 0, worst = 0; const b = st();
       for (; k < 400; k++) { frame(); const along = (b.X / TL - tr.x) * Math.cos(yaw) + (b.Z / TL - tr.y) * Math.sin(yaw); if (along > 0.5) break; if (b.speed < 0.3) still++; else still = 0; worst = Math.max(worst, still); }
       // (against the time of the same way with nothing in it, at the jog: what the tree cost)
@@ -278,13 +286,13 @@ if (want('m9')) {
     IN.mz = 1; IN.dodge = true; frame(); for (let q = 0; q < 60 && b.dodge; q++) frame(); IN.dodge = true; frame(); const cd = !!b.dodge; for (let q = 0; q < 40; q++) frame(); stop();
     ok('m9 sem fôlego não sai; no ar não sai; uma logo atrás da outra espera o seu momento', !any && !inAir && !cd, JSON.stringify({ semFolego: any, noAr: inAir, colada: cd })); }
   // (the bad cases: the world takes the body in the middle; saved and loaded in the middle; the person dies in the middle)
-  { live(v0, A0[0] + COR.dx * 3, A0[1] + COR.dy * 3, YAW); const b = st(); IN.mz = 1; frame(); IN.dodge = true; frame(); frame(); const was = !!b.dodge; Av.place(A0[0] + COR.dx * 6, A0[1] + COR.dy * 6); frame(); const gone = !b.dodge && b.loco === 'ground';
+  { live(v0, A0[0] + COR.dx * 3, A0[1] + COR.dy * 3, YAW); const b = st(); IN.mz = 1; frame(); IN.dodge = true; frame(); frame(); const was = !!b.dodge; const took = Av.place(A0[0], A0[1]); frame(); const gone = took && !b.dodge && b.loco === 'ground'; // (to the corridor's start, three tiles back: six ahead was past the end of the six-tile corridor of the metropole made after the merge, and Avatar.place moved nobody, T-1395)
     IN.mz = 1; frame(); IN.dodge = true; frame(); frame(); const was2 = !!st().dodge; const n = M.salvarCarregar(); S = G.S; v0 = S.villagers.get(v0.id); const v1 = G.Possess.body(); let after = null; if (v1) { Av.attach(v1, YAW); C3.attach(Av.pos(), YAW); for (let q = 0; q < 30; q++) frame(); after = { dodge: !!st().dodge, chao: W.walkableXY(v1.x, v1.y), loco: st().loco }; }
     // (the one who dies is another than the stage's body: the parts after this one live on with it)
     const vd = pick(1); live(vd, A0[0] + COR.dx * 3, A0[1] + COR.dy * 3, YAW); const v2 = G.Possess.body(); if (v2) { IN.mz = 1; frame(); IN.dodge = true; frame(); frame(); } const was3 = !!(st() && st().dodge);
     if (v2) { G.Possess.apply(w => { G.Vg.damage(w, 999, 'beast', false); return { ok: true }; }); for (let q = 0; q < 10; q++) frame(); }
     const dead = v2 && !G.S.villagers.has(v2.id);
-    ok('m9 os casos ruins: o mundo leva o corpo no meio, o save no meio, a pessoa morre no meio', was && gone && was2 && n > 0 && after && !after.dodge && after.chao && was3 && dead && !G.Possess.body(), JSON.stringify({ levado: { na: was, depois: gone }, save: { na: was2, depois: after }, morte: { na: was3, morta: dead, corpo: !!G.Possess.body() } }));
+    ok('m9 os casos ruins: o mundo leva o corpo no meio, o save no meio, a pessoa morre no meio', was && gone && was2 && n > 0 && after && !after.dodge && after.chao && was3 && dead && !G.Possess.body(), JSON.stringify({ levado: { na: was, moveu: took, depois: gone }, save: { na: was2, depois: after }, morte: { na: was3, morta: dead, corpo: !!G.Possess.body() } }));
   }
 }
 
