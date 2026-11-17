@@ -227,6 +227,9 @@ orçamento (≤ 4 ms por quadro para as pessoas no centro da metrópole), a medi
 | 22a os personagens | 1670–1709 | 550–564 | 1575–1589 | 197–203 |
 | 22b a sociedade | 1710–1769 | 565–589 | 1590–1609 | 204–212 |
 | 22c a vida que se vê | 1770–1809 | 590–604 | 1610–1624 | 213–219 |
+| 22c, onda 2 | (a mesma) | 605–619 | (a mesma) | 220–227 |
+| 22b, onda 2 (se faltar a da onda 1) | (a mesma) | 620–634 | (a mesma) | 228–235 |
+| 22a, onda 2 | (a mesma) | 635–649 | (a mesma) | 236–243 |
 
 ## 7. Como cada parte trabalha
 
