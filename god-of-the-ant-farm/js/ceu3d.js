@@ -77,10 +77,12 @@ float gxCloud( vec2 p ) { vec2 u = p * gxCl2.y; return 0.5 + ( ( texture2D( gxCl
 // lightest quality, which has none)
 void gxLightAt( vec3 wp, out float ks, out vec3 sk ) {
 	ks = 1.0; sk = vec3( 1.0 ); vec3 kd = gxKeyW.xyz;
-	if ( gxCl1.z > 0.0 ) { vec2 pc = wp.xz + kd.xz * ( ( gxCl2.x - wp.y ) / max( kd.y, 0.12 ) ); ks *= 1.0 - smoothstep( 0.98 - gxCl2.z, 1.3 - gxCl2.z, gxCloud( pc ) ) * gxCl1.z; }
 	if ( gxShadeK.y > 0.0 ) {
 		vec2 uv = gxMapUV( wp.xz ); vec4 sh = texture2D( gxShade, uv ); float gy = sh.b * 76.5 * gxAirB.w; float above = mix( sh.r, sh.g, gxShadeK.x ) * 51.0 * gxAirB.w;
 		ks *= 1.0 - step( 0.004, above ) * smoothstep( -0.8, 0.8, gy + above - wp.y );
+		// (the clouds' shadow over the land, the JS's own sum of the world's one field along the key light — G.Ceu.cloudShade —, in the
+		// same texel: no read of its own)
+		ks *= 1.0 - sh.a * gxCl1.z;
 		if ( gxAirK.z > 0.0 ) { float cano = texture2D( gxAirMap, uv ).g * gxAirK.z;
 			if ( cano > 0.004 ) {
 				float top = gy + gxCanopy.w * gxAirB.w; float below = 1.0 - smoothstep( top - gxCanopy.w * 0.25 * gxAirB.w, top + gxCanopy.w * 0.15 * gxAirB.w, wp.y );
@@ -244,7 +246,7 @@ ${GXAIR}`;
 		// the spray of a fall —, under its top: read at the middle of the way and at its end)
 		float tauL = 0.0; vec3 mTint = vec3( 1.0 );
 		if ( gxAirB.z > 0.0 ) {
-			vec3 mp = mix( cameraPosition, vFogW, 0.5 ); vec4 a1 = texture2D( gxAirMap, gxMapUV( mp.xz ) ), a2 = texture2D( gxAirMap, gxMapUV( vFogW.xz ) );
+			vec3 mp = mix( cameraPosition, vFogW, 0.5 ); vec4 a1 = texture2D( gxAirMap, gxMapUV( mp.xz ) ), a2 = gxAirB.z > 1.5 ? texture2D( gxAirMap, gxMapUV( vFogW.xz ) ) : a1; // (the lighter qualities read it once, at the middle)
 			float t1 = a1.a * 76.5 * gxAirB.w, t2 = a2.a * 76.5 * gxAirB.w;
 			float d1 = ( a1.r * gxAirK.x + a1.b * gxAirK.y ) * ( 1.0 - smoothstep( t1 - 2.5, t1 + 1.0, mp.y ) ), d2 = ( a2.r * gxAirK.x + a2.b * gxAirK.y ) * ( 1.0 - smoothstep( t2 - 2.5, t2 + 1.0, vFogW.y ) );
 			tauL = ( d1 * 0.65 + d2 * 0.35 ) * fl * gxAirK.w;
@@ -272,7 +274,7 @@ ${GXAIR}`;
   // tile: made when the world's size is new; the air again when the land changes (its key), looked at every second of the
   // view's clock; the shade at two hours of the world a little apart, the light blending from one to the other as the hour goes,
   // the next made when the hour passes the second — the shadows of the ridges creep with the sun, never jump)
-  const MAPS = { n: 0, air: null, shade: null, key: '', at: -1, look: 0, tA: NaN, dirA: null, dirB: null, shA: null, shB: null, ground: '', kT: 0 };
+  const MAPS = { n: 0, air: null, shade: null, key: '', at: -1, look: 0, tA: NaN, dirA: null, dirB: null, shA: null, shB: null, ground: '', kT: 0, cRow: 0, cano: 0 }; const KW = { x: 0, y: 1, z: 0 };
   const SHADE_DT = 0.0025; // (a step of the hour between two shades: half a second of the world, under half a degree of sun)
   function mapsMake() {
     const n = G.N + 1; if (MAPS.n === n && MAPS.air) return; MAPS.n = n;
@@ -288,9 +290,9 @@ ${GXAIR}`;
     const S = G.S; if (!MAPS.air || MAPS.n !== G.N + 1) mapsMake(); const n = MAPS.n;
     // (the air: looked at once a second of the view; made again only when the land is another)
     if (vt - MAPS.look > 1 || vt < MAPS.look || !MAPS.key) { MAPS.look = vt; const key = G.Ceu.airKey();
-      if (key !== MAPS.key) { const A = G.Ceu.airMap(); MAPS.air.image.data.set(A.pic); MAPS.air.needsUpdate = true; MAPS.key = key; MAPS.at = S.clock;
+      if (key !== MAPS.key) { const A = G.Ceu.airMap(); MAPS.air.image.data.set(A.pic); MAPS.air.needsUpdate = true; MAPS.key = key; MAPS.at = S.clock; MAPS.cano = 0; for (let c = 0; c < A.cano.length; c++) if (A.cano[c] > 0.004) { MAPS.cano = 1; break; }
         // (the ground in the shade's B: the land the shadows and the canopy are measured from)
-        const d = MAPS.shade.image.data, H = S.H; for (let c = 0; c < n * n; c++) { d[c * 4 + 2] = Math.round(G.clamp(H[c] * G.Space.HM / G.Ceu.TOPM, 0, 1) * 255); d[c * 4 + 3] = 255; } MAPS.tA = NaN; } }
+        const d = MAPS.shade.image.data, H = S.H; for (let c = 0; c < n * n; c++) { d[c * 4 + 2] = Math.round(G.clamp(H[c] * G.Space.HM / G.Ceu.TOPM, 0, 1) * 255); } MAPS.tA = NaN; } }
     // (the shade: two hours apart, the light blending between them)
     const kA = Math.floor(t / SHADE_DT), tA = kA * SHADE_DT;
     if (kA !== MAPS.tA) {
@@ -301,8 +303,14 @@ ${GXAIR}`;
       for (let c = 0; c < n * n; c++) { d[c * 4] = Math.min(255, Math.round(MAPS.shA[c] / 51 * 255)); d[c * 4 + 1] = Math.min(255, Math.round(MAPS.shB[c] / 51 * 255)); }
       MAPS.shade.needsUpdate = true;
     }
+    // (the clouds' shadow over the land, in the shade's A: a twelfth of the rows every other frame — the clouds drift slowly, the
+    // whole made again in a third of a second or so, and the seam between two slices moves less than a hand)
+    if ((MAPS.kT = (MAPS.kT + 1) & 1) === 0) { const d = MAPS.shade.image.data, H = S.H, HM = G.Space.HM, TL = G.Space.TILE; const dr = DR, cov = GX.gxCl2.value.z, kw = GX.gxKeyW.value; const rows = Math.ceil(n / 12);
+      const j0 = MAPS.cRow, j1 = Math.min(n, j0 + rows); const sd = KW; sd.x = kw.x; sd.y = kw.y; sd.z = kw.z;
+      if (GX.gxCl1.value.z > 0) { for (let j = j0; j < j1; j++) for (let i = 0; i < n; i++) { const c = j * n + i; d[c * 4 + 3] = Math.round((1 - G.Ceu.cloudShade(i * TL, H[c] * HM, j * TL, sd, cov, 1, dr)) * 255); } MAPS.shade.needsUpdate = true; }
+      MAPS.cRow = j1 >= n ? 0 : j1; }
     GX.gxShadeK.value.x = G.clamp((t - tA) / SHADE_DT, 0, 1); GX.gxShadeK.value.y = 1;
-    const B = GX.gxAirB.value; B.x = 1 / G.Space.TILE; B.y = 1 / n; B.z = 1; B.w = scene.scale.y;
+    const B = GX.gxAirB.value; B.x = 1 / G.Space.TILE; B.y = 1 / n; B.z = (R3.Q().vlight | 0) > 0 ? 2 : 1; B.w = scene.scale.y; // (2: the higher qualities read the air twice)
   }
   // (for the verifier: the version of the land the maps the 3D draws are of, and when they were made)
   Ce3.maps = () => (MAPS.key ? { key: MAPS.key, at: MAPS.at } : null);
@@ -721,7 +729,7 @@ ${GXAIR}`;
     // (and thicker where the land round the body is still wet from a rain the sun is drying: the land steaming)
     { let wm = 0; if (focus && S.wet) { const N = G.N, cx = G.clamp(Math.floor(focus.X / G.Space.TILE), 0, N - 1), cy = G.clamp(Math.floor(focus.Z / G.Space.TILE), 0, N - 1); let n = 0;
         for (let j = cy - 4; j <= cy + 4; j += 2) for (let i = cx - 4; i <= cx + 4; i += 2) { if (i < 0 || j < 0 || i >= N || j >= N) continue; wm += S.wet[j * N + i]; n++; } wm = n ? wm / n : 0; }
-      const mn = G.Ceu.mistNow(t, w, wm); const K = GX.gxAirK.value; K.x = mn.dawn; K.y = mn.last; K.z = 1; K.w = 0.012; }
+      const mn = G.Ceu.mistNow(t, w, wm); const K = GX.gxAirK.value; K.x = mn.dawn; K.y = mn.last; K.z = MAPS.cano; K.w = 0.012; } // (the canopy read only where the woods have one)
     { const fx = focus ? focus.X / G.Space.TILE : G.N / 2, fy = focus ? focus.Z / G.Space.TILE : G.N / 2; const K = G.Ceu.sky(t, fx, fy, w, SKY);
       skyU.skB.value.set(K.band[0], K.band[1], K.band[2], K.band[3]); skyU.skM.value.set(K.halo[0], K.halo[1], K.halo[2], K.halo[3]); skyU.skE.value.set(K.shadow[0], K.shadow[1]); skyU.skU.value.setRGB(K.under[0], K.under[1], K.under[2]);
       // (and the far land goes blue as soon as the place's air says: the wet woods' milky, the desert's clear)
