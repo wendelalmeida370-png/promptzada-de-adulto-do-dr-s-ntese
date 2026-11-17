@@ -175,10 +175,15 @@
   // ------------------------------ the carving of the faces of cliff ------------------------------
   // (a tile the drawing may carve: a cliff of the land with nothing of the world on it — no stone, no building, no road, no wall,
   // no cave's mouth — and nobody stands on a cliff: W.walkable)
+  let carveMemo = null; // (only inside a batch: the same tile asked again and again while one stretch is carved)
   Ge.carves = function (i) {
     const S = G.S; if (i < 0 || i >= N * N || !S.cliff[i] || S.type[i] < T.SAND) return false;
-    return !S.objAt[i] && !S.occ[i] && !S.road[i] && !S.wall[i] && !(S.ice && S.ice[i]) && !(G.Caves && G.Caves.isMouth && S.ug && G.Caves.isMouth(i));
+    if (carveMemo) { const m = carveMemo.get(i); if (m !== undefined) return m; }
+    const v = !S.objAt[i] && !S.occ[i] && !S.road[i] && !S.wall[i] && !(S.ice && S.ice[i]) && !(G.Caves && G.Caves.isMouth && S.ug && G.Caves.isMouth(i));
+    if (carveMemo) carveMemo.set(i, v); return v;
   };
+  // (a stretch carved in one go: what a tile is carved asked once — the world does not change inside one call of the drawing)
+  Ge.batch = function (fn) { const was = carveMemo; if (!was) carveMemo = new Map(); try { return fn(); } finally { if (!was) carveMemo = null; } };
   // (how far a point lies from every tile that is not carved — in tiles, at most 2: the carving fades to nothing at their edge)
   function reach(x, y) {
     const tx = Math.floor(x), ty = Math.floor(y); let d = 2;
@@ -344,7 +349,9 @@
     const hx = W.hAt(m.x + 1.5, m.y + 0.5) - W.hAt(m.x - 0.5, m.y + 0.5), hz = W.hAt(m.x + 0.5, m.y + 1.5) - W.hAt(m.x + 0.5, m.y - 0.5);
     const yaw = m.fx || m.fy ? Math.atan2(-m.fy, -m.fx) : Math.atan2(hz, hx);
     const w = kind === 'fenda' ? 1.4 : kind === 'abrigo' ? 4.4 : 3, h = kind === 'fenda' ? 3.4 : kind === 'abrigo' ? 2.1 : 2.8;
-    return { X: (m.x + 0.5) * TL, Y: W.hAt(m.x + 0.5, m.y + 0.5) * HM, Z: (m.y + 0.5) * TL, yaw, w, h, deep: kind === 'abrigo' ? 2.2 : 5, rock: Ge.rockAt(i), kind };
+    // (cut into a face: the tile the way in leads to is a carved cliff — the drawing opens a hole in it for the throat)
+    const ix = Math.round(m.x + Math.cos(yaw)), iy = Math.round(m.y + Math.sin(yaw)); const carve = W.inb(ix, iy) && Ge.carves(iy * N + ix);
+    return { X: (m.x + 0.5) * TL, Y: W.hAt(m.x + 0.5, m.y + 0.5) * HM, Z: (m.y + 0.5) * TL, yaw, w, h, deep: kind === 'abrigo' ? 2.2 : 5, rock: Ge.rockAt(i), kind, carve };
   };
   Ge.version = 1;
 })(window.G);

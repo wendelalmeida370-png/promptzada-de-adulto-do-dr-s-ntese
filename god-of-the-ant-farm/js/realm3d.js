@@ -628,6 +628,7 @@ vec3 gxGrade( vec3 c ) {
     G.FX3D && G.FX3D.init && G.FX3D.init(THREE, R3);
     G.Dragon3D && G.Dragon3D.init && G.Dragon3D.init(THREE, R3);
     G.Things3D && G.Things3D.init && G.Things3D.init(THREE, R3);
+    G.Geo3D && G.Geo3D.init && G.Geo3D.init(THREE, R3); // (21b: the relief — the rock's material, the kit of rock, the land beyond the edge)
     G.Grass3D && G.Grass3D.init && G.Grass3D.init(THREE, R3);
     G.Post3D && G.Post3D.init && G.Post3D.init(THREE, R3);
   }
@@ -653,7 +654,7 @@ vec3 gxGrade( vec3 c ) {
     for (const ch of chunks.values()) if (ch.near) { ch.sig = STALE; ch.sigT = -1e9; }
     resize();
   }
-  const STALE = { a: NaN, b: NaN, c: NaN, d: NaN }; // (a signature no picture has: what carries it is made again)
+  const STALE = { a: NaN, b: NaN, c: NaN, d: NaN, e: NaN }; // (a signature no picture has: what carries it is made again)
   function resize() { if (!renderer) return; const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix(); G.Post3D && G.Post3D.resize && G.Post3D.resize(); }
 
   // ------------------------------ the ground of a chunk ------------------------------
@@ -675,16 +676,18 @@ vec3 gxGrade( vec3 c ) {
   }
   // the slope of the ground from its heights (continuous across chunks: no seams of light between them)
   function normalAt(x, y, out) { const e = 0.25; const hx = (W.hAt(x + e, y) - W.hAt(x - e, y)) * G.Space.HM / (2 * e * G.Space.TILE), hz = (W.hAt(x, y + e) - W.hAt(x, y - e)) * G.Space.HM / (2 * e * G.Space.TILE); const l = Math.hypot(hx, 1, hz); out[0] = -hx / l; out[1] = 1 / l; out[2] = -hz / l; return out; }
-  function terrainGeo(x0, y0, w, h, step) {
-    const TL = G.Space.TILE, HM = G.Space.HM; const gw = Math.round(w / step) + 1, gh = Math.round(h / step) + 1;
+  // (o.far: the far picture, a little low; o.skip: the tiles whose ground another drawing makes — the carved faces of cliff, 21b — one byte
+  // a tile of the stretch, 1 to leave it out)
+  function terrainGeo(x0, y0, w, h, step, o) {
+    const TL = G.Space.TILE, HM = G.Space.HM; const gw = Math.round(w / step) + 1, gh = Math.round(h / step) + 1; const far = o ? !!o.far : step > 1, skip = o && o.skip;
     const pos = new Float32Array(gw * gh * 3), nor = new Float32Array(gw * gh * 3), colr = new Float32Array(gw * gh * 3); const nn = [0, 0, 0];
     for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
       const x = Math.min(N, x0 + i * step), y = Math.min(N, y0 + j * step); const k = (j * gw + i) * 3;
-      pos[k] = x * TL; pos[k + 1] = W.hAt(x, y) * HM - (step > 1 ? 0.3 : G.Space.bedDrop(x, y)); pos[k + 2] = y * TL; // (the far picture a little low: a crack at its edge shows ground, not sky; near, the beds of the rivers under their water)
+      pos[k] = x * TL; pos[k + 1] = W.hAt(x, y) * HM - (far ? 0.3 : G.Space.bedDrop(x, y)); pos[k + 2] = y * TL; // (the far picture a little low: a crack at its edge shows ground, not sky; near, the beds of the rivers under their water)
       normalAt(x, y, nn); nor[k] = nn[0]; nor[k + 1] = nn[1]; nor[k + 2] = nn[2];
       const sh = step < 1 ? shadeAt(x, y) : 1; colr[k] = colr[k + 1] = colr[k + 2] = sh * sh; // (a shade, so linear)
     }
-    const idx = []; for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) { const a = j * gw + i, b = a + 1, c = a + gw, d = c + 1; idx.push(a, c, b, b, c, d); }
+    const idx = []; for (let j = 0; j < gh - 1; j++) for (let i = 0; i < gw - 1; i++) { if (skip && skip[Math.floor((j + 0.5) * step) * w + Math.floor((i + 0.5) * step)]) continue; const a = j * gw + i, b = a + 1, c = a + gw, d = c + 1; idx.push(a, c, b, b, c, d); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(colr, 3)); g.setIndex(idx); g.computeBoundingSphere();
     return g;
   }
@@ -1120,13 +1123,13 @@ vec3 gxGrade( vec3 c ) {
     }
     b = (b * 3 + (R3.floraFine ? R3.floraFine(x0, y0, C) : 1)) | 0; // (the near plants finer where the body comes: the preset's lod — A3)
     const bs = G.Build3D ? G.Build3D.sig(x0, y0, C) : 0;
-    return { a, b, c, d: bs };
+    return { a, b, c, d: bs, e: G.Geo3D ? G.Geo3D.sig(x0, y0, C) : 0 }; // (e: the carved faces and the mouths, their steps, the far grid — 21b)
   }
-  const sameSig = (p, q) => p && q && p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d;
+  const sameSig = (p, q) => p && q && p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.e === q.e;
   function buildFar(ch) {
     disposeGroup(ch.far); const grp = new THREE.Group(); ch.far = grp; grp.matrixAutoUpdate = false;
     const x0 = ch.cx * C, y0 = ch.cy * C;
-    addMesh(grp, terrainGeo(x0, y0, C, C, 2), MAT.land, { recv: false });
+    addMesh(grp, terrainGeo(x0, y0, C, C, G.Geo3D ? G.Geo3D.farStep(x0, y0, C) : 2, { far: true }), MAT.land, { recv: false }); // (21b: finer where the relief is rough)
     const wg = waterGeo(x0, y0, C, C, true); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice);
     addMesh(grp, G.Arvore3D.geo(x0, y0, C, C, true).flora, MAT.flora);
     if (G.Build3D) addMesh(grp, G.Build3D.farGeo(x0, y0, C), MAT.solid);
@@ -1135,17 +1138,21 @@ vec3 gxGrade( vec3 c ) {
   }
   // a near picture is three parts, each made again only when what it shows has changed: the ground (terrain, water,
   // roads), the plants (trees, bushes, rocks, grass) and the buildings — a field ripening does not remake the hillside
-  const PARTS = { ground: s => s.a + ':' + s.c, flora: s => s.a + ':' + s.b + ':' + s.c, build: s => s.c + ':' + s.d };
+  const PARTS = { ground: s => s.a + ':' + s.c + ':' + s.e, flora: s => s.a + ':' + s.b + ':' + s.c, build: s => s.c + ':' + s.d, geo: s => s.a + ':' + s.b + ':' + s.c + ':' + s.e }; // (e, geo: the carving, the stones and the formations, the mouths — 21b)
   function makePart(ch, part) {
     const x0 = ch.cx * C, y0 = ch.cy * C; const q = R3.Q(); const grp = new THREE.Group(); grp.matrixAutoUpdate = false;
     if (part === 'ground') {
-      addMesh(grp, terrainGeo(x0, y0, C, C, 0.5), MAT.land, { recv: true });
+      // (21b: the faces of cliff carved in their layers, by the Geo3D; the land's own picture leaves their tiles out)
+      const G3 = G.Geo3D; const skip = G3 ? G3.skipOf(x0, y0, C) : null;
+      addMesh(grp, terrainGeo(x0, y0, C, C, 0.5, { skip }), MAT.land, { recv: true });
+      if (skip) addMesh(grp, G3.carveGeo(x0, y0, C, G3.mouthsIn(x0 - 2, y0 - 2, C + 4).filter(m => m.carve)), MAT.land, { cast: true, recv: true });
       const wg = waterGeo(x0, y0, C, C, false); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 });
       addMesh(grp, roadGeo(x0, y0, C, C, false), MAT.solid, { cast: true, recv: true });
     } else if (part === 'flora') {
       const fg = G.Arvore3D.geo(x0, y0, C, C, false); addMesh(grp, fg.flora, MAT.flora, { cast: true, recv: true }); addMesh(grp, fg.plants, MAT.plant, { cast: true, recv: true }); addMesh(grp, fg.leaves, MAT.leaf, { cast: true, recv: true });
       // (the near grass is the field of blades round the eye (Grass3D) where the machine carries it; the tufts otherwise)
       if (q.grass && !q.field) addMesh(grp, G.Arvore3D.grassGeo(x0, y0, C, C), MAT.plant, { recv: true });
+    } else if (part === 'geo') { if (G.Geo3D) G.Geo3D.partInto(grp, x0, y0, C); // (21b)
     } else if (G.Build3D) { const bg = G.Build3D.nearGeo(x0, y0, C); addMesh(grp, bg.solid, MAT.solid, { cast: true, recv: true }); if (bg.glass) addMesh(grp, bg.glass, G.Build3D.glassMat()); addMesh(grp, bg.plants, MAT.plant, { recv: true }); addMesh(grp, bg.water, MAT.water, { order: 2 }); }
     disposeGroup(ch.parts[part]); ch.parts[part] = grp; ch.near.add(grp);
   }

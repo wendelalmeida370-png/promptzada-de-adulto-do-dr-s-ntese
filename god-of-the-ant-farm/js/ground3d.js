@@ -26,7 +26,8 @@
   // the kinds of ground (the alpha of a tile's texel)
   const K = G3.K = { grass: 0, meadow: 1, sand: 2, dune: 3, rocky: 4, snow: 5, swamp: 6, savanna: 7, jungle: 8, path: 9, gravel: 10, paved: 11, highway: 12, burnt: 13, field: 14, bed: 15, rock: 16, taiga: 17, wet: 18, river: 19 };
   let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0, gmap = null, gdata = null, fmap = null, fdata = null;
-  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; });
+  let emap = null, edata = null, stmap = null, stFor = NaN; // (21b: the rock of each tile, its fold, its moss and wet; the table of the layers)
+  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; fallsFor = ''; });
   // (the god's road colours: the same streets from both heights)
   const ROADC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
   const FARM = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1 };
@@ -152,21 +153,44 @@
     out[0] = Math.round(G.clamp(lit / 1.5, 0, 1) * 255); out[1] = free ? 255 : 0; out[2] = Math.round(wet * 255); out[3] = Math.round(snowOf(i, x, y) * 255);
     return out;
   }
+  // 21b: the rock of a tile, for the land's shader (G.Geo, D-490): R the rock (its index), G and B the fold of the layers there (16 bits:
+  // (metres + 256) × 128), A the moss on the rock (its high four bits: the wet and shaded rock of the wet lands, from the forest's
+  // moisture — G.Mata —, none in the cold, on the ash or a road) and how wet the rock is (its low four bits: the rain's wet of the world,
+  // S.wet, and the spray at the foot of a fall of water). Read smoothly between the tiles by the shader, the fold the same as G.Geo.fold
+  let fallsFor = '', fallsAt = null;
+  function sprayOf(i) {
+    const S = G.S; const fl = (S.relief && S.relief.falls) || []; const key = (S.seed | 0) + ':' + N + ':' + fl.length + ':' + (S.typeVer | 0);
+    if (key !== fallsFor) { fallsAt = new Map(); for (const f of fl) { const k = 0.5 + Math.min(1, (f.drop || 1) / 4) * 0.5; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = f.x + dx, y = f.y + dy; if (!W.inb(x, y)) continue; const j = y * N + x; const v = k * (1 - Math.hypot(dx, dy) / 3.2); if (v > (fallsAt.get(j) || 0)) fallsAt.set(j, v); } } fallsFor = key; }
+    return fallsAt.get(i) || 0;
+  }
+  function geoOf(i, x, y, out) {
+    const S = G.S; const Ge = G.Geo; if (!Ge) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
+    const r = Ge.rockAt(i); const v = G.clamp(Math.round((Ge.foldAt(i) + 256) * 128), 0, 65535);
+    let moss = 0; const t = S.type[i];
+    if (t >= T.SAND && !S.road[i] && !(S.burnt[i] > 0) && !(S.scar[i] > 0) && G.Mata && G.Mata.floor) { const f = G.Mata.floor(i); moss = G.clamp((f.umid - 0.42) * 1.7, 0, 1) * 0.85 + f.musgo * 0.4; moss *= 1 - G.clamp(G3.snowAt(i) * 1.6, 0, 1); }
+    const wet = G.clamp(Math.max(S.wet ? S.wet[i] : 0, sprayOf(i)), 0, 1);
+    out[0] = r; out[1] = v >> 8; out[2] = v & 255; out[3] = (Math.round(G.clamp(moss, 0, 1) * 15) << 4) | Math.round(wet * 15);
+    return out;
+  }
+  G3.geoOf = (i, x, y) => geoOf(i, x, y, [0, 0, 0, 0]);
+  G3.geoMap = () => emap;
   G3.grassMap = () => gmap;
   G3.map = () => map;
   G3.floorMap = () => fmap;
   // a band of rows of the picture made again from the world; true when something changed
-  const px = [0, 0, 0, 0], gx = [0, 0, 0, 0], fx4 = [0, 0, 0, 0];
+  const px = [0, 0, 0, 0], gx = [0, 0, 0, 0], fx4 = [0, 0, 0, 0], ex4 = [0, 0, 0, 0];
   function rows(y0, y1, x0, x1) {
-    if (!data) return false; let ch = false, gch = false, fch = false;
+    if (!data) return false; let ch = false, gch = false, fch = false, ech = false;
     for (let y = Math.max(0, y0); y < Math.min(N, y1); y++) for (let x = Math.max(0, x0); x < Math.min(N, x1); x++) {
       const i = y * N + x; paint(i, x, y, px); const o = i * 4;
       if (data[o] !== px[0] || data[o + 1] !== px[1] || data[o + 2] !== px[2] || data[o + 3] !== px[3]) { data[o] = px[0]; data[o + 1] = px[1]; data[o + 2] = px[2]; data[o + 3] = px[3]; ch = true; }
       grassOf(i, px[3], gx); if (gdata[o] !== gx[0] || gdata[o + 1] !== gx[1] || gdata[o + 2] !== gx[2] || gdata[o + 3] !== gx[3]) { gdata[o] = gx[0]; gdata[o + 1] = gx[1]; gdata[o + 2] = gx[2]; gdata[o + 3] = gx[3]; gch = true; }
       floorOf(i, x, y, fx4); if (fdata[o] !== fx4[0] || fdata[o + 1] !== fx4[1] || fdata[o + 2] !== fx4[2] || fdata[o + 3] !== fx4[3]) { fdata[o] = fx4[0]; fdata[o + 1] = fx4[1]; fdata[o + 2] = fx4[2]; fdata[o + 3] = fx4[3]; fch = true; }
+      if (edata) { geoOf(i, x, y, ex4); if (edata[o] !== ex4[0] || edata[o + 1] !== ex4[1] || edata[o + 2] !== ex4[2] || edata[o + 3] !== ex4[3]) { edata[o] = ex4[0]; edata[o + 1] = ex4[1]; edata[o + 2] = ex4[2]; edata[o + 3] = ex4[3]; ech = true; } }
     }
     if (gch && gmap) gmap.needsUpdate = true;
     if (fch && fmap) fmap.needsUpdate = true;
+    if (ech && emap) emap.needsUpdate = true;
     return ch;
   }
   // the whole picture (a new world, or the first descent)
@@ -183,9 +207,12 @@
       // (the floor read smoothly: the leaves thin out from tree to tree, the wet fades up the bank)
       if (fmap) fmap.dispose(); fdata = new Uint8Array(N * N * 4);
       fmap = new THREE.DataTexture(fdata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); fmap.magFilter = fmap.minFilter = THREE.LinearFilter; fmap.generateMipmaps = false; fmap.flipY = false;
+      // (21b: the rock of each tile, read texel by texel: the shader blends the four round a point itself)
+      if (emap) emap.dispose(); edata = new Uint8Array(N * N * 4);
+      emap = new THREE.DataTexture(edata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); emap.magFilter = emap.minFilter = THREE.NearestFilter; emap.generateMipmaps = false; emap.flipY = false;
     }
-    rows(0, N, 0, N); map.needsUpdate = true; fmap.needsUpdate = true; dirtyAll = false; row = 0;
-    U.uMap.value = map; U.uFMap.value = fmap; U.uN.value = N;
+    rows(0, N, 0, N); map.needsUpdate = true; fmap.needsUpdate = true; emap.needsUpdate = true; dirtyAll = false; row = 0;
+    U.uMap.value = map; U.uFMap.value = fmap; U.uN.value = N; U.uGeo.value = emap; strataTex();
   };
   // every frame: a few rows of the land round the body made again (the paths worn, the fields growing, the fire, the snow),
   // and one row of the whole map (the far land changes too: a town grows on the horizon)
@@ -280,9 +307,20 @@
 }
 `;
   G3.snowGLSL = () => SNOWGLSL;
-  const U = { uMap: { value: null }, uDet: { value: null }, uFMap: { value: null }, uN: { value: 128 }, uTL: { value: 4 }, uCN: { value: null }, uCO: { value: null }, uCC: { value: 0 }, uCS: { value: 0 }, uTime: { value: 0 }, uSeaY: { value: 3 }, uSkyH: { value: null } };
-  const FRAG = `
+  const U = { uMap: { value: null }, uDet: { value: null }, uFMap: { value: null }, uN: { value: 128 }, uTL: { value: 4 }, uCN: { value: null }, uCO: { value: null }, uCC: { value: 0 }, uCS: { value: 0 }, uTime: { value: 0 }, uSeaY: { value: 3 }, uSkyH: { value: null }, uGeo: { value: null }, uStrata: { value: null } };
+  // 21b: the rock of the land (G.Geo): the four tiles' rocks round a point and their bands at the height of the layers there (the
+  // world's height plus the fold, read smoothly between the tiles — the same band on one face and on the face across the valley), the
+  // band's colour and how hard it is (the table of the layers, a picture of a row a rock), the moss and the wet of the rock; and the
+  // joints each rock is broken by (the granite's blocks, the schist's sheets, the sandstone's cross-beds, the limestone's flutes, the
+  // basalt's columns). The rocks' periods and mean colours are the G.Geo's own, written into the shader
+  const geoGLSL = () => { const R = G.Geo ? G.Geo.ROCKS : [{ L: 48, col: [140, 134, 124] }]; const n = R.length; const lin = v => Math.pow(v / 255, 2.2).toFixed(4);
+    return `#define GROCKS ${n}.0
+const float GSTL[${n}] = float[${n}](${R.map(r => r.L.toFixed(1)).join(', ')});
+const vec3 GRMEAN[${n}] = vec3[${n}](${R.map(r => `vec3(${r.col.map(lin).join(', ')})`).join(', ')});
+`; };
+  const FRAG = () => geoGLSL() + `
 uniform sampler2D uMap; uniform sampler2D uDet; uniform sampler2D uFMap; uniform float uN; uniform float uTL; uniform sampler2D uCN; uniform vec2 uCO; uniform float uCC; uniform float uCS; uniform float uTime; uniform float uSeaY; uniform vec3 uSkyH;
+uniform sampler2D uGeo; uniform sampler2D uStrata;
 // (the light of the waves on a bed under the water: a net of bright lines that drifts and folds)
 float gCaus(vec2 p, float t) {
   vec2 q = p * 0.55; float c = 0.0;
@@ -301,6 +339,37 @@ float gWL = 0.0; // (how much this point is the line of the water on a shore: th
 // (the snow's own colour, linear: the god's white of the frozen land)
 #define GSNOW vec3(0.78, 0.835, 0.9)
 varying vec3 vGP; varying vec3 vGN;
+float gFold = 0.0, gMoss = 0.0, gWet = 0.0, gRH = 0.5, gRD = 0.0, gWR = 0.0; vec4 gRkI = vec4(0.0), gRkW = vec4(0.0); vec3 gRC = vec3(0.3);
+float gFoldOf(vec4 g) { return (floor(g.g * 255.0 + 0.5) * 256.0 + floor(g.b * 255.0 + 0.5)) / 128.0 - 256.0; }
+vec2 gMW(vec4 g) { float b = floor(g.a * 255.0 + 0.5); return vec2(floor(b / 16.0) / 15.0, mod(b, 16.0) / 15.0); }
+vec4 gBand(float r, float sL) { int k = int(clamp(r, 0.0, GROCKS - 1.0)); return texture2D(uStrata, vec2(sL / GSTL[k], (float(k) + 0.5) / GROCKS)); }
+// (the rock at this point: gRC its colour — the bands of the four tiles' rocks by the edge the ground blends with, far off their mean, so
+// a band thinner than a pixel never shimmers —, gRH how hard the band is, gRD the rock most of the point is, the fold, the moss, the wet)
+void gGeo(ivec2 a, ivec2 hi, vec2 f, vec2 s, float k00, float k10, float k01, float k11) {
+  vec4 e00 = texelFetch(uGeo, clamp(a, ivec2(0), hi), 0), e10 = texelFetch(uGeo, clamp(a + ivec2(1, 0), ivec2(0), hi), 0);
+  vec4 e01 = texelFetch(uGeo, clamp(a + ivec2(0, 1), ivec2(0), hi), 0), e11 = texelFetch(uGeo, clamp(a + ivec2(1, 1), ivec2(0), hi), 0);
+  gFold = mix(mix(gFoldOf(e00), gFoldOf(e10), f.x), mix(gFoldOf(e01), gFoldOf(e11), f.x), f.y);
+  vec2 m = mix(mix(gMW(e00), gMW(e10), f.x), mix(gMW(e01), gMW(e11), f.x), f.y); gMoss = m.x; gWet = m.y;
+  gRkI = floor(vec4(e00.r, e10.r, e01.r, e11.r) * 255.0 + 0.5);
+  gRkW = vec4((1.0 - s.x) * (1.0 - s.y), s.x * (1.0 - s.y), (1.0 - s.x) * s.y, s.x * s.y);
+  gWR = (k00 == 16.0 ? gRkW.x : 0.0) + (k10 == 16.0 ? gRkW.y : 0.0) + (k01 == 16.0 ? gRkW.z : 0.0) + (k11 == 16.0 ? gRkW.w : 0.0);
+  float sL = vGP.y + gFold; float aa = smoothstep(0.25, 1.1, fwidth(sL) * 1.4);
+  vec3 c = vec3(0.0); float h = 0.0, bw = -1.0;
+  for (int k = 0; k < 4; k++) { float w = gRkW[k]; if (w < 0.004) continue; int r = int(clamp(gRkI[k], 0.0, GROCKS - 1.0)); vec4 b = gBand(float(r), sL);
+    c += mix(b.rgb, GRMEAN[r], aa) * w; h += mix(b.a, 0.5, aa) * w; if (w > bw) { bw = w; gRD = float(r); } }
+  gRC = c; gRH = h;
+}
+// (the joints of the rock most of the point is, across its face: 1 the face itself, less in a joint — read from the side the face
+// looks to, as the pictures of the stack are; fading away with the distance)
+float gJL(float u, float P, float w) { float q = (0.5 - abs(fract(u / P) - 0.5)) * P; return 1.0 - smoothstep(0.0, w, q); }
+float gJoint(vec3 p, vec3 n, float sL) {
+  float wx = smoothstep(0.35, 0.65, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float u = mix(p.x, p.z, wx) + texture2D(uCN, p.xz / 23.0 + p.y * 0.013).r * 1.4;
+  if (gRD < 0.5) return 1.0 - 0.3 * gJL(u, 2.7, 0.08) - 0.12 * gJL(sL + u * 0.05, 3.9, 0.05);
+  if (gRD < 1.5) return 1.0 - 0.13 * gJL(sL + u * 0.09, 0.19, 0.025);
+  if (gRD < 2.5) return (1.0 - 0.1 * gJL(sL + u * 0.36, 0.42, 0.035)) * (1.0 - 0.24 * gJL(u, 5.3, 0.09));
+  if (gRD < 3.5) return 1.0 - 0.17 * smoothstep(0.55, 0.95, sin(u * 2.3 + texture2D(uCN, vec2(u * 0.05, p.y * 0.01)).g * 5.0)) - 0.08 * gJL(sL, 2.1, 0.05);
+  return 1.0 - 0.36 * gJL(u, 0.86, 0.055);
+}
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 ${SNOWGLSL}
 vec3 gShade(vec4 t, vec4 d, float m1, float m2) {
@@ -437,6 +506,8 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   float k00 = floor(t00.a * 255.0 + 0.5), k10 = floor(t10.a * 255.0 + 0.5), k01 = floor(t01.a * 255.0 + 0.5), k11 = floor(t11.a * 255.0 + 0.5);
   float w00 = (1.0 - s.x) * (1.0 - s.y), w10 = s.x * (1.0 - s.y), w01 = (1.0 - s.x) * s.y, w11 = s.x * s.y;
   vec3 c00 = gTint(t00.rgb, k00, mP), c10 = gTint(t10.rgb, k10, mP), c01 = gTint(t01.rgb, k01, mP), c11 = gTint(t11.rgb, k11, mP);
+  // (21b: a tile of cliff in the bands of its rock, a little of the god's colour of it kept — the white the cold leaves, the ash)
+  if (k00 == 16.0) c00 = mix(gRC, c00, 0.22); if (k10 == 16.0) c10 = mix(gRC, c10, 0.22); if (k01 == 16.0) c01 = mix(gRC, c01, 0.22); if (k11 == 16.0) c11 = mix(gRC, c11, 0.22);
   gAdd(gLay(k00), c00, w00); gAdd(gLay(k10), c10, w10); gAdd(gLay(k01), c01, w01); gAdd(gLay(k11), c11, w11);
   gDune = (k00 == 3.0 ? w00 : 0.0) + (k10 == 3.0 ? w10 : 0.0) + (k01 == 3.0 ? w01 : 0.0) + (k11 == 3.0 ? w11 : 0.0);
   vec3 cAll = c00 * w00 + c10 * w10 + c01 * w01 + c11 * w11;
@@ -461,8 +532,8 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
     if (rs > 0.003) gAdd(M3_GRAVEL, (c00 * r0 + c10 * r1 + c01 * r2 + c11 * r3) / rs, rs * 0.55); }
   // (the swash of a shore: the stones the waves roll, standing out of the sand)
   if (gWL > 0.01) gAdd(M3_PEBBLES, gPeb(cAll), gWL * 1.7);
-  // (a steep face is bare rock, whatever the tiles say)
-  gAdd(M3_CRAG, gRockish(cAll), gStp * 2.0);
+  // (a steep face is bare rock, whatever the tiles say — in the bands of its rock: 21b)
+  gAdd(M3_CRAG, mix(gRC, gRockish(cAll), 0.18), gStp * 2.0);
   // the heights decide where each stuff shows: the higher stands out of the lower
   vec4 T[GMX]; float mx = -9.0;
   for (int i = 0; i < GMX; i++) { if (i >= gN) break; T[i] = gTex(gL[i]); mx = max(mx, T[i].a + gW[i] * 2.0); }
@@ -499,6 +570,7 @@ vec3 groundCol() {
 #endif
   vec2 s = smoothstep(0.5 - B, 0.5 + B, f + (nE - 0.5) * 0.4 * (1.0 - hard));
   float steep = 1.0 - smoothstep(0.55, 0.8, vGN.y);
+  gGeo(a, hi, f, s, floor(t00.a * 255.0 + 0.5), floor(t10.a * 255.0 + 0.5), floor(t01.a * 255.0 + 0.5), floor(t11.a * 255.0 + 0.5)); // (21b)
   vec3 c; float mB = 0.5, mP = 0.5; float near = 1.0; // (near: how near the water — the floor's wet bank — the wash of the waves reaches only there)
   // (the floor, read smoothly from tile to tile: the leaves the trees drop, the wet of a bank, the snow lying)
   vec4 fm = texture2D(uFMap, vGP.xz / (uTL * uN));
@@ -524,6 +596,27 @@ vec3 groundCol() {
   // (the land a little warmer here, a little cooler there, over a hundred metres: no two fields the same green)
   c *= mix(vec3(1.05, 1.0, 0.9), vec3(0.93, 1.0, 1.07), m3);
 #endif
+  // ---- 21b: the rock (D-490, D-491): where the face is steep or the tile is cliff — its bands (the soft ones a little back in the
+  // shade, the hard ones standing out as ledges in the light), its joints, the moss of the wet lands on its ledges and its faces turned
+  // from the sun, the wet of the rain and of a fall's spray darkening it and giving it the sky's sheen ----
+  { float rk = clamp(max(steep * 1.35, gWR), 0.0, 1.0);
+    if (rk > 0.004) {
+      float sL = vGP.y + gFold; float fd = 1.0 - smoothstep(45.0, 140.0, length(cameraPosition - vGP));
+#ifdef GDETAIL
+      if (tex < 0.5) c = mix(c, gRC * (0.8 + d.b * 0.4), rk * 0.85);
+      c *= mix(1.0, (0.86 + 0.14 * gRH) * mix(1.0, gJoint(vGP, vGN, sL), fd), rk);
+      if (tex > 0.5) gHgt += (gRH - 0.5) * 0.12 * rk * fd;
+      float mz = gMoss * rk * (smoothstep(0.12, 0.7, vGN.y) * 0.9 + smoothstep(0.0, 0.6, -vGN.z) * 0.55);
+      mz *= smoothstep(0.38, 0.62, texture2D(uCN, vGP.xz / 9.0 + vGP.y * 0.05).g + (gMoss - 0.5) * 0.5);
+      c = mix(c, vec3(0.055, 0.095, 0.032) * (0.75 + texture2D(uCN, vGP.xz / 2.3 + vGP.y * 0.21).r * 0.6), clamp(mz, 0.0, 0.88));
+      if (tex > 0.5) gHgt += mz * 0.012;
+#else
+      c = mix(c, gRC, rk * 0.85);
+#endif
+      float wt = gWet * rk; float fr = pow(1.0 - clamp(dot(normalize(cameraPosition - vGP), normalize(vGN)), 0.0, 1.0), 3.0);
+      c = c * (1.0 - wt * 0.4) + uSkyH * fr * wt * 0.16;
+    }
+  }
   // (the kerb where a street meets the rest)
   float r = mix(mix(gRoad(t00), gRoad(t10), s.x), mix(gRoad(t01), gRoad(t11), s.x), s.y);
   // ---- the snow, laid over the ground: as much as the floor says lies here (the cold of the place, its hollows, the feet
@@ -616,7 +709,7 @@ vec3 groundCol() {
       if (G.Realm.skyU) U.uSkyH = G.Realm.skyU.hor;
       Object.assign(sh.uniforms, U, G3.U3());
       sh.vertexShader = 'varying vec3 vGP; varying vec3 vGN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGN = normalize(mat3(modelMatrix) * objectNormal);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + FRAG()).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
         // (the relief: from the stuff's heights once the pictures are in — the slopes of a pebble, a cobble, a tuft — and
         // from the drawn grain before)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
@@ -639,6 +732,16 @@ vec3 groundCol() {
     { const an = q.aniso || 4; for (const t of [texArr, det]) if (t && t.anisotropy !== an) { t.anisotropy = an; t.needsUpdate = true; } }
     const want = q.detail !== 0; const has = !!(mat.defines && mat.defines.GDETAIL); if (want !== has) { mat.defines = want ? { GDETAIL: 1 } : {}; mat.needsUpdate = true; } };
   G3.material = () => mat;
+  // 21b: the table of the layers of the rocks as a picture (a row a rock, 256 samples a period: the band's colour, how hard it is) — made
+  // again when the world's seed changes; read smoothly along the layers, never between the rows
+  function strataTex() {
+    if (!THREE || !G.Geo || !G.S) return; const sd = G.S.seed | 0; if (stmap && stFor === sd) { U.uStrata.value = stmap; return; }
+    const tb = G.Geo.table(); const n = G.Geo.ROCKS.length;
+    if (!stmap || stmap.image.height !== n) { if (stmap) stmap.dispose(); stmap = new THREE.DataTexture(new Uint8Array(G.Geo.TS * n * 4), G.Geo.TS, n, THREE.RGBAFormat, THREE.UnsignedByteType);
+      stmap.colorSpace = THREE.SRGBColorSpace; stmap.magFilter = stmap.minFilter = THREE.LinearFilter; stmap.wrapS = THREE.RepeatWrapping; stmap.wrapT = THREE.ClampToEdgeWrapping; stmap.generateMipmaps = false; stmap.flipY = false; }
+    stmap.image.data.set(tb); stmap.needsUpdate = true; stFor = sd; U.uStrata.value = stmap;
+  }
+  G3.strataMap = () => { strataTex(); return stmap; };
   // (the clouds over the land: their offset as the wind carries them, how much of the sky they cover, how dark their shadow)
   G3.clouds = function (ox, oz, cover, k) { if (!U.uCO.value) U.uCO.value = new THREE.Vector2(); U.uCN.value = G3.cloudNoise(); U.uCO.value.set(ox, oz); U.uCC.value = cover; U.uCS.value = k; };
   // a soft noise for the clouds (R: the big shapes, G: the small; tiling) — made once
