@@ -30,7 +30,7 @@
   const STRIDE = 12; // (an instance: x, y, z, size · turn, lean x, lean z, phase · r, g, b, accent + spread)
   let THREE = null, R3 = null, PF = null; const KINDS = [];
   let canTex = null, canData = null, canN = 0;
-  const U = { uEye: { value: null }, uBodyP: { value: null }, uPush: { value: [] }, uGust: { value: null }, uCan: { value: null }, uN: { value: 1 }, uShade: { value: 1 } };
+  const U = { uRain: { value: 0 }, uEye: { value: null }, uBodyP: { value: null }, uPush: { value: [] }, uGust: { value: null }, uCan: { value: null }, uN: { value: 1 }, uShade: { value: 1 } };
   const PUSH = 8;
   // the quality's share of the forest (NATUREZA.md §3.3: each pillar adds its own fields — R3.qualAdd, never the table): mataR, the
   // reach of the floor's plants (m; 0 none) and mataRD the share of them drawn; mataA, the reach of the shrubs and the hard stems,
@@ -185,7 +185,7 @@
     m.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind, uBody: R3.U.body, uR, uAcc: { value: acc }, uBark: { value: bark || new THREE.Color(0.2, 0.15, 0.1) }, uMoss: { value: moss || new THREE.Color(0.05, 0.1, 0.03) } });
       sh.vertexShader = `attribute vec4 iA; attribute vec4 iB; attribute vec4 iC; attribute float aK; attribute float aC; attribute float aA;
-        uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform sampler2D uGust; uniform sampler2D uCan; uniform float uN; uniform float uShade; uniform vec3 uAcc[3]; uniform vec3 uBark; uniform vec3 uMoss;
+        uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform sampler2D uGust; uniform sampler2D uCan; uniform float uN; uniform float uShade; uniform float uRain; uniform vec3 uAcc[3]; uniform vec3 uBark; uniform vec3 uMoss;
         varying vec3 vMC; varying vec3 vMW; varying float vMU;
         ` + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `
@@ -217,6 +217,8 @@
           vec3 ac = mAcc < 0.5 ? uAcc[0] : mAcc < 1.5 ? uAcc[1] : uAcc[2]; c = mix(c, ac, aA);
           // (the shade of the canopy over it: deeper and a little blue-green — the forest's own light, Mata's map)
           float can = texture2D(uCan, (iA.xz / 4.0) / uN).r; c *= mix(vec3(1.0), vec3(0.6, 0.66, 0.66), can * uShade);
+          // (in the rain the leaves are wet: darker and deeper — less under the roof of the canopy, which keeps the rain off)
+          c *= 1.0 - uRain * 0.2 * (1.0 - can * 0.6);
           vMC = c; vMU = aC; }
         vMW = transformed;`);
       sh.fragmentShader = `uniform vec3 uEye; uniform vec4 uBody; varying vec3 vMC; varying vec3 vMW; varying float vMU;\n` + sh.fragmentShader
@@ -277,6 +279,7 @@
     M3.on = RA > 0; if (!M3.on) { for (const p of pools.values()) p.mesh.visible = false; return; }
     const t0 = performance.now(); const e = cam ? cam.position : { x: focus.X, y: focus.Y, z: focus.Z };
     U.uEye.value.set(e.x, e.y, e.z);
+    { const w = S.weather || {}; const want = G.clamp((w.rain || 0) + (w.storm > 0 ? 0.3 : 0), 0, 1); U.uRain.value += (want - U.uRain.value) * Math.min(1, dt * 0.25); } // (the leaves wet slowly with the rain and dry slowly after)
     // (the chunks within the shrubs' reach: their plans made, the nearest first, a few rows a frame; those far behind let go)
     const ccx = Math.floor(focus.X / TL / C), ccy = Math.floor(focus.Z / TL / C), RC = Math.ceil(RA / (C * TL)) + 1; const want = new Set();
     for (let dy = -RC; dy <= RC; dy++) for (let dx = -RC; dx <= RC; dx++) { const cx = ccx + dx, cy = ccy + dy; if (cx < 0 || cy < 0 || cx * C >= N || cy * C >= N) continue;
