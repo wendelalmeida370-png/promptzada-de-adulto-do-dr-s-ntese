@@ -198,6 +198,56 @@ if (on('v7')) {
     `${drawnMax} desenhadas; o par mais tempo no mesmo gesto e na mesma fase: ${r2(worst)} s${worstPair ? ' (' + worstPair + ')' : ''} (na mesma passada, dito e não julgado: ${r2(worstLoco)} s${locoPair ? ', ' + locoPair : ''}) · a micro-ação mais repetida de uma pessoa em 10 min: ${Math.round(topShare * 100)}% (${topWho}), ${people} pessoas, ${ocSeen.size} micro-ações diferentes; repetidas em seguida: ${twice} · ${seen.size} gestos e estados vistos: ${[...seen].slice(0, 40).join(', ')}`);
 }
 
+if (on('v8')) {
+  // two in one gesture (D-605): the world puts two at the act's distance, facing (G.Convivio.place) and holds them in it (the task of
+  // each names the other); the view gives each their part and takes their hands to the other in the act's window — and never moves
+  // anyone. Far apart, each one alone; the god's hand on one, a death and a save in the middle: no error, and the other goes on alone
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = new Map(); // (by day, the beasts set aside in this copy: nobody flees)
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const awake = v => v && !v.inside && !v.sleeping && !v.aboard && !v.captive && !v.jail && v.age >= 18 && v.age < 60 && !v.held;
+  const twoOf = (not) => { const L = [...S.villagers.values()].filter(v => awake(v) && !(not || []).includes(v.id)); for (const a of L) for (const b of L) if (a !== b && a.set === b.set && Math.hypot(a.x - b.x, a.y - b.y) < 6) return [a, b]; return [L[0], L[1]]; };
+  const begin = (a, b, act) => { G.Convivio.place(a, b, act); const d = G.SocAtos.of(act); const rv = d.rev || act;
+    // (both held by the society's own 'duo' for the act's length — st 2: each one past the walk to the other, as the one who begins is
+    // when the society holds the other)
+    G.Vg.setTask(a, { type: 'duo', id: b.id, act, papel: 'a', pri: 0.95, wait: d.dur, kind: 'duo', st: 2 }); G.Vg.setTask(b, { type: 'duo', id: a.id, act: rv, papel: 'b', pri: 0.95, wait: d.dur, kind: 'duo', st: 2 }); };
+  const live = (a, n) => { for (let k = 0; k < n; k++) { G.debug.step(0.1); P3.update(0.1, { X: a.x * TL, Z: a.y * TL }); } };
+  // (where each palm is against where it goes: the frame's rig of the person again, from the view's memory of them)
+  const handErr = id => { const s = P3.visOf(id); if (!s || !s.L || !s.L.duo || !(s.L.duo.w > 0.999)) return null; const R = P3.rig(s.X, s.Y, s.Z, s.yaw, s.pose, s.L); const pm = P3.palms(R); let e = 0;
+    for (let q = 0; q < 2; q++) if (s.L.duo.on[q]) e = Math.max(e, Math.hypot(pm[q].x - s.L.duo.T[q][0], pm[q].y - s.L.duo.T[q][1], pm[q].z - s.L.duo.T[q][2])); return e; };
+  const out = [];
+  // (1) the embrace, in place: each their part, the hands on the other's back within 5 cm in the middle of the act; the world's places
+  // the same after the frames as before them
+  let [a, b] = twoOf(); P3.clear(); live(a, 3); begin(a, b, 'hug'); const xy0 = [a.x, a.y, b.x, b.y].join();
+  let stA = '', stB = '', eA = null, eB = null; tryF('o abraço', () => { live(a, 15); const sa = P3.visOf(a.id), sb = P3.visOf(b.id); stA = sa ? sa.st : '?'; stB = sb ? sb.st : '?'; eA = handErr(a.id); eB = handErr(b.id); });
+  const still = [a.x, a.y, b.x, b.y].join() === xy0;
+  const hugOk = stA === 'duo-abraco' && stB === 'duo-abraco-b' && eA !== null && eB !== null && eA < 0.05 && eB < 0.05 && still;
+  out.push(`o abraço: ${stA} e ${stB}, as mãos a ${eA === null ? '—' : r2(eA * 100)} e ${eB === null ? '—' : r2(eB * 100)} cm de onde vão, os lugares do mundo ${still ? 'os mesmos' : 'MUDADOS'}`);
+  // (2) the world left them far apart (2 m more): each one alone — the act's own gesture, no hands on the other
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'hug'); b.x += (b.x - a.x) > 0 ? 0.5 : -0.5; let farA = '', farHands = true;
+  tryF('longe', () => { live(a, 10); const sa = P3.visOf(a.id); farA = sa ? sa.st : '?'; farHands = !!(sa && sa.L && sa.L.duo); });
+  const farOk = farA !== 'duo-abraco' && !farHands; out.push(`longe: ${farA}, ${farHands ? 'AS MÃOS NO OUTRO' : 'sozinho'}`);
+  // (3) the god's hand takes one in the middle of the embrace: the other alone, no error
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'hug'); live(a, 8); b.held = 1; let godA = '';
+  tryF('a mão do deus', () => { live(a, 6); const sa = P3.visOf(a.id); godA = sa ? sa.st + (sa.L && sa.L.duo ? ' COM AS MÃOS' : '') : '?'; }); b.held = 0;
+  const godOk = !/duo-abraco|MÃOS/.test(godA); out.push(`a mão do deus num dos dois: o outro em «${godA}»`);
+  // (4) one of the two dies in the middle of the kiss: the other alone, no error
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'kiss'); live(a, 8); let deadA = '';
+  tryF('a morte no meio', () => { G.Village.kill(b, 'god', true); live(a, 6); const sa = P3.visOf(a.id); deadA = sa ? sa.st + (sa.L && sa.L.duo ? ' COM AS MÃOS' : '') : '?'; });
+  const deadOk = !/duo-beijo|MÃOS/.test(deadA); out.push(`a morte de um no meio do beijo: o outro em «${deadA}»`);
+  // (5) a save and a load in the middle of the hand in hand: the frame goes on, no error (the tasks are not saved: after the load
+  // each one is again what the world makes of them)
+  live(a, 30); [a, b] = twoOf([b.id]); begin(a, b, 'handhold'); live(a, 8);
+  tryF('o save no meio', () => { const s0 = G.Save.serialize(); G.Save.apply(JSON.parse(s0)); S = G.S; const a2 = S.villagers.get(a.id) || [...S.villagers.values()][0]; live(a2, 10); });
+  // (6) the greeting by the people and the standing
+  const g = (civ, grp, ogrp) => A.greetOf({ civ, grp, ogrp, captive: false, ocaptive: false });
+  const gr = [['romano', g('romano', 'povo', 'povo'), 'antebraco'], ['egípcio', g('egipcio', 'povo', 'povo'), 'reverencia'], ['nórdico', g('nordico', 'povo', 'povo'), 'aperto'],
+    ['o povo ao nobre', g('romano', 'povo', 'nobreza'), 'baixa'], ['o nobre ao povo', g('egipcio', 'nobreza', 'povo'), 'nobre']];
+  const grOk = gr.every(x => x[1] === x[2]); out.push('o cumprimento: ' + gr.map(x => `${x[0]} ${x[1]}`).join(', '));
+  const chk = P3.check();
+  ok('v8 a dois: cada um o seu papel, as mãos no outro, o lugar do mundo; longe, sozinho; a mão do deus, a morte e o save no meio', !errs.length && hugOk && farOk && godOk && deadOk && grOk && !chk.length && !Object.keys(G.modErr || {}).length,
+    (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
+}
+
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `VIDA3D: ${fails.length} falha(s): ${fails.join(', ')}` : 'VIDA3D: ok');
 process.exit(fails.length ? 1 : 0);

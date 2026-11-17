@@ -27,7 +27,7 @@ run('js/itens.js');
 // those are bare shelves that answer nothing: what the hands hold, G.Inv.held, asks none of them — T-1367)
 G.Depot = G.Depot || { addKind() { }, onMove: [], may: () => ({ ok: false }), move: () => 0, weight: () => 0, parse: r => String(r).split(':') };
 G.Act = G.Act || { hooks: { tick: [], possess: [] } }; G.Eco = G.Eco || { name: k => k };
-run('js/inventario.js'); { const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/(?:anim-|vida|social-clips|rosto)[^"]+)"><\/script>/g)) run(m[1]); } // (and 22c's: the acting, the reader, the clips of life)
+run('js/inventario.js'); { const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/(?:anim-|vida|social-clips|duo-clips|rosto)[^"]+)"><\/script>/g)) run(m[1]); } // (and 22c's: the acting, the reader, the clips of life)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
 G.People3D.init(THREE, realm);

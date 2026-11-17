@@ -1180,6 +1180,12 @@
     // (the palm on the holder's left to the left arm: in the trunk's frame the left is +x)
     if (HP.t[0][0] < HP.t[1][0]) { const t = HP.tw[0]; HP.tw[0] = HP.tw[1]; HP.tw[1] = t; HP.t[0] = HP.tw[0]; HP.t[1] = HP.tw[1]; }
   }
+  // (the hands of one of two in an act of two on the other: each one's point of the world in the trunk's frame — a hand with no point
+  // keeps the gesture's own)
+  function duoTargets(DU) {
+    HP.mode = 'duo'; HP.pole = DU.pole;
+    for (let q = 0; q < 2; q++) { if (!DU.on[q]) { HP.t[q] = null; continue; } const T = DU.T[q]; V3.a.set(T[0], T[1], T[2]).applyMatrix4(M.ci); HP.t[q] = HP.tw[q]; HP.t[q][0] = V3.a.x; HP.t[q][1] = V3.a.y; HP.t[q][2] = V3.a.z; }
+  }
   // (the empty hands reaching for a point of the world: each palm a hand's width to its side)
   function reachEmpty(R, L, s) {
     const r = L.reach; HP.mode = 'reach'; HP.pole = [0.7, -0.5, -0.45];
@@ -1228,10 +1234,14 @@
     // (what is held — or the empty hands reaching for a point —: where the thing sits and where the palms must be)
     const H = !lie && !L.bind ? L.held || null : null; const rch = !lie && !L.bind && L.reach && L.reach.w > 0.001 ? L.reach : null;
     const PR = !lie && !L.bind && L.pair ? L.pair : null; // (one of two under one crate)
+    // (one of two in an act of two — L.duo, from P3.update: the hands to the other's body or to where two hands meet, D-605 —, when
+    // the hands hold no load)
+    const DU = !lie && !L.bind && !PR && !H && !rch && L.duo && L.duo.w > 0.001 ? L.duo : null;
     if (PR) { M.ci.copy(R[B.chest]).invert(); pairTargets(L, PR); }
     else if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
+    else if (DU) { M.ci.copy(R[B.chest]).invert(); duoTargets(DU); if (hold) HP.t[0] = null; }
     else HP.t[0] = HP.t[1] = null;
-    const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
+    const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : DU ? G.clamp(DU.w, 0, 1) : 0;
     // (what the hands hold of their own — G.Inv.held, D-336: the thing in the right hand, the other hand's; a hand on a load holds
     // nothing else; and how each is held when no gesture works it: a shaft upright, a tool hanging from the fist, a shield on the
     // forearm, the bow at the side)
@@ -1502,6 +1512,36 @@
   P3.clipClock = clipClock;
   // (the frame's own lists and clocks, kept: the nearest people a frame — reused entries, nothing made each frame —, the frames
   // drawn and the view's seconds, for the beats of the far ones and the crowd's portraits)
+  // (the chest of someone in an act of two, for the other's hands: the rig's own of this frame where the skin drew them, else their
+  // standing chest where the view put them — D-605)
+  let CH0 = null;
+  function keepChest(s, Y, k) {
+    const m = s.chM || (s.chM = new THREE.Matrix4());
+    if (skin && RF) { m.copy(RF[B.chest]); return; }
+    if (!CH0) { const L1 = { s: 1, plant: null, ground: undefined, held: null, reach: null, pair: null, duo: null, inv: NO_INV, lod: 2 }; CH0 = P3.rig(0, 0, 0, Math.PI / 2, POSE0(), L1)[B.chest].clone(); }
+    M.dc = M.dc || new THREE.Matrix4(); m.makeTranslation(s.X, Y, s.Z); M.dc.makeRotationY(-s.yaw + Math.PI / 2); m.multiply(M.dc); M.dc.makeScale(k, k, k); m.multiply(M.dc); m.multiply(CH0);
+  }
+  // (where the hands go on the other, in the world: a point of the other's trunk — their chest's frame —, or a point between the two
+  // where two hands meet — the middle of the two chests, x to my left, y from the lower chest, z toward the other; the rig takes the
+  // hands there by the arms' reach, by the act's weight in its window, du.k)
+  const POLE_DUO = [0.7, -0.6, -0.4];
+  function duoAim(s, du, Y) {
+    const e = du.e, o = du.o; if (!e.hands || !o.chM || !s.chM) return null;
+    const r = s.duT || (s.duT = { T: [[0, 0, 0], [0, 0, 0]], on: [false, false], w: 0, pole: POLE_DUO });
+    r.w = du.k; r.pole = e.pole || POLE_DUO;
+    const me = DV.a || (DV.a = new THREE.Vector3()), ot = DV.b || (DV.b = new THREE.Vector3()), p = DV.c || (DV.c = new THREE.Vector3());
+    me.setFromMatrixPosition(s.chM); ot.setFromMatrixPosition(o.chM);
+    let fx = ot.x - me.x, fz = ot.z - me.z; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl; const lx = fz, lz = -fx; // (my left: the facing turned a quarter)
+    for (let q = 0; q < 2; q++) {
+      const h = e.hands[q]; r.on[q] = !!h; if (!h) continue;
+      if (h[0] === 'b') p.set(h[1], h[2], h[3]).applyMatrix4(o.chM);
+      else p.set((me.x + ot.x) / 2 + lx * h[1] + fx * h[3], Math.min(me.y, ot.y) + h[2], (me.z + ot.z) / 2 + lz * h[1] + fz * h[3]);
+      r.T[q][0] = p.x; r.T[q][1] = p.y; r.T[q][2] = p.z;
+    }
+    return r;
+  }
+  const DV = {};
+  P3.duoAim = duoAim; P3.keepChest = keepChest; // (for the tests)
   const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
   const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
   const visAt = id => vis.get(id);
@@ -1614,6 +1654,10 @@
       s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
       const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;
       let st = pl && s.sp < 0.2 ? pl.st : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st;
+      // (two in one gesture — the reader's Vida3D.duo, D-605: each one's part of the act and, in its window on the world's clock, the
+      // hands on the other; the place is the world's — never moved here —, and too far apart each one plays the act alone)
+      const du = pl ? null : fresh ? G.Vida3D.duo(s, v, visAt) : s.duOn ? s.du : null; s.duOn = !!du;
+      if (du && du.clip) st = du.clip;
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
       // of whoever walks: the prisoner's bound hands, the word said walking — the reader's, Vida3D.overOf)
       let over = null;
@@ -1627,14 +1671,14 @@
       Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; if (fresh) reachOf(s, v, Lv, s.X, Y, s.Z, dtA);
       // (and the drink, where the world has them drunk and on their feet: the additive stagger — inside, at their place, they sit)
       const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
-      Lv.lod = s.lod;
+      Lv.lod = s.lod; Lv.duo = du && du.k > 0.001 ? duoAim(s, du, Y) : null;
       if (fresh) {
         // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
         // (v.actT), the drink, the tiredness — the pose made from what they do (anim-body.js; the reader's numbers: vida3d.js)
         const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
-        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
+        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = du && du.clip ? du.u : clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
         // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
         // its breath; the hand one leads with)
         I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
@@ -1657,6 +1701,7 @@
       s.cull = inField(s.X, Y, s.Z, Lv.s) ? 0 : 1;
       if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([s.X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, s.Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
       P3.body(idx++, s.X, Y, s.Z, s.yaw + (dk > 0 && (st === 'walk' || st === 'carryWalk') ? Anim.weave(s.t, v.id, dk) : 0), s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
+      if (v.task && v.task.id && s.sp < 0.25) keepChest(s, Y, Lv.s); // (where their chest is, for the other's hands in an act of two)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } sp.position.set(s.X, Y + 2.2 * Lv.s + Math.sin(s.t * 3) * 0.03, s.Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);

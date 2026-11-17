@@ -191,7 +191,40 @@
   };
   // the one a person is with, by the errand the world gave them (the talk, the visit, the courting: t.id is the other)
   const WITH = new Set(['talk', 'social', 'court', 'visit', 'amor', 'adeus', 'contato']);
-  V3.partnerOf = v => { const t = v.task; return t && WITH.has(t.type) && t.id ? G.S.villagers.get(t.id) || null : null; };
+  // (and the two of an act of the society: the one held for it — the task 'duo' — and the one who began it, by its part: t.papel)
+  V3.partnerOf = v => { const t = v.task; return t && t.id && (WITH.has(t.type) || t.type === 'duo' || t.papel) ? G.S.villagers.get(t.id) || null : null; };
+
+  // ------------------------------ two in one gesture (22c fase 4, D-605) ------------------------------
+  // the part of a person in an act between two, as the view draws them — null when there is none, or when the world has them too
+  // far apart or not facing: then each one plays the act alone. The two: the act of the society's vocabulary (v.act), the other the
+  // one their task names, whose own task names them back; the part, 'b' the one held (the task 'duo'), 'a' the one who began. The
+  // time of the act is the world's: the act begins for both in the step the world puts them together (G.Convivio.place; the held
+  // one's task begins there, v.actT) — the gesture of each and the meeting of the hands on that clock. The part is the task's (t.papel),
+  // else the held one's. Only reads; the answer is kept
+  // in the view's memory (s.du)
+  V3.duo = function (s, v, visAt) {
+    const A = G.Anim3D; if (!A.duoFor || !v.act || !G.SocAtos || !(s.sp < 0.25)) return null;
+    const t = v.task; if (!t || !t.id) return null; const w = G.S.villagers.get(t.id);
+    if (!w || !w.task || w.task.id !== v.id || w.held || v.held || !G.SocAtos.has(v.act)) return null;
+    const papel = t.papel === 'a' || t.papel === 'b' ? t.papel : t.type === 'duo' ? 'b' : 'a';
+    const o = visAt(w.id); if (!o || !o.an || o.sp > 0.25) return null;
+    const ctx = V3.duoCtx(v, w, s.duc || (s.duc = {})); const e = A.duoFor(v.act, papel, ctx); if (!e) return null;
+    // (in place: the world's distance, facing — the view only meets the hands, it never brings anyone nearer)
+    const dx = o.X - s.X, dz = o.Z - s.Z, d = Math.hypot(dx, dz); const sa = G.SocAtos.of(v.act); const want = Math.max(sa && sa.dist ? sa.dist : 1.2, 0.3);
+    if (d > want + 0.45 || d < 0.15) return null;
+    let da = Math.atan2(dz, dx) - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; if (Math.abs(da) > 0.9) return null;
+    const C = e.clip && A.CLIPS ? A.CLIPS[e.clip] : null; const held = papel === 'b' ? v : w; const T = held.actT || 0;
+    const u = C ? (C.loop ? (T / C.dur) % 1 : Math.min(1, T / C.dur)) : 0;
+    const r = s.du || (s.du = {}); r.e = e; r.o = o; r.w = w; r.d = d; r.u = u; r.papel = papel; r.clip = C ? e.clip : null;
+    r.k = e.hands && (!e.reach || d <= e.reach) ? A.duoW(e, C ? u : 0.5) : 0; // (the hands on the other, or not this far apart)
+    return r;
+  };
+  // (what the greeting reads: the people and the standing of the two — G.Fac's people, the group, the captive)
+  V3.duoCtx = function (v, w, out) {
+    const c = out || {}; const fv = G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null, fw = G.Fac && G.Fac.ofV ? G.Fac.ofV(w) : null;
+    c.civ = (fv && fv.civ) || v._civ || v.civ || ''; c.grp = v.grp || ''; c.captive = !!(v.captive || v.jail);
+    c.ociv = (fw && fw.civ) || w._civ || w.civ || ''; c.ogrp = w.grp || ''; c.ocaptive = !!(w.captive || w.jail); return c;
+  };
   // the look of a person this frame (the head's turn, radians): the body first, where it stands before them; else the one they
   // are with, where the view draws them (at: id → { X, Z }); else ahead
   V3.look = function (s, v, av, st, at) {

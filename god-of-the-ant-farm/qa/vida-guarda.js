@@ -1,4 +1,4 @@
-// vida-guarda: the guard's rules of the life that is seen (22c, rules 213 to 219) shown to bite — a copy of the game's js/ with one
+// vida-guarda: the guard's rules of the life that is seen (22c, rules 213 to 221) shown to bite — a copy of the game's js/ with one
 // line broken on purpose (the rest of the game linked, not copied), qa/guard.js run on it, and the rule's own words looked for in
 // what it says. A rule that lets its sabotage through is a rule that guards nothing.
 //   node qa/vida-guarda.js            ONLY=213,215 for some rules
@@ -21,16 +21,22 @@ const CASES = [
   ['218', 'a micro-ação sorteada', 'js/anim-ocio.js', s => s.replace("const Anim = G.Anim3D = G.Anim3D || {};", "const Anim = G.Anim3D = G.Anim3D || {}; const sorte = () => G.vrr(0, 1);")],
   ['218', 'a micro-ação no relógio da máquina', 'js/anim-ocio.js', s => s.replace("const Anim = G.Anim3D = G.Anim3D || {};", "const Anim = G.Anim3D = G.Anim3D || {}; const agora = () => performance.now();")],
   ['219', 'um ato do vocabulário sem pose', 'js/soc-atos.js', s => s.replace("pet: ['afeto', 1, 0.6, '', 3],", "pet: ['afeto', 1, 0.6, '', 3], zzzNovo: ['zzzFam', 0, 0, '', 3],")],
+  // (22c onda 2: the two of an act)
+  ['220', 'um ato de dois sem as suas partes', 'js/anim-duo.js', s => s.replace("kiss: { a: P('duo-beijo',", "beijo: { a: P('duo-beijo',")],
+  ['220', 'o cumprimento sem o povo', 'js/anim-duo.js', s => s.replace("if (act === 'greet' || act === 'farewell') return GREET[Anim.greetOf(ctx || {})];", "if (act === 'greet' || act === 'farewell') return GREET.aperto;")],
+  ['221', 'as mãos no outro dadas fora do quadro', 'js/vida3d.js', s => s.replace("V3.lefty = v =>", "V3.maos = Lv => { Lv.duo = null; }; V3.lefty = v =>")],
+  ['221', 'o gesto de dois num relógio do desenho', 'js/vida3d.js', s => s.replace("const held = papel === 'b' ? v : w; const T = held.actT || 0;", "const held = papel === 'b' ? v : w; const T = s.t || 0;")],
+  ['221', 'o leitor movendo um dos dois', 'js/vida3d.js', s => s.replace("if (d > want + 0.45 || d < 0.15) return null;", "if (d > want + 0.45) { w.x = v.x; } if (d < 0.15) return null;")],
 ];
 // (the opening words of each rule's own message: the rule bit, not another one)
-const RULE = { 213: 'o leitor da vida só lê', 214: 'toda tarefa tem pose', 215: 'o porte vem do leitor', 216: 'só o anim-rosto escreve o rosto', 217: 'a coisa do gesto é do inventário', 218: 'a micro-ação é uma conta', 219: 'todo ato do vocabulário tem pose' };
+const RULE = { 213: 'o leitor da vida só lê', 214: 'toda tarefa tem pose', 215: 'o porte vem do leitor', 216: 'só o anim-rosto escreve o rosto', 217: 'a coisa do gesto é do inventário', 218: 'a micro-ação é uma conta', 219: 'todo ato do vocabulário tem pose' , 220: 'todo ato de dois tem as duas partes', 221: 'a dois'};
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null;
 for (const e of fs.readdirSync(GAME)) if (e !== 'js') fs.symlinkSync(path.join(GAME, e), path.join(TMP, e));
 let bad = 0, n = 0;
 // (the game as it is: clean, or the sabotages say nothing)
 const guard = () => { try { return cp.execFileSync('node', [path.join(GAME, 'qa', 'guard.js'), TMP], { encoding: 'utf8' }); } catch (e) { return String(e.stdout || ''); } };
 cp.execFileSync('cp', ['-r', path.join(GAME, 'js'), path.join(TMP, 'js')]);
-{ const out = guard(); const own = out.split('\n').filter(l => Object.values(RULE).some(r => l.startsWith(r))); console.log(`${own.length ? 'FALHOU' : 'PASSOU'} | vida-guarda o jogo como está | ${own.length ? own.slice(0, 3).join(' ‖ ') : 'as regras 213 a 219 limpas'}`); if (own.length) bad++; }
+{ const out = guard(); const own = out.split('\n').filter(l => Object.values(RULE).some(r => l.startsWith(r))); console.log(`${own.length ? 'FALHOU' : 'PASSOU'} | vida-guarda o jogo como está | ${own.length ? own.slice(0, 3).join(' ‖ ') : 'as regras 213 a 221 limpas'}`); if (own.length) bad++; }
 for (const [rule, name, file, f] of CASES) {
   if (ONLY && !ONLY.has(rule)) continue; n++;
   const p = path.join(TMP, file), orig = path.join(GAME, file);
