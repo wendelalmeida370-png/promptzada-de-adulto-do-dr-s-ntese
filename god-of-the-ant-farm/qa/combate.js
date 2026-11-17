@@ -323,6 +323,9 @@ if (want('c9')) {
   let why = w ? '' : 'ninguém para desafiar';
   if (w) { used.add(w.id); w.courage = 0.95; stand(w, 1.5, 0); clear([vb, w]); const r = god(() => Cb.challenge(vb, w)); why = r.ok ? '' : r.why; if (r.ok) { frames(30); const d0 = !!Cb.duel(); reload(); const w2 = S.villagers.get(w.id); duelOk = !!(Cb.duel() && w2 && w2.task && w2.task.type === 'combat' && w2.task.duel); if (!duelOk) why = `antes ${d0 ? 'em duelo' : 'SEM duelo'}; depois ${Cb.duel() ? 'duelo' : 'sem duelo'}, ${w2 ? w2.task ? w2.task.type : 'sem tarefa' : 'sumiu'}`; frames(30); } }
   res.push(`o save no meio do duelo: ${duelOk ? 'o duelo voltou, quem duela luta' : 'PERDIDO (' + why + ')'}`); if (!duelOk) bad.push('o duelo não atravessou o save');
+  // the god's hand takes the one dueling: the duel is let go, and nobody fights on in the air
+  if (Cb.duel()) { const wd = S.villagers.get(Cb.duel().o); const d1 = Cb.duel(); wd.held = true; frames(3); const gone = !Cb.duel(); wd.held = false; res.push(`a mão do deus pega quem duela: ${gone ? 'o duelo acabou' : 'O DUELO FICOU'}`); if (!gone) bad.push('o duelo ficou com quem duela na mão do deus');
+    if (gone) { const r2b = god(() => Cb.challenge(G.Possess.body(), wd)); if (!r2b.ok) res.push(`(o segundo desafio: ${r2b.why})`); frames(3); } void d1; }
   // the body dies in the middle of the duel: the duel goes with it
   const vb2 = G.Possess.body(); if (Cb.duel() && vb2) { god(() => G.Village.kill(vb2, 'war')); frames(2); res.push(`o corpo morre no duelo: ${Cb.duel() ? 'O DUELO FICOU' : 'o duelo acabou'}`); if (Cb.duel()) bad.push('o duelo ficou sem o corpo'); }
   // a fresh body for the rest

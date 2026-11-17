@@ -506,7 +506,7 @@
     if (d) {
       const a = S.villagers.get(d.a), o = S.villagers.get(d.o);
       if (!a || !o || !isBody(a)) endDuel(0, 'largou');
-      else if (G.dist(a.x, a.y, o.x, o.y) > Cb.DUEL_FAR || o.inside || a.inside) endDuel(0, 'largou');
+      else if (G.dist(a.x, a.y, o.x, o.y) > Cb.DUEL_FAR || o.inside || a.inside || o.held || o.air || o.aboard || o.captive || o.jail) endDuel(0, 'largou'); // (gone off, in a building, in the god's hand, taken)
       else if (!(o.task && o.task.type === 'combat' && o.task.id === a.id)) fightBody(o, a); // (the fight's errand wears out — t.age — while the duel lasts)
     }
     const B = S.combate.br;

@@ -1167,7 +1167,10 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 { for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (f !== 'combate.js' && /\baddKind\(\s*'a'/.test(c)) fails.push(`a flecha do livro: ${f}:${k + 1} registra o lugar 'a:' fora do combate.js (D-419): ${l.trim().slice(0, 110)}`); });
   const cb = src['combate.js'] || []; if (!cb.some(l => /G\.Depot\.addKind\('a'/.test(l))) fails.push("a flecha do livro: o combate.js não registra o lugar 'a:' (D-419)");
   cb.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bDepot\.(move|make|use|drop)\(/.test(c) && !/\bcode\b/.test(c)) fails.push(`a flecha do livro: combate.js:${k + 1} move uma flecha sem dizer a causa (code — D-419): ${l.trim().slice(0, 110)}`); });
-  if (!(src['war.js'] || []).some(l => /const R = G\.Combate \? G\.Combate\.reach\(v, o, 0\.85\) : 0\.85;/.test(l))) fails.push('quem luta com o corpo: o fightStep do war.js não pergunta ao G.Combate.reach a que distância golpeia (D-420)'); }
+  if (!(src['war.js'] || []).some(l => /const R = G\.Combate \? G\.Combate\.reach\(v, o, 0\.85\) : 0\.85;/.test(l))) fails.push('quem luta com o corpo: o fightStep do war.js não pergunta ao G.Combate.reach a que distância golpeia (D-420)');
+  // (and the guard of the body is asked before a blow reaches it — the possess.js's door of a hurt to the body: the dodge's window,
+  // the parry, the shield — D-415)
+  if (!(src['possess.js'] || []).some(l => /amt = G\.Combate\.shield\(v, amt, cause, by\); if \(!\(amt > 0\)\) return;/.test(l))) fails.push('a guarda do corpo: o Vg.damage do possess.js não pergunta ao G.Combate.shield antes de o golpe chegar ao corpo (D-415)'); }
 // 151. "todo ato do combate tem a sua linha de som" (D-166, D-422): o que o mundo vê o corpo fazendo num golpe, numa guarda, no arco
 // (o vact dos atos do combate-ui.js) e os atos que os clipes do combate mostram (acts) têm a sua linha na tabela A.ATO do
 // audio-src.js — um som, ou o silêncio dito
