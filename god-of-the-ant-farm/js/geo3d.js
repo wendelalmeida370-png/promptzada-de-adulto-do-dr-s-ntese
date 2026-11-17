@@ -37,7 +37,7 @@
     if (!G.Realm || !G.Realm.qualAdd) return; const qa = G.Realm.qualAdd;
     qa('geoCarve', { baixa: 0, media: 4, alta: 8, ultra: 8 });
     qa('geoCarveR', { baixa: 0, media: 70, alta: 130, ultra: 220 });
-    qa('geoForm', { baixa: 0, media: 110, alta: 240, ultra: 400 });
+    qa('geoForm', { baixa: 0, media: 80, alta: 240, ultra: 400 });
     qa('geoFar', { baixa: 2, media: 1, alta: 1, ultra: 0.5 });
     qa('geoHor', { baixa: 1, media: 2, alta: 2, ultra: 3 });
   };
@@ -49,9 +49,14 @@
   // (how finely a chunk's faces are carved: the preset's steps within its reach of the body by the chunk's nearest edge, half of them
   // beyond; nothing on the Leve — asked by the chunk's signature, so the chunk is made again when it changes. Only seen)
   const lodOf = new Map(); G.worldHooks.push(() => { lodOf.clear(); });
-  G3D.lod = function (x0, y0, n) {
+  // (the memories of how finely each chunk was drawn — kept so a body on a chunk's edge does not make it again and again — forgotten: for
+  // the proofs that draw the same world twice from the same start)
+  G3D.forget = () => { lodOf.clear(); formOf.clear(); };
+  // (eye: for the proofs, a point of the world in tiles standing for the body — { x, y })
+  const bodyOr = eye => eye || (G.Possess && G.Possess.body ? G.Possess.body() : null);
+  G3D.lod = function (x0, y0, n, eye) {
     const q = Q(); const k = q.geoCarve | 0; if (!k || !Ge()) return 0;
-    const f = G.Possess && G.Possess.body ? G.Possess.body() : null; if (!f) return k;
+    const f = bodyOr(eye); if (!f) return k;
     const L = G.Space.TILE, X = f.x * L, Z = f.y * L; const D = q.geoCarveR || 0; const key = x0 + ',' + y0;
     const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
     const was = lodOf.get(key); const fine = was === k ? d < D + 10 : d < D; const v = fine ? k : Math.max(2, k >> 1); lodOf.set(key, v); return v;
@@ -59,8 +64,8 @@
   // (whether the formations of a chunk are drawn: within the preset's reach of the body by the chunk's nearest edge — once drawn, until the
   // body is 12 m further; with no body, all of them)
   const formOf = new Map(); G.worldHooks.push(() => { formOf.clear(); });
-  G3D.formsOn = function (x0, y0, n) {
-    const q = Q(); const R = q.geoForm || 0; if (R <= 0) return 0; const f = G.Possess && G.Possess.body ? G.Possess.body() : null; if (!f) return 1;
+  G3D.formsOn = function (x0, y0, n, eye) {
+    const q = Q(); const R = q.geoForm || 0; if (R <= 0) return 0; const f = bodyOr(eye); if (!f) return 1;
     const L = G.Space.TILE, X = f.x * L, Z = f.y * L; const key = x0 + ',' + y0; const d = Math.hypot(Math.max(x0 * L - X, 0, X - (x0 + n) * L), Math.max(y0 * L - Z, 0, Z - (y0 + n) * L));
     const on = formOf.get(key) ? d < R + 12 : d < R; formOf.set(key, on); return on ? 1 : 0;
   };
@@ -96,8 +101,8 @@
   }
   // the carved faces of a chunk, one geometry for the land's material (the land's shader paints them: the bands, the joints, the moss) —
   // and the holes the mouths of the caves cut in them
-  G3D.carveGeo = function (x0, y0, n, holes) {
-    const k = G3D.lod(x0, y0, n); if (!k || !THREE) return null; const g = Ge(); return g.batch(() => carveGeoIn(x0, y0, n, holes, k, g));
+  G3D.carveGeo = function (x0, y0, n, holes, eye) {
+    const k = G3D.lod(x0, y0, n, eye); if (!k || !THREE) return null; const g = Ge(); return g.batch(() => carveGeoIn(x0, y0, n, holes, k, g));
   };
   function carveGeoIn(x0, y0, n, holes, k, g) {
     const P = [], NR = [], C = [], I = []; let tiles = 0; const p = [0, 0, 0, 0];
@@ -285,16 +290,18 @@
   }
   // the pieces of a chunk: the stones of the world (always — the feet stand on them) and, within the preset's reach of the body, the
   // formations of its faces and the stones round each mouth's lip
-  function piecesOf(x0, y0, n) {
+  function piecesOf(x0, y0, n, eye) {
     const S = G.S; const g = Ge(); const list = []; const TL = G.Space.TILE, HM = G.Space.HM; kit();
     for (let y = y0; y < Math.min(N, y0 + n); y++) for (let x = x0; x < Math.min(N, x0 + n); x++) {
       const i = y * N + x; const o = S.objAt[i]; const r = o && S.rocks.get(o); if (!r) continue;
       // (the shape is the Space's: the feet stand on these very faces — the meteor's black stone kept black)
       const rock = r.meteor ? 4 : g.rockAt(i); for (const st of G.Space.stones(r)) { piece(list, 'pedra0', st.X, st.Y, st.Z, st.ry, st.sx, st.sy, st.sz, rock, i); if (r.meteor) list[list.length - 1].c = [0.42, 0.32, 0.3]; }
     }
-    if (G3D.formsOn(x0, y0, n)) {
-      // (the stones broken off each boulder lying round its foot, sunk in the ground — never on a road)
-      for (let y = y0; y < Math.min(N, y0 + n); y++) for (let x = x0; x < Math.min(N, x0 + n); x++) {
+    if (G3D.formsOn(x0, y0, n, eye)) {
+      // (the stones broken off each boulder lying round its foot, sunk in the ground — never on a road; only near, as the plants' finest
+      // things: 40 m × the preset's lod, the reach they had when the forest drew them)
+      const f = bodyOr(eye), TLm = G.Space.TILE; const dn = f ? Math.hypot(Math.max(x0 * TLm - f.x * TLm, 0, f.x * TLm - (x0 + n) * TLm), Math.max(y0 * TLm - f.y * TLm, 0, f.y * TLm - (y0 + n) * TLm)) : 0;
+      if (dn < 40 * (Number.isFinite(Q().lod) ? Q().lod : 1)) for (let y = y0; y < Math.min(N, y0 + n); y++) for (let x = x0; x < Math.min(N, x0 + n); x++) {
         const i = y * N + x; const o = S.objAt[i]; const r = o && S.rocks.get(o); if (!r) continue; const big = G.Space.stones(r)[0]; const rock = r.meteor ? 4 : g.rockAt(i);
         for (let k = 0; k < 5; k++) { const a = G.hash(o * 7 + k) * TAU, dd = big.sx * (0.55 + G.hash(o * 11 + k) * 0.5), sz = 0.08 + G.hash(o * 13 + k) * 0.12; const px = big.X + Math.cos(a) * dd, pz = big.Z + Math.sin(a) * dd;
           if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)]) continue; piece(list, 'pedra0', px, G.Space.floorY(px, pz) - sz * 0.3, pz, a * 3, sz * 1.3, sz * 0.8, sz, rock, i); }
@@ -318,7 +325,7 @@
     }
     return list;
   }
-  G3D.piecesOf = (x0, y0, n) => (THREE ? (kit(), piecesOf(x0, y0, n)) : []);
+  G3D.piecesOf = (x0, y0, n, eye) => (THREE ? (kit(), piecesOf(x0, y0, n, eye)) : []);
   // (what the pieces of a chunk are made of — its stones and their sizes, the formations' reach — for the part's signature)
   G3D.pieceSig = function (x0, y0, n) {
     const S = G.S; let s = 3; for (let y = y0; y < Math.min(N, y0 + n); y++) for (let x = x0; x < Math.min(N, x0 + n); x++) { const o = S.objAt[y * N + x]; const r = o && S.rocks.get(o); if (r) s = (s * 31 + o + G.Space.stoneSize(r)) | 0; }
@@ -346,7 +353,7 @@
   G3D.farStep = function (x0, y0, n) {
     const q = Q(); const st = q.geoFar || 2; if (st >= 2) return 2; const S = G.S; const V = N + 1; let mx = 0;
     for (let y = y0; y < Math.min(N, y0 + n); y++) for (let x = x0; x < Math.min(N, x0 + n); x++) { const H = S.H; const a = H[y * V + x], b = H[y * V + x + 1], c = H[(y + 1) * V + x], d = H[(y + 1) * V + x + 1]; const r = Math.max(a, b, c, d) - Math.min(a, b, c, d); if (r > mx) mx = r; }
-    const m = mx * G.Space.HM; return m > 9 ? st : m > 4.5 ? Math.max(1, st) : 2;
+    const m = mx * G.Space.HM; return m > 9 ? st : m > 4.5 && st < 1 ? 1 : 2; // (the Média and the Alta only the roughest: a face of over nine metres)
   };
 
   // ------------------------------ the land beyond the edge ------------------------------

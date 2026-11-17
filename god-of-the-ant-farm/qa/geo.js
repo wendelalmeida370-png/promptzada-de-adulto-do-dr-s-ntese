@@ -23,7 +23,7 @@
 'use strict';
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
-const { G, M } = T.load({ qa: true, extra: ['qa/geo-inv.js'] });
+const { G, M } = T.load({ qa: true }); // (the checker «relevo» comes in the qa.js: qa/junta-inv.js)
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 const on = k => !ONLY || ONLY.includes(k);
 const fails = [];
