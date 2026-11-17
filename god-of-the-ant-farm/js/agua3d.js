@@ -236,7 +236,9 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         #endif
         // (far off the small ripples blur into one sheen: only the long waves are seen, no glitter of noise)
         float wnear = 1.0 - smoothstep(22.0, 130.0, length(cameraPosition - vWW));
-        gw = gw * calm * mix(0.45, 1.0, wnear) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear * (1.0 - still * 0.75);
+        // (still water — a lake, a pool, the slack of a wide river — lies calm in a light wind: a mirror of the shore; the wind roughens it)
+        float lakeC = mix(0.28 + ws * 0.4, 1.0, max(isSea, smoothstep(0.05, 0.6, fsp)));
+        gw = gw * calm * mix(0.45, 1.0, wnear) * mix(1.0, lakeC, 0.6) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear * (1.0 - still * 0.75) * lakeC;
         vec3 nW = normalize(vec3(-gw.x, 1.0, -gw.y));
         normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);`)
         .replace('#include <opaque_fragment>', `
