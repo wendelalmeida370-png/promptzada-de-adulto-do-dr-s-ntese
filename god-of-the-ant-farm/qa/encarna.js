@@ -1104,6 +1104,8 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       for (const t of near.slice(0, 12)) { const p = G.W.findPath(b.x, b.y, t.x, t.y, true, 30000); const e = p && p.length ? p[p.length - 1] : [t.x, t.y]; const d = Math.hypot(e[0] - t.x, e[1] - t.y) || 1;
         if ([0.3, 0.4, 0.22, 0.5].some(k => G.Avatar.place(t.x + (e[0] - t.x) / d * k, t.y + (e[1] - t.y) / d * k))) { tr = t; break; } }
       if (tr) { __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null;
+        // (the body's own axe — 20g, D-426: without one no tree is felled; the test's hand puts its people's in the bag, T-1473)
+        G.inSim++; try { const k = G.Inv.made('machado', b); if (k && G.Inv.count(b, k) < 1) G.Depot.make('m:' + b.id, k, 1, { code: 'teste', by: b.id }); } finally { G.inSim--; }
         const c0 = tr.chop; const r = G.Interact.run({ id: 'arvore', t: { tr, X: tr.x * TL, Z: tr.y * TL } }); G.Modes.menu(true); __E.f(90); const during = tr.chop; G.Modes.menu(false); __E.until(() => !G.Avatar.busy(), 200); __E.f(2);
         out.stroke = { ran: !!(r && r.ok), during: +(during - c0).toFixed(3), after: +(tr.chop - c0).toFixed(3), tree: tr.id, nearer: near.indexOf(tr), msg: r && !r.ok ? r.msg : undefined }; } }
     // 3. a load carried to the store: drawn in the hands while the world has it in them, never after

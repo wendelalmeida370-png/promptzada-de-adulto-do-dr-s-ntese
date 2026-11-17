@@ -52,7 +52,10 @@ const Q = process.env.Q || 'media';
     const S = G.S;
     // (a tree of the land, grown, free, with walkable ground round it, away from the buildings)
     const HIGH = new Set(['oak', 'olive', 'apple', 'mulberry', 'birch', 'willow', 'acacia', 'baobab', 'palm', 'date', 'jungle']); // (a crown above the eye: the stroke seen, not the branches)
-    const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.9 && HIGH.has(t.kind) && ![...S.animals.values()].some(a => !a.dead && Math.abs(a.x - t.x) < 14 && Math.abs(a.y - t.y) < 14) && !t.claim && !t.chop && [...S.buildings.values()].every(b => Math.abs(b.x - t.x) > 4 || Math.abs(b.y - t.y) > 4)).sort((a, b) => a.id - b.id);
+    // (the high crowns first, then the fewest beasts round it: the photos of the stroke, not of a deer)
+    const near = t => [...S.animals.values()].filter(a => !a.dead && Math.abs(a.x - t.x) < 10 && Math.abs(a.y - t.y) < 10).length;
+    const sc = t => (HIGH.has(t.kind) ? 0 : 1000) + near(t);
+    const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.9 && !t.claim && !t.chop && [...S.buildings.values()].every(b => Math.abs(b.x - t.x) > 4 || Math.abs(b.y - t.y) > 4)).map(t => [sc(t), t]).sort((a, b) => a[0] - b[0] || a[1].id - b[1].id).map(e => e[1]);
     const v = [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && !o.sick && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
     if (!v || !tr.length) return { none: !v ? 'ninguém para viver' : 'nenhuma árvore' };
     if (!T.enter(v)) return { none: 'não entrou no corpo' };
@@ -85,7 +88,7 @@ const Q = process.env.Q || 'media';
   const U = [0.05, 0.3, 0.45, 0.55, 0.62, 0.8]; let got = 0;
   for (let i = 0; i < U.length; i++) {
     const at = await E(u => { const T = window.__T; let a = G.Avatar.actNow(); if (!a) { G.IncUI.use(); T.f(1); a = G.Avatar.actNow(); } if (!a) return null; T.until(() => { const b = G.Avatar.actNow(); return !b || b !== a || b.t / b.dur >= u; }, 400, 8); const b = G.Avatar.actNow(); return b ? +(b.t / b.dur).toFixed(2) : null; }, U[i]);
-    if (at !== null) { await shot(`machado-${i + 1}`, { x: 250, y: 60, width: 600, height: 560 }); got++; }
+    if (at !== null) { await shot(`machado-${i + 1}`, { x: 100, y: 60, width: 800, height: 560 }); got++; }
   }
   const r1b = await E(() => { const T = window.__T; const out = {}; document.querySelectorAll('#inc-banner, #inc-label, #inc-hud .ih-toasts, #inc-hud .ih-hint, #inc-hud .ih-prompt').forEach(e => { e.style.visibility = ''; }); out.chop = T.tr.chop; out.held = G.Inv.held(T.v).mao; const card = document.querySelector('#inc-hud .ih-work'); out.card = card && !card.classList.contains('hidden') ? card.innerText.replace(/\s+/g, ' ') : null; out.qa = T.novas(); return out; });
   await shot('trabalho-cartao');
@@ -101,7 +104,7 @@ const Q = process.env.Q || 'media';
     if (rock) { T.clearBag(v); T.give(v, 'picareta.bronze'); T.f(4); T.side(); G.IncUI.use(); T.f(1); const a = G.Avatar.actNow(); out.pick = a ? a.anim : null; T.until(() => { const b = G.Avatar.actNow(); return !b || b.t / b.dur >= 0.45; }, 300, 8); out.pickHeld = G.Inv.held(v).mao; }
     return out;
   });
-  await shot('picareta', { x: 250, y: 60, width: 600, height: 560 });
+  await shot('picareta', { x: 100, y: 60, width: 800, height: 560 });
   const r3b = await E(() => {
     const T = window.__T, v = T.v, S = G.S; const out = {}; while (G.Avatar.busy()) T.f(1); v.carry = null;
     // (a bank of a river or the sea, with no beast that kills near)
