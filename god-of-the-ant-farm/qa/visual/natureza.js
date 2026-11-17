@@ -47,7 +47,7 @@ const VIEWS = [
   ['agua-lago', 'gerado', 'lake', null, 0.1, 6, 0.42],
   ['agua-praia', 'gerado', 'shore', null, 0.12, 5.5, 0.42],
   ['agua-praia-tarde', 'gerado', 'shore', null, 0.12, 5.5, 0.69],
-  ['agua-chuva-rua', 'cidade', 'praca', 0.55, 0.3, 6.5, 0.42, { rain: 0.8 }],
+  ['agua-chuva-rua', 'cidade', 'praca', 3.9, 0.48, 9, 0.42, { rain: 0.8 }],
 ];
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
