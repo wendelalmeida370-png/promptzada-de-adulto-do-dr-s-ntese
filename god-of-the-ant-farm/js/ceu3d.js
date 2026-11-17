@@ -461,6 +461,31 @@ ${GXAIR}`;
     GX.gxFlash.value.x = fv * 0.55; GX.gxFlash.value.y = fv * 0.6; GX.gxFlash.value.z = fv * 0.75;
   }
   Ce3.flash = () => flashV;
+  // ------------------------------ the shooting stars ------------------------------
+  // (on a clear night, now and then — the chance of what is only seen, G.VR —, a streak high across the sky: a head and its tail
+  // fading behind it, gone in under a second)
+  const NMT = 14; let meteor = null, met = null;
+  function meteorTick(L, rdt) {
+    if (!meteor) {
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(NMT * 3), 3)); g.setAttribute('aA', new THREE.BufferAttribute(new Float32Array(NMT), 1));
+      meteor = new THREE.Points(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, uniforms: { uPx: { value: 1 }, gxGr: GX.gxGr, gxTn: GX.gxTn },
+        vertexShader: 'attribute float aA; uniform float uPx; varying float vA; void main() { vA = aA; gl_PointSize = max(1.0, (1.0 + aA * 2.4) * uPx); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: `varying float vA; void main() { vec2 p = gl_PointCoord * 2.0 - 1.0; float a = exp(-dot(p, p) * 3.0) * vA; if (a < 0.004) discard; gl_FragColor = vec4(vec3(0.9, 0.95, 1.0) * a * 3.0, 1.0);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }` }));
+      meteor.frustumCulled = false; meteor.renderOrder = -0.4; meteor.visible = false; scene.add(meteor);
+    }
+    const night = L.stars * (1 - G.smooth(0.45, 0.7, L.cover));
+    if (!met && night > 0.5 && G.VR() < rdt / 35) { const a = G.VR() * TAU, e = 0.5 + G.VR() * 0.7, b = a + (G.VR() < 0.5 ? 1 : -1) * (0.5 + G.VR() * 0.6); met = { a, e, b, de: -(0.15 + G.VR() * 0.3), t: 0, life: 0.5 + G.VR() * 0.5 }; }
+    if (!met) { meteor.visible = false; return; }
+    met.t += rdt; if (met.t > met.life) { met = null; meteor.visible = false; return; }
+    const P = meteor.geometry.attributes.position.array, A = meteor.geometry.attributes.aA.array; const u = met.t / met.life; const R = 1250;
+    for (let k = 0; k < NMT; k++) { const v = Math.max(0, u - k * 0.022); const az = met.a + (met.b - met.a) * v, el = met.e + met.de * v;
+      P[k * 3] = Math.cos(az) * Math.cos(el) * R; P[k * 3 + 1] = Math.sin(el) * R; P[k * 3 + 2] = Math.sin(az) * Math.cos(el) * R; A[k] = (1 - k / NMT) * Math.sin(Math.PI * u) * night; }
+    meteor.geometry.attributes.position.needsUpdate = true; meteor.geometry.attributes.aA.needsUpdate = true; meteor.visible = true;
+    meteor.position.copy(camera.position); meteor.scale.setScalar(Math.min(1, camera.far * 0.92 / 1400)); meteor.material.uniforms.uPx.value = renderer.getPixelRatio();
+  }
   // the lights, the air and the sky, made once with the 3D (realm3d's init: after the land's material, before the others)
   Ce3.init = function (three, rn, sc, cam) {
     THREE = three; renderer = rn; scene = sc; camera = cam;
@@ -733,7 +758,7 @@ ${GXAIR}`;
     // the dome and the stars go with the eye; the key light's picture of the shadows over the ground round the body
     skyMesh.position.copy(camera.position); stars.position.copy(camera.position);
     shaftsTick(L, focus, q);
-    cloudsTick(L, focus, Math.max(0, U.time.value - (lastVT < 0 ? U.time.value : lastVT))); lastVT = U.time.value;
+    { const rdt = Math.max(0, U.time.value - (lastVT < 0 ? U.time.value : lastVT)); cloudsTick(L, focus, rdt); meteorTick(L, rdt); } lastVT = U.time.value;
     GX.gxSunBox.value.w = sun.castShadow ? 1 : 0;
     if (focus) placeKey(kd, focus, q);
     // (the sun's picture of the shadows made again every n frames where the quality says so: three.js keeps the frame it

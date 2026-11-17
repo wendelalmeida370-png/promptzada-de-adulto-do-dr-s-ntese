@@ -3228,13 +3228,14 @@
       if (!G.Mata) { let k = 0; for (let c = 0; c < n * n; c += 97) if (A.cano[c] > 0) k++; if (k) add('céu', 3, `o dossel no mapa do ar sem o G.Mata, que é quem o diz (${k} cantos)`); }
     }
     // the 3D's drawn bolts: each where the world struck a moment ago (on the land, a stroke leaves the ground burnt)
-    const C3 = G.Ceu3D; if (C3 && C3.bolts) for (const b of C3.bolts) {
+    const C3 = G.Ceu3D; if (C3 && C3.live) for (const b of C3.live()) {
       if (s.clock - b.at > 8 || b.at > s.clock + 0.01) add('céu', 3, `um raio desenhado ${(s.clock - b.at).toFixed(1)} s depois do raio do mundo`);
       const x = Math.floor(b.x), y = Math.floor(b.y); if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x;
       if (s.type[i] > T.RIVER && s.burnt && !(s.burnt[i] > 0)) add('céu', 3, `um raio desenhado na casa ${x},${y}, onde o mundo não fez cair nenhum (o chão não queimou)`);
     }
     // the 3D's maps of the land: of the land as it is now, a few seconds on
-    if (C3 && C3.maps) { const m = C3.maps(); if (m && m.key && m.key !== Ce.airKey() && s.clock - m.at > 6) add('céu', 3, `o 3D desenha o ar de outra versão do chão (${m.key} ≠ ${Ce.airKey()})`); }
+    // (only while the body's view is drawn: off, it keeps the last maps it drew)
+    if (C3 && C3.maps && G.Realm && G.Realm.on) { const m = C3.maps(); if (m && m.key && m.key !== Ce.airKey() && s.clock - m.at > 6) add('céu', 3, `o 3D desenha o ar de outra versão do chão (${m.key} ≠ ${Ce.airKey()})`); }
     // one wind: the sky's is the world's, the one the beasts smell by
     if (G.Meio && G.Meio.wind) { const a = Ce.wind(s.weather).a, b = G.Meio.wind().a; let d = Math.abs(a - b) % (Math.PI * 2); if (d > Math.PI) d = Math.PI * 2 - d; if (d > 0.2) add('céu', 4, `o vento do céu (${a.toFixed(2)}) não é o dos bichos (${b.toFixed(2)})`); }
   });
