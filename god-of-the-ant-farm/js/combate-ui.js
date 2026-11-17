@@ -240,7 +240,7 @@
   const C1 = 2 * Math.PI * 27, C2 = 2 * Math.PI * 22;
   function draw(w, rdt) {
     if (!hud || !hud.querySelector) return; void rdt;
-    const m = Av.motion ? Av.motion() : null; const fight = !!(w && (mode !== 'idle' || guardOn || (C3.locked && C3.locked()) || (m && m.stamina < 0.995)));
+    const m = Av.motion ? Av.motion() : null; const fight = !!(w && (mode !== 'idle' || guardOn || (C3.locked && C3.locked()) || (m && m.stamina < 0.995) || Cb.duel()));
     if (shown.on !== fight) { hud.classList.toggle('on', fight); shown.on = fight; }
     if (!fight) return;
     const st = m ? Math.round(G.clamp(m.stamina, 0, 1) * 100) / 100 : 1;

@@ -51,11 +51,15 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
       corridor() {
         if (X.cor !== undefined) return X.cor; const S = G.S, W = G.W, N = G.N;
         const okT = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return !(!W.walkable(i) || S.occ[i] || S.treeAt[i] || S.objAt[i] || S.type[i] <= G.T.RIVER || S.slope[i] > 1.0 || S.wall[i] || S.road[i]); };
-        const wide = (x, y, dx, dy) => okT(x, y) && okT(x - dy, y + dx) && okT(x + dy, y - dx) && okT(x - 2 * dy, y + 2 * dx) && okT(x + 2 * dy, y - 2 * dx); let best = 0, at = null;
-        for (let y = 3; y < N - 3; y++) for (let x = 3; x < N - 3; x++) for (const [dx, dy] of [[1, 0], [0, 1]]) { let n = 0; while (n < 12 && wide(x + dx * n, y + dy * n, dx, dy)) n++; if (n > best && G.W.reaches(X.body(), x + 0.5, y + 0.5)) { best = n; at = { x, y, dx, dy, n }; } }
-        return (X.cor = at);
+        // (five tiles wide where the world has it — the blows sweep, the targets stand to the sides —, else three)
+        for (const half of [2, 1]) {
+          const wide = (x, y, dx, dy) => { for (let k = -half; k <= half; k++) if (!okT(x - dy * k, y + dx * k)) return false; return true; }; let best = 0, at = null;
+          for (let y = 3; y < N - 3; y++) for (let x = 3; x < N - 3; x++) for (const [dx, dy] of [[1, 0], [0, 1]]) { let n = 0; while (n < 12 && wide(x + dx * n, y + dy * n, dx, dy)) n++; if (n > best && G.W.reaches(X.body(), x + 0.5, y + 0.5)) { best = n; at = { x, y, dx, dy, n }; } }
+          if (at && at.n >= 5) return (X.cor = at);
+        }
+        return (X.cor = null);
       },
-      reset() { G.Input3D.release(); G.Cam3D.unlock(); G.Cam3D.aim(false); X.f(4); const c = X.corridor(); G.Avatar.place(c.x + 0.5 + c.dx * 2, c.y + 0.5 + c.dy * 2); X.f(20); G.Cam3D.yaw = Math.atan2(c.dy, c.dx); G.Cam3D.pitch = 0.22; G.Avatar.rest(); X.f(10); },
+      reset() { G.Input3D.release(); G.Cam3D.unlock(); G.Cam3D.aim(false); X.f(4); const c = X.corridor(); if (c) { G.Avatar.place(c.x + 0.5 + c.dx * 2, c.y + 0.5 + c.dy * 2); X.f(20); G.Cam3D.yaw = Math.atan2(c.dy, c.dx); } else X.f(20); G.Cam3D.pitch = 0.22; G.Avatar.rest(); X.f(10); },
       // (someone of the world put before the body at d metres, side metres to its right, idle, facing it — the proof's hand)
       stand(o, d, side) { const p = G.Avatar.pos(); const L = G.Space.TILE; const y = p.yaw; const x = p.X / L + (Math.cos(y) * d - Math.sin(y) * (side || 0)) / L, z = p.Z / L + (Math.sin(y) * d + Math.cos(y) * (side || 0)) / L;
         G.Vg.endTask(o); o.inside = 0; o.x = x; o.y = z; o.path = null; o.hp = 100; o.downT = 0; o.stagT = 0; o.sleeping = false; G.faceTo(o, p.X / L - x, p.Z / L - z); return o; },
