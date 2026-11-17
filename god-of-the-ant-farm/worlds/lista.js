@@ -56,40 +56,40 @@ G.Ready.list({
   "bytes": 3709164
  },
  "mundial": {
-  "day": 56,
-  "pop": 382,
-  "peoples": 6,
-  "towns": 19,
+  "day": 65,
+  "pop": 451,
+  "peoples": 9,
+  "towns": 22,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Tebas",
-   "tier": 4,
-   "pop": 53
+   "name": "Roma",
+   "tier": 3,
+   "pop": 91
   },
-  "wars": 1,
+  "wars": 2,
   "ww": "a Grande Coalizão",
-  "world": "Auros",
-  "bytes": 3115160
+  "world": "Nerheim",
+  "bytes": 3505556
  },
  "anos100": {
   "day": 101,
-  "pop": 783,
-  "peoples": 2,
-  "towns": 13,
+  "pop": 881,
+  "peoples": 3,
+  "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Hedeby",
    "tier": 4,
-   "pop": 250
+   "pop": 114
   },
   "wars": 0,
   "ww": null,
-  "world": "Thalmar",
-  "bytes": 3507127
+  "world": "Ormar",
+  "bytes": 3921152
  },
  "anos500": {
   "day": 501,
