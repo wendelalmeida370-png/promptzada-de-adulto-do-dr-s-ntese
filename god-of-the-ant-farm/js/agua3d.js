@@ -45,7 +45,8 @@
   // the bed under it (its height every half tile), the key light on it, the sky's light on it, the colour of the deep, the world's
   // height on the screen (flatter in the descent); the pictures of the field (a texel a tile): the current, the look, the shore
   const WU = { bed: { value: null }, bedN: { value: null }, key: { value: null }, irr: { value: null }, deep: { value: null }, k: { value: 1 },
-    flow: { value: null }, look: { value: null }, shore: { value: null }, fN: { value: 0 }, scene: { value: null }, depth: { value: null }, grab: { value: 0 }, proj: { value: null }, nf: { value: null }, scr: { value: null }, ssr: { value: 0 } };
+    flow: { value: null }, look: { value: null }, shore: { value: null }, fN: { value: 0 }, scene: { value: null }, depth: { value: null }, grab: { value: 0 }, proj: { value: null }, nf: { value: null }, scr: { value: null }, ssr: { value: 0 },
+    mir: { value: null }, mirMat: { value: null }, mirOn: { value: 0 } };
   A3.WU = WU;
   // (the wet's picture and its strength, for the ground's and the buildings' shaders: R the rain on the land now, G where the rain
   // pools, B the spray of a fall)
@@ -165,7 +166,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
     THREE = three; MAT = mats; U = u; skyU = sky;
     WU.bedN.value = new THREE.Vector2(2 / G.Space.TILE, 1); WU.key.value = new THREE.Color(); WU.irr.value = new THREE.Color(); WU.deep.value = new THREE.Color(0.008, 0.04, 0.075);
     WET.uAgSky = skyU.hor; // (the sky at the horizon, for what shines wet: the same object the sky sets each frame)
-    WU.proj.value = new THREE.Vector4(1, 1, 0, 0); WU.nf.value = new THREE.Vector2(0.1, 1600); WU.scr.value = new THREE.Vector2(1, 1);
+    WU.proj.value = new THREE.Vector4(1, 1, 0, 0); WU.mirMat.value = new THREE.Matrix4(); WU.nf.value = new THREE.Vector2(0.1, 1600); WU.scr.value = new THREE.Vector2(1, 1);
     // water: the waves the god's view draws, in light — trains of waves running with the wind (long swells on the open sea, a chop
     // on the rivers, calm against the shore, still in a basin), down a river with its current; and what water is to the eye: how
     // deep it is, read at every point from the bed the 3D draws under it — clear over the sand at the shore, where it thins to
@@ -177,7 +178,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
     MAT.water.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uKeyDir: skyU.keyDir, uKeyCol: WU.key, uIrr: WU.irr, uDeep: WU.deep, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM }, uBed: WU.bed, uBedN: WU.bedN, uK: WU.k,
         uFlow: WU.flow, uLook: WU.look, uShoreT: WU.shore, uFN: WU.fN, uCover: skyU.cover, uCloudCol: skyU.cloudCol, uCloudSh: skyU.cloudSh, uNoise: skyU.uNoise,
-        uScene: WU.scene, uDepthT: WU.depth, uGrab: WU.grab, uProjK: WU.proj, uNF: WU.nf, uScr: WU.scr, uSSR: WU.ssr });
+        uScene: WU.scene, uDepthT: WU.depth, uGrab: WU.grab, uProjK: WU.proj, uNF: WU.nf, uScr: WU.scr, uSSR: WU.ssr, uMir: WU.mir, uMirMat: WU.mirMat, uMirOn: WU.mirOn });
       sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; attribute float aShore; varying float vShore; varying float vSea; varying vec3 vWW;\n' + G.Agua.waveGLSL() + '\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY * uK)); float still = step(1.5, aShore);
         // (the swell dies where the water is shallow: a paddy, a ford, the last of the beach hardly move — G.Agua.waveY, the same sum)
@@ -185,7 +186,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         transformed.y += aguaWaveY(wp.xz, uTime, uWind, sea, dep) * (1.0 - still);
         vShore = aShore; vSea = sea; vWW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
       sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform vec3 uIrr; uniform vec3 uDeep; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; uniform sampler2D uFlow; uniform sampler2D uLook; uniform sampler2D uShoreT; uniform float uFN; varying float vShore; varying float vSea; varying vec3 vWW;\n'
-        + 'uniform sampler2D uScene; uniform sampler2D uDepthT; uniform float uGrab; uniform vec4 uProjK; uniform vec2 uNF; uniform vec2 uScr; uniform float uSSR;\n' + CLOUDS + '\n' + sh.fragmentShader
+        + 'uniform sampler2D uScene; uniform sampler2D uDepthT; uniform float uGrab; uniform vec4 uProjK; uniform vec2 uNF; uniform vec2 uScr; uniform float uSSR; uniform sampler2D uMir; uniform mat4 uMirMat; uniform float uMirOn;\n#ifdef WSSR\nuniform mat4 projectionMatrix;\n#endif\n' + CLOUDS + '\n' + sh.fragmentShader
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land, none in a basin)
         vec2 wq = vWW.xz; float isSea = vSea; float still = step(1.5, vShore); float shore = clamp(vShore, 0.0, 1.0);
@@ -283,7 +284,11 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
           under = texture2D(uScene, ruv).rgb; haveU = 1.0;
           // (reflection: march the reflected ray across the screen against the picture's depth; the first point it passes behind)
           vec3 vR = (viewMatrix * vec4(Rw, 0.0)).xyz; vec3 vP = (viewMatrix * vec4(vWW, 1.0)).xyz;
-          if (rel > 0.002 && vR.z < 0.3) {
+          // (the sea at the Ultra: its flat mirror — the scene drawn again from the eye's reflection in the sea's face, all of it, what the
+          // screen does not hold too; the waves bend it)
+          if (uMirOn > 0.5 && isSea > 0.5 && vShore > -0.5) { vec4 mp = uMirMat * vec4(vWW.x, uSeaY * uK, vWW.z, 1.0); vec2 muv = mp.xy / mp.w + gw * 0.035;
+            vec2 me = min(muv, 1.0 - muv); skyR = mix(skyR, texture2D(uMir, muv).rgb, smoothstep(0.0, 0.03, min(me.x, me.y))); }
+          else if (rel > 0.002 && vR.z < 0.3) {
             float stp = 0.6 + length(vP) * 0.04; vec3 pr = vP; float hit = 0.0; vec2 huv = vec2(0.0);
             for (int k = 0; k < 24; k++) {
               if (float(k) >= uSSR) break;
@@ -615,7 +620,39 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
   // what stands so far (its colours and its depth) is copied, and the water reads it — what is under its face, bent by the waves;
   // what stands round it, along the reflected ray. Only in the post-processing's own picture (the Alta's and the Ultra's)
   let grabFrame = -1, frameNo = 0;
-  A3.frame = function () { frameNo++; WU.grab.value = 0; };
+  A3.frame = function () { frameNo++; WU.grab.value = 0; mirrorDraw(); };
+  // ------------------------------ the sea's flat mirror (Ultra) ------------------------------
+  // the scene drawn again, at half the picture's size, from the eye reflected in the sea's face (the near plane cut obliquely along the
+  // face: nothing under the sea is in it), the water left out; read by the sea where it lies at its level. Its cost is a second scene a
+  // frame, so only the Ultra draws it (aguaRefl 3), and only with the post-processing's own picture (the rest of the water's reading)
+  let mir = null, mirCam = null, MV = null;
+  function mirrorDraw() {
+    WU.mirOn.value = 0; const R = R3(); const q = R.Q(); if ((q.aguaRefl | 0) < 3 || !THREE) return;
+    const ren = R.renderer(), scene = R.scene(), cam = R.camera(); if (!ren || !scene || !cam || !G.Post3D || !G.Post3D.on) return;
+    if (!MV) { MV = { v2: new THREE.Vector2(), p: new THREE.Vector3(), t: new THREE.Vector3(), u: new THREE.Vector3(), r: new THREE.Matrix4(), n: new THREE.Vector3(0, 1, 0), pl: new THREE.Plane(), c: new THREE.Vector4(), q: new THREE.Vector4(), o: new THREE.Vector3() }; mirCam = new THREE.PerspectiveCamera(); }
+    const Y0 = G.SEA * G.Space.HM * scene.scale.y; if (cam.position.y < Y0 + 0.1) return;
+    const sz = ren.getDrawingBufferSize(MV.v2); const w = Math.max(1, sz.x >> 1), h = Math.max(1, sz.y >> 1);
+    if (!mir || mir.width !== w || mir.height !== h) { if (mir) mir.dispose(); mir = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: true }); WU.mir.value = mir.texture; }
+    // (the eye, what it looks at and its up, reflected across the face)
+    cam.updateMatrixWorld(); MV.r.extractRotation(cam.matrixWorld);
+    MV.p.copy(cam.position); MV.p.y = 2 * Y0 - MV.p.y;
+    MV.t.set(0, 0, -1).applyMatrix4(MV.r).add(cam.position); MV.t.y = 2 * Y0 - MV.t.y;
+    MV.u.set(0, 1, 0).applyMatrix4(MV.r); MV.u.y = -MV.u.y;
+    mirCam.position.copy(MV.p); mirCam.up.copy(MV.u); mirCam.lookAt(MV.t); mirCam.near = cam.near; mirCam.far = cam.far; mirCam.fov = cam.fov; mirCam.aspect = cam.aspect;
+    mirCam.updateProjectionMatrix(); mirCam.updateMatrixWorld();
+    WU.mirMat.value.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(mirCam.projectionMatrix).multiply(mirCam.matrixWorldInverse);
+    // (the near plane along the sea's face, a hand under it: what lies under the water is not mirrored)
+    MV.o.set(cam.position.x, Y0 - 0.12, cam.position.z); MV.pl.setFromNormalAndCoplanarPoint(MV.n, MV.o).applyMatrix4(mirCam.matrixWorldInverse);
+    const P = mirCam.projectionMatrix.elements; MV.c.set(MV.pl.normal.x, MV.pl.normal.y, MV.pl.normal.z, MV.pl.constant);
+    MV.q.set((Math.sign(MV.c.x) + P[8]) / P[0], (Math.sign(MV.c.y) + P[9]) / P[5], -1, (1 + P[10]) / P[14]); MV.c.multiplyScalar(2 / MV.c.dot(MV.q));
+    P[2] = MV.c.x; P[6] = MV.c.y; P[10] = MV.c.z + 1; P[14] = MV.c.w; mirCam.projectionMatrixInverse.copy(mirCam.projectionMatrix).invert();
+    // (drawn without the water and the sheets, without making the shadows again)
+    const sm = ren.shadowMap, au = sm.autoUpdate, nu = sm.needsUpdate, prev = ren.getRenderTarget(), info = ren.info, ar = info.autoReset;
+    MAT.water.visible = false; MAT.fall.visible = false; sm.autoUpdate = false; sm.needsUpdate = false; info.autoReset = false; const c0 = info.render.calls;
+    try { ren.setRenderTarget(mir); ren.clear(); ren.render(scene, mirCam); }
+    finally { ren.setRenderTarget(prev); MAT.water.visible = true; MAT.fall.visible = true; sm.autoUpdate = au; sm.needsUpdate = nu; A3.stats.mirCalls = info.render.calls - c0; info.autoReset = ar; }
+    WU.mirOn.value = 1;
+  }
   A3.grabHook = function (renderer, scene, camera) {
     const q = R3().Q(); if ((q.aguaRefl | 0) < 2 || grabFrame === frameNo) return;
     const rt = renderer.getRenderTarget(); if (!rt || !rt.depthTexture || !rt.samples) return;
