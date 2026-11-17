@@ -166,7 +166,9 @@
   Ge.foldAt = function (i) {
     const S = G.S; noises(); spine(); const key = (S.seed | 0) + ':' + N + ':' + spFor;
     if (key !== fdFor || !fd || fd.length !== N * N) { fd = new Float32Array(N * N).fill(NaN); fdFor = key; }
-    let v = fd[i]; if (v !== v) { v = fd[i] = foldTile(i % N, (i / N) | 0); } return v;
+    // (the value as the memory keeps it, the first time too: read back from the Float32 memory, never the wider number it was made from —
+    // the first reader and the later ones see the same fold, to the last bit: L-1552)
+    if (fd[i] !== fd[i]) fd[i] = foldTile(i % N, (i / N) | 0); return fd[i];
   };
   // (between the middles of the tiles, as the 3D's shader reads it: the same fold everywhere)
   Ge.fold = function (x, y) {
@@ -233,7 +235,9 @@
   // tiles one walks — and an arch over carved tiles only. Made whole when asked; again when what it is made of changes)
   const RG = Ge.R = 16;
   let fmMemo = new Map(), fmFor = '';
-  G.worldHooks.push(() => { fmMemo = new Map(); fmFor = ''; });
+  // (every memory of the module begins again with each world — a new world or a save opened: two worlds of the same seed, size and version
+  // of the ground are not the same world — L-1551)
+  G.worldHooks.push(() => { fmMemo = new Map(); fmFor = ''; topFor = ''; spFor = ''; spD = null; fdFor = ''; fd = null; byFor = ''; by = null; });
   function regionSig(rx, ry) {
     const S = G.S; let s = 7; const x0 = rx * RG, y0 = ry * RG;
     for (let y = Math.max(0, y0 - 2); y <= Math.min(N, y0 + RG + 2); y++) for (let x = Math.max(0, x0 - 2); x <= Math.min(N, x0 + RG + 2); x++) s = (s * 31 + hq(x, y)) | 0;
@@ -330,17 +334,29 @@
   // the height of the land beyond the edge at a point (metres, the world's own scale; under the sea where there is none): a shore some
   // tens of metres out, hills, then ranges — ridges of crests that grow with the distance, hundreds of metres high a few kilometres out
   // (D-467: far off they may be grand, they spend no ground of the world). Inside the map: -Infinity (the map's own land)
+  // (the ridges of the ranges beyond a side: a noise folded at its zero — sharp crests, wide valleys —, octave on octave, each weighted by
+  // the one before; stretched along the side, so the crests run with the coast in rows, one behind the other — the layers of a range seen
+  // from a valley. u along the side, v out of it, metres)
+  function ridges(u, v, sd) {
+    let rid = 0, amp = 1, wgt = 1, fu = 1 / 1500, fv = 1 / 520;
+    for (let o = 0; o < 5; o++) { let n = 1 - Math.abs(nzB(u * fu + o * 17.3 + sd * 41.7, v * fv - o * 9.1)); n *= n; n *= wgt; wgt = G.clamp(n * 1.7, 0, 1); rid += n * amp; amp *= 0.52; fu *= 2.1; fv *= 2.0; }
+    return rid / 1.96;
+  }
+  // the height of the land beyond the edge at a point (metres, the world's own scale; under the sea where there is none): a shore some
+  // tens of metres out, hills, then the ranges — rows of crests that grow with the distance, a thousand metres and more a few kilometres
+  // out (D-467: far off they may be grand, they spend no ground of the world). Inside the map: -Infinity (the map's own land)
   Ge.beyondH = function (X, Z) {
-    const S = G.S; const L = N * TL; if (X >= 0 && Z >= 0 && X <= L && Z <= L) return -Infinity; noises();
+    const L = N * TL; if (X >= 0 && Z >= 0 && X <= L && Z <= L) return -Infinity; noises();
     const sea = G.SEA * HM; const t = landToward(X, Z); if (t.land <= 0.005) return sea - 8;
     const d = t.d; const shore = 50 + 40 * (G.fbm(nzA, X / 220, Z / 220, 2) + 0.5);
     const up = G.smooth(shore - 30, shore + 160, d);
-    // (the ridges: a noise folded at its zero — sharp crests, wide valleys —, octave on octave, each weighted by the one before)
-    let rid = 0, amp = 1, wgt = 1, f = 1 / 900;
-    for (let o = 0; o < 5; o++) { let n = 1 - Math.abs(nzB(X * f + o * 17.3, Z * f - o * 9.1)); n *= n; n *= wgt; wgt = G.clamp(n * 1.6, 0, 1); rid += n * amp; amp *= 0.5; f *= 2.05; }
-    rid /= 1.94;
-    const lift = 18 + Math.min(1400, d * 0.24); const land = G.smooth(0.05, 0.65, t.land);
-    return sea - 8 + up * land * (12 + 8 + lift * rid * (0.45 + 0.55 * G.smooth(0.2, 0.9, t.land)));
+    // (the ridges of the side or the two sides the point faces, weighed as the land toward it is)
+    const ox = X < 0 ? -X : X > L ? X - L : 0, oz = Z < 0 ? -Z : Z > L ? Z - L : 0; const wx = ox / (ox + oz || 1);
+    const rid = (ox > 0 ? ridges(Z, ox, X < 0 ? 0 : 1) * wx : 0) + (oz > 0 ? ridges(X, oz, Z < 0 ? 2 : 3) * (1 - wx) : 0);
+    // (the great massifs here and there along the edge: the ranges higher in some stretches than in others)
+    const mass = 0.7 + 0.6 * (G.fbm(nzE, X / 2600 + 3.1, Z / 2600 - 1.7, 2) + 0.5);
+    const lift = 24 + Math.min(1500, d * 0.34) * mass; const land = G.smooth(0.05, 0.65, t.land);
+    return sea - 8 + up * land * (20 + lift * rid * (0.45 + 0.55 * G.smooth(0.2, 0.9, t.land)));
   };
   // (the snow's line beyond the edge, metres: low over a cold side, high over a hot one — by the biome the side's land mostly is)
   Ge.snowLine = function (side) { const b = Ge.beyondBiome(side); return b === 1 ? 70 : b === 2 ? 160 : b === 6 || b === 5 ? 720 : b === 4 || b === 3 ? 640 : 380; };
@@ -360,7 +376,7 @@
   };
   // (for the checker and the proofs: a tile's rock and fold, and a region's formations, made from nothing — no memory: what the memory
   // says must be what the world says now)
-  Ge.fresh = function (i) { noises(); spine(); return { rock: Ge.rockAt(i), fold: foldTile(i % N, (i / N) | 0) }; };
+  Ge.fresh = function (i) { noises(); spine(); return { rock: Ge.rockAt(i), fold: Math.fround(foldTile(i % N, (i / N) | 0)) }; };
   Ge.formsFresh = (rx, ry) => makeForms(rx, ry);
   Ge.version = 1;
 })(window.G);

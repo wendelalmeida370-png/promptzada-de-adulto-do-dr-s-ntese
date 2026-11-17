@@ -125,10 +125,12 @@ if (on('g5') || on('g6')) {
 }
 
 if (on('g7')) {
-  S = alpino(); // (a cliff tile with a road or a building beside it, or on it)
+  S = alpino(); // (a cliff tile with a road or a building beside it, or on it: the world has few — the proof lays roads at the foot of 30 faces)
+  const laid = []; for (let i = 0; i < N * N && laid.length < 30; i++) { if (!Ge.carves(i)) continue; const x = i % N, y = (i / N) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * N + x + dx; if (W.inb(x + dx, y + dy) && W.walkable(j) && !S.road[j]) { S.road[j] = 1; laid.push(j); break; } } }
   let roadNb = 0, edgeBad = 0; for (let i = 0; i < N * N; i++) { if (!Ge.carves(i)) continue; const x = i % N, y = (i / N) | 0;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * N + x + dx; if (!W.inb(x + dx, y + dy) || !(S.road[j] || S.occ[j])) continue; roadNb++;
       for (let k = 0; k <= 8; k++) { const u = k / 8; Ge.cliffAt(dx === 1 ? x + 1 : dx === -1 ? x : x + u, dy === 1 ? y + 1 : dy === -1 ? y : y + u, o3); if (Math.abs(o3[0]) + Math.hypot(o3[1], o3[2]) > 1e-6) edgeBad++; } } }
+  for (const j of laid) S.road[j] = 0;
   let onRoad = 0; for (let i = 0; i < N * N; i++) if (S.cliff[i] && (S.road[i] || S.occ[i]) && Ge.carves(i)) onRoad++;
   // (a road opened across a carved face: no longer carved, the chunk made again, its edges on the world's ground)
   let at = -1; for (let i = 0; i < N * N && at < 0; i++) if (Ge.carves(i) && i % N > 2 && i % N < N - 3) at = i; const x = at % N, y = (at / N) | 0; const sig0 = G3.sig(Math.floor(x / 16) * 16, Math.floor(y / 16) * 16, 16);
