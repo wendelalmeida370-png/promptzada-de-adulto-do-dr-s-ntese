@@ -1778,7 +1778,9 @@
       // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
       // (v.actT), the drink — the pose made from what they do, every frame (anim-body.js)
       const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
-      I.run = v.act === 'run' ? 1 : 0; I.walk = 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = 0; I.id = v.id;
+      // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
+      // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
+      I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = 0; I.id = v.id;
       Anim.drive(s.an, I, s.pose, Lv, dt);
       // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
       const look = P3.lookFor(s.yaw, s.X, s.Z, av, st);

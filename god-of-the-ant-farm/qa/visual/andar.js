@@ -141,6 +141,17 @@ for (const deg of [90, 180]) {
   ok('o contato do clipe no golpe do mundo (as pessoas: a contagem do mundo, v.actT; o corpo: o contato do ato)', Math.abs(u0 - C.events.contact) < 1e-6 && Math.abs(u1 - (C.events.contact + 0.999) % 1) < 1e-3 && Math.abs(k - C.events.contact) < 1e-9 && k0 === 0 && Math.abs(k1 - 1) < 1e-9 && !A.clipErr.length,
     `golpe do mundo: no recomeço u=${u0.toFixed(3)}, a meio ${uh.toFixed(3)}, no fim ${u1.toFixed(3)} (contato ${C.events.contact}) · ato do corpo: 62% → ${k.toFixed(3)} · ${Object.keys(A.CLIPS).length} clipes, ${A.clipErr.length} erros${A.clipErr.length ? ': ' + A.clipErr.slice(0, 2).join('; ') : ''}`); }
 
+// ------------------------------ the walk the world gives is a walk (L-1119) ------------------------------
+// (the people of the world move, drawn, at 1.9–2.9 m/s — the world's pace for the body's time, D-015, and the roads' — and the animator
+// took the speed past 2.3 m/s for a jog: a town of people in no hurry, running. The feed of the world's people says walk when the world
+// walks them — people3d.js, I.walk —: the gait holds the walk at any of those speeds, and only the world's «run» runs)
+{ const drive = (v, walk, run) => { const L = Object.assign({}, LOOK, { plant: [{ on: 0 }, { on: 0 }], s: 1 }); const a = A.memory(); const pose = A.POSE0(); const I = {}; let z = 0, ran = 0;
+    for (let i = 0; i < 240; i++) { z += v / 60; Object.assign(I, { st: run ? 'run' : 'walk', t: i / 60, sp: v, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s: 1, run: run ? 1 : 0, walk: walk ? 1 : 0, over: null, overK: undefined, drunk: 0, tired: 0, id: 1 });
+      A.drive(a, I, pose, L, 1 / 60); if (i > 120 && a.run) ran++; } return ran; };
+  const calm = [2.3, 2.6, 2.9].map(v => drive(v, true, false)), hurry = drive(2.6, false, true), old = drive(2.6, false, false);
+  ok('quem o mundo tem andando anda, mesmo depressa numa estrada (2,3–2,9 m/s: nenhum quadro de trote); só o «correr» do mundo corre (L-1119)', calm.every(n => n === 0) && hurry > 100,
+    `andando a 2,3 / 2,6 / 2,9 m/s: ${calm.join(' / ')} quadros de trote em 120 · o «correr» do mundo a 2,6: ${hurry} · sem dizer andar (antes): ${old}`); }
+
 // ------------------------------ the people of the world, as the view draws them ------------------------------
 { G.W = G.W || {}; const keepW = G.W.walkableXY; G.W.walkableXY = () => true;
   // (a way with a corner at right angles, 4 m tiles: the world walks it at 1.75 m/s, sharp at the corner; the view draws it)

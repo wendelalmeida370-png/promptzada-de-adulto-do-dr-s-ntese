@@ -987,7 +987,9 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
     if (!['anim-body.js', 'anim-gait.js', 'people3d.js'].includes(f) && /\bGait\.pose\(/.test(c)) fails.push(`o andar da fase: ${f}:${k + 1} pede a passada fora do animador (D-341): ${l.trim().slice(0, 110)}`);
     if (/\.blend\([^)]*\.pose\(\s*'(walk|run|carry|sneak)'/.test(c)) fails.push(`o andar da fase: ${f}:${k + 1} mistura uma pose de andar com outra (a passada é da fase, L-1107): ${l.trim().slice(0, 110)}`);
     if (f === 'avatar.js' && /\b(A3|Anim3D|G\.Anim3D)\.(blend|pose|hold)\(/.test(c)) fails.push(`o andar da fase: avatar.js:${k + 1} põe ou mistura a pose do corpo (o People3D a faz no quadro, pelo Anim.drive — D-341): ${l.trim().slice(0, 110)}`); });
-  if (!(src['people3d.js'] || []).some(l => /Anim\.drive\(avFeet\.an, I, av\.pose, av\.look, dt\)/.test(l))) fails.push('o andar da fase: o People3D não põe o corpo do deus pelo Anim.drive (D-341)'); }
+  if (!(src['people3d.js'] || []).some(l => /Anim\.drive\(avFeet\.an, I, av\.pose, av\.look, dt\)/.test(l))) fails.push('o andar da fase: o People3D não põe o corpo do deus pelo Anim.drive (D-341)');
+  // (and the gait of the world's people is the world's intent, not the speed: the walk the world gives draws a walk — L-1119)
+  if (!(src['people3d.js'] || []).some(l => /I\.walk = st === 'walk' \|\| st === 'carryWalk'/.test(l))) fails.push('o andar da fase: o People3D não desenha andando quem o mundo tem andando (o trote de quem não tem pressa, L-1119)'); }
 // 116. "um clipe nasce pelo registro" (D-342): os clipes das ações nascem só pelo Anim.clip(id, def) (ou na fila G.ANIM_CLIPS, que
 // o registro lê) — ninguém escreve o Anim3D.CLIPS à mão, onde o registro não confere as chaves, as máscaras e os eventos —; e todo
 // ato que o CLIP_OF liga a um clipe liga a um clipe que existe
