@@ -88,7 +88,8 @@ const VIEWS = [
         if (window.__draw) G.Realm.renderer().render = window.__draw;
         G.Modes.leave('deus'); until(() => G.Modes.state === 'GOD', 400); S.time = hour;
         const pk = S.relief.peaks[0]; const p = G.Render.proj(pk.x, pk.y, W.hAt(pk.x, pk.y));
-        G.Render.cam.x = p[0]; G.Render.cam.y = p[1]; G.Render.cam.zoom = G.Render.cam.tz = 1.1; f(20);
+        G.Render.cam.follow = 0; G.Render.cam.target = null; G.Render.cam.x = p[0]; G.Render.cam.y = p[1]; G.Render.cam.zoom = G.Render.cam.tz = 1.1; f(20); // (not following the body: the same frame in every copy)
+        G.Render.cam.follow = 0; G.Render.cam.target = null; G.Render.cam.x = p[0]; G.Render.cam.y = p[1]; f(4);
         document.querySelectorAll('#hud, #inc-hud, #inc-label, .panel, #news').forEach(e => e.style.visibility = 'hidden'); f(4);
         return { deus: 1, peak: [pk.x, pk.y], err: JSON.stringify(G.modErr) };
       }

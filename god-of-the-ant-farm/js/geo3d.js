@@ -333,7 +333,8 @@
         const c = Math.cos(m.yaw), s = Math.sin(m.yaw);
         for (let j = 0; j < 9; j++) { const a = j / 8 * Math.PI; const across = Math.cos(a) * m.w * 0.58, up = Math.sin(a) * m.h * 1.02; const X = m.X - 0.2 * c - across * s, Z = m.Z - 0.2 * s + across * c;
           const gy = W.hAt(X / TL, Z / TL) * HM; const sz = 0.45 + G.hash(j * 3 + m.X) * 0.4; const Y = j === 0 || j === 8 ? gy - sz * 0.45 : Math.max(m.Y + up - sz * 0.55, gy - sz * 0.45);
-          piece(list, 'matacao' + (j % nk), X, Y, Z, m.yaw + j * 1.3, sz * 1.25, sz, sz * 1.1, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1))); }
+          piece(list, 'matacao' + (j % nk), X, Y, Z, m.yaw + j * 1.3, sz * 1.25, sz, sz * 1.1, m.rock, W.idx(G.clamp(X / TL, 0, N - 1), G.clamp(Z / TL, 0, N - 1)));
+          list[list.length - 1].c = [1.3, 1.27, 1.22]; } // (the rim weathered pale round the dark: the mouth reads from far)
       }
     }
     return list;
