@@ -658,6 +658,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // the key I, in the god's view: someone near the middle of the screen
     G.UI.select(null); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'i' })); out.ikey = G.Modes.state !== 'GOD'; __E.until(() => G.Modes.state === 'INC', 300);
     // the fingers: a thumb on the left half pushed up walks the body forward; the on-screen buttons show
+    // (on a body out on the street, as every part that walks one takes it — __E.adults: the I key takes the nearest, who may be
+    // inside a house, a room's wall a hand ahead where the street's map is open; then one out of doors, T-1389)
+    { const b1 = G.Possess.body(); const o = b1 && b1.inside && __E.adults(s)[0]; if (o) { __E.leave(); __E.enter(o); } }
     { const cv = G.Realm.canvas(); const b = G.Possess.body(); const x0 = b.x, y0 = b.y; G.Cam3D.yaw = __E.openYaw(x0, y0); // (the thumb walks the body ahead, as the camera looks: toward open ground — the way the part before left the camera may be shut, T-1056)
       const T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
       cv.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [T(1, 200, 450)], touches: [T(1, 200, 450)], cancelable: true, bubbles: true }));
