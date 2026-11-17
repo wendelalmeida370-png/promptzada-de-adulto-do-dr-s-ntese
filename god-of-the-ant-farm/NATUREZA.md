@@ -310,9 +310,12 @@ de altura, `G.Agua.levelQ`: L-1590) — a mesma corrente num mundo e no mesmo mu
 | `G.Agua3D.wetU()` / `groundGLSL()` / `solidGLSL()` | o retrato do molhado (R a chuva agora, G onde empoça, B o borrifo; um texel por casa) e o pedaço de sombreador do chão molhado (`aguaWetGround`) e do telhado molhado (`aguaWetSolid`), com o brilho `gAgSheen` | o chão (`ground3d.js`, 21b), os prédios (`build3d.js`) |
 | `G.Agua3D.light(key, keyI, skyIrr, k)` | a luz do sol e do céu na água, e os retratos que andam com o mundo (chamada do `light()` — na junção, do `ceu3d.js`) | o céu (21d) |
 
-**O que a água lê do céu** (por referência, como hoje: a junção só passa): os pedaços do three.js remendados pelo `toon()` (o ar `gxHaze`,
-`gxAir`, a luz das chamas `gxLM`), o `skyU` (o alto do céu, o rumo da luz, as nuvens: `cover`, `cloudCol`, `cloudSh`, `uNoise` — a água
-reflete as nuvens do domo pela mesma conta dele), o `R3.U.wind` (o vento das ondas e do borrifo) e o arco-íris do `G.Ceu.rainbow` quando
-existir (hoje o borrifo faz o seu: o sol atrás do olho, os 42°). **A névoa da queda é do mapa do ar do céu** (`Ce.WHY.queda`): a água não
-desenha névoa. **A fase B** lerá o `G.Agua` no passo do mundo (a corrente que empurra o nadador e quem vadeia, a onda maior com quem nada
+**O que a água lê do céu** (21d, junto em 327a14a): os pedaços do three.js remendados pelo `G.Ceu3D.toon` (o ar `gxHaze`, `gxAir`,
+a luz das chamas `gxLM`), **o pano das nuvens** (`gxCloud`, no plano `gxCl2.x`: a água encontra-o ao longo do raio refletido, como o
+domo o encontra do olho — as nuvens no reflexo desde a Média), **a parte da luz-chave que chega** (`gxKS`: o brilho do sol na água e a
+luz no corpo dela escurecem sob as nuvens, os morros e o dossel), o `skyU` (o alto do céu, o rumo da luz, `cover`, `cloudCol`,
+`cloudSh`), a luz da hora que o `G.Ceu3D.light(focus)` devolve (`key`, `keyI`, `sky`: o quadro do `realm3d.js` a passa ao
+`G.Agua3D.light`), **o vento único** (`R3.U.wind`, escrito pelo `G.Ceu.wind`; o borrifo vai com o `G.Ceu.wind`) e **o sol**
+(`G.Ceu.sun`: o arco-íris do borrifo, com o sol atrás do olho e mais baixo que 42° — a causa é o próprio borrifo, não o chão molhado
+do arco-íris do céu, `G.Ceu.rainbow`). **A névoa da queda é do mapa do ar do céu** (`Ce.WHY.queda`): a água não desenha névoa. **A fase B** lerá o `G.Agua` no passo do mundo (a corrente que empurra o nadador e quem vadeia, a onda maior com quem nada
 nela): a regra 182 muda com o protocolo inteiro.
