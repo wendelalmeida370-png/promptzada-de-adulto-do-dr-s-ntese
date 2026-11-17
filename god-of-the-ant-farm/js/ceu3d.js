@@ -594,7 +594,12 @@ ${GXAIR}`;
             c += mix(vec3(0.08, 1.0, 0.42), vec3(0.55, 0.18, 0.95), smoothstep(0.06, 0.3, h - e0)) * v * auK * 0.062 * smoothstep(0.2, 0.75, nb); }
           // (the high thin clouds of the day, streaked along the wind, far over the others: lit white, pink at the dusk)
           if (ciK.x > 0.001 && h > 0.0) { vec2 hp = (cameraPosition.xz + d.xz * (1600.0 / (h + 0.05))) / 6400.0 + gxCl0.xy * 0.35; vec2 wd = ciK.yz; vec2 q = vec2(dot(hp, wd), dot(hp, vec2(-wd.y, wd.x)) * 3.2);
-            float cl2 = min(log2(1.0 + 0.3 / max(h, 0.02)), 4.0); float cn = textureLod(gxCloudN, q, cl2).b * 0.7 + textureLod(gxCloudN, q * 2.7 + 0.13, cl2 + 1.0).g * 0.3; float ci = smoothstep(0.52, 0.8, cn) * ciK.x * smoothstep(0.0, 0.18, h);
+            float cl2 = min(log2(1.0 + 0.3 / max(h, 0.02)), 4.0);
+            #ifdef SKYMED
+            float cn = textureLod(gxCloudN, q, cl2).b; // (the Média: one read)
+            #else
+            float cn = textureLod(gxCloudN, q, cl2).b * 0.7 + textureLod(gxCloudN, q * 2.7 + 0.13, cl2 + 1.0).g * 0.3;
+            #endif float ci = smoothstep(0.52, 0.8, cn) * ciK.x * smoothstep(0.0, 0.18, h);
             c = mix(c, ciCol + skU * 0.8, ci * 0.42); }
           // (the bow opposite the sun after a shower: red outside at 42°, violet in; a fainter second one at 51°, its colours turned)
           if (rbK > 0.001 && h > -0.02) { float ra = acos(clamp(dot(d, -gxSunW), -1.0, 1.0));
@@ -615,7 +620,11 @@ ${GXAIR}`;
             #ifdef SKYCHEAP
             float ns = n + thick * 0.08;
             #else
+            #ifdef SKYMED
+            float ns = gxCloud(cp + normalize(keyDir.xz + 1e-4) * 40.0); // (the Média: the big shapes only toward the light — two reads, not four)
+            #else
             float ns = cloudN(cp + normalize(keyDir.xz + 1e-4) * 40.0);
+            #endif
             #endif
             float sh = clamp((ns - n) * 5.0 + thick * 0.45, 0.0, 1.0);
             vec3 cc = mix(cloudCol, cloudSh, sh) + gxGlow * pow(cs, 4.0) * 0.55 * (1.0 - thick);
@@ -680,7 +689,8 @@ ${GXAIR}`;
     sun.castShadow = !!q.shadows;
     // (the side of the sun's picture: never more than the graphics card can hold)
     if (q.shadows) { const n = Math.min(q.shadows, renderer.capabilities.maxTextureSize || 4096); sun.shadow.mapSize.set(n, n); shadowKey = ''; if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
-    skyMesh.material.defines = q.detail === 0 ? { SKYCHEAP: 1 } : q.vclouds ? { VOLCLOUD: 1 } : {}; skyMesh.material.needsUpdate = true;
+    // (the Média's sky a little lighter — D-032: fewer reads of the clouds' stuff where the post does not draw the higher ones)
+    skyMesh.material.defines = q.detail === 0 ? { SKYCHEAP: 1 } : q.vclouds ? { VOLCLOUD: 1 } : (q.vlight | 0) === 0 ? { SKYMED: 1 } : {}; skyMesh.material.needsUpdate = true;
   };
   // ------------------------------ the light of the hour ------------------------------
   // the hour is the world's (S.time) and nothing else: G.Ceu says the sun and the moon, the colours of the light and of the sky,
