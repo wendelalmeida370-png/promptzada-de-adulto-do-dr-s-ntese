@@ -247,7 +247,9 @@
           float fine = 1.0 - smoothstep(60.0, 120.0, length(vViewPosition));
           vec3 w = pow(abs(n), vec3(4.0)); w /= w.x + w.y + w.z + 1e-4;
           vec4 r = vec4(0.5);
+          #ifndef NOPAT
           if (uTexOn > 0.5) r = m3raw(RROCK, vRP.zy * RROCK_S * 1.4) * w.x + m3raw(RROCK, vRP.xz * RROCK_S * 1.4 + 0.31) * w.y + m3raw(RROCK, vRP.xy * RROCK_S * 1.4 + 0.57) * w.z;
+          #endif
           vec3 rc = diffuseColor.rgb * bc * mix(vec3(1.0), m3col(r), fine * uTexOn) * (0.86 + 0.14 * b.a);
           // (each facet its own tone, as a stone broken along its planes)
           { vec3 fn = normalize(cross(dFdx(vRP), dFdy(vRP))); float fh = fract(sin(dot(floor(fn * 3.0 + 0.5), vec3(12.9898, 78.233, 37.719))) * 43758.5453); rc *= 0.88 + fh * 0.22; }
@@ -256,7 +258,10 @@
           float moss = floor(gb / 16.0) / 15.0, wet = mod(gb, 16.0) / 15.0; float snow = texture2D(uFMap, vRP.xz / (uTL * uN)).a;
           float top = smoothstep(0.2, 0.85, n.y);
           float mz = moss * (top * 0.9 + smoothstep(0.0, 0.6, -n.z) * 0.5) * smoothstep(0.36, 0.62, texture2D(uCN, vRP.xz / 5.0 + vRP.y * 0.07).g + (moss - 0.5) * 0.4);
-          vec4 mt = uTexOn > 0.5 ? m3raw(RMOSS, vRP.xz * RMOSS_S * 1.5) : vec4(0.5);
+          vec4 mt = vec4(0.5);
+          #ifndef NOPAT
+          if (uTexOn > 0.5) mt = m3raw(RMOSS, vRP.xz * RMOSS_S * 1.5);
+          #endif
           rc = mix(rc, vec3(0.055, 0.095, 0.032) * mix(vec3(1.0), m3col(mt), fine * uTexOn) * 1.15, clamp(mz, 0.0, 0.9));
           float sn = smoothstep(0.3, 0.6, snow) * smoothstep(0.35, 0.75, n.y + (texture2D(uCN, vRP.xz / 3.0).r - 0.5) * 0.3);
           rc = mix(rc, vec3(0.78, 0.835, 0.9), clamp(sn, 0.0, 1.0));
@@ -349,6 +354,8 @@
   // mouths; a token geometry in the part's group gives them back when the part is thrown away (its geometry disposed)
   G3D.partInto = function (grp, x0, y0, n) {
     if (!THREE) return; meshes(); const key = y0 * 4096 + x0;
+    // (the stone's grain only where the machine carries the ground's: the Leve draws the stones plain, as it drew them before)
+    { const plain = !Q().detail; if (!!(MAT.rock.defines && MAT.rock.defines.NOPAT) !== plain) { MAT.rock.defines = plain ? { NOPAT: 1 } : {}; MAT.rock.needsUpdate = true; } }
     G3D.horizon(); // (the land beyond the edge, made when the map, its ground or the preset is new: a key compared, otherwise — L-1553)
     PIECES.set(key, piecesOf(x0, y0, n)); fill();
     const tok = new THREE.BufferGeometry(); tok.addEventListener('dispose', () => { if (PIECES.get(key) && tok.userData.live) { PIECES.delete(key); fill(); } }); tok.userData.live = true;
