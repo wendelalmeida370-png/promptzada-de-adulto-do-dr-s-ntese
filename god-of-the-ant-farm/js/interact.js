@@ -715,7 +715,7 @@
   // (may the hands take it: still there — another may have taken it first —, hands for it, a thing a bag holds, and room)
   function canPick(v, t) {
     const o = (G.S.loose || []).find(x => x.id === t.g); if (!o || !(o.n > 0)) return { ok: false, why: 'Alguém pegou primeiro.' };
-    if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
+    if (v.age < 2 || (v.lost && v.lost.armL && v.lost.armR)) return { ok: false, why: 'Você não tem mãos para isso.' }; // (the work's own hands() goes with the work: 20g)
     if (!G.Itens.def(o.k) || o.k === 'water' || o.k === 'moedas') return { ok: false, why: 'Isso não vai na mochila.' };
     const room = G.Inv.room(v, o.k); return room >= (G.Itens.isThing(o.k) ? 1 : 1e-4) ? { ok: true } : { ok: false, why: 'A mochila está cheia.' };
   }
