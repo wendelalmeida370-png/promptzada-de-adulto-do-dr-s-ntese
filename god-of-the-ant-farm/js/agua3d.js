@@ -394,7 +394,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         // (the sheet trembles as it pours; the apron and the ice lie still)
         transformed += objectNormal * sin(uTime * 6.3 + aF.x * 9.0 + aF.y * 5.0) * 0.025 * aF.y * step(aF.w, 0.5);
         vF = aF; vQ = aQ; vFW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
-      sh.fragmentShader = 'uniform float uTime; uniform sampler2D uDet; varying vec4 vF; varying vec4 vQ; varying vec3 vFW;\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      sh.fragmentShader = 'uniform float uTime; uniform sampler2D uDet; varying vec4 vF; varying vec4 vQ; varying vec3 vFW; vec3 gFallGlow = vec3(0.0);\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += gFallGlow * gxAmb.x;').replace('#include <color_fragment>', `#include <color_fragment>
         {
           float u = vF.x, v = vF.y, len = vF.z, kind = vF.w; float wid = vQ.x, drop = vQ.y, spd = vQ.z;
           float side = smoothstep(0.0, 0.09, u) * smoothstep(1.0, 0.91, u);
@@ -402,12 +402,16 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
           if (kind < 0.5) {
             // (the streaks: the picture's noise stretched down the sheet, sliding as fast as the water falls there)
             float fallV = 1.1 + spd * 0.35 + sqrt(max(drop, 0.1)) * 0.9;
-            vec2 su = vec2(u * wid / 0.5, v * len / 2.6 - uTime * fallV);
+            vec2 su = vec2(u * wid / 0.8, v * len / 2.6 - uTime * fallV);
             float n1 = texture2D(uDet, vec2(su.x, su.y * 0.22)).r, n2 = texture2D(uDet, vec2(su.x * 2.3 + 0.31, su.y * 0.55 - uTime * 0.4)).g;
-            float streak = smoothstep(0.4, 0.8, n1 * 0.6 + n2 * 0.4);
-            float aer = smoothstep(0.0, 0.8, v) * clamp(drop / 3.5, 0.2, 1.0) + smoothstep(0.75, 1.0, v) * 0.35;
-            c = mix(diffuseColor.rgb * 0.85, vec3(0.93, 0.96, 0.98), clamp(max(streak * 0.7, aer * 0.9) + streak * aer * 0.35, 0.0, 1.0));
-            a = clamp(0.42 + aer * 0.4 + streak * 0.3, 0.0, 0.95) * side * smoothstep(-0.12, 0.04, v);
+            // (the heavier columns of water and the thinner veils between them, across the sheet; the streaks running down each)
+            float col = smoothstep(0.25, 0.75, texture2D(uDet, vec2(u * wid / 3.2 + 0.17, 0.31)).b);
+            float streak = smoothstep(0.38, 0.78, n1 * 0.6 + n2 * 0.4);
+            float aer = smoothstep(0.0, 0.7, v) * clamp(drop / 3.0, 0.25, 1.0) + smoothstep(0.7, 1.0, v) * 0.4;
+            // (aerated water is white: the light scattered in its bubbles — only the clear tongue at the lip shows the water's own colour)
+            c = mix(diffuseColor.rgb * 0.9, vec3(0.94, 0.97, 0.99), clamp(0.3 + streak * 0.45 + aer * 0.75 + col * 0.15, 0.0, 1.0));
+            a = clamp(0.5 + aer * 0.38 + streak * 0.22 + col * 0.12 - (1.0 - col) * 0.12 * (1.0 - aer), 0.0, 0.96) * side * smoothstep(-0.12, 0.04, v);
+            gFallGlow = c * (0.1 + aer * 0.14) * a;
           } else if (kind < 1.5) {
             // (the apron: foam boiling out from where the sheet strikes, fading as it spreads)
             float r = v;
