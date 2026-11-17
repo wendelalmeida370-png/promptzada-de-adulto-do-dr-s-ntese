@@ -179,7 +179,10 @@
       if (mataR) { const k = (y - mataR.y0) * Ma.R + (x - mataR.x0); const um = mataR.umid[k] / 255, dl = mataR.dossel[k] / 255; moss = G.clamp((um - 0.42) * 1.7, 0, 1) * 0.85 + G.clamp(dl * um * 1.3 - 0.15, 0, 1) * 0.4; }
       moss *= 1 - G.clamp(snowOf(i, x, y) * 1.6, 0, 1); }
     const wet = G.clamp(Math.max(S.wet ? S.wet[i] : 0, sprayOf(i)), 0, 1);
-    out[0] = r; out[1] = v >> 8; out[2] = v & 255; out[3] = (Math.round(G.clamp(moss, 0, 1) * 15) << 4) | Math.round(wet * 15);
+    // (the scree at the foot of a face: a tile one walks under a cliff of its own rock — the stones the face sheds lie there, more the taller
+    // the face over it; in the high four bits of R)
+    let tal = 0; if (t >= T.SAND && !S.cliff[i] && !S.road[i] && !S.occ[i]) { const h0 = W.tileH(i); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.cliff[j]) tal = Math.max(tal, (W.tileH(j) - h0) * G.Space.HM / ((dx && dy) ? 12 : 8)); } }
+    out[0] = r | (Math.round(G.clamp(tal, 0, 1) * 15) << 4); out[1] = v >> 8; out[2] = v & 255; out[3] = (Math.round(G.clamp(moss, 0, 1) * 15) << 4) | Math.round(wet * 15);
     return out;
   }
   G3.geoOf = (i, x, y) => { mataK = -1; return geoOf(i, x, y, [0, 0, 0, 0]); };
@@ -353,7 +356,7 @@ float gWL = 0.0; // (how much this point is the line of the water on a shore: th
 // (the snow's own colour, linear: the god's white of the frozen land)
 #define GSNOW vec3(0.78, 0.835, 0.9)
 varying vec3 vGP; varying vec3 vGN;
-float gFold = 0.0, gMoss = 0.0, gWet = 0.0, gRH = 0.5, gRD = 0.0, gWR = 0.0; vec4 gRkI = vec4(0.0), gRkW = vec4(0.0); vec3 gRC = vec3(0.3);
+float gFold = 0.0, gMoss = 0.0, gWet = 0.0, gRH = 0.5, gRD = 0.0, gWR = 0.0, gTal = 0.0; vec4 gRkI = vec4(0.0), gRkW = vec4(0.0); vec3 gRC = vec3(0.3);
 float gFoldOf(vec4 g) { return (floor(g.g * 255.0 + 0.5) * 256.0 + floor(g.b * 255.0 + 0.5)) / 128.0 - 256.0; }
 vec2 gMW(vec4 g) { float b = floor(g.a * 255.0 + 0.5); return vec2(floor(b / 16.0) / 15.0, mod(b, 16.0) / 15.0); }
 vec4 gBand(float r, float sL) { int k = int(clamp(r, 0.0, GROCKS - 1.0)); return texture2D(uStrata, vec2(sL / GSTL[k], (float(k) + 0.5) / GROCKS)); }
@@ -364,7 +367,8 @@ void gGeo(ivec2 a, ivec2 hi, vec2 f, vec2 s, float k00, float k10, float k01, fl
   vec4 e01 = texelFetch(uGeo, clamp(a + ivec2(0, 1), ivec2(0), hi), 0), e11 = texelFetch(uGeo, clamp(a + ivec2(1, 1), ivec2(0), hi), 0);
   gFold = mix(mix(gFoldOf(e00), gFoldOf(e10), f.x), mix(gFoldOf(e01), gFoldOf(e11), f.x), f.y);
   vec2 m = mix(mix(gMW(e00), gMW(e10), f.x), mix(gMW(e01), gMW(e11), f.x), f.y); gMoss = m.x; gWet = m.y;
-  gRkI = floor(vec4(e00.r, e10.r, e01.r, e11.r) * 255.0 + 0.5);
+  vec4 rr = floor(vec4(e00.r, e10.r, e01.r, e11.r) * 255.0 + 0.5); gRkI = mod(rr, 16.0); vec4 tl = floor(rr / 16.0) / 15.0;
+  gTal = mix(mix(tl.x, tl.y, f.x), mix(tl.z, tl.w, f.x), f.y);
   gRkW = vec4((1.0 - s.x) * (1.0 - s.y), s.x * (1.0 - s.y), (1.0 - s.x) * s.y, s.x * s.y);
   gWR = (k00 == 16.0 ? gRkW.x : 0.0) + (k10 == 16.0 ? gRkW.y : 0.0) + (k01 == 16.0 ? gRkW.z : 0.0) + (k11 == 16.0 ? gRkW.w : 0.0);
   float sL = vGP.y + gFold; float aa = smoothstep(0.25, 1.1, fwidth(sL) * 1.4);
@@ -376,13 +380,18 @@ void gGeo(ivec2 a, ivec2 hi, vec2 f, vec2 s, float k00, float k10, float k01, fl
 // (the joints of the rock most of the point is, across its face: 1 the face itself, less in a joint — read from the side the face
 // looks to, as the pictures of the stack are; fading away with the distance)
 float gJL(float u, float P, float w) { float q = (0.5 - abs(fract(u / P) - 0.5)) * P; return 1.0 - smoothstep(0.0, w, q); }
-float gJoint(vec3 p, vec3 n, float sL) {
-  float wx = smoothstep(0.35, 0.65, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float u = mix(p.x, p.z, wx) + texture2D(uCN, p.xz / 23.0 + p.y * 0.013).r * 1.4;
+float gJoint0(float u, float sL, vec3 p) {
   if (gRD < 0.5) return 1.0 - 0.3 * gJL(u, 2.7, 0.08) - 0.12 * gJL(sL + u * 0.05, 3.9, 0.05);
   if (gRD < 1.5) return 1.0 - 0.13 * gJL(sL + u * 0.09, 0.19, 0.025);
   if (gRD < 2.5) return (1.0 - 0.1 * gJL(sL + u * 0.36, 0.42, 0.035)) * (1.0 - 0.24 * gJL(u, 5.3, 0.09));
   if (gRD < 3.5) return 1.0 - 0.17 * smoothstep(0.55, 0.95, sin(u * 2.3 + texture2D(uCN, vec2(u * 0.05, p.y * 0.01)).g * 5.0)) - 0.08 * gJL(sL, 2.1, 0.05);
   return 1.0 - 0.36 * gJL(u, 0.86, 0.055);
+}
+float gJoint(vec3 p, vec3 n, float sL) {
+  float wx = smoothstep(0.35, 0.65, abs(n.x) / (abs(n.x) + abs(n.z) + 1e-4)); float u = mix(p.x, p.z, wx) + texture2D(uCN, p.xz / 23.0 + p.y * 0.013).r * 1.4;
+  // (the streaks down a face: the dark the water leaves running down from each ledge, long and thin)
+  float st = 1.0 - 0.14 * smoothstep(0.58, 0.82, texture2D(uCN, vec2(u * 0.11, p.y * 0.006 + 0.37)).g);
+  return st * gJoint0(u, sL, p);
 }
 float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 ${SNOWGLSL}
@@ -544,6 +553,8 @@ vec3 gStack(vec4 t00, vec4 t10, vec4 t01, vec4 t11, vec2 s, float mP, float mB, 
   // (a road of the first rank: gravel worked into its packed earth)
   { float r0 = k00 == 10.0 ? w00 : 0.0, r1 = k10 == 10.0 ? w10 : 0.0, r2 = k01 == 10.0 ? w01 : 0.0, r3 = k11 == 10.0 ? w11 : 0.0; float rs = r0 + r1 + r2 + r3;
     if (rs > 0.003) gAdd(M3_GRAVEL, (c00 * r0 + c10 * r1 + c01 * r2 + c11 * r3) / rs, rs * 0.55); }
+  // (21b: the scree at the foot of a face, in the mean colour of its rock — over the grass and the earth, under the snow)
+  if (gTal > 0.02) gAdd(M3_STONY, GRMEAN[int(clamp(gRD, 0.0, GROCKS - 1.0))] * 1.05, smoothstep(0.0, 0.8, gTal) * 1.1 * (1.0 - gStp));
   // (the swash of a shore: the stones the waves roll, standing out of the sand)
   if (gWL > 0.01) gAdd(M3_PEBBLES, gPeb(cAll), gWL * 1.7);
   // (a steep face is bare rock, whatever the tiles say — in the bands of its rock: 21b)
