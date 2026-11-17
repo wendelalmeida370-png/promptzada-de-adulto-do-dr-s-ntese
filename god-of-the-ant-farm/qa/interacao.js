@@ -224,6 +224,9 @@ if (on('n5')) {
 // ================================================================ n6 knocking at a door
 if (on('n6')) {
   const out = []; const bad = [];
+  // (the knocks by day: at night the world puts the household to bed between the proof's hand and the knock — the metropole opens
+  // at night; the world lived until morning, not its clock set)
+  for (let k = 0; k < 4000 && G.isNight(); k++) frame();
   // (a house of a plan of someone else's family, with someone of it — the case puts them in and takes them out)
   const H = [...S().buildings.values()].filter(x => x.built && x.id !== v.home && In.has(x) && G.BDEF[x.type] && G.BDEF[x.type].housing && G.Space.planNow(x) && people(o => o.home === x.id && o.age >= 16).length).sort(byId)[0];
   if (!H) ok('n6 bater à porta', false, 'nenhuma casa alheia com morador');
@@ -231,7 +234,10 @@ if (on('n6')) {
     const pl = G.Space.planNow(H); const d = pl.doors.find(q => q.kind !== 'vao' && q.outer) || pl.doors.find(q => q.kind !== 'vao'); const r0 = people(o => o.home === H.id && o.age >= 16)[0];
     const others = people(o => o.home === H.id && o.id !== r0.id);
     const set = (inside, sleeping) => god(() => { for (const o of others) { o.inside = 0; } G.Vg.endTask(r0); r0.inside = inside ? H.id : 0; r0.sleeping = !!sleeping; r0.energy = sleeping ? 3 : 100; r0.fear = 0; In.useDoor(H, d.id, 'destrancar', r0); In.useDoor(H, d.id, 'fechar', r0); });
-    const knock = () => ask(w => I.knocked(w, H, d));
+    // (the world's answer at the knock, asked in the world's step with the house as the proof's hand left it — the hands' own knock,
+    // by Possess.apply, is the visual/porta.js 5's; here the house must not change between the hand and the knock: a step of the world
+    // takes the one put at home out on the day's errand — the metropole, by day)
+    const knock = () => god(() => I.knocked(G.S.villagers.get(v.id), H, d));
     set(false); const a = knock(); out.push(`vazia: «${a.msg}»`); if (!a.ok || !a.none) bad.push('vazia');
     set(true, true); const b = knock(); out.push(`dormindo: «${b.msg}»`); if (!b.ok || !b.asleep) bad.push('dormindo');
     set(true, false); const known = Po.knows.person(r0, v) > 0 || !!Po.kin(r0, v); const c = knock(); const s1 = In.doorState(H, d.id).state; out.push(`acordad${r0.g === 'f' ? 'a' : 'o'} (${known ? 'conhece o corpo' : 'não conhece'}): «${c.msg}», a porta ${s1}`);
