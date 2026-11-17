@@ -179,7 +179,7 @@
     m.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind, uBody: R3.U.body, uR, uAcc: { value: acc }, uBark: { value: bark || new THREE.Color(0.2, 0.15, 0.1) }, uMoss: { value: moss || new THREE.Color(0.05, 0.1, 0.03) } });
       sh.vertexShader = `attribute vec4 iA; attribute vec4 iB; attribute vec4 iC; attribute float aK; attribute float aC; attribute float aA;
-        uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform sampler2D uGust; uniform sampler2D uCan; uniform float uN; uniform vec3 uAcc[3]; uniform vec3 uBark; uniform vec3 uMoss;
+        uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform sampler2D uGust; uniform sampler2D uCan; uniform float uN; uniform float uShade; uniform vec3 uAcc[3]; uniform vec3 uBark; uniform vec3 uMoss;
         varying vec3 vMC; varying vec3 vMW; varying float vMU;
         ` + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `
