@@ -51,7 +51,8 @@ const Q = process.env.Q || 'media';
     T.base = new Set(QA.check().filter(e => e.sev <= 3).map(T.qk));
     const S = G.S;
     // (a tree of the land, grown, free, with walkable ground round it, away from the buildings)
-    const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.9 && !t.claim && !t.chop && [...S.buildings.values()].every(b => Math.abs(b.x - t.x) > 4 || Math.abs(b.y - t.y) > 4)).sort((a, b) => a.id - b.id);
+    const HIGH = new Set(['oak', 'olive', 'apple', 'mulberry', 'birch', 'willow', 'acacia', 'baobab', 'palm', 'date', 'jungle']); // (a crown above the eye: the stroke seen, not the branches)
+    const tr = [...S.trees.values()].filter(t => G.Nature.isChoppable(t) && t.stage === 'grow' && t.size >= 0.9 && HIGH.has(t.kind) && ![...S.animals.values()].some(a => !a.dead && Math.abs(a.x - t.x) < 14 && Math.abs(a.y - t.y) < 14) && !t.claim && !t.chop && [...S.buildings.values()].every(b => Math.abs(b.x - t.x) > 4 || Math.abs(b.y - t.y) > 4)).sort((a, b) => a.id - b.id);
     const v = [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && !o.sick && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
     if (!v || !tr.length) return { none: !v ? 'ninguém para viver' : 'nenhuma árvore' };
     if (!T.enter(v)) return { none: 'não entrou no corpo' };
@@ -72,6 +73,8 @@ const Q = process.env.Q || 'media';
   // ================================ w1: the axe stroke, in six moments
   const r1 = await E(() => {
     const T = window.__T, v = T.v; T.give(v, 'machado.bronze'); T.f(6); T.side(); T.f(4);
+    // (the words over the picture set aside for the photos of the stroke — the name of the first seconds, the hints, the toasts)
+    document.querySelectorAll('#inc-banner, #inc-label, #inc-hud .ih-toasts, #inc-hud .ih-hint, #inc-hud .ih-prompt').forEach(e => { e.style.visibility = 'hidden'; });
     const best = G.IncUI.best(); const out = { best: best ? best.label : null };
     G.IncUI.use(); T.f(1); const a = G.Avatar.actNow(); out.anim = a ? a.anim : null; out.vact = v.act;
     // (to the moment before the first contact of the next strokes: the photos are taken as the stroke goes by)
@@ -84,7 +87,7 @@ const Q = process.env.Q || 'media';
     const at = await E(u => { const T = window.__T; let a = G.Avatar.actNow(); if (!a) { G.IncUI.use(); T.f(1); a = G.Avatar.actNow(); } if (!a) return null; T.until(() => { const b = G.Avatar.actNow(); return !b || b !== a || b.t / b.dur >= u; }, 400, 8); const b = G.Avatar.actNow(); return b ? +(b.t / b.dur).toFixed(2) : null; }, U[i]);
     if (at !== null) { await shot(`machado-${i + 1}`, { x: 250, y: 60, width: 600, height: 560 }); got++; }
   }
-  const r1b = await E(() => { const T = window.__T; const out = {}; out.chop = T.tr.chop; out.held = G.Inv.held(T.v).mao; const card = document.querySelector('#inc-hud .ih-work'); out.card = card && !card.classList.contains('hidden') ? card.innerText.replace(/\s+/g, ' ') : null; out.qa = T.novas(); return out; });
+  const r1b = await E(() => { const T = window.__T; const out = {}; document.querySelectorAll('#inc-banner, #inc-label, #inc-hud .ih-toasts, #inc-hud .ih-hint, #inc-hud .ih-prompt').forEach(e => { e.style.visibility = ''; }); out.chop = T.tr.chop; out.held = G.Inv.held(T.v).mao; const card = document.querySelector('#inc-hud .ih-work'); out.card = card && !card.classList.contains('hidden') ? card.innerText.replace(/\s+/g, ' ') : null; out.qa = T.novas(); return out; });
   await shot('trabalho-cartao');
   ok('w1 o golpe de machado de cima: o E corta com o clipe do ofício, o machado na mão (o que se segura e o que o 3D desenha)', r1.best === 'Cortar a árvore' && r1.anim === 'machado' && r1.vact === 'chop' && /machado/.test(r1.held || '') && /machado/.test(r1.look || r1.held || '') && got >= 4 && r1b.chop > 0,
     `o E: ${r1.best}; o gesto: ${r1.anim} (o mundo vê ${r1.vact}); na mão: ${r1.held} (o 3D: ${r1.look}); fotos ${got}/6; o contador da árvore ${r1b.chop.toFixed(2)}`);

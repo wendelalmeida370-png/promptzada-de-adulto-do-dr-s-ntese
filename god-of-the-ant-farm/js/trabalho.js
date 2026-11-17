@@ -436,7 +436,7 @@
       for (const d of bank ? [reachW, reachW * 0.6, 0.7] : [0.7]) {
         const X = ctx.X + Math.cos(ctx.yaw) * d, Z = ctx.Z + Math.sin(ctx.yaw) * d; const x = X / L(), y = Z / L();
         if (!W.inb(x, y) || !isFishWater(S, W.idx(x, y))) continue;
-        return [{ X, Z, x, y, sea: S.type[W.idx(x, y)] <= G.T.SEA, d, reach: Math.max(1.6, d + 0.4) }];
+        return [{ X, Z, x, y, sea: S.type[W.idx(x, y)] <= G.T.SEA, d, reach: Math.max(1.6, d + 0.4), pref: bank ? 1.2 : 0 }]; // (the gear in the hand: the fishing meant before the drink of the edge)
       }
       return [];
     },
