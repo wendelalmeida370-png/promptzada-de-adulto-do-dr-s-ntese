@@ -164,7 +164,7 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   if (want('t7')) {
     const r = await E(() => {
       const X = __X; X.reset(); X.arm([['espada.bronze', 'mao']]); const S = G.S; const me = X.body(); const F = G.Fac.idOfV(me);
-      const w = [...S.villagers.values()].filter(o => o.id !== me.id && o.age >= 20 && o.age < 50 && !o.captive && !o.jail && !o.aboard && !(o.sick > 0) && G.Fac.idOfV(o) === F && !G.Possess.kin(me, o) && !G.Vg.handsBusy(o) && !(o.traits || []).includes('Covarde')).sort((p, q) => (q.role === 'guerreiro') - (p.role === 'guerreiro') || p.id - q.id)[0];
+      const w = [...S.villagers.values()].filter(o => o.id !== me.id && o.age >= 20 && o.age < 50 && !o.captive && !o.jail && !o.aboard && !(o.sick > 0) && G.Fac.idOfV(o) === F && !G.Possess.kin(me, o) && !G.Vg.handsBusy(o) && !(o.traits || []).includes('Covarde') && !(o.lost && (o.lost.armL || o.lost.armR || o.lost.leg)) && o.hp >= 60).sort((p, q) => (q.role === 'guerreiro') - (p.role === 'guerreiro') || p.id - q.id)[0];
       if (!w) return { none: 1 }; w.courage = 0.98; X.stand(w, 1.6, 0); X.f(8);
       const offer = G.Interact.offer(); const fv = offer && offer.verbs.find(x => x.k === 'outra');
       X.key('f', true); X.key('f', false); X.f(12); const d = G.Combate.duel(); const ev = G.Combate.events().filter(e => e.kind === 'recusa' || e.kind === 'duelo' || e.kind === 'fim').map(e => e.kind).join(','); const why = G.Combate.wouldDuel ? '' : ''; X.f(30);
