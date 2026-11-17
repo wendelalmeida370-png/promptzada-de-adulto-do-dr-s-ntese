@@ -127,6 +127,32 @@
     { const sig = { id: ctx.v.id, what: p.id, x: ctx.x, y: ctx.y, set: ctx.v.set }; G.Possess.apply(() => { G.Stories && G.Stories.signal('avatarDeed', sig); return { ok: true }; }); }
     return r;
   };
+  // ------------------------------ the verbs of a target (the second wave's contract, D-460) ------------------------------
+  // A provider may give more than one thing to do with what the body faces: verbs(ctx, t) → [{ k, label, can, run }] — k the key
+  // that does it: 'outra' (F) or 'segurar' (E held; 20e times it); the E itself ('usar') is always the provider's own label / can /
+  // run. Which target is meant stays I.best's, with all its rules; the verbs are that target's. label: text or (ctx, t) → text; can:
+  // (ctx, t) → { ok, why } (none: always); run: (ctx, t) → { ok, msg, card } as a provider's run
+  I.VERB_KEYS = ['usar', 'outra', 'segurar'];
+  const verbList = (ctx, b) => (b && b.p && typeof b.p.verbs === 'function' ? (b.p.verbs(ctx, b.t) || []).filter(x => x && (x.k === 'outra' || x.k === 'segurar') && typeof x.run === 'function') : []);
+  // what can be done with the target the body faces now: { id, t, p, verbs: [{ k, label, ok, why }] } (the E first), or null
+  I.offer = function (b) {
+    const ctx = I.ctx(); if (!ctx) return null; b = b || I.best(); if (!b) return null;
+    const verbs = [{ k: 'usar', label: b.label, ok: b.ok, why: b.why }];
+    for (const x of verbList(ctx, b)) { const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true }; verbs.push({ k: x.k, label: typeof x.label === 'function' ? x.label(ctx, b.t) : String(x.label || ''), ok: !!c.ok, why: c.why || '' }); }
+    return { id: b.id, t: b.t, p: b.p, verbs };
+  };
+  // doing verb k of the target the body faces (or of the choice given) — checked again at the moment of doing, as I.run
+  I.runVerb = function (k, choice) {
+    if (!k || k === 'usar') return I.run(choice || I.best());
+    const ctx = I.ctx(); if (!ctx || G.Avatar.busy() || G.Avatar.swimming()) return null;
+    const b = choice || I.best(); if (!b) return null;
+    const x = verbList(ctx, b).find(q => q.k === k); if (!x) return null;
+    if (score(ctx, b.t.X, b.t.Z, (b.t.reach || b.p.reach) + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };
+    const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true }; if (!c.ok) return { ok: false, msg: c.why };
+    const r = x.run(ctx, b.t) || { ok: true };
+    { const sig = { id: ctx.v.id, what: b.p.id + ':' + k, x: ctx.x, y: ctx.y, set: ctx.v.set }; G.Possess.apply(() => { G.Stories && G.Stories.signal('avatarDeed', sig); return { ok: true }; }); }
+    return r;
+  };
   const face = (ctx, X, Z) => Math.atan2(Z - ctx.Z, X - ctx.X);
   // The hands of the body change the world as anyone's do: what an act does is asked at its contact and done by the world in
   // its own step (Avatar.act's op, through Possess.apply), and it lasts the world seconds the same work lasts for anyone of the

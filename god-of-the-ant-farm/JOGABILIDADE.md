@@ -653,3 +653,99 @@ erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa 
   cortar com machado, minerar com picareta, pescar com vara, rede ou lança, caçar e esfolar, colher, vender numa banca), as pessoas
   do mundo desenhadas fazendo o mesmo com os mesmos clipes e as mesmas ferramentas, sem mudar os resultados do mundo de hoje.
   Usa: tudo da onda 1 e os verbos da 20e.
+
+## 9. A onda 2 — o contrato (D-460 a D-464)
+
+A onda 1 está junta no ramo principal (a animação, o movimento, o inventário, a arte dos itens) com a origem das coisas (20h:
+`G.Origem`, o mapa `ORIGEM.md`). A onda 2 faz a jogabilidade sobre esses alicerces, em três partes ao mesmo tempo, cada uma na sua
+árvore, a partir do commit deste contrato. **Nada vem do nada** (CLAUDE.md, D-440) vale para tudo o que a onda 2 fizer: a coisa que
+se usa existe (na mochila ou no kit), o que se colhe, se caça, se pesca e se vende vai pelo livro com a sua origem.
+
+### 9.1 As portas prontas (leia antes de começar)
+- **As coisas**: `G.Inv.held(v)` / `heldFor(v, memo)` (o que cada um segura e veste), `equip`, `stow`, `draw`, `give`, `take`,
+  `put`, `drop`, `pick`, `near`, `offer` / `make` (o armazém), `kindOK`, `made` (o material que o povo teve); o catálogo `G.Itens`
+  (`dano`, `alcance`, `ritmo`, `trabalho`, `bloqueio`, `protecao`, `peso`, `pega`, `maos`, `tags`); a forma `G.ItemArt` (`geo`,
+  `grip(k).off`, `marks(k)` — `ponta`, `centro`, `chama`, `linha`, `corda` —, `stow`, `icon`, `material`). §4.1 a §4.3.
+- **O corpo**: `G.Avatar.motion()` (§4.4); `G.Avatar.act({ … drive, moveScale, turn, face: 'lock', cancelAt … })` (§4.5);
+  `G.Avatar.dodging()`, `crouched()`, `cuttable()`; a mira travada `G.Cam3D.lockOn / unlock / locked`, a mira por cima do ombro
+  `G.Cam3D.aim(on) / aimRay()`.
+- **As teclas** (§4.7): `outra` (F / Y), `atacar` (clique esquerdo / RT), `defender` (clique direito / LT; também o mirar do arco),
+  `guardar` (R / RB), `travar` (botão do meio, Z / R3), `esquivar` (Q / B), `ombro` (T) já existem — a onda 2 as escuta com
+  `G.Input3D.on(nome, f)` (e `onUp`); os botões do toque pelo registro `G.Input3D.button(ação, { label, when, hold, slot })`.
+- **Os gestos** (§4.6): um gesto novo é um clipe do `G.ANIM_CLIPS.push([id, def])` num arquivo seu, com os seus `acts`, o
+  `item: { hand, two }`, o `contact` no relógio do mundo (`G.Anim3D.loopTime` / `warpTime`) — nunca uma edição do `people3d.js`
+  nem dos `anim-*.js`.
+- **Os bichos para o golpe**: `G.Corpo` (o contorno de cada bicho, o golpe visto antes de chegar, `js/fauna-corpo.js`); o dano
+  pelas portas do mundo: `G.Vg.damage` (pessoas), `G.Animals.damage` (bichos).
+
+### 9.2 Os verbos de um alvo (D-460, feito neste contrato)
+Um provedor do `G.Interact` pode dar mais de uma coisa a fazer com o alvo: `verbs(ctx, t) → [{ k, label, can, run }]`, com `k` a
+tecla — `'outra'` (F) ou `'segurar'` (E segurado: a 20e cronometra) —; o E (`'usar'`) é sempre o `label` / `can` / `run` do
+próprio provedor. Qual alvo se quer continua sendo do `I.best` e de todas as regras dele (L-326, L-467, L-625, L-754, L-778, L-815,
+L-892 — a `qa/portas-casos.js` e o encarna e9/e13/e15/e16/e18 cobram). `G.Interact.offer(b?)` → `{ id, t, p, verbs: [{ k, label, ok,
+why }] }` (o E primeiro); `G.Interact.runVerb(k, b?)` faz o verbo k, conferido de novo na hora (o alcance, o `can`, as mãos livres,
+a nado não), e conta o feito às histórias como o `I.run`. A tela mostra o F ao lado do E quando o alvo tem um (`.ih-alt` no
+`.ih-prompt`), e a tecla F (`outra`) faz `G.IncUI.useVerb('outra')`. A 20e faz a versão inteira (o segurar, a troca de alvo, o
+destaque); a 20f e a 20g registram os seus verbos assim desde já.
+
+### 9.3 As três partes
+- **20e — a interação.** Os verbos de todo alvo (o E, o F, o E segurado — o tempo do segurar com um anel na tela); **trocar de alvo**
+  quando há vários ao alcance (a roda do mouse, a cruz do controle, um toque no alvo no celular); **o destaque do que se mira** —
+  qualquer coisa: pessoa, porta, árvore, coisa no chão, móvel, bicho —, firme (sem piscar), com a dica presa nele na tela;
+  **pegar e largar qualquer coisa** (as coisas do chão pelo `G.Inv.near` / `pick` / `drop`, o que caiu pelo `S.loose`); **a tela dos
+  guardados** — a troca entre a mochila e o que o corpo pode usar (a casa `h:`, a prateleira `b:`, a banca `z:`, o armazém do povo
+  pelo `G.Inv.offer`), pelas regras do `D.may`, arrastando no PC e com dois toques no celular, no estilo da mochila; **os móveis** (o
+  registro `useRule` do `interact.js`, que ninguém usa): sentar, deitar, comer à mesa, aquecer-se, ler, rezar, com os clipes; **dar
+  uma coisa a alguém** (`G.Inv.give`) e **pegar uma ferramenta no armazém**. As provas das portas e das ofertas de hoje continuam
+  passando. *Dono de*: `js/interact.js` (menos os provedores do trabalho — 9.4), o `.ih-prompt` do `incui.js`, o despacho do E e do F
+  (`incui.js` `use` / `useVerb`, `modes.js` `interagir`), os arquivos novos `js/guardados-ui.js` e `js/mira3d.js` (só se vê), e o
+  `possess.js` no que for o encontro e a dádiva (o mínimo, dito).
+- **20f — o combate.** O golpe leve e o pesado de cada arma (o punho, a faca, a espada, o machado, a clava, a lança, a coisa de duas
+  mãos), em sequência (dois ou três leves seguidos; o pesado carregado segurando), com o avanço do próprio golpe (`drive`) e as
+  janelas de corte (`cancelAt`); **a defesa** com escudo ou arma (`defender` segurado: o `bloqueio` do catálogo), **o aparo** (a
+  defesa na hora certa), **a esquiva** da 20b com a janela em que nada acerta, **o fôlego** que o golpe, a defesa e a esquiva gastam
+  (o do corpo); **a reação ao golpe** (o tranco, o cambaleio, a queda) no corpo e nas pessoas do mundo; **a mira travada** (`travar`,
+  `Cam3D.lockOn`) e a troca de alvo; **o arco** — mirar (`defender` com o arco na mão: `Cam3D.aim`), puxar, soltar; a flecha que voa
+  e acerta pelo corpo, as flechas da mochila —; **o golpe que acerta pelo corpo no contato** (as cápsulas das pessoas, que a 20f
+  faz, e os contornos dos bichos do `G.Corpo`), o dano pelas portas do mundo (`Vg.damage`, `G.Animals.damage`) com o `dano` e o
+  material da arma, a `protecao` do elmo e da couraça, o `bloqueio` do escudo; **o crime** de bater em gente do próprio povo (o
+  `G.Crime`, as testemunhas) e **o duelo** (o F numa pessoa: «Desafiar» — a luta que não é crime). As lutas das pessoas entre si
+  (`war.js`, `army.js`, a caça) **mantêm os resultados do mundo de hoje** (os sorteios ficam), desenhadas com os golpes novos (os
+  clipes pelos `acts`). Todo gesto novo com a sua linha no `G.Audio.GESTO` (regra 54). *Dono de*: os arquivos novos `js/combate.js`
+  (`G.Combate`: as operações do golpe no passo do mundo, pelo `Possess.apply`), `js/combate3d.js` (só se vê: o rastro, o clarão do
+  acerto, a marca da mira) e `js/combate-clips.js`; a sua tela (o fôlego, a mira) num elemento seu dentro do `G.IncUI.hud()`,
+  desenhado pelo gancho `G.IncUI.frames` (D-462); o `crime.js` e o `possess.js` só no mínimo (o crime do corpo, o duelo), dito.
+- **20g — os ofícios.** O arcabouço das atividades do corpo: **o alvo, a ferramenta certa na mão** (o `G.Inv.held(v).mao` do tipo
+  que o trabalho pede: machado, picareta, pá, enxada, foice, faca, vara, rede, lança, martelo — sem ela, o trabalho que não se faz
+  diz por quê, e o que se faz pior diz que demora), **o ciclo** (o clipe com o contato no relógio do mundo; o golpe de machado de
+  cima, a duas mãos quando a coisa pede — o clipe «cortar» de hoje é fraco: um braço que se estende), **o rendimento pelas portas do
+  mundo** (`G.Nature.fellTree`, a mina e a pedreira do `economy.js`, `G.Pesca.cast`, `Riches.carcass`, a colheita, a venda numa banca
+  pelo `G.Biz`), **o material da ferramenta** (o `trabalho` do `G.Itens.MATS`: a pedra devagar, o bronze, o ferro mais depressa).
+  Os trabalhos: cortar, minerar e quebrar pedra, cavar, pescar (a vara: lançar, esperar, recolher; a rede: jogar e puxar; a lança:
+  o golpe na água), caçar e esfolar, colher (o arbusto, o campo com a foice), vender numa banca (a semente do comerciante). **As
+  pessoas do mundo desenhadas fazendo o mesmo**, com os mesmos clipes e as mesmas ferramentas, **sem mudar os resultados do mundo de
+  hoje**. *Dono de*: os provedores do trabalho do `interact.js` (`arvore`, `arbusto`, `pedra`, `ouro`, `peixe`, e a tabela `WT`) —
+  que a 20g leva para o arquivo novo `js/trabalho.js` (`G.Trabalho`), registrados pelo `G.Interact.add` —, o `js/trabalho-clips.js`,
+  a sua tela (o andamento do trabalho) num elemento seu pelo `G.IncUI.frames`; os arquivos do mundo do trabalho (`act-pesca.js`,
+  `riches.js`, `nature.js`, `economy.js`, `act-negocio.js`) só no mínimo, dito.
+
+### 9.4 Os donos de cada arquivo na onda 2
+| Arquivo | Dono | Os outros |
+|---|---|---|
+| `js/interact.js` | 20e | a 20g leva os provedores `arvore`, `arbusto`, `pedra`, `ouro`, `peixe` e a `WT` para o `js/trabalho.js` (e só ela os muda); a 20f registra o «Desafiar» do arquivo dela, pelos `verbs` |
+| `js/incui.js` | 20e (o `.ih-prompt`, o `use` / `useVerb`) | a 20f e a 20g põem a sua tela no `G.IncUI.hud()` pelo arquivo delas e a desenham pelo `G.IncUI.frames`; mais nada |
+| `js/modes.js`, `js/input3d.js`, `js/cam3d.js`, `js/avatar.js` | (da 20b, já juntos) | a onda 2 usa as portas (`Input3D.on`, `button`, `Avatar.act`, `Cam3D.lockOn` / `aim`); uma porta que falta: o mínimo, dito no relatório |
+| `js/people3d.js`, `js/anim-*.js`, `js/body3d.js` | (da 20a, já juntos) | a onda 2 só acrescenta clipes pelo `G.ANIM_CLIPS`, do arquivo dela |
+| `js/possess.js`, `js/crime.js` | 20e (o encontro, a dádiva) | a 20f no crime do corpo e no duelo: o mínimo, dito |
+| `js/inventario.js`, `js/itens.js`, `js/origem.js` | (20c, 20h, já juntos) | a onda 2 usa as portas; uma porta nova: o mínimo, dito |
+| `js/villagers.js`, `js/war.js`, `js/army.js`, os `act-*.js`, `economy.js`, `riches.js`, `nature.js` | (o mundo) | o mínimo, dito; os resultados do mundo de hoje não mudam |
+| `index.html`, `css/style.css`, `qa/guard.js`, `qa/AUDIT.md`, `qa/README.md` | todos | **cada parte só abaixo da sua marca** (`20e`, `20f`, `20g`) |
+| `qa/qa.js`, `CLAUDE.md`, `worlds/` | o arquiteto | rode `node qa/junta-inv.js` depois de mudar o seu `*-inv.js`, proponha as linhas do CLAUDE.md, não gere mundos prontos |
+
+### 9.5 Como cada parte trabalha (além do §7)
+- **A máquina recicla a cada hora e meia, mais ou menos** (o contêiner reinicia; o que roda em segundo plano morre sem avisar):
+  **faça commit de cada passo que passar**, logo; prefira provas que terminem em menos de meia hora (as partes por `ONLY=`); guarde
+  o que cada medição deu num arquivo da sua pasta de rascunho; depois de um reinício, retome do último commit.
+- O navegador só pela fila (`bash qa/navegador.sh …`), duas vezes no máximo na máquina inteira.
+- O tempo do mundo do corpo (D-015, a proposta D-365 da 20b: `Space.TIME` de 0,35 para 0,27) **fica como está** nesta onda (D-464):
+  o dono decide depois de sentir a versão 9.

@@ -64,7 +64,7 @@
         <div class="ih-calls"></div>
         <div class="ih-lead hidden"><i></i><span></span></div>
         <div class="ih-mark hidden"><i></i><u></u><b></b></div>
-        <div class="ih-prompt hidden"><kbd>E</kbd><span></span></div>
+        <div class="ih-prompt hidden"><kbd>E</kbd><span></span><i class="ih-alt hidden"><kbd>F</kbd><b></b></i></div>
         <div class="ih-hotbar"></div>
         <div class="ih-reticle"></div>
         <div class="ih-lockmark hidden"><i></i></div>
@@ -235,8 +235,12 @@
   // ------------------------------ the frame ------------------------------
   const hourOf = t => { const h = t >= 0.02 && t <= 0.73 ? 6 + (t - 0.02) / 0.71 * 13 : (19 + (((t - 0.73) + 1) % 1) / 0.29 * 11) % 24; const hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10; return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`; };
   const DIRS = ['L', 'SE', 'S', 'SO', 'O', 'NO', 'N', 'NE']; // (east first: yaw 0 looks east, +yaw turns south)
+  // (the parts' own screens on the body's beat — the second wave's contract, D-462: a part's HUD lives in its own file and is
+  // drawn by its hook here, the same frame, the same pause)
+  IU.frames = [];
   IU.frame = function (rdt) {
     if (!root) return;
+    for (const f of IU.frames) f(rdt);
     const S = G.S;
     // the world's answers to what was asked of it
     for (let k = waits.length - 1; k >= 0; k--) { const w = waits[k]; const r = w.ask.res; if (!r) continue; waits.splice(k, 1); if (r.dropped) continue; if (r.ok) { if (w.ok) w.ok(r); } else if (w.no) w.no(r); }
@@ -265,6 +269,8 @@
       const pr = $('.ih-prompt', hud);
       if (best) { pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok); pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`; }
       else pr.classList.add('hidden');
+      // (the target's second verb, F — the second wave's contract, D-460: shown beside the E when the target has one)
+      { const al = $('.ih-alt', pr); const o = best && G.Interact.offer ? G.Interact.offer(best) : null; const v = o && o.verbs.find(x => x.k === 'outra'); al.classList.toggle('hidden', !v); if (v) { al.querySelector('kbd').textContent = G.Input3D.label('outra'); al.querySelector('b').textContent = v.ok ? v.label : `${v.label} — ${v.why}`; al.classList.toggle('no', !v.ok); } }
     }
     // holding the key repeats the work (stroke after stroke on the same tree)
     if (G.Input3D.down.interagir && best && best.ok && !G.Avatar.busy() && !G.Modes.panel() && (best.id === 'arvore' || best.id === 'pedra')) { repeatT -= rdt; if (repeatT <= 0) { repeatT = 0.15; IU.use(); } } else repeatT = 0.3;
@@ -416,6 +422,17 @@
     else if (r.msg) IU.toast(r.msg, 2.4);
     bestT = 0;
   };
+
+  // the target's second verb (F) or another of its verbs: as IU.use (the second wave's contract, D-460)
+  IU.useVerb = function (k) {
+    const b = best || G.Interact.best(); if (!b || !G.Interact.runVerb) return false;
+    const r = G.Interact.runVerb(k, b); if (!r) return false;
+    if (!r.ok) { IU.toast(r.msg || 'Não dá.'); G.Audio && G.Audio.play && G.Audio.play('deny'); return true; }
+    if (r.card) IU.card(r.card, r.said); else if (r.msg) IU.toast(r.msg, 2.4);
+    bestT = 0; return true;
+  };
+  // (F: the second verb of what the body faces — only in the body, with no panel open, awake)
+  G.Input3D.on('outra', () => { if (!G.Modes.is('INC') || G.Modes.panel() || G.Avatar.busy()) return false; const v = G.Possess.body(); if (!v || v.sleeping) return false; return IU.useVerb('outra'); });
 
   // ------------------------------ cards ------------------------------
   IU.card = function (c, said) {
