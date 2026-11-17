@@ -224,8 +224,10 @@ function castWith(key, pl) {
   const P = G.Pesca; const cast0 = P.cast; const hows = []; P.cast = function (w, x, y, o) { const r = cast0.apply(this, arguments); if (w === v) hows.push([o && o.how, r.ok, S.clock]); return r; };
   const wm = G.Vg.workMul(v); const n0 = ledN(); let durs = new Set(), tries = 0, why = '', heldNow = null;
   try {
+    // (the beasts that kill kept away again at each cast: bears came to the river while the net was out — after the merge of 20e
+    // and 20f the world had four by the ford of this case, and the body hurt let go of its casts: T-1471)
     for (let k = 0; k < 9000 && !(v.carry && v.carry.fish) && tries < 14; k++) {
-      if (!G.Avatar.busy()) { const t = target('peixe'); if (!t) { why = 'sem água diante do corpo'; break; } P.stock && G.S.pesca && delete G.S.pesca[P.idAt(t.x, t.y)]; const r = E('peixe', t); if (!r || !r.ok) { why = r ? r.msg : 'nada'; break; } tries++; const a = G.Avatar.actNow(); if (a) durs.add(+a.dur.toFixed(3)); }
+      if (!G.Avatar.busy()) { safe(pl.ford[0], pl.ford[1]); const t = target('peixe'); if (!t) { why = 'sem água diante do corpo'; break; } P.stock && G.S.pesca && delete G.S.pesca[P.idAt(t.x, t.y)]; const r = E('peixe', t); if (!r || !r.ok) { why = r ? r.msg : 'nada'; break; } tries++; const a = G.Avatar.actNow(); if (a) durs.add(+a.dur.toFixed(3)); if (process.env.DBG) { const nb = [...S.animals.values()].filter(x => !x.dead && Math.hypot(x.x - v.x, x.y - v.y) < 3).map(x => x.kind + '@' + Math.hypot(x.x - v.x, x.y - v.y).toFixed(1)); const np = [...S.villagers.values()].filter(x => x !== v && Math.hypot(x.x - v.x, x.y - v.y) < 2).map(x => x.name + ':' + (x.task && x.task.type)); console.log('  lance', key, JSON.stringify({ t: [t.x, t.y], last: Tr.last() && Tr.last().t, at: [+v.x.toFixed(2), +v.y.toFixed(2)], anim: a && a.anim, hp: Math.round(v.hp), nb, np })); } }
       frame(); if (G.Avatar.busy() && !heldNow) heldNow = Inv.held(v).mao;
     }
   } finally { P.cast = cast0; }
@@ -434,8 +436,10 @@ if (on('t13')) {
   ok('t13 o mesmo mundo com e sem o arcabouço do trabalho carregado (a mesma semente, três minutos do mundo)', a === b && !/^ERRO/.test(a), `sem: ${a.slice(0, 140)} · com: ${b === a ? 'igual' : b.slice(0, 140)}`);
   if (!process.env.NODIGI) {
     const old = path.join(process.env.TRABALHO_OLD || '/tmp/claude-0/-home-user-promptzada-de-adulto-do-dr-s-ntese/474a40dc-2376-5786-aa24-770c3a52b5eb/scratchpad/old76', 'god-of-the-ant-farm');
-    if (!fs.existsSync(path.join(old, 'index.html'))) ok('t13 o mesmo mundo que o 76e3cae', false, `a cópia do 76e3cae não está em ${old} (git archive 76e3cae god-of-the-ant-farm | tar -x -C …; ou TRABALHO_OLD=…)`);
-    else { const c = run(old, false), d = run(old, true); ok('t13 o mesmo mundo que o 76e3cae (com e sem o corpo)', c === a && d === a, `76e3cae: ${c === a ? 'igual' : c.slice(0, 140)} · com o corpo: ${d === a ? 'igual' : d.slice(0, 140)}`); }
+    // (the commit before the 20g — the contract's 76e3cae, or the one it was joined onto: TRABALHO_BASE=46c78a8 TRABALHO_OLD=…)
+    const B = process.env.TRABALHO_BASE || '76e3cae';
+    if (!fs.existsSync(path.join(old, 'index.html'))) ok(`t13 o mesmo mundo que o ${B}`, false, `a cópia do ${B} não está em ${old} (o arquivo do ${B} extraído ali; ou TRABALHO_OLD=…)`);
+    else { const c = run(old, false), d = run(old, true); ok(`t13 o mesmo mundo que o ${B} (com e sem o corpo)`, c === a && d === a, `${B}: ${c === a ? 'igual' : c.slice(0, 140)} · com o corpo: ${d === a ? 'igual' : d.slice(0, 140)}`); }
   } }
 
 // ------------------------------ x ------------------------------
