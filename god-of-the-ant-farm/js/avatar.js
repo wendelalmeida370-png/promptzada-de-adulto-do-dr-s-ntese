@@ -361,6 +361,8 @@
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid); const tr = G.Space.trunk(t); // (the rule the steps before a door keep from: L-197)
       if (tr) { cx = t.x * L; cz = t.y * L; rr = tr; }
       else if (S.occ[i] && S.occ[i] !== sq) { const B = S.buildings.get(S.occ[i]); if (B && B.type === 'praca' && B.built) { sq = B.id; cx = (B.x + B.w / 2) * L; cz = (B.y + B.h / 2) * L; rr = 1.4; } }
+      // (21a: the forest's hard stems — a tree fern, a young tree, a slim palm, bamboo —, walked round as a trunk is: Space.stems, D-473)
+      for (const st of G.Space.stems(i)) { const sx = X + ox - st[0], sz = Z + oz - st[1]; const d = Math.hypot(sx, sz); const m = st[2] + TUNE.radius; if (d < m && d > 1e-4) { ox += sx / d * (m - d); oz += sz / d * (m - d); } }
       if (!rr) continue;
       const ddx = X + ox - cx, ddz = Z + oz - cz; const d = Math.hypot(ddx, ddz); const m = rr + TUNE.radius;
       if (d < m && d > 1e-4) { ox += ddx / d * (m - d); oz += ddz / d * (m - d); }
@@ -533,8 +535,9 @@
   // lost leg none). Indoors one walks: the jog and the sprint are for the street and the field (an open ground — a square, an
   // arena — is the street's); a heavy load, deep water, the crouch: no sprint
   const PACE = { walk: 0, jog: 0, sprint: 0 };
-  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time of D-015,
-  // 0,35 — so a slower time of the body would slow the walk with the world's people, and leave the jog and the sprint as they are)
+  // (the jog and the sprint are the body's own, not the world's pace: reckoned from this person's walk at the body's time they were
+  // tuned on, D-015's 0,35 — so the slower time of the body of D-365 (Space.TIME 0,27) slows the walk with the world's people and
+  // leaves the jog and the sprint as they were)
   const REF_TIME = 0.35;
   Av.refWalk = caps => caps.walk * REF_TIME / (G.Space.TIME || REF_TIME);
   function paces(v, caps, here, wx, wz, wl) {
@@ -867,6 +870,10 @@
   Av.wade = () => (b && b.loco !== 'swim' ? b.wade : 0);
   Av.climbing = () => !!(b && b.climb);
   Av.rest = () => { if (b && b.caps) b.stamina = b.caps.stamina; }; // (a drink of water: the breath comes back)
+  // (the fight's doors, 20f: the breath a blow, the guard or a parry takes — false, and nothing taken, with none left; n 0 only
+  // holds its coming back —; and the weight of a blow that lands, the body's own time all but stopped for s seconds)
+  Av.spend = function (n) { if (!b || !b.caps) return false; if (n > 0 && b.stamina < 1) return false; b.stamina = Math.max(0, b.stamina - Math.max(0, n || 0)); b.regenT = TUNE.regenDelay; return true; };
+  Av.hitstop = s => { if (b) b.stopT = Math.max(b.stopT || 0, G.clamp(s || 0, 0, 0.2)); };
   Av.cancelAct = () => { if (b && b.act) { cutAct(); b.loco = 'ground'; } };
   // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
   function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (a && a.cut && !a.res) a.cut(); }
@@ -1065,6 +1072,7 @@
   }
   Av.frame = function (rdt) {
     const v = G.Possess.body(); if (!b || !v || v.id !== b.id) return;
+    if (b.stopT > 0) { const k = Math.min(rdt, b.stopT); b.stopT -= k; rdt -= k * 0.9; } // (a blow's weight: the body's own time all but stops a moment — Av.hitstop, 20f)
     b.acc = Math.min(0.25, b.acc + rdt);
     while (b && b.acc >= TUNE.step) { b.acc -= TUNE.step; step(v, TUNE.step); }
     if (!b) return; // (the step ended the body: the world took it)

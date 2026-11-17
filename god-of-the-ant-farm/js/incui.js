@@ -64,7 +64,7 @@
         <div class="ih-calls"></div>
         <div class="ih-lead hidden"><i></i><span></span></div>
         <div class="ih-mark hidden"><i></i><u></u><b></b></div>
-        <div class="ih-prompt hidden"><kbd>E</kbd><span></span><i class="ih-alt hidden"><kbd>F</kbd><b></b></i></div>
+        <div class="ih-prompt hidden"><div class="ih-main"><kbd>E</kbd><span></span></div><i class="ih-alt hidden"><kbd>F</kbd><b></b></i><i class="ih-hold hidden"><kbd>E</kbd><u class="ih-ring"></u><em>segurar</em><b></b></i><i class="ih-cyc hidden"><kbd>Roda</kbd><b></b></i></div>
         <div class="ih-hotbar"></div>
         <div class="ih-reticle"></div>
         <div class="ih-lockmark hidden"><i></i></div>
@@ -88,6 +88,8 @@
     $('.ih-god', hud).onclick = () => G.Modes.leave('deus');
     $('.ih-diary', hud).onclick = () => G.Input3D.press('diario'); // (the same as its key)
     touchBuild();
+    // (20e: the prompt is a button for the fingers — its E line the E, its F line the F)
+    { const pr = $('.ih-prompt', hud); pr.addEventListener('click', e => { if (!G.Modes.is('INC') || G.Modes.panel()) return; e.stopPropagation(); if (e.target.closest('.ih-alt')) IU.useVerb('outra'); else if (e.target.closest('.ih-hold')) IU.useVerb('segurar'); else if (e.target.closest('.ih-cyc')) IU.cycle(1); else { IU.press(); IU.release(); } }); }
     card.addEventListener('click', onCardClick); menu.addEventListener('click', onMenuClick); menu.addEventListener('input', onMenuInput);
     // (the cards and the menu are the mouse's: a click there is not a look-around)
     for (const el of [card, menu]) el.addEventListener('mousedown', e => e.stopPropagation());
@@ -254,26 +256,17 @@
     if (hintT > 0) { hintT -= rdt; }
     fadeOut($('.ih-hint', hud), hintT, 1.2);
     if (!G.Modes.inc()) { label.classList.add('hidden'); markEl.classList.add('hidden'); return; }
-    drawAir();
+    drawAir(); tapHook();
     const v = G.Possess.body(); if (!v) return;
     // (another body: what reached the ears of the one before is not this one's)
     if (v.id !== lastBody) { lastBody = v.id; if (news.length) { news = []; renderNews(); } }
     // (the diary's page, while it is open: read again once a second — the world goes on while one reads)
     if (G.Modes.panelIs('diario')) { diaryT -= rdt; if (diaryT <= 0) { diaryT = 1; renderDiary(); } }
-    // the best thing to do, a few times a second (the world is asked, not the picture)
-    bestT -= rdt;
-    if (bestT <= 0) {
-      bestT = 0.12;
-      best = G.Modes.panel() || v.sleeping || G.Avatar.busy() ? null : G.Interact.best();
-      G.People3D.highlight = best && best.id === 'pessoa' && !hudOff ? best.t.o.id : 0; // (the mark over the one faced is the screen's)
-      const pr = $('.ih-prompt', hud);
-      if (best) { pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok); pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`; }
-      else pr.classList.add('hidden');
-      // (the target's second verb, F — the second wave's contract, D-460: shown beside the E when the target has one)
-      { const al = $('.ih-alt', pr); const o = best && G.Interact.offer ? G.Interact.offer(best) : null; const v = o && o.verbs.find(x => x.k === 'outra'); al.classList.toggle('hidden', !v); if (v) { al.querySelector('kbd').textContent = G.Input3D.label('outra'); al.querySelector('b').textContent = v.ok ? v.label : `${v.label} — ${v.why}`; al.classList.toggle('no', !v.ok); } }
-    }
-    // holding the key repeats the work (stroke after stroke on the same tree)
-    if (G.Input3D.down.interagir && best && best.ok && !G.Avatar.busy() && !G.Modes.panel() && (best.id === 'arvore' || best.id === 'pedra')) { repeatT -= rdt; if (repeatT <= 0) { repeatT = 0.15; IU.use(); } } else repeatT = 0.3;
+    // the best thing to do, a few times a second (the world is asked, not the picture) — the target the screen shows, firm, the
+    // others one may switch to, its verbs on their keys, the ring of the E held, the prompt by the target (20e: aimFrame)
+    aimFrame(rdt, v);
+    // holding the key repeats the work (stroke after stroke on the same tree) — where E held is no verb of the target's own
+    if (G.Input3D.down.interagir && best && best.ok && !hold && !aim.hv && !G.Avatar.busy() && !G.Modes.panel() && (best.id === 'arvore' || best.id === 'pedra')) { repeatT -= rdt; if (repeatT <= 0) { repeatT = 0.15; IU.use(); } } else repeatT = 0.3;
     // the name over the one the body faces
     placeLabel();
     // the lead to the work near (only read from the world, a few times a second), and its mark over the place, every frame
@@ -316,7 +309,7 @@
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['travar', 'travar a mira'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
+    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['travar', 'travar a mira'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
@@ -411,28 +404,174 @@
     IU.markAt = { x, y, off, angle: ang };
   }
 
+  // ------------------------------ the target and its verbs (20e, D-395 to D-400) ------------------------------
+  // The target the screen shows is firm (D-398): what I.best gives, kept while it is still in reach until another one has been the
+  // best on two looks in a row — never one that blinks between two at the edge of their scores — at once when the shown one is
+  // gone; or the one the player switched to (the wheel, the cross, a touch on it: D-397), held while it is in reach and I.best's
+  // own choice stays the same. Its verbs on their keys: E, F and E held — the ring fills while E is held over a target that has a
+  // verb for it, and a tap is the E (D-396). The prompt is by the target on the screen, its keys and verbs stacked beside it; where
+  // the target is off the picture, at the foot of the screen as before (D-400). The 3D mark round the target is Mira3D's (only seen)
+  IU.HOLD_T = 0.45; // (seconds of E held for the held verb; the ring shows from a tap's length on)
+  IU.RING_FROM = 0.12;
+  let aim = { key: '', cands: [], pin: '', pinBest: '', want: '', wantN: 0, hv: false, verbs: null, pt: null, sx: NaN, sy: NaN, at: false };
+  let hold = null; // ({ key, t, b }: E held over a target with a held verb, since t)
+  G.worldHooks.push(() => { aim = { key: '', cands: [], pin: '', pinBest: '', want: '', wantN: 0, hv: false, verbs: null, pt: null, sx: NaN, sy: NaN, at: false }; hold = null; });
+  IU.aim = () => ({ key: aim.key, pin: aim.pin, cands: aim.cands.map(c => ({ id: c.id, key: c.key, label: c.label, ok: c.ok, ang: +c.ang.toFixed(3), d: +c.d.toFixed(2) })), verbs: aim.verbs, at: aim.at, x: aim.sx, y: aim.sy, hold: hold ? hold.t : 0 }); // (for the proofs)
+  IU.holding = () => (hold ? Math.min(1, hold.t / IU.HOLD_T) : 0);
+  IU.cands = () => aim.cands.slice(); // (for the proofs: the targets in reach as the screen has them, with their targets of the world)
+  // (the choice of a candidate, as I.run takes it: I.best's own answer for the first — its rules' words —, the provider's for another)
+  const choiceOf = (c, b0) => (!c ? null : c.first && b0 ? b0 : G.Interact.asChoice(c));
+  function look(v) {
+    const I = G.Interact; const blind = G.Modes.panel() || v.sleeping || G.Avatar.busy();
+    const sn = blind ? null : I.scan(); const b0 = sn ? I.best(sn) : null; const cands = b0 ? I.candidates(sn) : [];
+    const firstKey = b0 ? I.keyOf(b0) : ''; aim.cands = cands;
+    const has = k => !!k && cands.some(c => c.key === k);
+    // (the player's choice holds while it is in reach and the best one is the one it was chosen beside)
+    if (aim.pin && (!has(aim.pin) || aim.pinBest !== firstKey)) aim.pin = '';
+    let key = aim.pin;
+    if (!key) {
+      if (!firstKey) key = '';
+      else if (!has(aim.key) || aim.key === firstKey) { key = firstKey; aim.want = ''; aim.wantN = 0; }
+      else { if (aim.want === firstKey) aim.wantN++; else { aim.want = firstKey; aim.wantN = 1; } key = aim.wantN >= 2 ? firstKey : aim.key; if (key === firstKey) { aim.want = ''; aim.wantN = 0; } }
+    }
+    if (key !== aim.key) { aim.key = key; aim.sx = NaN; aim.sy = NaN; aim.side = 0; if (hold && hold.key !== key) hold = null; }
+    const c = cands.find(q => q.key === key) || null; best = choiceOf(c, b0);
+    if (!best && key) aim.key = '';
+    return c;
+  }
+  // (the prompt's words: E, F and E held, each with what it does — or why not —; how many there are to switch to)
+  function renderPrompt(c) {
+    const pr = $('.ih-prompt', hud); const I = G.Interact;
+    G.People3D.highlight = best && best.id === 'pessoa' && !hudOff ? best.t.o.id : 0; // (the mark over the one faced is the screen's)
+    if (!best) { pr.classList.add('hidden'); aim.verbs = null; aim.hv = false; return; }
+    pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok);
+    pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`;
+    const o = I.offer ? I.offer(best) : null; aim.verbs = o ? o.verbs.map(x => ({ k: x.k, label: x.label, ok: x.ok, why: x.why })) : null;
+    // (the target's second verb, F — the second wave's contract, D-460: shown beside the E when the target has one)
+    { const al = $('.ih-alt', pr); const x = o && o.verbs.find(q => q.k === 'outra'); al.classList.toggle('hidden', !x); if (x) { al.querySelector('kbd').textContent = G.Input3D.label('outra'); al.querySelector('b').textContent = x.ok ? x.label : `${x.label} — ${x.why}`; al.classList.toggle('no', !x.ok); } }
+    { const hl = $('.ih-hold', pr); const x = o && o.verbs.find(q => q.k === 'segurar'); aim.hv = !!x; hl.classList.toggle('hidden', !x); if (x) { hl.querySelector('kbd').textContent = G.Input3D.label('interagir'); hl.querySelector('b').textContent = x.ok ? x.label : `${x.label} — ${x.why}`; hl.classList.toggle('no', !x.ok); } }
+    { const cy = $('.ih-cyc', pr); const n = aim.cands.length; cy.classList.toggle('hidden', n < 2); if (n >= 2) { const i = Math.max(0, aim.cands.findIndex(q => q.key === aim.key)); const pad = G.Input3D.device === 'pad', touch = G.Input3D.device === 'touch';
+      cy.querySelector('kbd').textContent = pad ? '← →' : touch ? 'Toque' : (G.Input3D.keyLabel('alvoProx') && /Roda/.test(G.Input3D.keyLabel('alvoProx')) ? 'Roda' : G.Input3D.keyLabel('alvoProx') || 'Roda'); cy.querySelector('b').textContent = `${i + 1} de ${n} · trocar de alvo`; } }
+    void c;
+  }
+  function aimFrame(rdt, v) {
+    // (a panel over the middle of the screen — the bag, the things kept —: what lies behind it, the news, the hint, the prompt,
+    // steps out of sight, and the world's answers rise above it: the panel is read, not the screen behind it)
+    { const on = !!(G.Modes.panelIs('mochila') || G.Modes.panelIs('guardados')); if (root._po !== on) { root._po = on; root.classList.toggle('panel-on', on); } }
+    if (G.GuardUI) G.GuardUI.frame(rdt); // (the screen of what is kept, on the body's beat: guardados-ui.js)
+    bestT -= rdt;
+    if (bestT <= 0) { bestT = 0.12; const c = look(v); renderPrompt(c); }
+    // (E held: the ring fills; at its end the held verb — the target still the one it was held over —; let go before, the E)
+    if (hold) {
+      if (G.Modes.panel() || !G.Modes.is('INC')) hold = null;
+      else { hold.t += rdt; if (hold.t >= IU.HOLD_T) { const h = hold; hold = null; IU.useVerb('segurar', h.b); } }
+    }
+    placePrompt(rdt);
+    // (the 3D mark round what is shown: firm, crossfaded by Mira3D — only seen; nothing with the screen put away)
+    if (G.Mira3D) G.Mira3D.set(best && !hudOff && !G.Modes.panel() ? { key: aim.key, id: best.id, t: best.t, ok: best.ok } : null);
+  }
+  // (the prompt by the target: to its right at the height of its middle, kept on the picture, eased so it never jitters; with the
+  // target off the picture or behind the eye, or with nothing in the 3D to point at, at the foot of the screen)
+  function placePrompt(rdt) {
+    const pr = $('.ih-prompt', hud); const r = hold ? Math.min(1, hold.t / IU.HOLD_T) : 0; const show = hold && hold.t >= IU.RING_FROM ? r : 0;
+    const rs = show.toFixed(3); if (pr._r !== rs) { pr._r = rs; pr.style.setProperty('--hold', rs); pr.classList.toggle('holding', show > 0); }
+    if (!best || pr.classList.contains('hidden')) { aim.at = false; return; }
+    const A = G.Mira3D && G.Mira3D.anchor ? G.Mira3D.anchor() : null; const cam = G.Realm.camera && G.Realm.camera(); let at = false, x = 0, y = 0;
+    if (A && cam && window.THREE && A.key === aim.key) {
+      const q = IU._pq || (IU._pq = new window.THREE.Vector3()); q.set(A.X, A.Y, A.Z); q.project(cam);
+      const Wd = window.innerWidth, Ht = window.innerHeight; x = (q.x * 0.5 + 0.5) * Wd; y = (-q.y * 0.5 + 0.5) * Ht;
+      at = q.z < 1 && x > 24 && x < Wd - 24 && y > 70 && y < Ht - 60;
+      // (on the side of the target away from the middle of the picture, where the body is: never over the body itself; the side
+      // kept while the target stays near the middle, so the box does not jump across it)
+      if (at) { const w = pr.offsetWidth || 260, h = pr.offsetHeight || 60; const c = Wd / 2; aim.side = Math.abs(x - c) < 40 && aim.side ? aim.side : x < c ? -1 : 1;
+        x = G.clamp(aim.side < 0 ? x - 34 - w : x + 34, 12, Wd - w - 12); y = G.clamp(y - h / 2, 64, Ht - h - (G.Input3D.touch ? 240 : 96)); }
+    }
+    if (at !== aim.at) { aim.at = at; pr.classList.toggle('at', at); if (!at) { pr.style.transform = ''; aim.sx = NaN; } }
+    if (!at) return;
+    const k = Number.isFinite(aim.sx) ? 1 - Math.exp(-16 * Math.max(0, rdt)) : 1; aim.sx = Number.isFinite(aim.sx) ? aim.sx + (x - aim.sx) * k : x; aim.sy = Number.isFinite(aim.sy) ? aim.sy + (y - aim.sy) * k : y;
+    const tr = `translate(${aim.sx.toFixed(1)}px, ${aim.sy.toFixed(1)}px)`; if (pr._tr !== tr) { pr._tr = tr; pr.style.transform = tr; }
+  }
+  // switching to the next target in reach, toward the right (dir 1) or the left (-1) of the one shown — the order they stand in
+  // before the body; true when there was another to go to (the wheel's fallback is the eye's zoom)
+  IU.cycle = function (dir) {
+    const v = G.Possess.body(); if (!v || !G.Modes.is('INC') || G.Modes.panel() || v.sleeping) return false;
+    const L = aim.cands; if (L.length < 2) return false; let i = L.findIndex(c => c.key === aim.key); if (i < 0) i = 0;
+    const c = L[(i + (dir < 0 ? L.length - 1 : 1)) % L.length]; IU.pick(c.key); return true;
+  };
+  // (the player's own choice of a target in reach, by its key: shown now and held — the eye of the screen, never the world's)
+  IU.pick = function (key) {
+    const c = aim.cands.find(q => q.key === key); if (!c) return false;
+    const first = aim.cands.find(q => q.first); aim.pin = c.first ? '' : key; aim.pinBest = first ? first.key : ''; aim.key = key; aim.want = ''; aim.wantN = 0; aim.sx = NaN;
+    hold = null; best = choiceOf(c, c.first ? G.Interact.best() : null); renderPrompt(c); G.Audio && G.Audio.play && G.Audio.play('click', 0.6); return true;
+  };
+  // (a finger's tap on the picture: the target drawn nearest to it — 64 px at most — is chosen; on the one already shown, its E)
+  IU.tapAt = function (x, y) {
+    const cam = G.Realm.camera && G.Realm.camera(); if (!cam || !window.THREE || !aim.cands.length) return false;
+    const q = IU._tq || (IU._tq = new window.THREE.Vector3()); let bk = '', bd = 64;
+    for (const c of aim.cands) { const p = (G.Mira3D && G.Mira3D.pointOf ? G.Mira3D.pointOf(c) : null) || { X: c.t.X, Y: (G.Avatar.pos() || { Y: 0 }).Y + 0.9, Z: c.t.Z }; q.set(p.X, p.Y, p.Z); q.project(cam); if (q.z > 1) continue;
+      const d = Math.hypot((q.x * 0.5 + 0.5) * window.innerWidth - x, (-q.y * 0.5 + 0.5) * window.innerHeight - y); if (d < bd) { bd = d; bk = c.key; } }
+    if (!bk) return false; if (bk === aim.key) { IU.press(); IU.release(); return true; } return IU.pick(bk);
+  };
+  let tapOn = false, tap0 = null;
+  function tapHook() {
+    const cv = G.Realm.canvas && G.Realm.canvas(); if (tapOn || !cv) return; tapOn = true;
+    cv.addEventListener('touchstart', e => { const t = e.changedTouches[0]; if (t && e.touches.length === 1 && t.clientX > window.innerWidth * 0.45) tap0 = { id: t.identifier, x: t.clientX, y: t.clientY, t: performance.now() }; else tap0 = null; }, { passive: true });
+    cv.addEventListener('touchmove', e => { if (!tap0) return; for (const t of e.changedTouches) if (t.identifier === tap0.id && Math.hypot(t.clientX - tap0.x, t.clientY - tap0.y) > 12) tap0 = null; }, { passive: true });
+    cv.addEventListener('touchend', e => { const s = tap0; tap0 = null; if (!s || !G.Modes.is('INC') || G.Modes.panel()) return; for (const t of e.changedTouches) if (t.identifier === s.id && performance.now() - s.t < 300) IU.tapAt(t.clientX, t.clientY); }, { passive: true });
+  }
   // ------------------------------ doing ------------------------------
-  IU.use = function () {
+  // E pressed (modes.js, the E's dispatch — 20e): over a target with a held verb, wait — let go soon it is the E, held the ring's
+  // time it is the held verb —; over any other, the E at once (as it always was: a tree's stroke on the key's press)
+  IU.press = function () {
     const b = best || G.Interact.best(); if (!b) return;
+    if (aim.hv && !G.Avatar.busy()) { hold = { key: aim.key || G.Interact.keyOf(b), t: 0, b }; return; }
+    IU.use(b);
+  };
+  IU.release = function () { const h = hold; if (!h) return; hold = null; if (h.t < IU.HOLD_T) IU.use(h.b); };
+  // what a verb's answer opens on the screen: a card, a word, or the screen of what is kept (G.GuardUI: the bag and a holder, or the
+  // bag and someone to give to)
+  function answer(r) {
+    if (r.knock) G.Audio && G.Audio.play && G.Audio.play('knock');
+    if (r.panel && G.GuardUI) { const ok = G.GuardUI.open(r.panel); if (!ok && r.panel.why) IU.toast(r.panel.why, 2.4); }
+    else if (r.card) IU.card(r.card, r.said);
+    else if (r.msg) IU.toast(r.msg, 2.4);
+    if (r.ask) IU.when(r.ask, () => r.msgOk && IU.toast(r.msgOk, 2.4));
+  }
+  IU.use = function (b0) {
+    const b = b0 || best || G.Interact.best(); if (!b) return;
     if (!b.ok) { IU.toast(b.why); G.Audio && G.Audio.play && G.Audio.play('deny'); return; }
     const r = G.Interact.run(b); if (!r) return;
     if (!r.ok) { IU.toast(r.msg || 'Não dá.'); return; }
-    if (r.knock) G.Audio && G.Audio.play && G.Audio.play('knock');
-    if (r.card) IU.card(r.card, r.said);
-    else if (r.msg) IU.toast(r.msg, 2.4);
+    answer(r);
     bestT = 0;
   };
 
-  // the target's second verb (F) or another of its verbs: as IU.use (the second wave's contract, D-460)
-  IU.useVerb = function (k) {
-    const b = best || G.Interact.best(); if (!b || !G.Interact.runVerb) return false;
-    const r = G.Interact.runVerb(k, b); if (!r) return false;
+  // the target's second verb (F) or another of its verbs: as IU.use (the second wave's contract, D-460); vid: one verb by its id
+  IU.useVerb = function (k, b0, vid) {
+    const b = b0 || best || G.Interact.best(); if (!b || !G.Interact.runVerb) return false;
+    const r = G.Interact.runVerb(k, b, vid); if (!r) return false;
     if (!r.ok) { IU.toast(r.msg || 'Não dá.'); G.Audio && G.Audio.play && G.Audio.play('deny'); return true; }
-    if (r.card) IU.card(r.card, r.said); else if (r.msg) IU.toast(r.msg, 2.4);
+    // (a hug's answer is the world's: told when the one hugged has answered — Interact.hug's ask)
+    if (r.ask && r.msg && !r.card && !r.panel) { IU.when(r.ask, () => IU.toast(r.msg, 2.4)); bestT = 0; return true; }
+    answer(r);
     bestT = 0; return true;
   };
   // (F: the second verb of what the body faces — only in the body, with no panel open, awake)
   G.Input3D.on('outra', () => { if (!G.Modes.is('INC') || G.Modes.panel() || G.Avatar.busy()) return false; const v = G.Possess.body(); if (!v || v.sleeping) return false; return IU.useVerb('outra'); });
+  // (E let go: the end of a hold — heard whatever the state, as every letting go)
+  G.Input3D.onUp('interagir', () => IU.release());
+  // (the wheel switches between the targets in reach — and where there is no other, it is the eye's zoom, as it was: D-397; the
+  // fingers' E is held and let go as the key)
+  G.Input3D.def('alvoProx', 'Próximo alvo (vários ao alcance)', ['wheeldown']);
+  G.Input3D.def('alvoAnt', 'Alvo anterior (vários ao alcance)', ['wheelup']);
+  G.Input3D.on('alvoProx', () => { if (!IU.cycle(1)) G.Cam3D.zoom(100); return true; });
+  G.Input3D.on('alvoAnt', () => { if (!IU.cycle(-1)) G.Cam3D.zoom(-100); return true; });
+  G.Input3D.button('interagir', { label: () => G.Input3D.keyLabel('interagir') || 'E', hold: true, order: 12 });
+  // (the cross of the controller, ← and →, switches while there are several in reach and the controller is in the hands: the quick
+  // things of 2 and 4 wait for them to go — modes.js asks here before the quick things hear it)
+  // (the press of a controller's button reaches here before the poll says the controller is the one in the hands — its first press
+  // after the keyboard —: a controller connected is asked, not the device of the last input — L-1243)
+  IU.padCycle = function (a) { if (!(G.Input3D.pad && G.Input3D.pad()) || aim.cands.length < 2 || !best) return false; if (a === 'rapido2') return IU.cycle(1); if (a === 'rapido4') return IU.cycle(-1); return false; };
 
   // ------------------------------ cards ------------------------------
   IU.card = function (c, said) {
@@ -460,7 +599,11 @@
       const can = o ? G.Possess.can(o) : { ok: false };
       // (one's own, or anyone in mourning: a hug)
       const hug = o ? G.Interact.canHug(G.Possess.body(), o) : { ok: false };
-      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
+      // (20e, D-395: the verbs of this person that lost their key — another part's took it — are buttons here)
+      const chosen = best && best.id === 'pessoa' && best.t.o.id === c.id ? best : null; const of = chosen && G.Interact.offer ? G.Interact.offer(chosen) : null;
+      const more = of ? of.more.filter(x => x.id !== 'abraco') : []; // (the hug has its own button above)
+      const vb = more.map(x => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${esc(x.label)}</button>`).join('');
+      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${vb}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;
       if (c.desc) h += `<div class="ic-desc">${esc(c.desc)}</div>`;
@@ -509,6 +652,7 @@
   function onCardClick(e) {
     const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
     if (c === 'close') { IU.closeAll(); G.Modes.setPanel(null); }
+    else if (c === 'verb') { const k = b.dataset.vk, id = b.dataset.v; IU.closeAll(); G.Modes.setPanel(null); IU.useVerb(k, null, id); }
     else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r && r.ok) IU.when(r.ask, () => IU.toast(r.msg, 2.4)); else if (r) IU.toast(r.msg || 'Agora não dá.', 2.4); }
     else if (c === 'swap') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); if (o) G.Modes.switchTo(o); }
     else if (c === 'diary') IU.diary();
@@ -556,7 +700,7 @@
         <button data-m="god" class="big gold">Voltar ao Modo Deus</button>
         <button data-m="save">Salvar o jogo</button></div>
         <div class="im-row"><label><input type="checkbox" data-h="tela" ${hudOff ? '' : 'checked'}> Mostrar a tela — nome, lugar, hora, avisos <kbd>${esc(G.Input3D.label('tela'))}</kbd></label></div>
-        <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a 0,35× da velocidade normal do Modo Deus).</div>`;
+        <div class="im-note">Enquanto você vive esta vida, o mundo segue no mesmo relógio — só que no passo de uma pessoa (o tempo corre a ${String(G.Space.TIME).replace(".", ",")}× da velocidade normal do Modo Deus).</div>`;
     } else if (tab === 'controles') {
       // (20b: each action with its keys and mouse buttons and its controller button — a click on either and the next key, button
       // of the mouse or of the controller is it —; the eye's choices for the mouse, the controller and the fingers)

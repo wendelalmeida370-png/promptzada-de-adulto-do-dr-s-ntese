@@ -289,8 +289,8 @@ ${GXAIR}`;
   function mapsTick(t, vt) {
     const S = G.S; if (!MAPS.air || MAPS.n !== G.N + 1) mapsMake(); const n = MAPS.n;
     // (the air: looked at once a second of the view; made again only when the land is another)
-    if (vt - MAPS.look > 1 || vt < MAPS.look || !MAPS.key) { MAPS.look = vt; const key = G.Ceu.airKey();
-      if (key !== MAPS.key) { const A = G.Ceu.airMap(); MAPS.air.image.data.set(A.pic); MAPS.air.needsUpdate = true; MAPS.key = key; MAPS.at = S.clock; MAPS.cano = 0; for (let c = 0; c < A.cano.length; c++) if (A.cano[c] > 0.004) { MAPS.cano = 1; break; }
+    if (vt - MAPS.look > 1 || vt < MAPS.look || !MAPS.key) { MAPS.look = vt; const key = G.Ceu.airKey(true);
+      if (key !== MAPS.key) { const A = G.Ceu.airMap(true); MAPS.air.image.data.set(A.pic); MAPS.air.needsUpdate = true; MAPS.key = key; MAPS.at = S.clock; MAPS.cano = 0; for (let c = 0; c < A.cano.length; c++) if (A.cano[c] > 0.004) { MAPS.cano = 1; break; }
         // (the ground in the shade's B: the land the shadows and the canopy are measured from)
         const d = MAPS.shade.image.data, H = S.H; for (let c = 0; c < n * n; c++) { d[c * 4 + 2] = Math.round(G.clamp(H[c] * G.Space.HM / G.Ceu.TOPM, 0, 1) * 255); } MAPS.tA = NaN; } }
     // (the shade: two hours apart, the light blending between them)
@@ -321,7 +321,7 @@ ${GXAIR}`;
   // (the canopy over a point of the world — X, Z in metres —, from the map of the air, between its four corners; and whether the
   // point lies under the crowns: their height over the ground there)
   function canopyAt(X, Y, Z) {
-    const A = G.Ceu.airMap(), n = A.n, TL = G.Space.TILE; const x = G.clamp(X / TL, 0, n - 1.001), z = G.clamp(Z / TL, 0, n - 1.001); const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j; const c = j * n + i;
+    const A = G.Ceu.airMap(true), n = A.n, TL = G.Space.TILE; const x = G.clamp(X / TL, 0, n - 1.001), z = G.clamp(Z / TL, 0, n - 1.001); const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j; const c = j * n + i;
     const cv = (A.cano[c] * (1 - fx) + A.cano[c + 1] * fx) * (1 - fz) + (A.cano[c + n] * (1 - fx) + A.cano[c + n + 1] * fx) * fz;
     const gy = W.hAt(x, z) * G.Space.HM * scene.scale.y; const top = gy + GX.gxCanopy.value.w * scene.scale.y;
     return cv * (1 - G.smooth(top - GX.gxCanopy.value.w * 0.25, top + GX.gxCanopy.value.w * 0.15, Y));
@@ -357,7 +357,7 @@ ${GXAIR}`;
     const u = shafts.material.uniforms; u.uDir.value.set(-sd.x, -sd.y, -sd.z); u.uCol.value.setRGB(L.key[0], L.key[1], L.key[2]).multiplyScalar(L.keyI * 0.055 * k);
     // (the cards are put again twice a second of the view: where the canopy has its gaps round the body)
     const vt = U.time.value; if (vt - shT < 0.5 && vt >= shT) { shafts.visible = shafts.geometry.instanceCount > 0; return; } shT = vt;
-    const A = G.Ceu.airMap(), n = A.n, TL = G.Space.TILE, HM = G.Space.HM, ky = scene.scale.y; const g = shafts.geometry, P = g.attributes.aP.array, Sx = g.attributes.aS.array;
+    const A = G.Ceu.airMap(true), n = A.n, TL = G.Space.TILE, HM = G.Space.HM, ky = scene.scale.y; const g = shafts.geometry, P = g.attributes.aP.array, Sx = g.attributes.aS.array;
     const ci = Math.round(focus.X / TL), cj = Math.round(focus.Z / TL), R = 8; let m = 0; const ch = GX.gxCanopy.value.w;
     for (let dj = -R; dj <= R && m < NSH; dj++) for (let di = -R; di <= R && m < NSH; di++) {
       const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= n || j >= n) continue; const c = j * n + i; const cv = A.cano[c];
@@ -738,6 +738,9 @@ ${GXAIR}`;
       const kw = GX.gxKeyW.value, kv = L.byMoon ? L.md : L.sd; kw.x = kv.x; kw.y = kv.y; kw.z = kv.z; }
     // (the map of the air and the land's shade; the mist of each place as thick as the hour makes it)
     mapsTick(t, U.time.value);
+    // (where the sky darkens every material under the woods' canopy, the woods' own plants do not darken twice: G.Mata3D.setShade,
+    // NATUREZA.md §8b)
+    if (G.Mata3D && G.Mata3D.setShade && MAPS.shadeSet !== MAPS.cano) { G.Mata3D.setShade(MAPS.cano ? 0 : 1); MAPS.shadeSet = MAPS.cano; }
     // (and thicker where the land round the body is still wet from a rain the sun is drying: the land steaming)
     { let wm = 0; if (focus && S.wet) { const N = G.N, cx = G.clamp(Math.floor(focus.X / G.Space.TILE), 0, N - 1), cy = G.clamp(Math.floor(focus.Z / G.Space.TILE), 0, N - 1); let n = 0;
         for (let j = cy - 4; j <= cy + 4; j += 2) for (let i = cx - 4; i <= cx + 4; i += 2) { if (i < 0 || j < 0 || i >= N || j >= N) continue; wm += S.wet[j * N + i]; n++; } wm = n ? wm / n : 0; }

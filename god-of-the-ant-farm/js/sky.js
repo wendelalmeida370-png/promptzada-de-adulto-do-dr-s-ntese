@@ -114,7 +114,7 @@
       const tx0 = Math.max(0, Math.floor(Math.min(x0, x1, x2, x3)) - 2), tx1 = Math.min(N - 1, Math.ceil(Math.max(x0, x1, x2, x3)) + 2);
       const ty0 = Math.max(0, Math.floor(Math.min(y0, y1, y2, y3)) - 2), ty1 = Math.min(N - 1, Math.ceil(Math.max(y0, y1, y2, y3)) + 2);
       const spr = mistSprite(); const wx = Math.cos(S.weather.windA) * 0.4, wy = Math.sin(S.weather.windA) * 0.4;
-      const mapA = G.Ceu ? G.Ceu.airMap() : null; const mn = G.Ceu ? G.Ceu.mistNow(tm, S.weather, 0) : null;
+      const mapA = G.Ceu ? G.Ceu.airMap(true) : null; const mn = G.Ceu ? G.Ceu.mistNow(tm, S.weather, 0) : null;
       let n = 0;
       ctx.save();
       for (let y = ty0 - (ty0 % step); y <= ty1 && n < 160; y += step) for (let x = tx0 - (tx0 % step); x <= tx1 && n < 160; x += step) {

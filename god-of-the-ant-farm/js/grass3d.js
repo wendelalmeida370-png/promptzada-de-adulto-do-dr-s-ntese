@@ -28,7 +28,7 @@
   let lmesh = null, lgeo = null, lmat = null, lside = 0;
   const CELL = 0.5, PUSH = 6, LCELL = 1, LR = 13;
   let cell = CELL; // (the spacing of the clumps now: the preset's density of grass, grassDen, spaces them wider — fewer, fuller tufts)
-  const U = { uMask: { value: null }, uGMap: { value: null }, uFMap: { value: null }, uH: { value: null }, uGust: { value: null }, uN: { value: 1 }, uOrigin: { value: null }, uLOrigin: { value: null }, uEye: { value: null }, uR: { value: 20 }, uLR: { value: LR }, uPush: { value: [] }, uCell: { value: CELL } };
+  const U = { uVeg: { value: null }, uMask: { value: null }, uGMap: { value: null }, uFMap: { value: null }, uH: { value: null }, uGust: { value: null }, uN: { value: 1 }, uOrigin: { value: null }, uLOrigin: { value: null }, uEye: { value: null }, uR: { value: 20 }, uLR: { value: LR }, uPush: { value: [] }, uCell: { value: CELL } };
   G.worldHooks.push(() => { hFor = null; });
   // (a hash of a cell of the world, the same in every shader that reads it)
   const GH = `float gh(vec2 c, uint s) { uvec2 q = uvec2(ivec2(c) + 65536) * uvec2(1597334673u, 3812015801u); uint n = (q.x ^ q.y ^ (s * 2654435761u)) * 1597334673u; n ^= n >> 15; n *= 2246822519u; n ^= n >> 13; return float(n & 0xffffffu) / 16777216.0; }
@@ -66,7 +66,7 @@
     mat.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, U, { uTime: R3.U.time, uWind: R3.U.wind, uBody: R3.U.body });
       sh.vertexShader = `attribute vec2 aCell; attribute float aU; attribute float aB;
-        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uH; uniform sampler2D uGust; uniform sampler2D uFMap;
+        uniform sampler2D uMask; uniform sampler2D uGMap; uniform sampler2D uH; uniform sampler2D uGust; uniform sampler2D uFMap; uniform sampler2D uVeg;
         uniform float uN; uniform vec2 uOrigin; uniform vec3 uEye; uniform float uR; uniform float uTime; uniform vec3 uWind; uniform vec4 uBody; uniform vec4 uPush[${PUSH}]; uniform float uCell;
         varying vec3 vGC; varying float vGU;
         ${GH}
@@ -91,6 +91,8 @@
         // earth showing between them — never spilling over it; the jungle's undergrowth thinner in the deep shade of the trees)
         float th = mk.r > 0.0 ? min(mk.r, texture2D(uMask, tile / uN).r + (texture2D(uGust, root / 7.0 + 0.3).g - 0.5) * 0.7 + (r2 - 0.5) * 0.18) : 0.0;
         float Hh = (0.1 + mk.g * 1.5) * (0.7 + r4 * 0.6) * step(r3, th * (kind == 3.0 ? 1.0 - sfm.r * 0.5 : 1.0)) * fade * (1.0 - smoothstep(0.44, 0.52, snowE));
+        // (21a: as tall as the world's pasture is there — S.veg: grazed short, grown back, the tall grass the beasts hide in above 0,95; D-475)
+        float vgv = texelFetch(uVeg, ti, 0).r * 1.2; if (kind != 5.0) Hh *= 0.45 + 0.85 * smoothstep(0.1, 1.15, vgv);
         if (Hh <= 0.0) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; } // (thinned out, out of the circle, under the snow: the same)
         float ang = r1 * 6.2832 + r3 * 2.0; float ca = cos(ang), sa = sin(ang);
         vec2 wd = uWind.xy; float ws = length(wd) + 1e-4; wd /= ws;
@@ -122,6 +124,7 @@
         { vec3 tc = texelFetch(uGMap, ti, 0).rgb; float bv = fract(r2 * 13.7 + aB * 0.61 + r4 * 3.1);
           vec3 tip = tc * mix(vec3(1.0, 1.04, 0.9), vec3(1.08, 1.04, 0.8), bv) + vec3(0.015, 0.016, 0.004);
           if (kind == 1.0) tip = mix(tip, vec3(0.74, 0.6, 0.28), 0.7); else if (kind == 2.0) tip = mix(tip, vec3(0.36, 0.42, 0.22), 0.6); else if (kind == 4.0) tip *= 0.88; else if (kind == 3.0) tip *= 0.86; else if (kind == 5.0) tip = mix(tip, mix(vec3(0.62, 0.6, 0.36), vec3(0.42, 0.48, 0.3), bv), 0.6);
+          tip = mix(tip, vec3(0.7, 0.64, 0.4), 0.3 * smoothstep(0.93, 1.06, vgv)); // (the tall grass gone to seed, paler at its heads)
           vec3 c = mix(tc * mix(0.62, 0.78, bv), tip, smoothstep(0.0, 1.0, aU)) * (1.0 + gust * 0.22 * aU);
           if (aB > 2.5 && r4 < mk.b * 1.2 && aU > 0.66) { float fk = fract(r2 * 7.0); c = fk < 0.25 ? vec3(0.95, 0.88, 0.3) : fk < 0.5 ? vec3(0.95, 0.95, 0.92) : fk < 0.75 ? vec3(0.85, 0.42, 0.55) : vec3(0.5, 0.45, 0.9); }
           // (a little quieter than the god's flat green: moss and meadow, not lime — the tone curve lifts it again; the jungle's
@@ -146,6 +149,7 @@
     mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.castShadow = false; mesh.visible = false;
     realm.scene().add(mesh);
     littleInit(realm);
+    G.Mata3D && G.Mata3D.init && G.Mata3D.init(THREE, realm); // (the forest between the ground and the crowns: 21a)
   };
   // ------------------------------ the small things on the ground ------------------------------
   // the shapes, all in one piece (each point knows which shape it belongs to; a cell shows one, or none): 0 a pebble, 1 three
@@ -274,8 +278,20 @@
       U.uH.value = hTex; hT = 0;
     }
   }
+  // (21a: the world's pasture, S.veg, a byte a tile (0..1,2 of the cap), sent again every second and a half — it grows and is grazed
+  // slowly. Not in the save: after a load the world starts it again at 0,85 of the land's cap, and the grass is drawn so — a little
+  // lower than the tall grass that grew, and growing back as the world grows it; D-475)
+  let vegTex = null, vegData = null, vegT = 9;
+  G.worldHooks.push(() => { vegT = 9; });
+  function vegTick(dt) {
+    const S = G.S, N = G.N; if (!vegData || vegData.length !== N * N) { vegData = new Uint8Array(N * N); if (vegTex) vegTex.dispose(); vegTex = new THREE.DataTexture(vegData, N, N, THREE.RedFormat, THREE.UnsignedByteType); vegTex.magFilter = vegTex.minFilter = THREE.NearestFilter; vegTex.generateMipmaps = false; vegTex.flipY = false; vegT = 9; U.uVeg.value = vegTex; }
+    if ((vegT += dt) < 1.5) return; vegT = 0; const v = S.veg;
+    for (let i = 0; i < N * N; i++) vegData[i] = v ? Math.min(255, Math.max(0, Math.round(v[i] / 1.2 * 255))) : 181; // (no pasture yet: 0,85)
+    vegTex.needsUpdate = true;
+  }
   GR.update = function (dt, focus, cam) {
     if (!mesh) return; const q = R3.Q();
+    if (G.Mata3D && G.Mata3D.update) G.Mata3D.update(dt, focus, cam); // (the forest's layers round the eye: 21a)
     const R = q.grass ? q.field || 0 : 0; GR.on = R > 0 && !!G.Ground3D.grassMap();
     mesh.visible = GR.on; if (lmesh) lmesh.visible = GR.on && !!G.Ground3D.floorMap();
     if (!GR.on) { GR.clumps = 0; GR.bits = 0; return; }
@@ -285,13 +301,16 @@
     const den = Number.isFinite(q.grassDen) ? G.clamp(q.grassDen, 0.25, 1) : 1; if (CELL / Math.sqrt(den) !== cell) { cell = CELL / Math.sqrt(den); side = 0; }
     U.uCell.value = cell;
     layout(R);
+    vegTick(dt);
     U.uMask.value = G.Ground3D.grassMap(); U.uGMap.value = G.Ground3D.map(); U.uFMap.value = G.Ground3D.floorMap(); U.uN.value = G.N; U.uR.value = R;
     const e = cam ? cam.position : { x: focus.X, y: focus.Y, z: focus.Z }; U.uEye.value.set(e.x, e.y, e.z);
     U.uOrigin.value.set(Math.floor(e.x / cell) - side / 2, Math.floor(e.z / cell) - side / 2);
     if (lmesh && lmesh.visible) { const lr = littleR(q); U.uLR.value = lr; layoutLittle(lr); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
     // (the people walking nearest part it too)
     const W3 = (G.People3D && G.People3D.walkers) || []; let j = 0;
-    for (const w of W3) { if (j >= PUSH) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
+    for (const w of W3) { if (j >= PUSH - 2) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
+    // (21a: and the beasts walking nearest the body part it too — the grass where a beast goes through it moves, D-472)
+    if (G.Animals && G.Animals.near && focus) G.Animals.near(focus.X / 4, focus.Z / 4, 5, a => { if (j >= PUSH || a.dead || a.air || a.swim) return; U.uPush.value[j++].set(a.x * 4, 0, a.y * 4, 1); });
     for (; j < PUSH; j++) U.uPush.value[j].set(0, -1e4, 0, 0);
     GR.clumps = side * side;
   };

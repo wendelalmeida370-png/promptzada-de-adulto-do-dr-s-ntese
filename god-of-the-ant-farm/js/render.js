@@ -507,6 +507,9 @@
     } });
     measureRelief();
   };
+  // (21a: the floor of a wood of each land under a closed canopy: the jungle's dark moss and litter, the temperate wood's brown leaves,
+  // the taiga's needles, the swamp's mud — D-477)
+  const FLOOR21A = [[92, 96, 52], [150, 160, 150], [70, 80, 58], [62, 76, 46], [46, 70, 34], [140, 122, 72], [160, 140, 100]];
   function tileColor(i, x, y) {
     const S = G.S; const t = S.type[i];
     let c;
@@ -721,6 +724,10 @@
     const steep = rg > G.Relief.STEEP && S.burnt[i] <= 0 && S.scar[i] <= 0;
     const light = steep ? G.clamp(1 + vx * 0.085 + vy * 0.03, 0.5, 1.34) : G.clamp(1 + vx * 0.13 + vy * 0.045, 0.62, 1.28);
     let base = tileColor(i, x, y);
+    // (21a: the floor of a wood under its canopy — the litter, the moss, the shade —, by how much the crowns close over it: G.Mata;
+    // the floor of a forest is no longer the meadow's green, D-477)
+    const mr = (t === T.GRASS || t === T.MEADOW) && !S.road[i] && G.Mata ? G.Mata.regionNow(x >> 4, y >> 4) : null; const mk = mr ? (y - mr.y0) * 16 + (x - mr.x0) : 0;
+    if (mr && mr.dossel[mk] > 12) { const bf = S.biome ? S.biome[i] : 0; base = G.lerpColor(base, FLOOR21A[bf] || FLOOR21A[0], mr.dossel[mk] / 255 * 0.42); }
     if (steep) base = rockColor(i, base, rg);
     else if (rg > 0.9 && (t === T.GRASS || t === T.MEADOW)) base = G.lerpColor(base, [142, 128, 104], G.clamp((rg - 0.9) / 0.8, 0, 1) * 0.35);
     const col = [base[0] * light, base[1] * light, base[2] * light];
@@ -761,6 +768,11 @@
         c.strokeStyle = 'rgba(150,120,50,0.7)'; c.lineWidth = 0.55;
         for (let k = 0; k < 5; k++) { const p = pt(0.1 + G.hash(i * 17 + k) * 0.8, 0.1 + G.hash(i * 23 + k) * 0.8); c.beginPath(); c.moveTo(p[0], p[1]); c.quadraticCurveTo(p[0] - 0.3, p[1] - 2, p[0] + 0.6, p[1] - 3.4); c.moveTo(p[0] + 0.5, p[1]); c.quadraticCurveTo(p[0] + 0.8, p[1] - 1.6, p[0] + 1.6, p[1] - 2.6); c.stroke(); }
       } else if (sty === 'jungle') {
+        // (21a: the undergrowth as thick as the forest's growth there — G.Mata —: more leaves, the dark fans of the ferns, a small palm)
+        const md = mr ? mr.dens[mk] / 255 : 0.5;
+        for (let k = 0; k < Math.round(md * 4); k++) { const p = pt(0.15 + G.hash(i * 71 + k) * 0.7, 0.15 + G.hash(i * 73 + k) * 0.7); c.strokeStyle = G.hash(i * 79 + k) < 0.5 ? 'rgba(24,70,30,0.8)' : 'rgba(44,96,40,0.75)'; c.lineWidth = 0.6;
+          c.beginPath(); for (let j = 0; j < 5; j++) { const a = -Math.PI / 2 + (j - 2) * 0.5; c.moveTo(p[0], p[1]); c.lineTo(p[0] + Math.cos(a) * 2.6, p[1] + Math.sin(a) * 2.2); } c.stroke(); }
+        if (md > 0.6 && G.hash(i * 83) < 0.3) { const p = pt(0.5, 0.55); c.strokeStyle = 'rgba(60,110,50,0.85)'; c.lineWidth = 0.7; c.beginPath(); for (let j = 0; j < 6; j++) { const a = j / 6 * TAU; c.moveTo(p[0], p[1] - 3); c.quadraticCurveTo(p[0] + Math.cos(a) * 2, p[1] - 4, p[0] + Math.cos(a) * 3.2, p[1] - 2.2 + Math.sin(a) * 0.8); } c.moveTo(p[0], p[1]); c.lineTo(p[0], p[1] - 3); c.stroke(); }
         for (let k = 0; k < 4; k++) {
           const p = pt(0.12 + G.hash(i * 17 + k) * 0.76, 0.12 + G.hash(i * 23 + k) * 0.76);
           c.fillStyle = G.hash(i * 37 + k) < 0.5 ? 'rgba(30,90,30,0.75)' : 'rgba(90,170,60,0.7)';
@@ -2308,7 +2320,8 @@
         const burning = S.fire[W.idx(o.x, o.y)] > 0.2;
         if (o.stage === 'grow') {
           if (o.size < 0.32) { if (!farLod) Art.draw(ctx, Art.sapling(), sx, sy, 0.6 + o.size); break; }
-          const s = o.size;
+          // (21a: the great trees of the south as they stand in the round — the canopy of the forest, the emergent over it: D-471)
+          const s = o.size * (o.kind === 'jungle' && G.Mata ? (G.Mata.tree(o).emerg ? 1.5 : 1.22) : 1);
           if (farLod && o.kind !== 'palm') { Art.draw(ctx, Art.canopy(o.kind, o.v), sx, sy, s); if (burning) emisFire.push(sx, sy - 12 * s, S.fire[W.idx(o.x, o.y)] * 1.4); break; }
           const wind = S.weather.windS;
           const sway = Math.sin(t * (1.3 + wind) + o.ph) * (0.6 + wind * 2.2) * s + Math.sin(t * 3.1 + o.ph * 2) * wind * 0.8;

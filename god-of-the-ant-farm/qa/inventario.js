@@ -384,6 +384,9 @@ if (on('i10')) {
   const a1 = stock(fid, 'stone'), w1 = stock(fid, 'wood');
   if (!(inH === 1 && n === 1 && (Math.abs(p1 - p0 - 0.5) < 1e-6 || full('stone')) && D.get(H, 'machado.pedra') === 0 && Math.abs(t1 - t0 - 1) < 1e-6 && Math.abs(q1 - q0 - 1) < 1e-6 && (Math.abs(a1 - a0 - 0.25) < 1e-6 || full('stone')) && (Math.abs(w1 - w0 - 0.75) < 1e-6 || full('wood')))) bad.push(`pedra ${p0}→${p1}, ferramentas ${t0}→${t1} (bronze ${q0}→${q1}), pedra das flechas ${a0}→${a1}, madeira ${w0}→${w1}`);
   const things = [...S.factions.values()].flatMap(f => Object.keys(f.stock).filter(k => It.isThing(k)));
+  // (the proof's hand set Neferu at her door, out of the house, within the same instant of the world: the atmosphere counts who is
+  // inside once per instant, and its door for the proofs says the world changed by hand — T-1404)
+  if (G.Atmos && G.Atmos.flush) G.Atmos.flush();
   const nv = novas();
   ok('i10 a coisa que chega ao armazém conta como o que ela é feita; nenhuma coisa no estoque', !bad.length && !things.length && !nv.length, `o machado de pedra da casa de ${o.name} levado ao armazém: pedra ${p0} → ${p1}; um de bronze: ferramentas ${t0} → ${t1} (de bronze ${q0} → ${q1}); vinte flechas e o cajado → pedra ${a0} → ${a1}, madeira ${w0} → ${w1}${things.length ? ' — COISAS NO ESTOQUE: ' + things.join(',') : ''}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''}`);
 }

@@ -42,7 +42,7 @@ de design numeradas (D-0xx) estão também no `qa/AUDIT.md`.
 | 1 casa da grade | **4 m** | uma casa de 1 casa = 4×4 m (um chalé), uma pessoa de 1,75 m cabe na porta; uma fazenda 3×3 = 12×12 m |
 | 1 unidade de altura | **1,5 m** | morros de 10–20 unidades viram 15–28 m; o mar (`G.SEA` = 2) fica a 3 m |
 | Eixos 3D | `X = x·4`, `Z = y·4`, `Y = h·1,5` (Y para cima) | leste = +X, sul = +Z, como a grade |
-| Tempo encarnado | **1× encarnado = 0,35× do Modo Deus** (D-015) | as pessoas andam 1,35 casa/s de simulação = 5,4 m/s; no ritmo humano isso vira ~1,9 m/s, e o dia dura ~9,5 min |
+| Tempo encarnado | **1× encarnado = 0,27× do Modo Deus** (D-015, D-365) | as pessoas andam 1,35 casa/s de simulação = 5,4 m/s; no ritmo humano isso vira ~1,5 m/s (era 0,35×: ~1,9 m/s), e o dia dura ~12,3 min |
 
 Conversões (todas em `G.Space`): `toWorld(x,y)`, `toTile(X,Z)`, `groundY(X,Z)` (o chão ou a água por cima),
 `floorY(X,Z)` (o terreno), `waterY(X,Z)`, `surface(X,Z)` (o que há ali: chão, água rasa, água funda, penhasco,
@@ -73,8 +73,8 @@ a mão passa para o jogador sem salto. A interface divina some aos poucos; a do 
 contrário, terminando com a pessoa selecionada e seguida no Modo Deus. Um save feito encarnado abre direto no corpo
 (`Modes.wake`, um despertar curto, sem descida).
 
-**O tempo (D-015).** Encarnado, o mundo anda a 0,35× da velocidade 1× do Modo Deus (o passo de uma pessoa: os NPCs andam
-~1,9 m/s, como o jogador). Dormir acelera 14× (uma noite passa em ~12 s). O menu pausa. O mesmo relógio, o mesmo mundo:
+**O tempo (D-015).** Encarnado, o mundo anda a 0,27× da velocidade 1× do Modo Deus (D-365; o passo de uma pessoa: os NPCs andam
+~1,5 m/s, como o jogador). Dormir acelera 14× (uma noite passa em ~16 s; era ~12 s a 0,35×). O menu pausa. O mesmo relógio, o mesmo mundo:
 só a velocidade muda.
 
 ## 4. A posse — `G.Possess` (`js/possess.js`)

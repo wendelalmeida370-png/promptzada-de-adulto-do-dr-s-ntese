@@ -29,6 +29,10 @@ const VIEWS = [
   ['b-temperado-alto', 'gerado', 'b:0', 2.4, 0.5, 12, 0.42],
   ['b-selva-alto', 'gerado', 'b:4', 2.4, 0.5, 12, 0.42],
   ['b-deserto-alto', 'gerado', 'b:6', 2.4, 0.5, 12, 0.42],
+  // 21a: inside the jungle at the eye's height, and looking up into its roof; the swamp from above
+  ['b-selva-dentro', 'gerado', 'b:4', 3.6, 0.06, 3.4, 0.42],
+  ['b-selva-teto', 'gerado', 'b:4', 3.6, -0.32, 2.6, 0.42],
+  ['b-pantano-alto', 'gerado', 'b:3', 2.4, 0.5, 12, 0.42],
 ];
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
@@ -74,7 +78,7 @@ const VIEWS = [
       else if (place.startsWith('b:')) {
         const id = +place.slice(2); const of = j => (G.Biome.of(j) === id);
         // (deep in the biome, among its trees but with room round the body for the eye — no trunk or bough in its face)
-        at = best((i, x, y) => { if (!of(i)) return -1; const pure = count(x, y, 6, of); if (pure < 110) return -1; return pure + count(x, y, 4, j => S.treeAt[j] && of(j)) * 6 - count(x, y, 2, j => S.treeAt[j]) * 40 - count(x, y, 6, j => S.type[j] <= T.RIVER) * 4 - count(x, y, 6, j => S.occ[j]) * 8; });
+        at = best((i, x, y) => { if (!of(i)) return -1; const pure = count(x, y, 6, of); if (pure < 110) return -1; return 1e4 + pure + count(x, y, 4, j => S.treeAt[j] && of(j)) * 6 - count(x, y, 2, j => S.treeAt[j]) * 40 - count(x, y, 6, j => S.type[j] <= T.RIVER) * 4 - count(x, y, 6, j => S.occ[j]) * 8; });
       }
       if (!at) { quiet(false); return { skip: 'sem lugar' }; }
       G.Avatar.place(at[0], at[1]); S.time = hour; f(30);
@@ -84,11 +88,14 @@ const VIEWS = [
       // (the photo: drawn for real, three frames — the first one makes the shaders)
       quiet(false); const tq = performance.now(); for (let k = 0; k < 3; k++) { G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1); }
       const m = G.Realm.memory();
-      return { at: at.map(q => +q.toFixed(2)), biome: G.Biome ? G.Biome.of(W.idx(at[0], at[1])) : -1, err: JSON.stringify(G.modErr), calls: m && m.calls, tris: m && m.tris, drawMs: Math.round((performance.now() - tq) / 3) };
+      // (21a: the checks of the plants' drawing, which no proof called before — T-1511: the trees round the place, the meadow's field, the forest's layers)
+      const chk = [].concat(G.Realm.floraCheck ? G.Realm.floraCheck(at[0], at[1], 14) : [], G.Grass3D && G.Grass3D.check ? G.Grass3D.check() : [], G.Mata3D && G.Mata3D.check ? G.Mata3D.check() : []);
+      const mata = G.Mata3D ? { inst: G.Mata3D.stats.inst, tris: G.Mata3D.stats.tris, calls: G.Mata3D.stats.calls } : null;
+      return { at: at.map(q => +q.toFixed(2)), biome: G.Biome ? G.Biome.of(W.idx(at[0], at[1])) : -1, err: JSON.stringify(G.modErr), calls: m && m.calls, tris: m && m.tris, drawMs: Math.round((performance.now() - tq) / 3), checks: chk.length ? chk.slice(0, 3) : 0, mata };
     }, [w, place, yaw, pitch, dist, hour, world !== w, process.env.Q || 'media', SEED]);
     world = w;
     if (info.skip) { log.push(`${name}: ${info.skip}`); console.log(log[log.length - 1]); continue; }
-    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 240000 });
+    await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: +process.env.TSHOT || 240000 }); // (TSHOT: the Alta by software can take longer)
     log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
   }
   console.log('erros: ' + (errs.slice(0, 5).join(' || ') || 'nenhum'));

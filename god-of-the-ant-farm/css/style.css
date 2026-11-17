@@ -1428,8 +1428,92 @@ canvas#game3d { touch-action: none; transition: none; }
 /* === 20d: a arte dos itens === */
 
 /* === 20e: a interação === */
+/* the prompt: E, F and E held, each a line with its key; the switch between the targets in reach; by the target (.at) or at the foot */
+#inc-root .ih-prompt { pointer-events: auto; cursor: default; }
+#inc-root .ih-prompt .ih-main { display: inline-flex; align-items: center; gap: 9px; }
+#inc-root .ih-prompt .ih-hold, #inc-root .ih-prompt .ih-cyc { position: relative; display: inline-flex; align-items: center; gap: 7px; margin-left: 10px; padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, .16); font-style: normal; }
+#inc-root .ih-prompt .ih-hold.hidden, #inc-root .ih-prompt .ih-cyc.hidden { display: none; }
+#inc-root .ih-prompt .ih-hold em { font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ih-gold); opacity: .85; }
+#inc-root .ih-prompt .ih-hold.no, #inc-root .ih-prompt .ih-hold.no em { color: var(--ih-mute); }
+#inc-root .ih-prompt .ih-cyc { color: var(--ih-mute); font-size: 11.5px; }
+#inc-root .ih-prompt .ih-cyc kbd { min-width: 0; padding: 0 7px; background: rgba(255, 255, 255, .12); color: var(--ih-text); box-shadow: none; font-size: 11px; height: 22px; }
+/* the ring of E held: round the held verb's key, filling with the seconds of the hold */
+#inc-root .ih-prompt .ih-ring { position: absolute; left: 7px; top: 50%; width: 34px; height: 34px; margin-top: -17px; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .08s linear;
+  background: conic-gradient(var(--ih-gold-2) calc(var(--hold, 0) * 360deg), rgba(255, 255, 255, .16) 0);
+  -webkit-mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 17px, transparent 17.5px); mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 17px, transparent 17.5px); }
+#inc-root .ih-prompt.holding .ih-ring { opacity: 1; }
+#inc-root .ih-prompt.holding .ih-hold { color: var(--ih-gold-2); }
+/* by the target: the lines stacked, the box at the point the target is drawn (the transform is set each frame, eased) */
+#inc-root .ih-prompt.at { left: 0; top: 0; bottom: auto; flex-direction: column; align-items: flex-start; gap: 4px; border-radius: 12px; padding: 6px 13px 6px 6px; animation: none; }
+#inc-root .ih-prompt.at .ih-alt, #inc-root .ih-prompt.at .ih-hold, #inc-root .ih-prompt.at .ih-cyc { margin-left: 0; padding-left: 0; border-left: 0; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, .1); }
+#inc-root .ih-prompt.at .ih-cyc { padding-top: 3px; }
+/* a panel over the middle (the bag, the things kept): what is behind it steps away; the world's answers rise above it */
+#inc-root.panel-on .ih-news, #inc-root.panel-on .ih-hint, #inc-root.panel-on .ih-prompt, #inc-root.panel-on .ih-lead, #inc-root.panel-on .ih-mark, #inc-root.panel-on .ih-calls, #inc-root.panel-on #inc-label { visibility: hidden; }
+#inc-root.panel-on .ih-toasts { bottom: auto; top: calc(6px + env(safe-area-inset-top, 0px)); }
+#inc-root #inv-panel, #inc-root #guard-panel { background: rgb(15, 13, 19); }
+/* the screen of what is kept: the bag on the left, the other side (a house, a shelf, a stall, the store, someone to give to) on the right */
+#guard-panel { pointer-events: auto; position: absolute; left: 50%; top: calc(54px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); width: min(1040px, calc(100vw - 32px)); max-height: calc(100vh - 140px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); overflow: auto; padding: 14px 16px 12px; animation: ihIn .22s ease both; font-size: 13px; line-height: 1.4; user-select: none; -webkit-user-select: none; touch-action: pan-y; }
+#guard-panel .x { position: absolute; right: 8px; top: 6px; width: 28px; height: 28px; border-radius: 7px; background: transparent; border: 0; font-size: 20px; line-height: 1; color: var(--ih-mute); }
+#guard-panel .x:hover { background: rgba(255, 255, 255, .08); color: var(--ih-text); }
+#guard-panel h3 { margin: 0; font-family: 'Cinzel', Georgia, serif; color: var(--ih-gold-2); font-size: 19px; line-height: 1.2; letter-spacing: .02em; padding-right: 26px; }
+#guard-panel .sub { color: var(--ih-mute); font-size: 12px; font-weight: 700; margin-top: 3px; }
+#guard-panel .gd-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+#guard-panel .gd-side { border: 1px solid var(--ih-edge); border-radius: 10px; padding: 8px 9px 10px; background: rgba(255, 255, 255, .03); min-height: 150px; }
+#guard-panel .gd-side.can { border-color: rgba(240, 198, 110, .55); box-shadow: inset 0 0 0 1px rgba(240, 198, 110, .25); }
+#guard-panel .gd-side.over { background: rgba(240, 198, 110, .08); }
+#guard-panel .gd-side > label { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ih-mute); margin-bottom: 7px; }
+#guard-panel .gd-side > label b { color: var(--ih-gold-2); letter-spacing: 0; text-transform: none; font-size: 12px; }
+#guard-panel .gd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+#guard-panel .gd-cell { position: relative; height: 70px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .04); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: grab; }
+#guard-panel .gd-cell:hover { background: rgba(255, 255, 255, .08); }
+#guard-panel .gd-cell.sel { border-color: var(--ih-gold); background: rgba(240, 198, 110, .13); }
+#guard-panel .gd-cell.off { opacity: .45; cursor: not-allowed; }
+#guard-panel .gd-cell .ic { width: 36px; height: 36px; pointer-events: none; }
+#guard-panel .gd-cell .ic svg, #guard-panel .gd-cell .ic img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55)); -webkit-user-drag: none; }
+#guard-panel .gd-cell small { font-size: 10px; line-height: 1.1; color: var(--ih-mute); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; pointer-events: none; }
+#guard-panel .gd-cell b { position: absolute; right: 4px; top: 2px; font-size: 10.5px; color: var(--ih-gold-2); pointer-events: none; }
+#guard-panel .gd-cell i { position: absolute; left: 4px; top: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ih-gold); pointer-events: none; }
+#guard-panel .gd-none { color: var(--ih-mute); font-size: 12px; padding: 18px 4px; text-align: center; }
+#guard-panel .gd-note { color: var(--ih-mute); font-size: 11.5px; margin-top: 7px; }
+#guard-panel .gd-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-top: 10px; }
+#guard-panel .gd-zone { border: 1px dashed rgba(255, 255, 255, .22); border-radius: 9px; padding: 6px 12px; font-size: 12px; font-weight: 800; color: var(--ih-mute); }
+#guard-panel .gd-zone.over, #guard-panel .gd-zone.can { border-color: var(--ih-gold); color: var(--ih-gold-2); }
+#guard-panel .gd-hint { color: var(--ih-mute); font-size: 11.5px; }
+#guard-panel .gd-hint kbd { font-size: 10.5px; padding: 0 5px; border-radius: 4px; background: rgba(255, 255, 255, .12); border: 0; color: var(--ih-text); }
+#guard-panel .gd-card { margin-top: 10px; min-height: 40px; color: var(--ih-text); font-size: 12px; }
+#guard-panel .gd-card .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+#guard-panel .gd-card .btns button { border: 1px solid var(--ih-edge); background: rgba(255, 255, 255, .07); border-radius: 8px; padding: 5px 10px; font-weight: 800; font-size: 12px; color: var(--ih-text); }
+#guard-panel .gd-card .btns button:hover { background: rgba(255, 255, 255, .12); }
+#guard-panel .gd-card .btns button[disabled] { opacity: .45; }
+#guard-panel .gd-make { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+#guard-panel .gd-make button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--ih-edge); background: rgba(255, 255, 255, .05); border-radius: 8px; padding: 3px 8px 3px 3px; font-size: 11.5px; font-weight: 800; color: var(--ih-text); }
+#guard-panel .gd-make button .ic { width: 24px; height: 24px; display: block; pointer-events: none; }
+#guard-panel .gd-make button .ic svg, #guard-panel .gd-make button .ic img { width: 100%; height: 100%; display: block; }
+#guard-panel .gd-make button[disabled] { opacity: .4; }
+#guard-panel.dragging .gd-cell { cursor: grabbing; }
+.gd-ghost { position: fixed; z-index: 60; width: 44px; height: 44px; margin: -22px 0 0 -22px; pointer-events: none; opacity: .92; }
+.gd-ghost svg, .gd-ghost img { width: 100%; height: 100%; display: block; }
+@media (max-width: 720px) {
+  #guard-panel .gd-cols { grid-template-columns: 1fr; }
+  #guard-panel .gd-grid { grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); }
+  #guard-panel .gd-cell { height: 62px; }
+}
 
 /* === 20f: o combate === */
+/* the fight's own screen (combate-ui.js): the breath round the reticle while it is spent, the charge and the draw inside it, the
+   guard's mark under it, the duel's line at the top */
+.cb-hud { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s; }
+.cb-hud.on { opacity: 1; }
+.cb-ring { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; transform: rotate(-90deg); overflow: visible; }
+.cb-ring circle { fill: none; stroke-linecap: round; }
+.cb-st { stroke: rgba(150, 225, 140, .75); stroke-width: 3; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .7)); transition: stroke .2s; }
+.cb-st.low { stroke: rgba(240, 120, 90, .9); }
+.cb-ch { stroke: rgba(255, 236, 170, .9); stroke-width: 2.5; filter: drop-shadow(0 0 1px rgba(0, 0, 0, .7)); }
+.cb-ch.full { stroke: rgba(255, 200, 80, 1); stroke-width: 3.5; }
+.cb-guard { position: absolute; left: 50%; top: calc(50% + 40px); transform: translateX(-50%); font-size: 18px; color: rgba(245, 220, 160, .95); text-shadow: 0 0 3px rgba(0, 0, 0, .8); }
+.cb-duel { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); padding: 4px 12px; border-radius: 6px; background: rgba(40, 20, 14, .72); color: #f3dcae; font-size: 12.5px; font-weight: 700; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+#inc-root.hud-off .cb-hud { display: none !important; }
+@media (max-width: 640px) { .cb-ring { width: 52px; height: 52px; margin: -26px 0 0 -26px; } .cb-duel { font-size: 11.5px; } }
 
 /* === 20g: os ofícios === */
 /* === 20h: a origem das coisas === */

@@ -32,7 +32,7 @@
   // the curve between the two hours changes, never the hours themselves
   const RISE = -0.015, SET = 0.735, DAY = SET - RISE;
   Ce.RISE = RISE; Ce.SET = SET;
-  Ce.SHAPE = 1.5; // (D-469: the sun from 6° to the horizon in about 35 s of the body's clock, against 18 with the plain arc)
+  Ce.SHAPE = 1.3; // (D-469: the sun from 6° to the horizon in about 35 s of the body's clock — with the body's time at 0.27, D-365 —, against 23 with the plain arc)
   // (the angles of the hour: alt, az of the sun; malt, maz of the moon)
   function arc(t, o) {
     let k = t - RISE; k -= Math.floor(k);
@@ -332,23 +332,33 @@
   // (the ring of land a valley is measured against: sixteen points, eight tiles off)
   const RING = (() => { const r = []; for (let a = 0; a < 16; a++) { const an = a / 16 * TAU; r.push(Math.round(Math.cos(an) * 8), Math.round(Math.sin(an) * 8)); } return r; })();
   let air = null;
-  // (the woods' canopy over a tile, read as the woods give it: a number, or nothing)
-  // (the woods' source is js/mata.js — the 21a's G.Mata —, which may not be there yet: asked by its name, and nothing without it)
-  const woods = () => G['Mata'];
+  // (the woods' canopy, read as the woods give it — js/mata.js, the 21a's G.Mata, NATUREZA.md §8b: its map of the canopy seen from
+  // above, G.Mata.canopy — a byte a tile, 0 open to 255 a roof — and its signature, the same while nothing under it changed. The
+  // whole map is checked when asked; the drawing may take it a second of the world late (fast: the god's view asks every frame,
+  // and a check of a large map is some milliseconds). A woods without that map: its tile's luz, and its version)
+  const woods = () => G.Mata;
+  let wm = { S: null, at: -1e9, sig: null, data: null };
+  function woodsCanopy(fast) {
+    const M = woods(); if (!M || typeof M.canopy !== 'function') return null; const S = G.S;
+    if (fast && wm.S === S && wm.data && wm.data.length === N * N && S.clock >= wm.at && S.clock - wm.at < 1) return wm;
+    const c = M.canopy(0, 0, N, N); wm = { S, at: S.clock, sig: c.sig, data: c.data }; return wm;
+  }
+  G.worldHooks.push(() => { wm = { S: null, at: -1e9, sig: null, data: null }; });
   function canopyOf(i) {
     const M = woods(); if (!M) return 0;
     try { const v = typeof M.luz === 'function' ? M.luz(i) : M.at ? (M.at(i) || {}).luz : 0; return Number.isFinite(v) ? cl(v, 0, 1) : 0; } catch (e) { return 0; }
   }
   const verOf = M => (!M ? '' : typeof M.ver === 'function' ? M.ver() : M.ver !== undefined ? M.ver : 'm');
   // (the land's own version — S.typeVer: the heights, the water, the land's kind —, not the buildings': the air does not change
-  // when a house goes up)
-  Ce.airKey = function () { const S = G.S; return N + ':' + (S.typeVer || 0) + ':' + verOf(woods()) + ':' + (S.relief && S.relief.falls ? S.relief.falls.length : 0); };
-  Ce.airMap = function () {
-    const S = G.S; const key = Ce.airKey(); if (air && air.key === key && air.S === S) return air;
+  // when a house goes up; and the woods' canopy's)
+  Ce.airKey = function (fast) { const S = G.S; const wc = woodsCanopy(fast); return N + ':' + (S.typeVer || 0) + ':' + (wc ? 'c' + wc.sig : verOf(woods())) + ':' + (S.relief && S.relief.falls ? S.relief.falls.length : 0); };
+  Ce.airMap = function (fast) {
+    const S = G.S; const key = Ce.airKey(fast); if (air && air.key === key && air.S === S) return air;
     const n = N + 1, HM = 1.5, TL = 4; const Hs = S.H; const typ = S.type; const bio = S.biome; const moist = S.moist;
     const dawn = new Float32Array(n * n), last = new Float32Array(n * n), top = new Float32Array(n * n), cano = new Float32Array(n * n), why = new Uint8Array(n * n);
     // (the woods' canopy over each tile, asked once a tile)
-    const ct = new Float32Array(N * N); if (woods()) for (let t = 0; t < N * N; t++) ct[t] = canopyOf(t);
+    const ct = new Float32Array(N * N); const wc = woodsCanopy(fast);
+    if (wc) for (let t = 0; t < N * N; t++) ct[t] = wc.data[t] / 255; else if (woods()) for (let t = 0; t < N * N; t++) ct[t] = canopyOf(t);
     const hc = (i, j) => Hs[cl(j, 0, N) * n + cl(i, 0, N)] * HM;
     const T = G.T; const RIV = T ? T.RIVER : 2, SEAT = T ? T.SEA : 1;
     // (the tiles round a corner: the four that touch it)

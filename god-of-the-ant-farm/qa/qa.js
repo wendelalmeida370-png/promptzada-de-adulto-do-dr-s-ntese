@@ -3187,6 +3187,126 @@
     }
   });
 })();
+  // ---- qa/combate-inv.js ----
+// combate-inv: as regras do verificador do combate do corpo (20f, D-410 a D-424) — carregado depois do qa/qa.js (QA.more),
+// juntado a ele pelo qa/junta-inv.js. Lê o registro do combate (S.combate: o duelo, as flechas no ar, as brigas) e o mundo —
+// nenhuma pergunta muda nada. O sistema «combate»:
+//   · toda flecha no ar é de alguém e é uma flecha (S2): uma chave do catálogo, uma só, números que são números, no mapa, voando
+//     há menos do que voa uma flecha — e só com um corpo vivido para voá-la (fora dele, todas descem onde estão);
+//   · o lugar 'a:' do livro tem só o que as flechas no ar têm (S2: o livro e o registro, a mesma conta);
+//   · o duelo é do corpo vivido, com alguém vivo, dos dois povos em paz (S2), e quem duela luta com o corpo — a tarefa do duelo (S3);
+//   · quem briga com alguém (a resposta de um golpe) existe e luta com ele (S3);
+//   · a guarda erguida é do corpo vivido (S2), e nenhuma porta do combate foi pedida de fora do passo do mundo (S3);
+//   · o tranco de alguém dura segundos, não dias (S3): v.stagT no máximo cinco segundos do mundo adiante.
+(function () {
+  if (!window.QA || !QA.more) return;
+  const fin = x => typeof x === 'number' && isFinite(x);
+  const rule = function (add, s) {
+    const Cb = G.Combate; if (!Cb) return;
+    const c = s.combate; const body = s.avatar ? s.villagers.get(s.avatar.id) : null;
+    if (c) {
+      if (!Array.isArray(c.fl) || !Array.isArray(c.br)) { add('combate', 1, 'S.combate sem as listas das flechas e das brigas'); return; }
+      const TL = Cb.TILE || 4;
+      for (const f of c.fl) {
+        const nm = `flecha#${f && f.id}`;
+        if (!f || !fin(f.id) || !(G.Itens.THINGS.has(f.k) && G.Itens.def(f.k).kind === 'flecha') || !(f.n === 1)) { add('combate', 2, `${nm}: no ar sem ser uma flecha (${f && f.k} × ${f && f.n})`); continue; }
+        const bad = ['X', 'Y', 'Z', 'vx', 'vy', 'vz', 't'].filter(k => !fin(f[k])); if (bad.length) { add('combate', 2, `${nm}: números que não são números (${bad.join(', ')})`); continue; }
+        if (!G.W.inb(f.X / TL, f.Z / TL)) add('combate', 2, `${nm}: fora do mapa, em ${(f.X / TL).toFixed(1)},${(f.Z / TL).toFixed(1)}`);
+        if (f.t > (Cb.FLY || 4) + 0.5) add('combate', 2, `${nm}: voando há ${f.t.toFixed(1)} s (uma flecha voa no máximo ${Cb.FLY} s)`);
+        if (!body) add('combate', 2, `${nm}: no ar sem um corpo vivido que a voe (devia ter descido onde estava)`);
+        if (!s.villagers.has(f.by) && !s.dead.has(f.by)) add('combate', 3, `${nm}: de alguém que não existe (#${f.by})`);
+      }
+      const ids = new Set(c.fl.map(f => f.id));
+      if (G.Depot && G.Depot.total && G.Depot.KINDS.includes('a')) for (const f of c.fl) if (Math.abs((G.Depot.get('a:' + f.id, f.k) || 0) - f.n) > 1e-6) add('combate', 2, `flecha#${f.id}: o livro tem ${G.Depot.get('a:' + f.id, f.k)} no lugar dela, o registro ${f.n}`);
+      void ids;
+      const d = c.duel;
+      if (d) {
+        const a = s.villagers.get(d.a), o = s.villagers.get(d.o);
+        if (!a || !o) add('combate', 2, `o duelo de #${d.a} e #${d.o}: um dos dois não existe`);
+        else if (!s.avatar || s.avatar.id !== d.a) add('combate', 2, `o duelo de ${a.name} e ${o.name}: não é do corpo vivido`);
+        else {
+          if (G.Fac.idOfV(a) && G.Fac.idOfV(o) && G.Fac.idOfV(a) !== G.Fac.idOfV(o)) { const r = G.Fac.get(G.Fac.idOfV(a)); const rel = r && r.rel && r.rel[G.Fac.idOfV(o)]; if (rel && rel.st === 'guerra') add('combate', 2, `o duelo de ${a.name} e ${o.name}: os povos deles estão em guerra`); }
+          if (!(o.task && o.task.type === 'combat' && o.task.id === a.id && o.task.duel)) add('combate', 3, `o duelo de ${a.name} e ${o.name}: ${o.name} não luta com o corpo (${o.task ? o.task.type : 'sem tarefa'})`);
+        }
+      }
+      for (const q of c.br) {
+        const o = s.villagers.get(q.id); if (!o) { add('combate', 3, `briga de #${q.id}: não existe`); continue; }
+        if (!(o.task && o.task.type === 'combat' && o.task.id === q.foe && o.task.brawl)) add('combate', 3, `briga de ${o.name} #${o.id}: não briga com #${q.foe} (${o.task ? o.task.type : 'sem tarefa'})`);
+      }
+    }
+    const g = Cb.guarding && Cb.guarding(); if (g && (!s.avatar || s.avatar.id !== g.id)) add('combate', 2, `a guarda erguida de #${g.id}, que não é o corpo vivido`);
+    const st = Cb.stats ? Cb.stats() : null; if (st && st.outside > 0) add('combate', 3, `${st.outside} porta(s) do combate pedida(s) de fora do passo do mundo`);
+    for (const v of s.villagers.values()) if (v.stagT && v.stagT > s.clock + 5) add('combate', 3, `${v.name} #${v.id}: o tranco até ${(v.stagT - s.clock).toFixed(1)} s adiante`, v.id);
+  };
+  QA.more.push(rule); QA.combate = rule;
+  // (the save's round trip sees the fight's record too)
+  if (QA.canonMore) QA.canonMore.push(['combate', () => { const c = G.S && G.S.combate; if (!c) return null; return { duel: c.duel ? [c.duel.a, c.duel.o] : null, fl: c.fl.map(f => [f.id, f.k, f.n, Math.round(f.X * 100), Math.round(f.Z * 100)]), br: c.br.map(q => [q.id, q.foe]) }; }]);
+})();
+  // ---- qa/interacao-inv.js ----
+// interacao-inv: as regras do verificador para a interação do corpo com o ambiente (20e, D-395 a D-409) — carregado depois do
+// qa/qa.js (QA.more), como os outros; o qa/junta-inv.js o copia para dentro do qa.js. Só lê o mundo.
+//   · o que está no chão (S.loose, fora das caixas de um serviço) é uma coisa ou um bem do catálogo, em quantidade que se pega,
+//     num lugar do mapa — o que o corpo pega e larga passa por ali;
+//   · as mãos movem as coisas pelas portas certas, no livro: o que se dá vai de uma mochila para outra (G.Inv.give, «dar»), o que
+//     se apanha do chão vai do chão para uma mochila («apanhou»), o que se guarda ou se tira de uma casa, uma prateleira, uma
+//     banca vai entre a mochila e esse lugar («guardou» / «pegar») — nunca para o estoque do povo como coisa (D-371);
+//   · os feitos das mãos do corpo (deu, pegou do chão, guardou, bateu à porta) são contas inteiras, nunca negativas.
+(function () {
+  if (!window.QA || !QA.more) return;
+  const fin = x => typeof x === 'number' && isFinite(x);
+  QA.more.push(function (add, s) {
+    const It = G.Itens, D = G.Depot; if (!It || !D) return;
+    // ---- the ground: what lies there is something a hand can take
+    for (const o of s.loose || []) {
+      if (o.op) continue;
+      if (!It.def(o.k) && o.k !== 'water' && o.k !== 'moedas') add('interacao', 2, `no chão #${o.id}: «${o.k}», que o catálogo não conhece`);
+      if (!fin(o.x) || !fin(o.y) || !G.W.inb(o.x, o.y)) add('interacao', 1, `no chão #${o.id}: fora do mapa (${o.x}, ${o.y})`);
+    }
+    // ---- the doors the hands move things by (the ledger lines of today)
+    const L = D.ledger ? D.ledger() : []; const day = s.day; const kind = r => (typeof r === 'string' ? r.split(':')[0] : '');
+    for (let i = L.length - 1; i >= 0 && L[i][1] >= day - 1; i--) {
+      const e = L[i]; const code = e[8], de = e[3], para = e[4];
+      if (code === 'dar' && (kind(de) !== 'm' || kind(para) !== 'm' || de === para)) add('interacao', 1, `o livro: «dar» de ${de} para ${para} — o que se dá vai de uma mochila para a de outra pessoa (G.Inv.give)`);
+      if (code === 'apanhou' && (kind(de) !== 'g' || kind(para) !== 'm')) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick)`);
+      if ((code === 'guardou' || code === 'pegar') && kind(para) === 'f' && It.THINGS && It.THINGS.has(e[5])) add('interacao', 1, `o livro: uma coisa (${e[5]}) entrou no estoque do povo como coisa por «${code}» (D-371: conta como o seu bem)`);
+    }
+    // ---- the body's deeds of the hands: whole counts
+    const a = s.avatar; if (a && a.deeds) for (const k of ['dadiva', 'apanhou', 'guardou', 'porta']) { const n = a.deeds[k]; if (n !== undefined && (!fin(n) || n < 0 || Math.abs(n - Math.round(n)) > 1e-9)) add('interacao', 2, `o feito «${k}» do corpo é ${n}`); }
+  });
+})();
+  // ---- qa/mata-inv.js ----
+// mata-inv: as regras do verificador para a mata (o G.Mata, js/mata.js; D-470 a D-473). O G.Mata só lê o mundo e guarda uma memória
+// de regiões de 16 × 16 casas, refeita quando o que a faz muda; estas regras conferem, a cada olhada do verificador, em quatro regiões
+// escolhidas pelo dia (nunca por um acaso):
+//   · a memória bate com a mata feita do zero agora (G.Mata.fresh) — uma memória atrasada desenharia a mata de ontem;
+//   · nada de mata em estrada, prédio, muro e água; a trilha batida (desgaste ≥ 2) aberta;
+//   · os caules duros que o corpo não atravessa (Space.stems) nunca em estrada, prédio, trilha ou água, e longe de todo tronco do
+//     mundo o bastante para o corpo passar (0,64 m).
+// Carregado depois do qa/qa.js (QA.more); o junta-inv.js o leva para dentro do qa.js.
+(function () {
+  if (!window.QA || !QA.more) return;
+  QA.more.push(function (add, s) {
+    const Ma = G.Mata; if (!Ma || !s.treeAt || !s.trees) return; const N = G.N, R = Ma.R, T = G.T; const nr = Math.ceil(N / R);
+    let nm = 0, nz = 0, ns = 0;
+    for (let q = 0; q < 4; q++) {
+      const h = G.hash(((s.day | 0) * 4 + q) * 7919 + 13); const rx = Math.floor(h * nr) % nr, ry = Math.floor(G.hash(((s.day | 0) * 4 + q) * 104729 + 7) * nr) % nr;
+      const r = Ma.region(rx, ry); if (!r) continue;
+      // (one tile of the region against the forest made from nothing)
+      const k0 = Math.floor(G.hash(rx * 31 + ry * 17 + (s.day | 0)) * R * R); const i0 = (r.y0 + ((k0 / R) | 0)) * N + r.x0 + k0 % R;
+      if (i0 < N * N) { const a = Ma.at(i0), f = Ma.fresh(i0); for (const fd of Ma.FIELDS) if (Math.abs(a[fd] - f[fd]) > 1e-9) { if (nm++ < 2) add('mata', 3, `a memória da mata em ${i0 % N},${(i0 / N) | 0} diz ${fd} ${a[fd].toFixed(2)} e o mundo agora ${f[fd].toFixed(2)}`, i0); break; } }
+      for (let k = 0; k < R * R; k++) {
+        const x = r.x0 + k % R, y = r.y0 + ((k / R) | 0); if (x >= N || y >= N) continue; const i = y * N + x; const d = r.dens[k];
+        if (d && (s.road[i] || s.occ[i] || s.wall[i] || (s.type[i] <= T.RIVER && !(s.dry && s.dry[i])) || G.pathLevel(s.wear[i]) >= 2)) { if (nz++ < 2) add('mata', 3, `mata (${(d / 255).toFixed(2)}) em ${x},${y}, sobre ${s.road[i] ? 'estrada' : s.occ[i] ? 'prédio' : s.wall[i] ? 'muro' : s.type[i] <= T.RIVER ? 'água' : 'trilha batida'}`, i); }
+        if (!G.Space || !G.Space.stems) continue;
+        for (const st of Ma.stemsOf(i, r)) {
+          let why = s.road[i] ? 'estrada' : s.occ[i] ? 'prédio' : G.pathLevel(s.wear[i]) >= 1 ? 'trilha' : s.type[i] <= T.RIVER ? 'água' : '';
+          if (!why) for (let dy = -1; dy <= 1 && !why; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (y + dy) * N + x + dx; if (j < 0 || j >= N * N) continue; const t = s.trees.get(s.treeAt[j]); const tr = G.Space.trunk(t); if (tr && Math.hypot(st[0] - t.x * 4, st[1] - t.y * 4) - tr - st[2] < 0.64) { why = `o tronco da árvore #${t.id}, sem lugar para o corpo passar`; break; } }
+          if (why && ns++ < 2) add('mata', 2, `um caule duro em ${x},${y} sobre ${why}`, i);
+        }
+      }
+    }
+  });
+})();
   // ---- qa/ceu-inv.js ----
 // ceu-inv: as regras do verificador para o céu, a luz e o ar (21d — D-466, D-520 a D-534). O G.Ceu só lê o mundo; estas regras
 // conferem, a cada olhada do verificador, que o que ele responde tem a causa que diz ter — contada aqui de novo, direto dos campos

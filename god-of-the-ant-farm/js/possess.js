@@ -43,6 +43,9 @@
   Po.on = () => !!(G.S && G.S.avatar);
   Po.body = () => { const id = Po.id(); return id ? G.S.villagers.get(id) || null : null; };
   Po.is = v => !!(v && G.S && G.S.avatar && G.S.avatar.id === v.id);
+  // (the world seconds a second of the body lasts, and the metres a unit of the world's height: for the world's side of the body
+  // — the fight's, 20f — that may not ask the space itself)
+  Po.time = () => G.Space.TIME; Po.hm = () => G.Space.HM;
 
   // ------------------------------ who can be lived ------------------------------
   const oa = v => (v.g === 'f' ? 'a' : 'o');
@@ -112,7 +115,7 @@
   Po.release = function (why, detail, keepTask) {
     const S = G.S; const a = S.avatar; if (!a) return null;
     const v = S.villagers.get(a.id);
-    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop(); if (G.Combate) G.Combate.onRelease(); // (the fight of the body: its guard down, its arrows down, its duel over — 20f)
     if (v) {
       if (!keepTask && v.task && v.task.type === 'avatar') { v.task = null; }
       if (!keepTask) { v.path = null; v.act = ''; v.sleeping = false; }
@@ -126,7 +129,7 @@
     const S = G.S; if (!a) return;
     // (what ended it, for the eye that sees the body fall: the cause, the beast, the last blow — D-334)
     a.end = { cause, beast: beast || null, hit: a.hits && a.hits.length ? Object.assign({}, a.hits[a.hits.length - 1]) : null, t: S.clock };
-    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop(); if (G.Combate) G.Combate.onRelease();
     record(rec, a, 'morte', cause, beast);
     for (const f of Po.onEnd) f('morte', rec, cause, a);
   }
@@ -361,6 +364,8 @@
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
     // that breaks — counted in G.modErr, as any module's error — leaves the rest answered, never a body waiting forever)
     if (queue.length) { const q = queue; queue = []; for (const it of q) it.res = { ok: false, why: '', dropped: 1 }; for (const it of q) { if (it.cancel || it.id !== a.id || S.avatar !== a || !S.villagers.has(v.id)) continue; it.res = it.fn(v) || { ok: true }; } }
+    // (the fight of the body, after what the hands asked: its arrows fly, its duel is kept to — 20f, G.Combate)
+    if (G.Combate && S.avatar === a && S.villagers.has(v.id)) G.Combate.step(v, dt);
     if (S.avatar === a && S.villagers.has(v.id)) { a.via = viaOf(v, a); remember(v); } // (the building the body is by, as the step leaves it; and where it is, kept as the person's own)
     void dt;
   };
@@ -381,8 +386,10 @@
   const dmg0 = G.Vg.damage;
   G.Vg.damage = function (v, amt, cause, byGod, by) {
     const S = G.S; const a = S && S.avatar;
-    if (a && v && a.id === v.id && S.villagers.has(v.id) && amt > 0) noteHit(v, a, amt, cause, by);
-    return dmg0.apply(this, arguments);
+    // (the guard of the body first — the dodge's window, the parry, the shield or the weapon across: G.Combate.shield, 20f —; what
+    // it lets through is what the world deals, and what is noted)
+    if (a && v && a.id === v.id && S.villagers.has(v.id) && amt > 0) { if (G.Combate) { amt = G.Combate.shield(v, amt, cause, by); if (!(amt > 0)) return; } noteHit(v, a, amt, cause, by); }
+    return dmg0.call(this, v, amt, cause, byGod, by);
   };
   const BEASTLY = { beast: 1, wolf: 1, boar: 1 };
   function noteHit(v, a, amt, cause, by) {
@@ -436,6 +443,10 @@
     if (o.biz && G.Biz && (o.act === 'comprar' || o.act === 'pechinchar' || o.act === 'aceitarContra')) { const z = G.Biz.get(o.biz); if (z && z.owner) Po.meet(z.owner); }
     if (o.def === 'taverna' && o.act === 'pedir' && G.Taverna && G.Act) { const op = G.Act.get(o.op); const b = op ? G.S.buildings.get(op.at) : null; const k = b ? G.Taverna.keeperOf(b) : null; if (k) Po.meet(k.id); }
   };
+
+  // a thing of the body's bag given to someone (20e, D-401: Interact.give, in the world's step): the two have met face to face, and
+  // the giving is one of the deeds of the life in the body. Outside the world's step it does nothing, as Po.meet
+  Po.gave = function (o) { if (!o || !G.S.avatar || !G.inSim) return false; Po.meet(o.id); Po.deed('dadiva'); return true; };
 
   // ------------------------------ who I am, where I am, what is around me ------------------------------
   // (the doors a future adventure asks at: an identity, a place, the stories, the people known, what was seen, the duties)
@@ -653,7 +664,9 @@
   // ------------------------------ words ------------------------------
   const tt0 = G.Vg.taskText;
   G.Vg.taskText = function (v) { return v.task && v.task.type === 'avatar' ? (v.sleeping ? 'Dormindo — guiad' + oa(v) + ' pelo deus' : 'Vivid' + oa(v) + ' pelo deus (Modo Encarnado)') : tt0(v); };
-  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'], cozinha: ['cozinhou', 'ceia da casa', 'ceias da casa'] };
+  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'], cozinha: ['cozinhou', 'ceia da casa', 'ceias da casa'],
+    // (20e: the hands' new doings — a thing given, one picked up from the ground, the things kept or taken in a store or a house)
+    dadiva: ['deu', 'coisa a alguém', 'coisas a outras pessoas'], apanhou: ['pegou do chão', 'coisa', 'coisas'], guardou: ['guardou ou tirou', 'coisa', 'coisas'] };
   Po.DEED = DEED;
   if (G.Life) {
     const bl0 = G.Life.bioLine;

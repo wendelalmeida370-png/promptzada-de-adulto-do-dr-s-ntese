@@ -484,7 +484,7 @@
       const tr = S.trees.get(id);
       if (!tr || tr.stage !== 'fall') { R3.dropMesh(f.m); falling.delete(id); if (tr) R3.refreshAt(tr.x, tr.y); continue; }
       const k = G.easeIn ? G.easeIn(Math.min(1, tr.fallT / 0.9)) : Math.min(1, tr.fallT / 0.9) ** 2; f.m.rotation.set(0, 0, -(tr.fallDir || 1) * k * Math.PI / 2 * 0.92); f.m.updateMatrixWorld();
-      if (k > 0.9 && !f.landed) { f.landed = true; const X = tr.x * L + (tr.fallDir || 1) * 5 * Math.max(0.4, tr.size), Y = W.groundH(tr.x, tr.y) * H, Z = tr.y * L; const c = R3.crownOf(Object.assign({}, tr, { stage: 'grow' }));
+      if (k > 0.9 && !f.landed) { f.landed = true; const X = tr.x * L + (tr.fallDir || 1) * (G.Mata ? G.Mata.tree(tr).cy * 0.95 : 5 * Math.max(0.4, tr.size)), /* (21a: the burst where its crown lands — a great tree of the south reaches far) */ Y = W.groundH(tr.x, tr.y) * H, Z = tr.y * L; const c = R3.crownOf(Object.assign({}, tr, { stage: 'grow' }));
         for (let q = 0; q < 14; q++) spawn(PA, { x: X + G.vrr(-2.5, 2.5), y: Y + 0.3, z: Z + G.vrr(-1.5, 1.5), vx: G.vrr(-1.2, 1.2), vy: G.vrr(0.4, 1.2), vz: G.vrr(-1.2, 1.2), life: G.vrr(1, 1.8), s0: 0.6, s1: 2.2, c: [0.7, 0.62, 0.5], a: 0.35, drag: 1.2 });
         if (c) for (let q = 0; q < 26; q++) spawn(PA, { x: X + G.vrr(-3, 3), y: Y + G.vrr(0.5, 2.5), z: Z + G.vrr(-2, 2), vx: G.vrr(-1.5, 1.5), vy: G.vrr(0.5, 2), vz: G.vrr(-1.5, 1.5), life: G.vrr(2, 4), s0: 0.17, s1: 0.17, c: c[4], a: 1, sh: 2, drag: 1.4, grav: 1.5, wob: 1.6 }); }
     }

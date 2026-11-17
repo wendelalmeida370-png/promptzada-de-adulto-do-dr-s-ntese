@@ -83,13 +83,21 @@ if (on('c5')) {
 // c6 — the map of the air: every corner with mist says its cause; none on the dry desert's open land; the canopy is the woods'
 // (nothing without G.Mata; with them, theirs); the same map twice; made again when the woods change
 if (on('c6')) {
-  const A = Ce.airMap(); const n = A.n; let mist = 0, noCause = 0, desertNoon = 0, canopy = 0; const causes = {};
+  // (the map without the woods first — the canopy is theirs, and nothing without them)
+  const had = G.Mata; G.Mata = undefined; const A = Ce.airMap(); const n = A.n; let mist = 0, noCause = 0, desertNoon = 0, canopy = 0; const causes = {};
   const mn = Ce.mistNow(0.36, { rain: 0 }, 0);
   for (let c = 0; c < n * n; c++) { if (A.cano[c] > 0) canopy++; const m = A.dawn[c] + A.last[c]; if (m > 0.02) { mist++; if (!A.why[c]) noCause++; for (const k in Ce.WHY) if (A.why[c] & Ce.WHY[k]) causes[k] = (causes[k] || 0) + 1; }
     const i = c % n, j = (c / n) | 0; if (i < N() && j < N() && S.biome[j * N() + i] === 6 && !(A.why[c] & (Ce.WHY.rio | Ce.WHY.queda)) && (A.dawn[c] * mn.dawn + A.last[c] * mn.last) > 0.2) desertNoon++; }
-  const had = G.Mata; G.Mata = { ver: 'prova-1', at: i => ({ luz: (S.treeAt[i] ? 0.9 : 0), dens: 0 }) }; const B = Ce.airMap(); let withMata = 0, forest = 0; for (let c = 0; c < n * n; c++) { if (B.cano[c] > 0) withMata++; if (B.why[c] & Ce.WHY.mata) forest++; }
-  const same = Ce.airMap() === B; G.Mata.ver = 'prova-2'; const C = Ce.airMap(); G.Mata = had; const D = Ce.airMap();
-  ok('c6 o mapa do ar', mist > 50 && !noCause && !desertNoon && canopy === 0 && withMata > 50 && same && C !== B && D !== C, `${mist} cantos com névoa, ${noCause} sem causa (${Object.entries(causes).map(([k, v]) => k + ' ' + v).join(', ')}); no deserto seco ao meio-dia: ${desertNoon}; o dossel sem o G.Mata: ${canopy} cantos; com o G.Mata de prova: ${withMata} (mata úmida ${forest}); a mesma versão, o mesmo mapa: ${same}; a versão nova o refaz: ${C !== B}`);
+  // (with the woods: their map of the canopy, a corner the mean of its four tiles; the same signature, the same map)
+  G.Mata = had; const B = Ce.airMap(); let withMata = 0, forest = 0, off = 0; const cmap = had && had.canopy ? had.canopy(0, 0, N(), N()).data : null;
+  for (let c = 0; c < n * n; c++) { if (B.cano[c] > 0) withMata++; if (B.why[c] & Ce.WHY.mata) forest++;
+    if (cmap) { const i = c % n, j = (c / n) | 0; let sum = 0, k = 0; for (let dj = -1; dj <= 0; dj++) for (let di = -1; di <= 0; di++) { const x = i + di, y = j + dj; if (x < 0 || y < 0 || x >= N() || y >= N()) continue; sum += cmap[y * N() + x] / 255; k++; } if (k && Math.abs(sum / k - B.cano[c]) > 1e-6) off++; } }
+  const same = Ce.airMap() === B;
+  // (a tree of the woods felled: their signature moves, the map is made again)
+  let felled = null; for (const t of S.trees.values()) { if (t.stage === 'grow' && t.size > 0.6 && B.cano[Math.round(t.y) * n + Math.round(t.x)] > 0.5) { felled = t; break; } }
+  const k0 = Ce.airKey(); if (felled) G.Nature.removeTree(felled); const C = Ce.airMap(); const k1 = Ce.airKey();
+  const fake = { ver: 'prova', at: () => ({ luz: 0.9 }) }; G.Mata = fake; const D = Ce.airMap(); let withFake = 0; for (let c = 0; c < n * n; c++) if (D.cano[c] > 0.5) withFake++; G.Mata = had;
+  ok('c6 o mapa do ar', mist > 50 && !noCause && !desertNoon && canopy === 0 && (!had || (withMata > 50 && !off)) && same && (!felled || (k1 !== k0 && C !== B)) && withFake > 50, `${mist} cantos com névoa, ${noCause} sem causa (${Object.entries(causes).map(([k, v]) => k + ' ' + v).join(', ')}); no deserto seco ao meio-dia: ${desertNoon}; sem o G.Mata, o dossel em ${canopy} cantos; com o G.Mata da mata (o mapa do dossel dela): ${withMata} cantos (mata úmida ${forest}), ${off} fora do mapa dela; a mesma assinatura, o mesmo mapa: ${same}; uma árvore derrubada: a assinatura ${k1 !== k0 ? 'mudou' : 'NÃO mudou'} e o mapa ${C !== B ? 'refeito' : 'NÃO refeito'}; uma mata sem o mapa do dossel (a luz de cada casa): ${withFake} cantos`);
 }
 // c7 — the shade of the hills: the sweep against a brute look along the line to the light, at corners picked by the hash
 if (on('c7')) {

@@ -81,7 +81,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // of a frame past 60 ms of the machine, and the parts that share the «cidade» after e3 lived another world on each machine
       // and on each run: T-262)
       f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33, true); },
-      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? max : -1; },
+      // (the ceiling of a wait, in frames of the world's time at D-015's 0,35: what it waits for — a meal, a load, the world's step
+      // that moves the body out of a house — is in the world's seconds, and at the slower time of the body of D-365 a frame is
+      // fewer of them; the ceiling only, never the condition, T-1394)
+      until(c, max, ms) { const n = Math.ceil((max || 400) * 0.35 / G.Space.TIME); for (let k = 0; k < n; k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? n : -1; },
+      // (and the frames of a fixed wait for the world, the same way)
+      fw(n, ms) { E.f(Math.ceil(n * 0.35 / G.Space.TIME), ms); },
       enter(v) { if (!G.Modes.enter(v)) return false; return E.until(() => G.Modes.state === 'INC', 300) >= 0; },
       leave() { if (G.Modes.state === 'INC') G.Modes.leave('deus'); return E.until(() => G.Modes.state === 'GOD', 400) >= 0; },
       town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
@@ -229,7 +234,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // with a load and no strength left — 0.9 to 1.2 m/s, as the world gives it: 5.1 m in 4.6 s, T-208)
     // (of the biggest town; none there outside with a family and a past, of the next by size — the «cidade» of the generation 19,
     // its night lived out, four towns of thirty-odd souls: none such of the six outside in Tenochtitlan, two in Mênfis: T-667)
-    const fam = o => o.mother && o.bio && o.bio.length >= 3; let s = __E.town(); for (let k = 1; s && !__E.adults(s, fam).length && __E.town(k); k++) s = __E.town(k);
+    const fam = o => o.mother && o.bio && o.bio.length >= 3;
+    // (the «cidade» of the worlds made after the merge of 20a–20h is saved at midnight: everyone with a mother in bed, out of doors
+    // only founders — the god waits for the morning, at 8×, as e10 does: T-1390)
+    const anyFam = () => { for (let k = 0; __E.town(k); k++) if (__E.adults(__E.town(k), fam).length) return true; return false; };
+    if (!anyFam()) { G.UI.setSpeed(8); __E.until(anyFam, 3000, 100); G.UI.setSpeed(1); }
+    let s = __E.town(); for (let k = 1; s && !__E.adults(s, fam).length && __E.town(k); k++) s = __E.town(k);
     const dry = (X, Z) => { const sf = G.Space.surface(X, Z); return sf.walk && sf.kind === 'ground'; };
     const fit = o => o.energy >= 30 && (o.hunger || 0) < 100 && !(o.carry && o.carry.n > 0) && !(o.sick > 0) && !(o.lost && o.lost.leg) && dry(o.x * 4, o.y * 4);
     const v = __E.adults(s, fam).sort((a, b) => (fit(b) ? 1 : 0) - (fit(a) ? 1 : 0) || (b.kids.length - a.kids.length))[0];
@@ -508,7 +518,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // an S2 of the checker, the test's own doing: T-262)
     { const lotless = o => { const i = G.W.idx(Math.floor(o.x), Math.floor(o.y)); return !S.occ[i] && !S.wall[i]; };
       const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y) && lotless(o))[0] || __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
-      const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
+      const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.fw(60, 50);
       out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
       // the same on a ford (L-150): the water under the new building is no water to swim in — the building stops the feet, so
       // the world moves the body out like anyone (the swimmer's mark is for open water, which the world leaves alone, D-026)

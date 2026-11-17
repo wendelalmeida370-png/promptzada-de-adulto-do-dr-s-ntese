@@ -455,7 +455,9 @@ if (part(6)) {
     god(() => { G.Vg.endTask(v); v.inside = 0; v.x = x + 0.5; v.y = y + 0.5; v.path = null; });
     if (!G.Possess.take(v).ok) continue; G.Avatar.attach(v, 0); for (let k = 0; k < 4; k++) frame(); if (Math.floor(v.x) !== x || Math.floor(v.y) !== y) continue;
     const nb = god(() => G.Village.addBuilding('house', x, y, set, true)); if (!nb) continue; n++; // (of the town of the house beside it)
-    for (let k = 0; k < 90; k++) frame(); for (const q of vbad()) bad.add(`S${q.sev} ${q.sys}: ${q.msg}`); // (the world's push, once a second: then the verifier)
+    // (the world's push, once a second of the world: then the verifier — 1,05 s of it, the 90 frames it was at D-015's 0,35; at the 0,27 of
+    // D-365 the 90 frames were 0,81 s, and one house in six still held the body in its walls, T-1391)
+    for (let k = 0, K = Math.ceil(1.05 / (RDT * G.Space.TIME)); k < K; k++) frame(); for (const q of vbad()) bad.add(`S${q.sev} ${q.sys}: ${q.msg}`);
     const q = Sp.indoor(v.x * TL, v.y * TL); const inWalls = !v.inside && !!q && q.b === nb && q.shell;
     if (v.inside === nb.id) inside++; if (inWalls) walled++; if (!S.avatar || S.avatar.id !== v.id) lost++;
     rows.push(v.inside === nb.id ? 'dentro' : inWalls ? 'nas paredes' : W.walkableXY(v.x, v.y) ? 'no chão do mundo' : G.Possess.onPlan(v) ? 'na soleira da casa nova' : 'preso'); made.push(`${nb.id}@${nb.x},${nb.y}`);
