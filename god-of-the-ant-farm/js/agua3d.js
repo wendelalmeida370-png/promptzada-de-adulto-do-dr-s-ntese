@@ -89,7 +89,7 @@
   // the land, the way to it, the foam where the current meets a bank or a stone) — made whole when the field is made again (the
   // land changed); the look's turbid rivers, the wet of the land and its puddles swept a band of rows each frame (the rain comes
   // and goes in hours of the world). Land texels take the look of the water beside them: no dark seam where the two meet
-  let flowTex = null, lookTex = null, shoreTex = null, wetTex = null, fieldFor = null, sweepY = 0;
+  let flowTex = null, lookTex = null, shoreTex = null, wetTex = null, fieldFor = null, sweepY = 0, pzRow = null;
   const mkTex = (data, fmt, type, lin) => { const t = new THREE.DataTexture(data, N, N, fmt, type); t.magFilter = t.minFilter = lin === false ? THREE.NearestFilter : THREE.LinearFilter; t.generateMipmaps = false; t.flipY = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true; return t; };
   function makeFieldTex() {
     for (const t of [flowTex, lookTex, shoreTex, wetTex]) if (t) t.dispose();
@@ -125,22 +125,24 @@
       L[o] = c[0]; L[o + 1] = c[1]; L[o + 2] = c[2]; L[o + 3] = c[3];
       // (the wet now, and where the rain pools in this tile: the most of four points of it)
       Wt[o] = Math.round(Ag.wet(i) * 255);
-      Wt[o + 1] = S.type[i] <= T.RIVER ? 0 : Math.round(Math.max(Ag.puddle(x + 0.25, y + 0.25), Ag.puddle(x + 0.75, y + 0.25), Ag.puddle(x + 0.25, y + 0.75), Ag.puddle(x + 0.75, y + 0.75)) * 255);
+      // (where the rain pools does not change with the rain: made once a row after the land changed)
+      if (!pzRow[y]) Wt[o + 1] = S.type[i] <= T.RIVER ? 0 : Math.round(Math.max(Ag.puddle(x + 0.25, y + 0.25), Ag.puddle(x + 0.75, y + 0.25), Ag.puddle(x + 0.25, y + 0.75), Ag.puddle(x + 0.75, y + 0.75)) * 255);
     }
+    for (let y = Math.max(0, y0); y < y1c; y++) pzRow[y] = 1;
     lookTex.needsUpdate = wetTex.needsUpdate = true;
   }
   function fieldTick() {
     const t0 = performance.now();
     if (!flowTex || flowTex.image.width !== N) makeFieldTex();
     const f = G.Agua.field();
-    if (fieldFor !== f) { const whole = fieldFor === null || fieldFor.S !== f.S; fieldFor = f; fillField(f); if (whole) { sweepRows(0, N); sweepY = 0; } }
-    else { const B = Math.max(2, Math.ceil(N / 24)); sweepRows(sweepY, sweepY + B); sweepY = sweepY + B >= N ? 0 : sweepY + B; A3.stats.sweep++; }
+    if (fieldFor !== f) { const whole = fieldFor === null || fieldFor.S !== f.S; fieldFor = f; pzRow = new Uint8Array(N); fillField(f); if (whole) { sweepRows(0, N); sweepY = 0; } }
+    else { const B = Math.max(1, Math.ceil(N / 96)); sweepRows(sweepY, sweepY + B); sweepY = sweepY + B >= N ? 0 : sweepY + B; A3.stats.sweep++; }
     A3.stats.texMs = A3.stats.texMs * 0.9 + (performance.now() - t0) * 0.1;
   }
   // (for the proofs: the pictures as they stand — the current's, the look's, the shore's, the wet's)
   A3.tex = () => ({ flow: flowTex, look: lookTex, shore: shoreTex, wet: wetTex, bed: bedTex });
   // (for the proofs: all of the pictures made again now, whole)
-  A3.fieldNow = function () { if (!THREE) THREE = window.THREE; if (!flowTex || flowTex.image.width !== N) makeFieldTex(); const f = G.Agua.field(); fieldFor = f; fillField(f); sweepRows(0, N); sweepY = 0; };
+  A3.fieldNow = function () { if (!THREE) THREE = window.THREE; if (!flowTex || flowTex.image.width !== N) makeFieldTex(); const f = G.Agua.field(); fieldFor = f; pzRow = new Uint8Array(N); fillField(f); sweepRows(0, N); sweepY = 0; };
 
   // ------------------------------ the light on the water, each frame ------------------------------
   // (the realm's light of the hour hands over the key light and the sky's light on the water; the pictures follow the world)
