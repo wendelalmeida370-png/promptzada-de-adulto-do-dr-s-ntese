@@ -372,7 +372,12 @@ if (want('c10')) {
   if (!/^cb-corpo-\w+-0$/.test(st2) || !C2 || Math.abs(C2.period - 0.8 * Cb.bodyTime()) > 1e-6) bad.push('o gesto de quem luta com o corpo');
   e.stagT = S.clock + 0.2; const st3 = A.stateOf(e, 0); e.stagT = 0; e.downT = S.clock + 1; const st4 = A.stateOf(e, 0); e.downT = 0;
   res.push(`o tranco: «${st3}»; a queda: «${st4}»`); if (st3 !== 'cb-tranco' || st4 !== 'knocked') bad.push('o tranco ou a queda');
-  G.Vg.endTask(e);
+  // one who turns the body's blow on a shield: the guard up, seen
+  arm(vb, [['espada.bronze', 'mao']]); arm(e, [['escudo.madeira', 'outra']]); stand(e, 1.0, 0); clear([vb, e]); G.Vg.setTask(e, { type: 'combat', id: vb.id, pri: 4.2, any: true, kind: 'combat' }); e.act = 'fight';
+  let blk = null; for (let k = 0; k < 40 && !blk; k++) { stand(e, 1.0, 0); G.Vg.setTask(e, { type: 'combat', id: vb.id, pri: 4.2, any: true, kind: 'combat' }); e.act = 'fight'; const r = strikeNow(vb, { i: 0, yaw: Math.atan2(e.y - vb.y, e.x - vb.x) }); if (r.hits[0] && r.hits[0].blocked) blk = r.hits[0]; } // (the jolt pushes back: in place again before each blow)
+  A.stateOf(e, 0); const st5 = A.stateOf(e, 0); res.push(`a guarda de quem apara o golpe: ${blk ? `aparou ${r2(blk.blocked * 100)}% — «${st5}»` : 'NENHUM GOLPE APARADO em 40'}`);
+  if (!blk || st5 !== 'cb-guarda-escudo') bad.push('a guarda de quem apara');
+  arm(e, []); G.Vg.endTask(e);
   // the clips: all registered, none refused; every act the fight gives the body has its line of sound
   const mine = Object.keys(A.CLIPS).filter(c => /^cb-/.test(c)); const miss = []; for (const cls in Cb.MOVES) for (const m of [...Cb.MOVES[cls].l, Cb.MOVES[cls].p]) if (!A.CLIPS[m.clip]) miss.push(m.clip);
   const sound = ['golpe', 'guarda', 'mirar'].filter(a => !G.Audio || !G.Audio.ATO || !G.Audio.ATO[a]);

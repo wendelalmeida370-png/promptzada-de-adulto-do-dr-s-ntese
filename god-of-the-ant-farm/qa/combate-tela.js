@@ -112,13 +112,20 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   // ================================ t4: o toque ================================
   if (want('t4')) {
     const r = await E(() => {
-      const X = __X; X.reset(); X.arm([['espada.bronze', 'mao']]); const o = G.S.villagers.get(X.t1) || X.other([]); X.stand(o, 1.0, 0); X.f(30);
+      const X = __X; X.reset(); X.arm([['espada.bronze', 'mao']]); const o = G.S.villagers.get(X.t1) || X.other([]); X.stand(o, 1.0, 0);
+      // (a finger on the screen: the touch layer on, as the first touch of the canvas puts it — the buttons by their moment)
+      G.Input3D.touch = true; G.IncUI.touchOn(); X.f(30);
       const shown = G.IncUI.touchButtons ? G.IncUI.touchButtons() : []; const h0 = o.hp;
-      G.Input3D.press('atacar', true); G.Main.frameFor(16.7, true); G.Input3D.press('atacar', false); X.until(() => o.hp < h0, 60); const hit = Math.round((h0 - o.hp) * 10) / 10; X.f(40);
-      G.Input3D.press('defender', true); X.f(6); const g = G.CombateUI.state().guard; G.Input3D.press('defender', false); X.f(6); const g2 = G.CombateUI.state().guard;
-      return { shown, hit, g, g2 };
+      const T = (id, x, y, tg) => new Touch({ identifier: id, target: tg, clientX: x, clientY: y });
+      const btn = a => document.querySelector(`#inc-hud .ih-tb button[data-k="${a}"]`);
+      const touch = (a, down) => { const b = btn(a); if (!b) return false; b.dispatchEvent(new TouchEvent(down ? 'touchstart' : 'touchend', { changedTouches: [T(2, 900, 500, b)], touches: down ? [T(2, 900, 500, b)] : [], cancelable: true, bubbles: true })); return true; };
+      const pressed = touch('atacar', true); G.Main.frameFor(16.7, true); touch('atacar', false); X.until(() => o.hp < h0, 60); const hit = Math.round((h0 - o.hp) * 10) / 10; X.f(40);
+      touch('defender', true); X.f(6); const g = G.CombateUI.state().guard; touch('defender', false); X.f(6); const g2 = G.CombateUI.state().guard;
+      const lab = btn('atacar') ? btn('atacar').textContent : '';
+      return { shown, hit, g, g2, pressed, lab };
     });
-    ok('t4 o-toque', r.shown.includes('atacar') && r.shown.includes('defender') && r.hit > 0 && r.g && !r.g2, `os botões: ${r.shown.join(', ')}; Golpe acertou ${r.hit}; Defesa segurada ${r.g ? 'guarda' : 'NÃO guarda'}, solta ${r.g2 ? 'AINDA GUARDA' : 'baixa'}`);
+    await shot('t4-toque');
+    ok('t4 o-toque', r.shown.includes('atacar') && r.shown.includes('defender') && r.pressed && r.hit > 0 && r.g && !r.g2, `os botões: ${r.shown.join(', ')} («${r.lab}»); o dedo no Golpe acertou ${r.hit}; Defesa segurada ${r.g ? 'guarda' : 'NÃO guarda'}, solta ${r.g2 ? 'AINDA GUARDA' : 'baixa'}`);
   }
 
   // ================================ t5: o arco ================================

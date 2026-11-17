@@ -40,6 +40,8 @@
   const wrap = a => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
   const fid = v => G.Fac.idOfV(v);
   const alive = o => !!(o && G.S.villagers.has(o.id));
+  // (the way someone faces, from the world's facing — a facing straight along y has fx 0, which is no «none»: L-1285)
+  const faceOf = o => (Number.isFinite(o.fx) && Number.isFinite(o.fy) && (o.fx || o.fy) ? Math.atan2(o.fy, o.fx) : (o.face || 1) > 0 ? 0 : Math.PI);
   Cb.TILE = TILE;
 
   // ------------------------------ the weapons ------------------------------
@@ -152,7 +154,7 @@
     if (!inStep()) return NO;
     if (!alive(v) || v.downT > G.S.clock || v.captive || v.jail) return { ok: false, why: '' };
     const w = Cb.weapon(v); const i = sp && Number.isFinite(sp.i) ? sp.i : 0; const mv = Cb.move(w.cls, i);
-    const yaw = sp && Number.isFinite(sp.yaw) ? sp.yaw : Math.atan2(v.fy || 0, v.fx || 1);
+    const yaw = sp && Number.isFinite(sp.yaw) ? sp.yaw : faceOf(v);
     G.faceTo(v, Math.cos(yaw), Math.sin(yaw));
     const reach = Cb.reachOf(w, mv); let T = Cb.targets(v, yaw, reach, mv.arc);
     // (a thrust stops at the first body; a sweep goes on through two more)
@@ -189,7 +191,7 @@
     let blocked = 0;
     // (one fighting, awake, on their feet, facing the one who strikes: the guard may come up — a shield often, a blade now and
     // then; a heavy blow beats it half the time)
-    const facing = Math.cos(Math.atan2(v.y - o.y, v.x - o.x) - Math.atan2(o.fy || 0, o.fx || 1)) > 0.34;
+    const facing = Math.cos(Math.atan2(v.y - o.y, v.x - o.x) - faceOf(o)) > 0.34;
     const fights = !!(o.task && FIGHTING[o.task.type]) || o.role === 'guerreiro' || duel;
     if (fights && facing && !o.sleeping && !(o.downT > S.clock) && !(o.stagT > S.clock) && !isBody(o)) {
       const ch = (ow.shield ? 0.4 : ow.cls !== 'punho' ? 0.15 : 0) * (mv && mv.down ? 0.5 : 1) * (how === 'arrow' && !ow.shield ? 0 : 1);
@@ -265,7 +267,7 @@
     const dg = G.Avatar && G.Avatar.dodging ? G.Avatar.dodging() : null; const win = dg && Cb.IFRAME[dg.kind];
     if (win && dg.u >= win[0] && dg.u <= win[1]) { stats.dodged++; note('esquiva', { amt: r2(amt), cause, from: src ? src.id : 0 }); return 0; }
     if (guard && guard.id === v.id && src) {
-      const yaw = G.Avatar && G.Avatar.state && G.Avatar.state() ? G.Avatar.state().yaw : Math.atan2(v.fy || 0, v.fx || 1);
+      const yaw = G.Avatar && G.Avatar.state && G.Avatar.state() ? G.Avatar.state().yaw : faceOf(v);
       const w = Cb.weapon(v); const half = (w.shield ? 85 : 70) * D2R;
       const off = Math.abs(wrap(Math.atan2(src.y - v.y, src.x - v.x) - yaw));
       if (off <= half && (cause !== 'arrow' || w.shield)) {

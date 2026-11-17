@@ -125,12 +125,19 @@
   // clock —; a jolt the world gave, a throw down by a blow: only read, nothing kept in the person)
   const A = G.Anim3D; if (!A || !A.stateOf) return;
   const memo = new Map(); G.worldHooks.push(() => memo.clear());
-  const clsOf = v => { let m = memo.get(v.id); if (!m) { m = {}; memo.set(v.id, m); if (memo.size > 400) { const k = memo.keys().next().value; memo.delete(k); } } const h = G.Inv && G.Inv.heldFor ? G.Inv.heldFor(v, m) : null; return h && G.Combate ? G.Combate.classOf(h.mao) : 'espada'; };
+  const heldOf = v => { let m = memo.get(v.id); if (!m) { m = {}; memo.set(v.id, m); if (memo.size > 400) { const k = memo.keys().next().value; memo.delete(k); } } return G.Inv && G.Inv.heldFor ? G.Inv.heldFor(v, m) : null; };
+  const clsOf = v => { const h = heldOf(v); return h && G.Combate ? G.Combate.classOf(h.mao) : 'espada'; };
   const vsBody = v => { const S = G.S; const id = S.avatar && S.avatar.id; const t = v.task; return !!(id && t && ((t.type === 'combat' && t.id === id) || (t.type === 'band' && t.foe === id))); };
+  // (one who turned the body's blow on their guard a moment ago: the guard up — the shield, the blade across — as the world's answer
+  // said it, G.Combate.events: only read)
+  const guarded = (v, S) => { const E = G.Combate && G.Combate.events ? G.Combate.events() : null; if (!E) return null;
+    for (let i = E.length - 1; i >= 0; i--) { const e = E[i]; if (S.clock - e.t > 0.45) break; if (e.kind === 'acerto' && e.id === v.id && e.blocked && !e.beast) { const h = heldOf(v); return h && h.outra && /^escudo/.test(h.outra) ? 'cb-guarda-escudo' : 'cb-guarda-arma'; } }
+    return null; };
   const stateOf0 = A.stateOf;
   A.stateOf = function (v, sp) {
     const s = stateOf0(v, sp); const S = G.S;
     if (v.downT > S.clock && !v.sleeping && s === 'sleep') return 'knocked'; // (thrown down by a blow — not lying down to sleep)
+    if (sp < 0.6 && s !== 'sleep' && s !== 'swim') { const g = guarded(v, S); if (g) return g; }
     if (v.stagT > S.clock && sp < 0.6 && s !== 'sleep' && s !== 'swim') return 'cb-tranco';
     if (s === 'fight' && v.act === 'fight' && !(v.task && v.task.type === 'drill')) {
       const b = vsBody(v); const k = b ? TIME : 1; const t = v.task; const cyc = ((v.actT || 0) + (t && Number.isFinite(t.cd) ? Math.max(0, t.cd) : 0.95 * k)) / k;
