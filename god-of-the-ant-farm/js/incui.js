@@ -118,16 +118,27 @@
     }
     tbT = 0;
   }
+  // (the foot of the screen — the hotbar and the corner's buttons — is theirs: the fingers' buttons stand above it; and on a narrow
+  // or short screen (a phone, upright or lying) they are smaller and in a tight grid at the right edge — two columns upright, four
+  // lying —, clear of the body in the middle — on the owner's phone they fell over the hotbar and the body: L-1246)
+  function footBand() {
+    let top = innerHeight;
+    for (const s of ['.ih-hotbar', '.ih-corner']) { const e = $(s, hud); if (!e) continue; const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && r.top < top) top = r.top; }
+    return Math.max(0, Math.round(innerHeight - top));
+  }
+  IU.compactTouch = () => innerWidth < 600 || innerHeight < 500;
   function touchFrame(rdt) {
     if (!root || !G.Input3D.touch) return; touchBuild(); tbT -= rdt; if (tbT > 0) return; tbT = 0.25;
-    let k = 0;
+    let k = 0; const foot = footBand(), tight = IU.compactTouch();
     for (const [, q] of tbEls) {
       const d = q.d; const vis = !d.when || !!d.when();
       if (vis !== q.vis) { q.vis = vis; q.el.classList.toggle('hidden', !vis); }
       if (!vis) continue;
       const lab = typeof d.label === 'function' ? d.label() : d.label; if (lab !== q.lab) { q.lab = lab; q.el.textContent = lab; }
       const on = d.toggle && d.on ? !!d.on() : false; if (on !== q.on) { q.on = on; q.el.classList.toggle('on', on); }
-      if (d.slot !== 'canto') { const p = ARC[Math.min(k, ARC.length - 1)]; k++; const st = `${p[0]}px|${p[1]}px`; if (q.el._at !== st) { q.el._at = st; q.el.style.right = p[0] + 'px'; q.el.style.bottom = `calc(${p[1]}px + env(safe-area-inset-bottom, 0px))`; } }
+      if (d.slot !== 'canto') {
+        let r, b; if (tight) { const cols = innerWidth < 600 ? 2 : 4; r = 8 + (k % cols) * 52; b = foot + 8 + Math.floor(k / cols) * 52; } else { const p = ARC[Math.min(k, ARC.length - 1)]; r = p[0]; b = foot + 8 + p[1] - 22; }
+        k++; const st = `${r}px|${b}px`; if (q.el._at !== st) { q.el._at = st; q.el.style.right = `calc(${r}px + env(safe-area-inset-right, 0px))`; q.el.style.bottom = b + 'px'; } }
     }
   }
   IU.touchButtons = () => [...tbEls.values()].filter(q => q.vis).map(q => q.d.a); // (for the proofs: the buttons shown now)

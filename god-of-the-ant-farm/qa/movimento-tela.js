@@ -14,6 +14,8 @@
 //      novo devagar (sem saltos para fora); a mira travada marcada na tela
 //   t8 o corpo desenhado: o rumo e a altura do corpo que o 3D desenha (People3D.avatar) seguem o corpo sem saltos, a 144 quadros
 //   t9 sem erro de página, aviso no console nem erro de módulo
+//   t10 no celular (em pé, deitado, pequeno): os botões dos dedos acima da barra e dos cantos, longe do corpo, dentro da tela; só a
+//      notícia mais nova (L-1246)
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
@@ -186,6 +188,39 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
       __X.key('w', false); __X.f(20); return { frames: n, worstYaw: +worstYaw.toFixed(2), worstY: +worstY.toFixed(3) }; });
     ok('t8 o corpo que o 3D desenha gira e sobe sem saltos, a 144 quadros', r.frames > 400 && r.worstYaw < 19 && r.worstY < 0.06, JSON.stringify(r));
     await shot('t8-andando');
+  }
+  // ================================ t10: o toque num celular (L-1246) ================================
+  // (the owner's phone: the fingers' buttons fell over the hotbar and the body, and two news took half the screen — upright, lying
+  // and small, the buttons stand above the foot of the screen, clear of the body's middle, inside the screen, none on another; only
+  // the newest news shows)
+  if (want('t10')) {
+    const out = {};
+    for (const [nm, w, h] of [['em-pe', 390, 844], ['deitado', 844, 390], ['pequeno', 360, 740]]) {
+      await page.setViewportSize({ width: w, height: h }); await page.waitForTimeout(300);
+      out[nm] = await E(() => {
+        for (let k = 0; k < 12; k++) G.Main.frameFor(33, true);
+        const R = el => { const r = el.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; };
+        const hit = (a, b) => a[0] < b[2] - 1 && b[0] < a[2] - 1 && a[1] < b[3] - 1 && b[1] < a[3] - 1;
+        const W = innerWidth, H = innerHeight;
+        const btns = [...document.querySelectorAll('#inc-hud .ih-tb button')].filter(b => !b.classList.contains('hidden') && !b.classList.contains('canto') && b.offsetParent !== null).map(b => [b.dataset.k, R(b)]);
+        const feet = ['.ih-hotbar', '.ih-corner'].map(s => document.querySelector('#inc-hud ' + s)).filter(e => e && e.getBoundingClientRect().height > 0).map(R);
+        const mid = [W * 0.4, H * 0.3, W * 0.6, H]; // (where the body stands, the camera behind it)
+        const bad = [];
+        for (const [k, r] of btns) {
+          if (feet.some(f => hit(r, f))) bad.push(k + ' sobre a barra'); if (hit(r, mid)) bad.push(k + ' sobre o corpo');
+          if (r[0] < 0 || r[1] < 0 || r[2] > W + 0.5 || r[3] > H + 0.5) bad.push(k + ' fora da tela');
+          for (const [k2, r2] of btns) if (k2 < k && hit(r, r2)) bad.push(k + ' sobre ' + k2);
+        }
+        // (two news put in by the proof's hand, only the DOM: the newest shows)
+        const box = document.querySelector('#inc-hud .ih-news'); const was = box.innerHTML; box.innerHTML = '<div>a primeira notícia</div><div>a segunda notícia</div>';
+        const news = [...box.children].filter(d => getComputedStyle(d).display !== 'none').length; box.innerHTML = was;
+        return { n: btns.length, feet: feet.length, news, bad };
+      });
+      await shot('t10-' + nm);
+    }
+    await page.setViewportSize({ width: 1000, height: 640 }); await page.waitForTimeout(300); await E(() => { for (let k = 0; k < 4; k++) G.Main.frameFor(33, true); });
+    const bad = Object.entries(out).flatMap(([k, r]) => r.bad.map(b => k + ': ' + b));
+    ok('t10 no celular (em pé, deitado, pequeno): os botões dos dedos acima da barra e dos cantos, longe do corpo, dentro da tela, nenhum sobre outro; só a notícia mais nova', !bad.length && Object.values(out).every(r => r.n >= 5 && r.feet >= 1 && r.news === 1), JSON.stringify(out));
   }
   // ================================ t9: os erros ================================
   { const q = await E(() => ({ qa: __X.qa(), err: JSON.stringify(G.modErr) }));

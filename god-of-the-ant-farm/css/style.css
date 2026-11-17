@@ -1318,6 +1318,15 @@ canvas#game3d { touch-action: none; transition: none; }
 .ih-tb .ih-tbtn.main { width: 68px; height: 68px; font-size: 12px; }
 .ih-tb .ih-tbtn.on { background: rgba(245, 200, 107, .34); border-color: rgba(245, 200, 107, .85); color: #fff3d6; }
 .ih-tb .ih-tbtn:active { transform: scale(.94); }
+/* (a phone, upright or lying: smaller buttons in a tight grid at the right edge, above the hotbar — incui.js touchFrame —, and only the
+   newest news, in two lines at most: on the owner's phone the buttons fell over the hotbar and the body, and two news took half the
+   screen; L-1246) */
+@media (max-width: 599px), (max-height: 499px) {
+  .ih-touch .ih-tb button { width: 46px; height: 46px; font-size: 9.5px; letter-spacing: 0; }
+  .ih-tb .ih-tbtn.main { width: 46px; height: 46px; font-size: 10px; }
+  .ih-news div:not(:last-child) { display: none; }
+  .ih-news div { font-size: 11px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
 /* (the stick past its ring: the sprint — the ring glows) */
 .ih-stick.run { border-color: rgba(245, 200, 107, .75); box-shadow: 0 0 18px rgba(245, 200, 107, .35); }
 /* (the target held: a gold diamond over it; aiming, the reticle grows into a cross) */
