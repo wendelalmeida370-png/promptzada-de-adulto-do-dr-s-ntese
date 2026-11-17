@@ -40,11 +40,24 @@ function decode(m) {
 const MESH = {}; for (const k in G.BODYMESH.meshes) MESH[k] = decode(G.BODYMESH.meshes[k]);
 function bend(mesh, row, clock) {
   const buf = B3._buf(); const TW = B3._tw(); const o = row * TW * 4; const out = new Float32Array(mesh.n * 3);
+  // (the shader's cuirass: from its lower edge up the hips' and the spine's share of a point taken by the chest — texel 40.w)
+  const NBn = G.BODYMESH.bones.length, CH = G.BODYMESH.bones.indexOf('chest'), cuE = buf[o + (NBn * 3 + 40) * 4 + 3], M = new Float32Array(12);
+  const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   for (let i = 0; i < mesh.n; i++) {
     let x = 0, y = 0, z = 0; const px = mesh.pos[i * 3], py = mesh.pos[i * 3 + 1], pz = mesh.pos[i * 3 + 2]; const U = [0, 0, 0];
-    for (let k = 0; k < 4; k++) { const w = mesh.bw[i * 4 + k] / 255; if (!w) continue; const j = o + mesh.bi[i * 4 + k] * 12;
-      x += w * (buf[j] * px + buf[j + 1] * py + buf[j + 2] * pz + buf[j + 3]); y += w * (buf[j + 4] * px + buf[j + 5] * py + buf[j + 6] * pz + buf[j + 7]); z += w * (buf[j + 8] * px + buf[j + 9] * py + buf[j + 10] * pz + buf[j + 11]);
-      U[0] += w * buf[j + 1]; U[1] += w * buf[j + 5]; U[2] += w * buf[j + 9]; }
+    const cuK = cuE > 0 ? ss(cuE - 0.13, cuE - 0.03, py) : 0;
+    for (let k = 0; k < 4; k++) { const w = mesh.bw[i * 4 + k] / 255; if (!w) continue; const bi = mesh.bi[i * 4 + k], j0 = o + bi * 12, jc = o + CH * 12;
+      for (let q = 0; q < 12; q++) M[q] = cuK > 0 && bi < CH ? buf[j0 + q] + (buf[jc + q] - buf[j0 + q]) * cuK : buf[j0 + q];
+      x += w * (M[0] * px + M[1] * py + M[2] * pz + M[3]); y += w * (M[4] * px + M[5] * py + M[6] * pz + M[7]); z += w * (M[8] * px + M[9] * py + M[10] * pz + M[11]);
+      U[0] += w * M[1]; U[1] += w * M[5]; U[2] += w * M[9]; }
+    // (and the shader's thigh under the cuirass' edge: a leg point the bend brings above it, inside the cuirass' foot, kept under it)
+    const b0 = mesh.bi[i * 4], LG = G.BODYMESH.bones;
+    if (cuE > 0 && ((b0 < CH && cuK < 1) || b0 === LG.indexOf('thL') || b0 === LG.indexOf('thR') || b0 === LG.indexOf('hpHL') || b0 === LG.indexOf('hpHR'))) {
+      const jc = o + CH * 12, c = q => buf[jc + q]; const d = [x - c(3), y - c(7), z - c(11)]; const s2 = Math.max(c(0) * c(0) + c(1) * c(1) + c(2) * c(2), 1e-6);
+      const cq = [0, 1, 2].map(k => (c(k) * d[0] + c(4 + k) * d[1] + c(8 + k) * d[2]) / s2); const ez = cq[2] > 0 ? 0.19 : 0.16; const e = Math.hypot(cq[0] / 0.225, cq[2] / ez); const top = cuE - 0.012;
+      const ky = 1 - ss(1.0, 1.3, e);
+      if (ky > 0 && cq[1] > top) { cq[1] = cq[1] + (top - cq[1]) * ky; x = c(0) * cq[0] + c(1) * cq[1] + c(2) * cq[2] + c(3); y = c(4) * cq[0] + c(5) * cq[1] + c(6) * cq[2] + c(7); z = c(8) * cq[0] + c(9) * cq[1] + c(10) * cq[2] + c(11); }
+    }
     const zn = mesh.zone[i]; if ((zn === 5 || zn === 6 || zn === 7 || zn === 15 || zn === 21) && !process.env.SEMPANO) [x, y, z] = cloth([x, y, z], [px, py, pz], zn, buf, o + G.BODYMESH.bones.length * 12, clock || { t: 0, wind: [0, 0, 0] }, U);
     out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z;
   }

@@ -367,7 +367,10 @@ chave tem figura); uma folha de fotos (todas as coisas, de dois lados, e as figu
 - (20a lê:) `geo(chave, nível)` nos três níveis do corpo (sem forma, as formas antigas do `people3d.js`); `grip(chave).off` para a
   outra mão nas coisas de duas mãos (sem ela, um ponto por tipo); `stow(chave, 'costas' | 'cinto')` → `{ p: [x, y, z], y: [x, y, z],
   z: [x, y, z] }`, em metros do corpo: `p` onde fica o punho, `y` para onde vai o cabo, `z` a frente da coisa — nas costas, no quadro
-  do peito; no cinto, no da bacia (sem ele, um encaixe por tipo).
+  do peito; no cinto, no da bacia (sem ele, um encaixe por tipo). O que se veste (`cabeca`, `corpo`): a forma no quadro do osso da
+  cabeça e do peito (D-387), desenhada com esse quadro (D-349); da couraça, a 20a lê a borda de baixo (`info(chave).lo`) para o
+  corpo debaixo dela (D-351) e corta a parte `enfeite` que pende abaixo da borda em abas que viram (D-352). O material das coisas
+  é o `material(THREE, …)` (o brilho, L-1115).
 
 **Como ficou (20d, D-385 a D-393).** Os arquivos: `js/itemforma.js` (as receitas, `G.ItemForma`: números puros; ninguém fora do
 `itemarte.js` o lê — regra 136), `js/itemarte.js` (a porta), `js/itemicons.js` (as figuras, gerado pelo `qa/visual/itens-figuras.js`).

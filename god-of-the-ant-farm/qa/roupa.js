@@ -149,10 +149,13 @@ if (run('r3')) mild(() => {
   if (!w) info.push('sem guerreiro de elmo neste mundo');
   else {
     const f = G.Fac.ofV(w); const K = f.tech.known; const k0 = Object.assign({}, K); const civ = f.civ;
-    const helm = () => { flush(); const o = P3.outfit(w); return `${o.hatM || 'cabeça nua'} ${o.hat}`; };
+    // (20a: the helmet a warrior wears is the inventory's — G.Inv.held(v).cabeca, drawn in its own shape and metal, D-349; the
+    // outfit's hat gives way to it. With no head thing, the outfit's hat as before)
+    const helm = () => { flush(); const L = P3.look(w); if (L.inv && L.inv.cabeca) return L.inv.cabeca; const o = P3.outfit(w); return `${o.hatM || 'cabeça nua'} ${o.hat}`; };
     delete K.bronze; delete K.ferro; const h0 = helm(); K.bronze = 1; const h1 = helm(); K.ferro = 2; const h2 = helm();
     for (const k of Object.keys(K)) delete K[k]; Object.assign(K, k0); flush();
-    const metal0 = /elmo|galea/.test(h0), bronze = h1.endsWith('#b08a4a'), iron = civ === 'grego' ? h2.endsWith('#b08a4a') : h2.endsWith('#8a8e96');
+    const inv = /^elmo\./.test(h1);
+    const metal0 = inv ? /bronze|ferro/.test(h0) : /elmo|galea/.test(h0), bronze = inv ? h1 === 'elmo.bronze' : h1.endsWith('#b08a4a'), iron = inv ? h2 === 'elmo.ferro' : civ === 'grego' ? h2.endsWith('#b08a4a') : h2.endsWith('#8a8e96');
     if (metal0 || !bronze || !iron) bad.push(`o elmo de #${w.id} (${civ}): sem bronze «${h0}», com bronze «${h1}», com ferro «${h2}»`);
     info.push(`elmo (${civ}): sem bronze «${h0}» · bronze «${h1}» · ferro «${h2}»`);
   }
