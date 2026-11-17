@@ -343,7 +343,7 @@ ${GXAIR}`;
     const sd = L.sd; const k = G.smooth(0.1, 0.24, sd.y) * (1 - G.smooth(0.78, 0.93, sd.y)) * (1 - L.rain) * (L.byMoon ? 0 : 1); shafts.visible = k > 0.01; if (!shafts.visible) return;
     const u = shafts.material.uniforms; u.uDir.value.set(-sd.x, -sd.y, -sd.z); u.uCol.value.setRGB(L.key[0], L.key[1], L.key[2]).multiplyScalar(L.keyI * 0.055 * k);
     // (the cards are put again twice a second of the view: where the canopy has its gaps round the body)
-    const vt = U.time.value; if (vt - shT < 0.5 && vt >= shT) return; shT = vt;
+    const vt = U.time.value; if (vt - shT < 0.5 && vt >= shT) { shafts.visible = shafts.geometry.instanceCount > 0; return; } shT = vt;
     const A = G.Ceu.airMap(), n = A.n, TL = G.Space.TILE, HM = G.Space.HM, ky = scene.scale.y; const g = shafts.geometry, P = g.attributes.aP.array, Sx = g.attributes.aS.array;
     const ci = Math.round(focus.X / TL), cj = Math.round(focus.Z / TL), R = 8; let m = 0; const ch = GX.gxCanopy.value.w;
     for (let dj = -R; dj <= R && m < NSH; dj++) for (let di = -R; di <= R && m < NSH; di++) {
@@ -354,7 +354,7 @@ ${GXAIR}`;
       P[m * 3] = X; P[m * 3 + 1] = top; P[m * 3 + 2] = Z; Sx[m * 4] = len; Sx[m * 4 + 1] = 0.6 + G.hash(c * 17) * 1.2; Sx[m * 4 + 2] = (1 - G.smooth(22, 34, d)) * G.smooth(0.35, 0.55, cv) * (1 - G.smooth(0.8, 0.93, cv)); Sx[m * 4 + 3] = G.hash(c * 19);
       m++;
     }
-    g.instanceCount = m; g.attributes.aP.needsUpdate = true; g.attributes.aS.needsUpdate = true;
+    g.instanceCount = m; g.attributes.aP.needsUpdate = true; g.attributes.aS.needsUpdate = true; if (!m) shafts.visible = false;
   }
   Ce3.shafts = () => (shafts && shafts.visible ? shafts.geometry.instanceCount : 0);
   Ce3.bolt = function (x, y) { const S = G.S; if (!S) return; prune(); bolts.push({ x, y, at: S.clock || 0, seed: (G.VR() * 1e9) | 0, t0: -1 }); while (bolts.length > 8) bolts.shift(); };
@@ -436,7 +436,7 @@ ${GXAIR}`;
         const u = mm.material.uniforms; u.uA.value = it * (storm ? 0.32 : 0.2) * (1 - near) * (1 - G.smooth(450, 900, d)); u.uCol.value.setRGB(L.sky[0] * 0.18 + 0.02, L.sky[1] * 0.18 + 0.02, L.sky[2] * 0.2 + 0.03); }
     }
     for (let k = cu; k < curtain.length; k++) curtain[k].visible = false;
-    g.instanceCount = m; g.attributes.aC.needsUpdate = true; g.attributes.aK.needsUpdate = true;
+    g.instanceCount = m; g.attributes.aC.needsUpdate = true; g.attributes.aK.needsUpdate = true; cl3.visible = m > 0; // (no cloud of the world near: no call)
     // the bolts the world struck, and the flash; and the sheet lightning inside a storm cloud (only seen: its own chance)
     const live = Ce3.live(); const P = boltM.geometry.attributes.position.array, A = boltM.geometry.attributes.aA.array; let n = 0, br = 0;
     const cr = camera.position;
@@ -453,7 +453,7 @@ ${GXAIR}`;
         seg(x, y, z, nx, ny, nz, 0.45, 1); if (rnd() < 0.3 && k < steps - 2) { let bx = nx, by = ny, bz = nz; const dd = rnd() < 0.5 ? -1 : 1; for (let j = 0; j < 4; j++) { const ex = bx + dd * (3 + rnd() * 7), ey = by - (4 + rnd() * 7), ez = bz + (rnd() - 0.5) * 8; seg(bx, by, bz, ex, ey, ez, 0.22, 0.5); bx = ex; by = ey; bz = ez; } }
         x = nx; y = ny; z = nz; }
     }
-    boltM.geometry.setDrawRange(0, n); boltM.geometry.attributes.position.needsUpdate = true; boltM.geometry.attributes.aA.needsUpdate = true; boltM.material.uniforms.uK.value = 1;
+    boltM.geometry.setDrawRange(0, n); boltM.visible = n > 0; if (n) { boltM.geometry.attributes.position.needsUpdate = true; boltM.geometry.attributes.aA.needsUpdate = true; } boltM.material.uniforms.uK.value = 1;
     Ce3.drawnBolts = n ? live.filter(b => U.time.value - b.t0 <= 0.6).length : 0;
     // (the sheet lightning: in a storm, now and then, the clouds lit from within — no bolt, no place of the world's)
     if ((S.weather.storm || 0) > 0 && (S.weather.rain || 0) > 0.3 && G.VR() < rdt * 0.22) sheetT = 0.22;
