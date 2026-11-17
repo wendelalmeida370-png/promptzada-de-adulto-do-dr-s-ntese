@@ -762,7 +762,9 @@
   const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0,
     // (20a: the hips' yaw and adduction, each foot's share of its swing — −1 standing —, the left hand's grip and wrist, the other
     // hand on a thing of two hands, the shoulders' yaw)
-    adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0 });
+    adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0,
+    // (22c: the chest's own roll — the trunk over a limping leg —, the head's tilt)
+    tilt: 0, headR: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -1215,10 +1217,10 @@
       // (as low as a foot on the ground needs them — a slope, a step, a long stride —, never by a fixed cap: L-1101)
       if (drop > 0) { hipY -= Math.min(0.4, drop); pelvis(); L.drop = drop; } else L.drop = 0;
     }
-    const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8;
+    const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8 + (pose.tilt || 0);
     fr(R[B.chest], R[B.pel], 0, 0.06, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06, 0, tx / 2, ty / 2, tz / 2);
     const nx = pose.neck, ny = (pose.lookY || 0) - (pose.twist - pel * 0.7) * 0.85;
-    fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, 0); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, 0);
+    const nz = pose.headR || 0; fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, nz); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, nz / 2);
     // (a child's head is big for the body; the grip of the hands: what they hold, the run's fists, the wave's open palm)
     if (L.headK && L.headK !== 1) { M.b.makeScale(L.headK, L.headK, L.headK); R[B.head].multiply(M.b); }
     const hold = (L.torch || L.lantern) && !lie && !L.bind;
@@ -1246,7 +1248,7 @@
       if (k && shaftR) { sp = 0.05; sr = -0.08; el = 1.05; }
       // (the other hand's thing: a shield before the body on the forearm, the bow at the side, a handle hanging)
       if (!k && kL && upright(pose)) { if (gL === 'escudo') { sp = -0.32; sr = 0.3; el = 1.5; } else if (gL === 'arco') { sp = 0.06; sr = 0.12; el = 0.3; } else if (gL === 'alca') { sp = 0.05; sr = 0.18; el = 0.1; } }
-      let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = 0; // (a wide skirt or a cape: the arms a little out)
+      let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = (k ? pose.shRy : pose.shLy) || 0; // (a wide skirt or a cape: the arms a little out; the yaw of the upper arm — across the body —, the pose's: 22c, D-597)
       // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight — or the left hand
       // on the thing of two hands the right holds, where the thing's art says the other hand goes)
       let T = hw > 0.001 ? HP.t[k] : null, w = hw, pole0 = HP.pole;
@@ -1628,6 +1630,9 @@
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
         I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
+        // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
+        // its breath; the hand one leads with)
+        I.porte = G.Vida3D.read(s, v, vt); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
         Anim.drive(s.an, I, s.pose, Lv, dtA); s.made = 1;
         // (the look: the body, where it stands before them — and back when it goes —; else the one they are with; a blink now and then)
         const look = G.Vida3D.look(s, v, av, st, visAt);

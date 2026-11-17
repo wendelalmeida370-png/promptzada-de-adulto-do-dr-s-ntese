@@ -118,10 +118,11 @@
   }
   Ga.travel = travel;
   const AMP = { walk: new Map(), run: new Map() };
-  // the hip swing for normalized speed n (cached by 1 cm/s)
-  Ga.amp = function (g, n) {
-    const key = Math.round(n * 100); let A = AMP[g].get(key); if (A !== undefined) return A;
-    const w = g === 'run' ? 1 : 0, need = Math.max(0, n) * Ga.duty(n, 1, w) / Ga.freq(n, 1, w);
+  // the hip swing for normalized speed n (cached by 1 cm/s) at a cadence k times the speed's own (22c, D-595: the elder's, the
+  // cold's quicker short steps; 1 the speed's own — the stride is what the speed and that cadence leave, the foot still under it)
+  Ga.amp = function (g, n, k) {
+    k = k > 0 ? Math.round(k * 50) / 50 : 1; const key = Math.round(n * 100) + (k === 1 ? 0 : Math.round(k * 50) * 100000); let A = AMP[g].get(key); if (A !== undefined) return A;
+    const w = g === 'run' ? 1 : 0, need = Math.max(0, n) * Ga.duty(n, 1, w) / (Ga.freq(n, 1, w) * k);
     let lo = 0, hi = 2.2; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (travel(g, m, n) < need) lo = m; else hi = m; }
     A = (lo + hi) / 2; AMP[g].set(key, A); if (AMP[g].size > 2000) AMP[g].clear(); return A;
   };
@@ -131,13 +132,13 @@
   // the heel or the ball under it —, no higher than standing; in the run's flight, an arc from the push-off to the next strike.
   // A table a speed (body units, the bend below standing: ≤ 0), made once
   const HT = { walk: new Map(), run: new Map() }, NH = 64;
-  function heightTable(g, n) {
-    const C = T[g], A = Ga.amp(g, n), ks = kneeScale(g, n), fs = footScale(g, A), w = g === 'run' ? 1 : 0, duty = Ga.duty(n, 1, w), toe = K[g].toe, pp = pelPitch(n, w);
+  function heightTable(g, n, kc) {
+    const C = T[g], A = Ga.amp(g, n, kc), ks = kneeScale(g, n), fs = footScale(g, A), w = g === 'run' ? 1 : 0, duty = Ga.duty(n, 1, w), toe = K[g].toe, pp = pelPitch(n, w);
     const need = new Float32Array(NH), has = new Uint8Array(NH), out = new Float32Array(NH + 1);
     // (the walk: each standing foot where it struck — its heel where the stride's own strike put it, gone back under the body as
     // far as the body went on — and the leg reaching it with the knee a little bent, the heel rising as far as it must, as the
     // rig's feet do; the run: its legs as the curves bend them, the knee's spring in the stance)
-    const f = Ga.freq(n, 1, w); let hz0 = 0;
+    const f = Ga.freq(n, 1, w) * kc; let hz0 = 0;
     if (g === 'walk') { const hp = cur(C.hip, 0) * A, kn = cur(C.knee, 0) * ks, pit = cur(C.foot, 0) * fs; fk(hp, kn, pit - hp - kn - pp, pp); hz0 = FK.hz; }
     for (let i = 0; i < NH; i++) {
       const u = i / NH; let lo = -1e9, top = 1e9;
@@ -153,7 +154,7 @@
     // (no foot on the ground: an arc from the push-off's height to the next strike's, rising over it as a leap does)
     for (let i = 0; i < NH; i++) if (!has[i]) {
       let a = i, b = i; while (!has[(a + NH - 1) % NH] && a > i - NH) a--; while (!has[(b + 1) % NH] && b < i + NH) b++;
-      const ha = need[(a - 1 + NH) % NH], hb = need[(b + 1) % NH], t = (i - a + 1) / (b - a + 2), fl = (b - a + 1) / NH / Ga.freq(n, 1, w);
+      const ha = need[(a - 1 + NH) % NH], hb = need[(b + 1) % NH], t = (i - a + 1) / (b - a + 2), fl = (b - a + 1) / NH / (Ga.freq(n, 1, w) * kc);
       need[i] = Math.min(0, lerp(ha, hb, t) + 0.5 * 9.8 * fl * fl * t * (1 - t) * 0.5);
     }
     for (let i = 0; i < NH; i++) { let v = 0; for (let d = -2; d <= 2; d++) v += need[(i + d + NH) % NH] * [0.1, 0.2, 0.4, 0.2, 0.1][d + 2]; out[i] = v; }
@@ -180,15 +181,16 @@
     }
     return best;
   }
-  Ga.height = function (g, n, u) {
-    const key = Math.round(n * 20); let t = HT[g].get(key); if (!t) { t = heightTable(g, key / 20); HT[g].set(key, t); if (HT[g].size > 400) HT[g].clear(); }
+  Ga.height = function (g, n, u, k) {
+    k = k > 0 ? Math.round(k * 50) / 50 : 1; const key = Math.round(n * 20) + (k === 1 ? 0 : Math.round(k * 50) * 10000); let t = HT[g].get(key); if (!t) { t = heightTable(g, Math.round(n * 20) / 20, k); HT[g].set(key, t); if (HT[g].size > 400) HT[g].clear(); }
     u -= Math.floor(u); const x = u * NH, i = x | 0, f = x - i; return t[i] + (t[i + 1] - t[i]) * f;
   };
 
   // ------------------------------ the pose of a stride ------------------------------
   // writes into `out` (a pose: People3D's POSE0 fields) the legs, the hips, the trunk, the arms and the head of a stride at
   // phase u, speed v (m/s), size s, the run's weight w (0..1, blended phase to phase); o: { lean, arms } extra (a load's
-  // stillness of the arms: 0..1 of the swing kept). Each leg's stance (stL, stR: 1 standing on it), its pitch to the ground
+  // stillness of the arms: 0..1 of the swing kept; 22c, D-595: cad, the cadence a k times the speed's own — the steps shorter and
+  // quicker, the stride the speed leaves at it —, and wide, metres more between the steps). Each leg's stance (stL, stR: 1 standing on it), its pitch to the ground
   // (pitL, pitR), how far its swing has come (swL, swR: 0 at the push-off .. 1 at the strike; −1 standing) for the rig's feet
   const LG = { hp: 0, kn: 0, pit: 0, st: 0, sw: 0 };
   function leg(g, u, n, A, duty) {
@@ -201,18 +203,18 @@
   Ga.pose = function (out, u, v, s, w, o) {
     s = s || 1; w = clamp(w || 0, 0, 1); const n = Math.max(0, v) / Math.sqrt(s);
     const dW = Ga.dutyWalk(n), dR = Ga.dutyRun(n), duty = lerp(dW, dR, w);
-    const AW = w < 1 ? Ga.amp('walk', n) : 0, AR = w > 0 ? Ga.amp('run', n) : 0;
+    const kc = Ga.cad(o); const AW = w < 1 ? Ga.amp('walk', n, kc) : 0, AR = w > 0 ? Ga.amp('run', n, kc) : 0;
     const c1 = Math.cos(TAU * u), s1 = Math.sin(TAU * u);
     // (the hips: as high as the standing leg lets them; turning forward with the leg that swings forward; dropping on the side of
     // the swing; over the standing foot)
-    const hW = w < 1 ? Ga.height('walk', n, u) : 0, hR = w > 0 ? Ga.height('run', n, u) : 0;
+    const hW = w < 1 ? Ga.height('walk', n, u, kc) : 0, hR = w > 0 ? Ga.height('run', n, u, kc) : 0;
     out.bob = lerp(hW, hR, w);
     out.pelY = -lerp(0.035 + 0.04 * Math.min(n, 2.2), 0.07 + 0.012 * n, w) * c1;
     out.pelR = lerp(0.035 + 0.02 * Math.min(n, 2), 0.04, w) * Math.sin(TAU * (u + 0.1));
     out.shift = lerp(clamp(0.032 - 0.007 * n, 0.012, 0.03), 0.012, w) * s1;
     out.pelP = pelPitch(n, w); out.rel = lerp(0.33, 0.5, w); // (the share of the swing in which the foot leaves its push-off's place)
     out.esw = w > 0.5 ? 0.93 : lerp(0.74, 0.9, clamp((n - 0.6) / 0.6, 0, 1)); // (how late in its swing a heel that meets the ground is a strike: a walk's near its end — a slow one's earlier, its short swing down sooner —; a run strikes on its stance)
-    const pp = out.pelP, width = lerp(0.045, 0.026, w);
+    const pp = out.pelP, width = lerp(0.045, 0.026, w) + ((o && o.wide) || 0);
     for (let k = 0; k < 2; k++) {
       const uk = u + k * 0.5; let hp = 0, kn = 0, pit = 0;
       // (each gait on its own duty — their curves blended, phase to phase: a walk becoming a run never jumps its legs)
@@ -254,6 +256,8 @@
     out.grip = lerp(0.15, 0.6, w); out.breath = Math.sin(TAU * u) * lerp(0.4, 1, w);
     return out;
   };
+  // (the cadence a stride's options ask, as a factor of the speed's own — between 0.8 and 1.3: the animator advances the phase by it)
+  Ga.cad = o => (o && o.cad > 0 ? clamp(o.cad, 0.8, 1.3) : 1);
   // (the phase at which a leg's swing begins: to start walking with that leg — 0 the left, 1 the right)
   Ga.startPhase = (k, v, s, w) => { const d = Ga.duty(v || 0.8, s, w || 0); return (d + (k ? 0.5 : 0)) % 1; };
 })(window.G);

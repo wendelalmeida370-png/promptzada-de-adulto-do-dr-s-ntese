@@ -27,7 +27,7 @@
     // (in the water, asleep, on the move: the state already says it)
     swim: 'swim', dive: MOVE, sleep: MOVE, insone: MOVE, drift: MOVE, naufrago: MOVE,
     // (a fight with a beast, no blow this moment: on guard — the fists, or the thing in the hand)
-    fight: (v, t, L) => (L && L.inv && L.inv.mao ? 'cb-guarda-arma' : 'cb-guarda-punho'),
+    fight: (v, t, L) => { const h = L && L.inv ? L.inv : G.Inv && G.Inv.held ? G.Inv.held(v) : null; return h && h.mao ? 'cb-guarda-arma' : 'cb-guarda-punho'; },
     // (by the grave, between the steps of the rite: the head bowed, the hands to the face)
     funeral: 'mourn',
     // (the rest, given their own act by the world — sit, sittalk, cook, eat, pray, guard, wait, read, write, story… —; between two,
@@ -84,6 +84,53 @@
   // ------------------------------ the body's state: tired ------------------------------
   // how tired a person shows (0..1): the energy the world's day takes (villagers.js needs: sleep comes under 22) — from 35 down
   V3.tired = v => (v.sleeping || !(v.energy < 35) ? 0 : G.clamp((35 - v.energy) / 25, 0, 1));
+
+  // ------------------------------ the porte: how a body carries itself (22c fase 1, D-594) ------------------------------
+  // Each cause read from the world, 0 (none) to 1 — the temperament −1..1, the limp's side −1 (left) or 1 (right) times how much:
+  //   velho      the years past 55 (to 80)              crianca  the years under 12
+  //   cansado    the day's energy from 35 down          frio     the cold of the place out of doors (G.Atmos.cold: 1, 2)
+  //   calor      the heat of the place (G.Atmos.heat)   chuva    the rain out of doors, unsheltered
+  //   doente     a sickness the world has (v.sick)      ferido   a wound of the last days, the blood lost (v.wound, v.hp)
+  //   manca      a leg lost (v.lost.leg)                gravida  the months of the child (v.preg)
+  //   luto       the grief (v.mourn)                    medo     the fear (v.fear), the fright of the moment (v.emo)
+  //   furia      the god's fury, the anger of the moment confia   the bold and the shy: the temperament (G.Indole) or the traits
+  //   expans     the open, the social                   nobre    the standing (v.grp): the nobles, the priests
+  // Never the look nor the people (rule 194: the porte reads the life, not the face). `any`: some cause shows
+  const PORTE = V3.PORTE = ['velho', 'crianca', 'cansado', 'frio', 'calor', 'chuva', 'doente', 'ferido', 'manca', 'gravida', 'luto', 'medo', 'furia', 'confia', 'expans', 'nobre'];
+  const DAY = () => G.DAY_LEN || 200;
+  const facet = (v, n, f) => { const I = G.Indole; if (I && I.de && I.de(v)) return G.clamp(I.faceta(v, n), 0, 1); return f; };
+  const trait = (v, t) => !!(v.traits && v.traits.includes(t));
+  const PO = {}; // (the answer of porteOf, reused: the frame copies it into each one's memory)
+  V3.porteOf = function (v, out) {
+    const r = out || PO; const S = G.S; const outdoors = !v.inside && !v.aboard && Number.isFinite(v.x);
+    r.velho = G.clamp((v.age - 55) / 25, 0, 1); r.crianca = v.age < 12 ? G.clamp((12 - v.age) / 8, 0, 1) : 0;
+    r.cansado = V3.tired(v);
+    r.frio = outdoors && G.Atmos && G.Atmos.cold ? G.Atmos.cold(v.x, v.y) / 2 : 0;
+    r.calor = outdoors && !r.frio && G.Atmos && G.Atmos.heat ? G.Atmos.heat(v.x, v.y) : 0;
+    const w = S && S.weather; const sheltered = v.task && v.task.type === 'shelter';
+    r.chuva = outdoors && !sheltered && w && w.rain > 0.3 ? G.clamp((w.rain - 0.3) / 0.5, 0, 1) : 0;
+    r.doente = v.sick > 0 ? G.clamp(0.55 + v.sick / (DAY() * 0.8) * 0.45, 0, 1) : 0;
+    const wd = v.wound && S && S.day - v.wound.d < 3 ? (v.wound.sev === 'grave' ? 1 : 0.5) : 0; r.ferido = Math.max(wd, v.hp < 50 ? G.clamp((50 - v.hp) / 40, 0, 1) : 0);
+    r.manca = v.lost && v.lost.leg ? (G.hash(v.id * 7 + 3) < 0.5 ? -1 : 1) : 0;
+    r.gravida = v.preg > 0 ? G.clamp(Math.sqrt(1 - v.preg / (DAY() * 0.55)), 0.25, 1) : 0;
+    r.luto = v.mourn > 0 ? G.clamp(v.mourn / (DAY() * 0.3), 0.35, 1) : 0;
+    const e = v.emo && v.emo.k; r.medo = Math.max(v.fear > 40 ? G.clamp((v.fear - 40) / 50, 0, 1) : 0, e === 'fear' || e === 'fire' ? 0.6 : 0);
+    r.furia = Math.max(v.fury > 0 ? G.clamp(v.fury / 20, 0.5, 1) : 0, e === 'angry' ? 0.45 : 0);
+    // (who one is: the temperament of the society's port, or — until it is filled — the traits of today)
+    r.confia = (facet(v, 'confiante', trait(v, 'Corajoso') ? 0.8 : trait(v, 'Medroso') ? 0.2 : 0.5) - 0.5) * 2;
+    r.expans = facet(v, 'extrovertido', trait(v, 'Sociável') ? 0.8 : 0.45);
+    r.nobre = v.grp === 'nobreza' ? 1 : v.grp === 'sacerdotes' ? 0.6 : 0;
+    r.any = r.velho > 0.15 || r.crianca > 0.15 || r.cansado > 0.15 || r.frio > 0 || r.calor > 0.15 || r.chuva > 0 || r.doente > 0 || r.ferido > 0.15 || r.manca !== 0 || r.gravida > 0 || r.luto > 0 || r.medo > 0.15 || r.furia > 0 || r.nobre > 0 || Math.abs(r.confia) > 0.4;
+    return r;
+  };
+  // the porte kept in the view's memory of someone (s.porte), made again about twice a second — each one on their own beat by
+  // their id — or at once when it was never made: what the animator reads (I.porte) between two readings is the last one
+  V3.read = function (s, v, now) {
+    if (!s.porte || !(now - s.pt < 0.45 + (v.id % 9) * 0.015)) { s.porte = V3.porteOf(v, s.porte || {}); s.pt = now; }
+    return s.porte;
+  };
+  // (the hand a person leads with: one in ten left-handed, by the id — the gestures of their hands on the other side)
+  V3.lefty = v => G.hash(v.id * 31 + 7) < 0.1;
 
   // ------------------------------ the look ------------------------------
   // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they stand,

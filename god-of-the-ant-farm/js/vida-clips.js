@@ -3,12 +3,13 @@
 //  The gestures of daily life (22c, D-590 to D-604): clips of the
 //  body's one animator (G.ANIM_CLIPS, JOGABILIDADE.md §4.6) for
 //  what the people of the world do as they live — the prisoner
-//  led with the hands bound behind. Only seen: nothing here reads
+//  led with the hands joined. Only seen: nothing here reads
 //  or writes the world (rule 113); what a gesture holds is the
 //  inventory's (G.Inv.held: without the thing, the hands empty).
 // ============================================================
 (function (G) {
-  const K = (id, def) => (G.ANIM_CLIPS = G.ANIM_CLIPS || []).push([id, def]);
+  // (each gesture and its mirror — the left-handed one's, `id~m`: Anim.mirrorDef, D-596)
+  const K = (id, def) => { const Q = G.ANIM_CLIPS = G.ANIM_CLIPS || []; Q.push([id, def]); if (G.Anim3D && G.Anim3D.mirrorDef) Q.push([id + '~m', G.Anim3D.mirrorDef(def)]); };
   const ARMS = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL', 'shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist'];
   // (bound, walking: the hands held together before the belly, as tied — the head bowed — over the stride; the legs walk under
   // it, led — the act the world gives the prisoner taken to the cell: crime.js, 'bound'. No shackles drawn: the world has none

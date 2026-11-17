@@ -1529,5 +1529,15 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
     for (const m of body.matchAll(/'([\w-]+)'/g)) if (!states.has(m[1])) fails.push(`toda tarefa tem pose: o TASK_OF nomeia o estado «${m[1]}», que não é postura nem clipe (D-592)`);
     const given = new Set(); for (const f of files) src[f].forEach(l => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/(?:setTask|\.give)\([^,()]+,\s*\{\s*type:\s*'(\w+)'/g)) given.add(m[1]); });
     for (const t of given) if (!keys.has(t)) fails.push(`toda tarefa tem pose: a tarefa «${t}» que o mundo dá não está no TASK_OF do vida3d.js — dê o estado que ela mostra, ou MOVE (D-592)`); } }
+// 215. "o porte vem do leitor" (D-594, D-595): as causas do porte (os anos, o frio, o luto…) só o js/vida3d.js lê do mundo, e só o
+// laço do quadro do people3d.js o entrega ao animador (I.porte = G.Vida3D.read…); os js/anim-*.js leem o porte só do I.porte (nunca
+// da figura, da pessoa ou do mundo) e não o escrevem; e as pernas e o passo do porte vão pela passada (as opções do G.Gait.pose):
+// o anim-porte.js não soma nas juntas das pernas nem na bacia, que deslizam o pé de apoio
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(?<!Anim)\.porte\s*=(?!=)/.test(c) && !(f === 'vida3d.js' || (f === 'people3d.js' && /\bI\.porte = G\.Vida3D\.read\(/.test(c)))) fails.push(`o porte vem do leitor: ${f}:${k + 1} escreve um porte fora do vida3d.js (D-594): ${l.trim().slice(0, 110)}`);
+    if (/^anim-.*\.js$/.test(f) && /\b(L|v|w|o)\.porte\b/.test(c)) fails.push(`o porte vem do leitor: ${f}:${k + 1} lê o porte de outro lugar que não o I.porte (D-594): ${l.trim().slice(0, 110)}`); });
+  if (!(src['people3d.js'] || []).some(l => /\bI\.porte = G\.Vida3D\.read\(s, v, vt\)/.test(l))) fails.push('o porte vem do leitor: o laço do quadro do people3d.js não entrega o porte do leitor ao animador (I.porte = G.Vida3D.read, D-594)');
+  (src['anim-porte.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(add|both)\(\s*'(hipL|hipR|knL|knR|anL|anR|adL|adR|hyL|hyR|crouch|bob|pelY|pelR|pelP|shift|sway)'/.test(c)) fails.push(`o porte vem do leitor: anim-porte.js:${k + 1} soma o porte nas pernas ou na bacia — o passo vai pela passada, G.Gait (D-595): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

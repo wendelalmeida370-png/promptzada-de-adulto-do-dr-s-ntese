@@ -175,6 +175,35 @@
   const GAIT_OF = { walk: 0, carryWalk: 0, wade: 0, run: 1 };
   Anim.rate = function (st, sp, s) { const w = GAIT_OF[st]; if (w === undefined || !G.Gait) return 2.6; const v = Math.max(0.3, sp || 0); return TAU * G.Gait.freq(v, s || 1, w) / v; };
   Anim.ST = ST;
+  // the mirror of a clip's definition (22c, D-596): the same gesture on the other side — the left-handed one's —: each joint of one
+  // side keyed on the other, the turns and the rolls the other way, the stance's feet swapped. A twin registered beside a clip
+  // (`id~m`) is the clip of the left-handed; the animator plays it for them (I.lefty)
+  const SWAP = { shLp: 'shRp', shRp: 'shLp', elL: 'elR', elR: 'elL', grip: 'gripL', gripL: 'grip', wrist: 'wristL', wristL: 'wrist', hipL: 'hipR', hipR: 'hipL', knL: 'knR', knR: 'knL', anL: 'anR', anR: 'anL' };
+  const SWAPN = { shLr: 'shRr', shRr: 'shLr', shLy: 'shRy', shRy: 'shLy', adL: 'adR', adR: 'adL', hyL: 'hyR', hyR: 'hyL' };
+  const NEG = new Set(['twist', 'sway', 'tilt', 'headR', 'lookY', 'gazeX', 'pelY', 'pelR', 'shift']);
+  const MASKM = { armR: 'armL', armL: 'armR' };
+  Anim.mirrorJoint = j => SWAP[j] || SWAPN[j] || j;
+  Anim.mirrorDef = function (def) {
+    const keys = {};
+    for (const j in def.keys) { const k = def.keys[j], to = SWAP[j] || SWAPN[j] || j, neg = !!SWAPN[j] || NEG.has(j); keys[to] = neg ? k.map(p => [p[0], -p[1]]) : k.map(p => [p[0], p[1]]); }
+    const out = Object.assign({}, def, { keys, acts: null, takes: null });
+    if (Array.isArray(def.mask)) out.mask = def.mask.map(j => SWAP[j] || SWAPN[j] || j); else if (MASKM[def.mask]) out.mask = MASKM[def.mask];
+    if (def.stance) out.stance = [def.stance[0], def.stance[2], def.stance[1]];
+    return out;
+  };
+  // the points of the body a hand reaches (22c, D-597): the right arm's angles — the shoulder's pitch, roll and yaw, the elbow —
+  // that put its palm there, found on the rig itself (a search over the angles, the palm within 2 cm of the point; the left arm the
+  // mirror: the roll and the yaw the other way). Radians: [shRp, shRr, elR, shRy]
+  Anim.REACH = { peito: [0.40, 0.20, 2.30, 0.80], peitoAlto: [0.30, -0.40, 2.40, 0.80], abraco: [-0.10, -0.10, 1.90, 1.40], barriga: [0.40, -0.50, 1.40, 1.60], juntas: [-0.10, 0.40, 0.00, -0.40],
+    costas: [0.50, 0.40, 0.70, 0.40], ladoBarriga: [0.70, -0.60, 1.70, 1.40], rosto: [-0.80, 0.00, 2.30, 1.00], testa: [-1.10, 0.60, 2.10, 0.80], nuca: [-1.10, 0.80, 2.10, 1.60], cabeca: [-1.70, 0.20, 1.70, 1.40], cintura: [0.70, 0.10, 1.50, 0.40],
+    boca: [-0.60, 0.80, 2.30, 0.80], olhos: [-0.90, 0.70, 2.20, 0.80], alto: [-2.90, 0.20, 0.40, -1.60], ombro: [0.10, 1.40, 2.00, 1.00] };
+  // (an arm eased toward a point of the body by w, 0..1: side 1 the right, −1 the left)
+  Anim.reachArm = function (out, side, key, w) {
+    if (!(w > 0)) return out; const q = Anim.REACH[key]; if (!q) return out; const k = w > 1 ? 1 : w; const R = side > 0;
+    const set = (j, x) => { out[j] = (out[j] || 0) + (x - (out[j] || 0)) * k; };
+    set(R ? 'shRp' : 'shLp', q[0]); set(R ? 'shRr' : 'shLr', R ? q[1] : -q[1]); set(R ? 'elR' : 'elL', q[2]); set(R ? 'shRy' : 'shLy', R ? q[3] : -q[3]);
+    return out;
+  };
   // (every state the drawing knows: the postures first, as they were, and the clips after them — anim-clips.js adds its own)
   { const STATES = Anim.STATES || (Anim.STATES = []); const rest = STATES.filter(k => !(k in ST)); STATES.length = 0; STATES.push(...Object.keys(ST), ...rest); }
 })(window.G);

@@ -25,8 +25,8 @@
   const LINEAR = new Set(['bob', 'crouch', 'shift', 'breath', 'grip', 'gripL', 'talk', 'holdW', 'lie', 'prone', 'tool', 'cloth', 'clothS', 'offW', 'reachW']);
   // the masks: which joints a clip moves (the others are the base's)
   const ARM_L = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL'], ARM_R = ['shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist'];
-  const HEAD = ['neck', 'lookY', 'talk', 'gazeX', 'gazeY'];
-  const TRUNK = ['lean', 'twist', 'sway', 'breath'];
+  const HEAD = ['neck', 'lookY', 'talk', 'gazeX', 'gazeY', 'headR'];
+  const TRUNK = ['lean', 'twist', 'sway', 'breath', 'tilt'];
   const LEGS = ['bob', 'crouch', 'shift', 'pelY', 'pelR', 'pelP', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'adL', 'adR', 'hyL', 'hyR', 'lie', 'prone'];
   const MASK = Anim.MASK = {
     armR: new Set(ARM_R), armL: new Set(ARM_L), arms: new Set([...ARM_L, ...ARM_R]), head: new Set(HEAD),
