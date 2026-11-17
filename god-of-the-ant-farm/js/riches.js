@@ -151,7 +151,8 @@
     let dy = 0;
     for (const k in extra) {
       const n = extra[k]; if (!(n > 0)) continue;
-      const add = G.Village.addStock(k, n, f.id);
+      // (born of the kill into the people's store, in the ledger — 'caca': the hide, the tusks; as far as the store has room, as before — 20h, L-1364)
+      const r = G.Depot.make('f:' + f.id, k, n, { code: 'caca', by: v.id, part: true }); const add = r.ok ? r.n : 0;
       if (add > 0) { E.made(f, k, add); E.pay(v, k, add); v.st[k] = (v.st[k] || 0) + add; if (G.FX) G.FX.deposit(v.x, v.y - (dy += 0.25), k, add); }
     }
   };

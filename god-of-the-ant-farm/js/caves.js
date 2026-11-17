@@ -28,7 +28,7 @@
   const FT = C.FT = { STAL: 1, COL: 2, CRYS: 3, GLOW: 4, SHROOM: 5, BONES: 6, FOSSIL: 7, GUANO: 8 };
   // what shines in the walls
   const ORES = C.ORES = [null,
-    { id: 'cobre', name: 'cobre', col: '#4cbf96', good: 'cobre', n: 2 }, // (a vein of copper gives copper, of tin, tin — never the iron ore: 20h, D-441)
+    { id: 'cobre', name: 'cobre', col: '#4cbf96', good: 'cobre', n: 2 }, // (a vein of copper gives copper, of tin, tin — never the iron ore: 20h, L-1363)
     { id: 'estanho', name: 'estanho', col: '#cfd6e0', good: 'estanho', n: 2 },
     { id: 'ferro', name: 'ferro', col: '#c2633e', good: 'minerio', n: 3 },
     { id: 'ouro', name: 'ouro', col: '#f6c84e', good: 'ouro', n: 2 },
@@ -889,7 +889,7 @@
       return;
     }
     G.Eco && G.Eco.ensure(f);
-    const take = (k, frac, cap) => { const n = Math.min(cap, Math.floor((f.stock[k] || 0) * frac)); if (n > 0) { f.stock[k] -= n; b.loot[k] = (b.loot[k] || 0) + n; } return n; };
+    const take = (k, frac, cap) => { const n = Math.min(cap, Math.floor((f.stock[k] || 0) * frac)); if (n > 0) { f.stock[k] -= n; b.loot[k] = (b.loot[k] || 0) + n; if (k === 'food' && G.Origem) b.lootOf = G.Origem.mix(b.lootOf, G.Origem.carried('f:' + f.id, null, 'food', n)); } return n; }; // (the stolen food keeps where it came from: 20h)
     const fo = take('food', 0.08, 14), go = take('ouro', 0.3, 3), te = take('tecido', 0.3, 3), mo = take('moedas', 0.15, 10);
     const what = [fo && fo + ' de comida', go && go + ' de ouro', te && te + ' de tecido', mo && mo + ' moedas'].filter(Boolean);
     b.raids++; b.victims[f.id] = (b.victims[f.id] || 0) + 1;
@@ -922,7 +922,7 @@
     const fallen = []; for (const o of here) if (G.R() < (win ? 0.12 : 0.35)) fallen.push(o);
     const f = G.Fac.get(b.hunt.fac);
     if (win) {
-      const lt = b.loot; if (f) { G.Eco && G.Eco.ensure(f); for (const k in lt) f.stock[k] = (f.stock[k] || 0) + lt[k]; }
+      const lt = b.loot; if (f) { G.Eco && G.Eco.ensure(f); for (const k in lt) f.stock[k] = (f.stock[k] || 0) + lt[k]; if (G.Origem && lt.food > 0) G.Origem.came('f:' + f.id, 'food', lt.food, b.lootOf || null, 'resgate'); } // (the food back with its parts: 20h)
       const got = Object.entries(lt).filter(([, n]) => n > 0).map(([k, n]) => n + ' de ' + (G.Eco ? G.Eco.name(k) : k)).join(', ');
       breakBand(cv, `Os guerreiros de ${f ? f.name : '?'} entraram ${C.na(cv)} com tochas e acabaram com ${b.name}. ${b.leader} caiu.${got ? ' Recuperaram ' + got + '.' : ''}`);
       for (const o of here) { o.kills = (o.kills || 0) + 1; bio(o, `Entrou ${C.na(cv)} e acabou com os bandidos.`, `Entrei ${C.na(cv)} com uma tocha e acabei com os bandidos`); }

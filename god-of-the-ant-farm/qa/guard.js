@@ -1064,7 +1064,7 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
   if (!/const forged = [^\n]*in: mat === 'ferro' \? 'minerio' : 'cobre'/.test(of)) fails.push('a receita gasta: a forja não trabalha o minério do seu metal (D-440)');
   if (!/kind: 'liga', k: 'estanho'/.test(of) || !/code: 'liga'/.test(of)) fails.push('a receita gasta: o bronze sem a etapa da liga que gasta o estanho pelo livro (D-440)');
   if (!/D\.use\('b:' \+ b\.id, R\.in, taken, \{[^}]*of: R\.of/.test(of)) fails.push('a receita gasta: a unidade de uma fornada não gasta as partes que a receita pede (of: R.of; D-440)');
-  if (!/D\.use\(ref, 'food', 4, \{[^}]*of:/.test(es)) fails.push('a receita gasta: a salga não diz a carne ou o peixe que salga (D-445)'); }
+  if (!/D\.use\(ref, 'food', 4, \{[^}]*\bof: [^u}]/.test(es)) fails.push('a receita gasta: a salga não diz a carne ou o peixe que salga (D-445)'); }
 // 163. "ninguém escolhe o material de uma coisa só pela arte" (D-442, D-443): o material de uma coisa é o que o povo tem (G.Origem) —
 // o «melhor material que o povo sabe» (G.Itens.best, bestMat) é só do catálogo; e a luta, o anzol e a roupa perguntam pelo metal
 // tido (G.Origem.forged / had), nunca só pela arte (Civ.has(…, 'bronze' | 'ferro'))

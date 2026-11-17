@@ -1,10 +1,11 @@
-// origem: a origem das coisas (a parte 20h; D-440, D-441 a D-447) — nada vem do nada, provado de propósito, em Node, num mundo
+// origem: a origem das coisas (a parte 20h; D-440, D-441 a D-449) — nada vem do nada, provado de propósito, em Node, num mundo
 // pronto (o «cidade», de antes das jazidas novas: ele abre como um save de antes) e num mundo novo.   [ONLY=o1,o3] node qa/origem.js
 //  o1 as jazidas: o cobre (nas colinas e no chão rochoso, o mais comum) e o estanho (raro: no granito do alto e no cascalho de rio)
 //     estão no mundo, onde a pedra os põe; o ferro e o ouro de um save de antes ficam onde estavam; o mesmo mundo da mesma semente
 //     tem as mesmas jazidas; um save de antes recebe as que faltam pela semente, uma vez (S.oresV);
 //  o2 a mina é a mesma, e o veio diz o que ela tira: um turno numa mina de cobre põe cobre nas mãos (no livro, «mina»), e o povo
-//     passa a ter tido cobre; o planejador abre mina de cobre para quem sabe o bronze, de ferro só para quem sabe o ferro;
+//     passa a ter tido cobre; o planejador abre mina de cobre para quem sabe o bronze, de ferro só para quem sabe o ferro, e só
+//     enquanto o povo precisa (com cobre de sobra no armazém, nenhuma mina nova, nenhum mineiro pedido);
 //  o3 a forja parada sem metal: o povo do bronze sem cobre não forja; com cobre e sem estanho também não; com os dois, uma fornada
 //     de bronze — o estanho vai ao cadinho pelo livro («liga»), as armas nascem de bronze, e o povo passou a ter tido bronze;
 //  o4 o povo sem metal: o povo do bronze que nunca teve cobre e estanho desenha os guerreiros de lança de pedra e escudo de madeira
@@ -19,7 +20,8 @@
 //  o11 o save antigo: o qa/oldsave_7.json (só lido) abre sem erro, ganha as jazidas novas e a divisão pelo palpite honesto;
 //  o12 a mão do deus na jazida: o meteoro derruba a mina, e a jazida fica livre de novo para outra mina (L-1361);
 //  o13 o povo que acaba: as partes e o que ele teve não dão erro, e nada é feito do nada depois;
-//  o14 o pulque: sem o maguey no mundo, o povo do pulque faz a cerveja do seu milho.
+//  o14 o pulque: sem o maguey no mundo, o povo do pulque faz a cerveja do seu milho;
+//  o15 a salga: com só grão, nem busca nem salga; a busca traz o peixe, não o trigo; do peixe o bacalhau, da carne a carne-seca.
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'qa/origem-inv.js'] });
@@ -91,6 +93,11 @@ if (on('o2')) {
   const oWant = { cobre: E.oreWanted(f.id, 'cobre'), ferro: E.oreWanted(f.id, 'ferro'), ouro: E.oreWanted(f.id, 'ouro') };
   if (oWant.cobre || oWant.ferro || !oWant.ouro) bad.push('o planejador sem o bronze: ' + JSON.stringify(oWant));
   teach(f, 'bronze'); if (!E.oreWanted(f.id, 'cobre') || !E.oreWanted(f.id, 'estanho') || E.oreWanted(f.id, 'ferro')) bad.push('o planejador com o bronze');
+  // (and only while the people needs it: a store of copper that nothing uses up opens no new mine, and asks no miner of the open
+  // ones; the bread first)
+  const cu0 = f.stock.cobre || 0; const enough0 = E.oreEnough(f, 'cobre'); give('f:' + f.id, 'cobre', 70, null, 'mina'); const enough1 = E.oreEnough(f, 'cobre'), busy1 = !E.oreEnough(f, 'cobre', 2);
+  if (enough0 || !enough1 || busy1) bad.push(`a necessidade: com ${cu0} de cobre ${enough0}, com ${f.stock.cobre} ${enough1}, os mineiros ficam ${busy1}`);
+  clear('f:' + f.id, 'cobre');
   // (a mine on the nearest copper, built by the proof's hand, and a miner of the town in it)
   const dep = S.ores.filter(o => o.kind === 'cobre' && !E.oreTaken(o)).sort((p, q) => G.dist(p.x, p.y, set.cx, set.cy) - G.dist(q.x, q.y, set.cx, set.cy))[0];
   let mine = null; if (dep && !S.occ[dep.y * G.N + dep.x]) mine = god(() => { const m = V.addBuilding('mina', dep.x, dep.y, set.id, true); E.onPlaced(m); return m; });
@@ -315,6 +322,48 @@ if (on('o14')) {
   if (!f || !tv) bad.push('nenhum povo do pulque com taverna');
   else { give('f:' + f.id, 'food', 200, 'milho'); clear('b:' + tv.id, 'food'); give('b:' + tv.id, 'food', 6, 'milho'); for (const op of Of.batches(tv)) god(() => Of.cut(op, 'prova')); p = Of.trade(tv).pick(tv, f); if (p !== 'cerveja') bad.push('a cuba asteca escolhe ' + p); }
   ok('o14 sem o maguey, o povo do pulque faz a cerveja do seu milho', !bad.length && !errs(), `${f ? f.name : '?'}: a cuba escolhe ${p} (o pulque pede o aguamiel do maguey, que o mundo ainda não planta)${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+}
+
+// ================================================================ o15 the salting
+// (a salting yard built by the proof's hand in the capital of the first people, and a hand of the town made its salter — held
+// while the case lasts, as the repartidor would give it back: T-850 —; the day's work of the yard asked straight, as the day asks it)
+if (on('o15')) {
+  open(); const bad = [], say = [];
+  const f = facs()[0], set = f && capOf(f);
+  const sg = set ? building(set, 'salga') : null; if (sg && !sg.built) god(() => V.completeBuilding(sg));
+  // (one with the hands free and no merchant — the caravan takes a merchant from any work of the day, with the goods in his arms)
+  const v = sg && sg.built ? people(x => x.set === set.id && grown(x) && !x.carry && !x.merchant && x.role !== 'mercador' && !(S.avatar && S.avatar.id === x.id))[0] : null;
+  if (!v) bad.push('nenhuma salga ou ninguém para salgar');
+  else {
+    const ref = 'b:' + sg.id, fr = 'f:' + f.id, H = G.Vg.H;
+    const hold = () => { v.role = 'salgador'; v.job = sg.id; v.hunger = 0; v.energy = 100; v.sleeping = false; };
+    const ask = () => { hold(); G.Vg.endTask(v); return G.Eco.jobTask(v, H); };
+    // (the work given again when another errand of the world takes the hand away — a cave, a caravan —, until it is done or the time is up)
+    const run = (t0, secs, done) => { const give1 = () => { hold(); G.Vg.endTask(v); god(() => H.setTask(v, Object.assign({}, t0))); }; give1();
+      for (let i = 0; i < secs * 10 && !(done && done()); i++) { if (!v.task || v.task.type !== t0.type || v.task.do !== t0.do) { if (t0.type === 'fetch' && v.carry) break; give1(); } hold(); M.viver(0.1); } };
+    if (G.isNight() || S.time > 0.6) S.time = 0.3;
+    const out = () => (D.get(ref, 'carne_seca') || 0) + (D.get(ref, 'bacalhau') || 0);
+    // (1. the grain only — the store all wheat, the shelf with salt and wheat —: no fetch of the grain, no salting; the salting
+    // forced by the hand, nothing salted: the grain stays)
+    clear(fr, 'food'); give(fr, 'food', 200, 'trigo'); clear(ref, 'food'); give(ref, 'sal', 2); give(ref, 'food', 8, 'trigo');
+    const t1 = ask(); const o0 = out(); run({ type: 'estate', id: sg.id, do: 'salt', pri: 1 }, 20);
+    if (t1 && (t1.do === 'salt' || (t1.type === 'fetch' && t1.k === 'food'))) bad.push('com só grão o dia da salga pede ' + JSON.stringify(t1).slice(0, 80));
+    if (out() > o0 || O.amount(ref, 'food', 'trigo') < 8 - 1e-6) bad.push(`a salga forçada com só grão: ${out() - o0} salgado, o trigo ${O.amount(ref, 'food', 'trigo')}`);
+    say.push(`só grão: ${t1 ? t1.type + (t1.k ? ' ' + t1.k : '') : 'nenhum afazer'}, nada salgado`);
+    // (2. fish in the store: the fetch takes the fish, not the wheat; 3. fish on the shelf: salted fish; 4. meat: dried meat)
+    give(fr, 'food', 20, 'peixe', 'pesca'); const t2 = ask();
+    if (v.carry) bad.push('as mãos de ' + v.name + ' com ' + JSON.stringify(v.carry));
+    if (!t2 || t2.type !== 'fetch' || t2.k !== 'food' || !t2.of) bad.push('com peixe no armazém o dia da salga pede ' + JSON.stringify(t2 || null).slice(0, 80));
+    else { const w0 = O.amount(ref, 'food', 'trigo'), p0 = O.amount(ref, 'food', 'peixe'); run(t2, 60, () => O.amount(ref, 'food', 'peixe') > p0 + 0.5); const w1 = O.amount(ref, 'food', 'trigo'), p1 = O.amount(ref, 'food', 'peixe'); if (!(p1 > p0 + 0.5) || Math.abs(w1 - w0) > 1e-6) bad.push(`a busca: peixe ${p0} → ${p1}, trigo ${w0} → ${w1}`); say.push(`a busca trouxe ${Math.round((p1 - p0) * 100) / 100} de peixe e nenhum trigo`); }
+    for (const [part, good] of [['peixe', 'bacalhau'], ['carne', 'carne_seca']]) {
+      clear(ref, 'food'); clear(ref, 'carne_seca'); clear(ref, 'bacalhau'); give(ref, 'sal', 2); give(ref, 'food', 6, part, part === 'peixe' ? 'pesca' : 'caca'); give(ref, 'food', 6, 'trigo');
+      const t = ask(); if (!t || t.do !== 'salt') { bad.push(`com ${part} na prateleira o dia da salga pede ` + JSON.stringify(t || null).slice(0, 80)); continue; }
+      run(t, 40, () => (D.get(ref, good) || 0) >= 2); const got = D.get(ref, good) || 0, other = (D.get(ref, good === 'bacalhau' ? 'carne_seca' : 'bacalhau') || 0);
+      if (!(got >= 2) || other > 0 || O.amount(ref, 'food', part) > 2 + 1e-6 || O.amount(ref, 'food', 'trigo') < 6 - 1e-6) bad.push(`do ${part}: ${got} de ${good}, ${other} do outro; ${part} ${O.amount(ref, 'food', part)}, trigo ${O.amount(ref, 'food', 'trigo')}`);
+      say.push(`do ${part}: ${got} de ${G.Eco.name(good)} (o trigo ficou)`);
+    }
+  }
+  ok('o15 a salga gasta carne ou peixe, nunca o grão: do peixe o bacalhau, da carne a carne-seca', !bad.length && !errs(), `${f ? f.name : '?'}: ${say.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
 }
 
 console.log(fails.length ? `FALHARAM: ${fails.join(', ')}` : 'tudo passou');

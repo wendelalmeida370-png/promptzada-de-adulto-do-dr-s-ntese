@@ -207,7 +207,7 @@
     const ores = E.oresNear(set, 22);
     // (a mine on what the people needs — the gold always; the copper and the tin with the art of the bronze, the iron with the art
     // of the iron — and the forge where there is a metal it knows how to work: D-441)
-    for (const o of ores) { if (E.oreTaken(o) || site('mina')) continue; if (!E.oreWanted(fac.id, o.kind)) continue; if (pop < 14) continue; want.push('mina'); set._mineFor = o.id; break; }
+    for (const o of ores) { if (E.oreTaken(o) || site('mina')) continue; if (!E.oreWanted(fac.id, o.kind) || E.oreEnough(fac, o.kind)) continue; if (pop < 14) continue; want.push('mina'); set._mineFor = o.id; break; }
     if (pop >= 18 && !n('forja') && !site('forja') && E.metalNear(set, fac)) want.push('forja');
     if (pop >= 20 && !n('ourives') && !site('ourives') && (st.ouro >= 3 || E.hasMine(set.id, 'ouro'))) want.push('ourives');
     if (t >= 2 && pop >= 24 && !n('feira') && !site('feira')) want.push('feira');
@@ -219,6 +219,10 @@
   };
   E.penCount = setId => { let n = 0; for (const b of E.byType(setId, 'curral')) n += E.penAnimals(b).length; return n; };
   E.hasSheep = setId => { for (const b of E.byType(setId, 'curral')) if (penKind(b) === 'ovelha') return true; return false; };
+  // (the ores of the bronze are dug while the people needs them: with a store of them that nothing uses up, no new mine is opened
+  // and the miners of the open ones go to other work until the forge or a caravan takes it down — the bread first: 20h, D-441)
+  E.ORE_ENOUGH = { cobre: 30, estanho: 12 };
+  E.oreEnough = (f, kind, k) => !!E.ORE_ENOUGH[kind] && ((f.stock[E.ORE_GOOD[kind]] || 0) >= E.ORE_ENOUGH[kind] * (k || 1));
   E.oreWanted = (fid, kind) => kind === 'ouro' || ((kind === 'cobre' || kind === 'estanho') && has(fid, 'bronze')) || (kind === 'ferro' && has(fid, 'ferro'));
   E.metalNear = (set, f) => { const st = f.stock; return (has(f.id, 'ferro') && ((st.minerio || 0) >= 4 || E.hasMine(set.id, 'ferro'))) || (has(f.id, 'bronze') && ((st.cobre || 0) >= 4 || E.hasMine(set.id, 'cobre'))); };
   E.hasMine = (setId, kind) => { for (const b of E.byType(setId, 'mina')) if (b.ore) { const o = G.S.ores.find(q => q.id === b.ore); if (o && o.kind === kind && o.amt > 0) return true; } return false; };
@@ -259,7 +263,7 @@
         case 'curral': case 'estabulo': { const k = E.penAnimals(b).length; n = k ? (k >= 5 ? 2 : 1) : 0; break; }
         case 'acougue': n = E.penCount(set.id) >= 4 ? 1 : 0; break;
         case 'tecelagem': n = Math.min(3, (st.la >= 2 || (b.inv && b.inv.la >= 2) ? 1 + Math.floor(st.la / 8) : 0) + (b.inv && b.inv.tecido > 0 ? 1 : 0)); break;
-        case 'mina': { const o = S.ores && S.ores.find(q => q.id === b.ore); n = o && o.amt > 0 ? Math.min(4, 2 + Math.floor(pop / 60)) : 0; break; }
+        case 'mina': { const o = S.ores && S.ores.find(q => q.id === b.ore); n = o && o.amt > 0 && !E.oreEnough(fac, o.kind, 2) ? Math.min(4, 2 + Math.floor(pop / 60)) : 0; break; }
         // (the forge asks its smiths while there is a metal it works — or a batch under way —; with nothing to forge, a hand for what lies on its shelf)
         case 'forja': n = E.forgeMetal(fac, b, 2) || (G.Oficio && G.Oficio.batches(b).length) ? 2 : (b.inv && (b.inv.armas || b.inv.ferramentas) ? 1 : 0); break;
         case 'ourives': n = st.ouro >= 1 || (b.inv && b.inv.ouro) ? 1 : 0; break;
