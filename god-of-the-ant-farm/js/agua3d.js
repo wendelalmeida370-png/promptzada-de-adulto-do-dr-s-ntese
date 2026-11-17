@@ -409,7 +409,8 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
             // (the heavier columns of water and the thinner veils between them, across the sheet; the streaks running down each)
             float col = smoothstep(0.25, 0.75, texture2D(uDet, vec2(u * wid / 3.2 + 0.17, 0.31)).b);
             float streak = smoothstep(0.38, 0.78, n1 * 0.6 + n2 * 0.4);
-            float aer = smoothstep(0.0, 0.7, v) * clamp(drop / 3.0, 0.25, 1.0) + smoothstep(0.7, 1.0, v) * 0.4;
+            // (a rapid is white water from its lip — the river broken over the stones; a tall fall pours clear from its lip and breaks as it falls)
+            float aer = max(smoothstep(0.0, 0.7, v) * clamp(drop / 2.5, 0.45, 1.0) + smoothstep(0.7, 1.0, v) * 0.4, (1.0 - smoothstep(0.8, 1.6, drop)) * 0.7);
             // (aerated water is white: the light scattered in its bubbles — only the clear tongue at the lip shows the water's own colour)
             c = mix(diffuseColor.rgb * 0.9, vec3(0.94, 0.97, 0.99), clamp(0.3 + streak * 0.45 + aer * 0.75 + col * 0.15, 0.0, 1.0));
             a = clamp(0.5 + aer * 0.38 + streak * 0.22 + col * 0.12 - (1.0 - col) * 0.12 * (1.0 - aer), 0.0, 0.96) * side * smoothstep(-0.12, 0.04, v);
