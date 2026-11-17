@@ -444,6 +444,10 @@
     if (o.def === 'taverna' && o.act === 'pedir' && G.Taverna && G.Act) { const op = G.Act.get(o.op); const b = op ? G.S.buildings.get(op.at) : null; const k = b ? G.Taverna.keeperOf(b) : null; if (k) Po.meet(k.id); }
   };
 
+  // a thing of the body's bag given to someone (20e, D-401: Interact.give, in the world's step): the two have met face to face, and
+  // the giving is one of the deeds of the life in the body. Outside the world's step it does nothing, as Po.meet
+  Po.gave = function (o) { if (!o || !G.S.avatar || !G.inSim) return false; Po.meet(o.id); Po.deed('dadiva'); return true; };
+
   // ------------------------------ who I am, where I am, what is around me ------------------------------
   // (the doors a future adventure asks at: an identity, a place, the stories, the people known, what was seen, the duties)
   const KIN = (me, o) => {
@@ -660,7 +664,9 @@
   // ------------------------------ words ------------------------------
   const tt0 = G.Vg.taskText;
   G.Vg.taskText = function (v) { return v.task && v.task.type === 'avatar' ? (v.sleeping ? 'Dormindo — guiad' + oa(v) + ' pelo deus' : 'Vivid' + oa(v) + ' pelo deus (Modo Encarnado)') : tt0(v); };
-  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'], cozinha: ['cozinhou', 'ceia da casa', 'ceias da casa'] };
+  const DEED = { abraco: ['deu', 'abraço', 'abraços'], consolo: ['consolou', 'pessoa de luto', 'pessoas de luto'], danca: ['dançou', 'vez', 'vezes'], pesca: ['pescou com as mãos', 'peixe', 'peixes'], escalada: ['escalou', 'pedra ou barranco', 'pedras e barrancos'], ouro: ['catou', 'moeda de ouro do chão', 'moedas de ouro do chão'], carinho: ['fez carinho em', 'bicho', 'bichos'], agua: ['bebeu água de', 'rio', 'rios'], aceno: ['acenou', 'vez', 'vezes'], conversa: ['conversou com', 'pessoa', 'pessoas'], lenha: ['cortou', 'árvore', 'árvores'], pedra: ['quebrou', 'pedra', 'pedras'], frutas: ['colheu', 'punhado de frutas', 'punhados de frutas'], entrega: ['levou ao armazém', 'carga', 'cargas'], refeicao: ['fez', 'refeição', 'refeições'], sono: ['dormiu', 'noite', 'noites'], exame: ['examinou', 'coisa', 'coisas'], porta: ['bateu em', 'porta', 'portas'], reza: ['rezou', 'vez no templo', 'vezes no templo'], obra: ['levou às obras', 'carga de material', 'cargas de material'], cozinha: ['cozinhou', 'ceia da casa', 'ceias da casa'],
+    // (20e: the hands' new doings — a thing given, one picked up from the ground, the things kept or taken in a store or a house)
+    dadiva: ['deu', 'coisa a alguém', 'coisas a outras pessoas'], apanhou: ['pegou do chão', 'coisa', 'coisas'], guardou: ['guardou ou tirou', 'coisa', 'coisas'] };
   Po.DEED = DEED;
   if (G.Life) {
     const bl0 = G.Life.bioLine;

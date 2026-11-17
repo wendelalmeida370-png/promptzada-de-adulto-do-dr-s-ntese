@@ -257,11 +257,12 @@
 
   // ------------------------------ the challenge: the F on a person ------------------------------
   // (a verb of the person provider — the second wave's contract, D-460: «Desafiar», the duel; the world answers in its step)
+  // (by the registry of the verbs, D-395, regra 141: of the verbs on the F of a person, the duel has the key — ord 0 — and the «Dar»
+  // goes to the card)
   function addVerb() {
-    const I = G.Interact; const p = I && I.list && I.list.find(q => q.id === 'pessoa'); if (!p || p.verbs && p.verbs.combate) return;
-    const v0 = p.verbs;
+    const I = G.Interact; if (!I || !I.verb) return;
     const mine = {
-      k: 'outra', label: (ctx, t) => `Desafiar ${G.Possess.knows ? G.Possess.knows.call(ctx.v, t.o) : t.o.name} para um duelo`,
+      id: 'desafiar', k: 'outra', label: (ctx, t) => `Desafiar ${G.Possess.knows ? G.Possess.knows.call(ctx.v, t.o) : t.o.name} para um duelo`,
       can(ctx, t) { const o = t.o; if (!G.S.villagers.has(o.id)) return { ok: false, why: 'Não está mais aqui.' }; if (Cb.duel()) return { ok: false, why: 'Já há um duelo.' }; if (o.age < 16) return { ok: false, why: 'Uma criança não duela.' }; if (o.sleeping) return { ok: false, why: 'Está dormindo.' }; return { ok: true }; },
       run(ctx, t) {
         const o = t.o; const ask = G.Possess.apply(wv => { const r = Cb.challenge(wv, o); if (G.Possess.meet(o.id)) G.Possess.deed('conversa'); return r; }); // (asked face to face: the two meet — Possess.knows)
@@ -270,8 +271,7 @@
         return { ok: true };
       },
     };
-    p.verbs = (ctx, t) => (v0 ? v0(ctx, t) || [] : []).concat([mine]);
-    p.verbs.combate = true;
+    I.verb('pessoa', mine);
   }
   addVerb();
   U.addVerb = addVerb; // (for the proofs, and for a provider made again)

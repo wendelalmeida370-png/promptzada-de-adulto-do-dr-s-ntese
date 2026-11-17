@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1125,6 +1125,47 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   for (const k of kinds) if (!new RegExp(`\\bR\\.${k} = \\(`).test(fo)) fails.push(`a receita de cada coisa: o tipo ${k} do catálogo não tem receita no js/itemforma.js (R.${k}; D-388)`);
   const fm = (fo.match(/F\.MATS = \{([^}]*)\}/) || [])[1] || ''; for (const m of mats) if (!new RegExp(`\\b${m}:`).test(fm)) fails.push(`a receita de cada coisa: o material ${m} do catálogo não está no F.MATS do js/itemforma.js (D-388)`); }
 // === 20e: a interação ===
+// 138. "o destaque só desenha" (D-398): o js/mira3d.js (na lista LOOK) marca o que a tela mostra e não faz nada com ele — não pede
+// ao mundo (Possess.apply), não faz um verbo (Interact.run / runVerb), não dá um ato ao corpo (Avatar.act), não escreve um
+// lugar, uma pessoa, um bicho nem um prédio do mundo
+{ const mi = src['mira3d.js'] || []; if (!mi.length) fails.push('o destaque: js/mira3d.js não existe (D-398)');
+  mi.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bPossess\.apply\(|\bInteract\.(run|runVerb|give|fetch|stash|knocked)\(|\bAvatar\.(act|place|seatAt|cancelAct)\(|\bInv\.\w+\(|\bDepot\.(move|make|use|drop)\(/.test(c)) fails.push(`o destaque só desenha: mira3d.js:${k + 1} pede ao mundo ou ao corpo (D-398): ${l.trim().slice(0, 110)}`);
+    if (/\b(sel|t|o|a|v|b|tr|bu)\.(x|y|hp|task|held|inside|stage|berries|stone)\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o destaque só desenha: mira3d.js:${k + 1} escreve numa coisa do mundo (D-398): ${l.trim().slice(0, 110)}`); }); }
+// 139. "a tela dos guardados pede pelas mãos do corpo" (D-402, L-139): no js/guardados-ui.js, toda porta que muda o mundo — as do
+// inventário (pegar, guardar, largar, dar, fazer no armazém) e as da interação (Interact.fetch / stash / give) — é pedida dentro de um
+// G.Possess.apply( (na mesma linha ou numa das duas antes): o passo do mundo a faz, e a tela só conta a resposta
+{ const ui = src['guardados-ui.js'] || []; if (!ui.length) fails.push('a tela dos guardados: js/guardados-ui.js não existe (D-402)');
+  const DOOR = /\b(Inv\.(equip|unequip|stow|draw|toggle|quick|shortcut|give|take|put|drop|pick|make|unmake|realize|settle|repair)|Interact\.(fetch|stash|give|knocked))\(/;
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (!DOOR.test(c)) return;
+    let inApply = false; for (let j = k; j >= Math.max(0, k - 2); j--) if (/\bPossess\.apply\(/.test(ui[j])) inApply = true;
+    if (!inApply) fails.push(`a tela dos guardados: guardados-ui.js:${k + 1} pede uma porta do mundo fora das mãos do corpo (G.Possess.apply; D-402): ${l.trim().slice(0, 110)}`); }); }
+// 140. "o alvo é do interact.js" (D-396): a tela (incui.js), o destaque (mira3d.js) e os guardados (guardados-ui.js) não procuram nem
+// julgam alvos por conta própria — nem os provedores (Interact.list, find, can, run de um provedor) —: perguntam ao I.scan / best /
+// candidates / offer e fazem pelo I.run / runVerb, onde as regras de precedência (L-326, L-467, L-625, L-754, L-778, L-815, L-892)
+// moram
+{ for (const f of ['incui.js', 'mira3d.js', 'guardados-ui.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bInteract\.list\b|\.p\.(find|run|label)\(|\bp\.find\(ctx/.test(c)) fails.push(`o alvo é do interact.js: ${f}:${k + 1} procura ou faz um alvo por um provedor, fora das portas do G.Interact (D-396): ${l.trim().slice(0, 110)}`); }); }
+// 141. "um verbo de outra parte entra pelo registro" (D-395): os verbos de um alvo são do provedor (verbs) ou do registro
+// G.Interact.verb(provedor, verbo) — nenhum arquivo fora do interact.js reescreve o verbs de um provedor nem o tira da lista
+{ for (const f of files) if (f !== 'interact.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(?<!\baim)\.verbs\s*=(?!=)|\bInteract\.list\s*(=(?!=)|\.(push|splice|unshift|pop|shift|sort)\()/.test(c)) fails.push(`um verbo pelo registro: ${f}:${k + 1} reescreve os verbos de um provedor ou a lista deles (use G.Interact.verb / add; D-395): ${l.trim().slice(0, 110)}`); }); }
+// 142. "o E segurado é cronometrado num lugar só" (D-396): quanto tempo o E está segurado é da tela (incui.js: IU.HOLD_T, o anel);
+// ninguém mais lê a tecla segurada do E (Input3D.down.interagir) para fazer um verbo seu — um verbo de E segurado é um verbo
+// «segurar» do alvo
+{ for (const f of files) if (!['incui.js', 'input3d.js', 'modes.js'].includes(f)) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bdown\.interagir\b|\bdown\[\s*'interagir'\s*\]/.test(c)) fails.push(`o E segurado num lugar só: ${f}:${k + 1} lê o E segurado (um verbo de E segurado é um verbo 'segurar' do alvo; D-396): ${l.trim().slice(0, 110)}`); }); }
+// 143. "os gestos das mãos são clipes, e puros" (D-404): o js/interacao-clips.js só registra clipes (G.ANIM_CLIPS) — não lê o mundo
+// (G.S), não tira de acaso nenhum, não pede nada ao mundo
+{ const ic = src['interacao-clips.js'] || []; if (!ic.length) fails.push('os gestos das mãos: js/interacao-clips.js não existe (D-404)');
+  ic.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bPossess\b|\bDepot\b|\bInv\b/.test(c)) fails.push(`os gestos das mãos são clipes: interacao-clips.js:${k + 1} lê o mundo, tira de um acaso ou pede ao mundo (D-404): ${l.trim().slice(0, 110)}`); }); }
+// 144. "a roda troca de alvo por uma ação" (D-397): no corpo, só o input3d.js escuta a roda do mouse (o evento 'wheel'); a troca de
+// alvo é a ação 'alvoProx' / 'alvoAnt' (que o jogador muda no menu) — sem um outro alvo, a roda volta a ser o zoom do olho
+{ const BODY = ['incui.js', 'mira3d.js', 'guardados-ui.js', 'modes.js', 'avatar.js', 'cam3d.js', 'interact.js', 'inv-ui.js', 'possess.js', 'realm3d.js', 'people3d.js'];
+  for (const f of BODY) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/addEventListener\(\s*'wheel'/.test(c)) fails.push(`a roda por uma ação: ${f}:${k + 1} escuta a roda do mouse fora do input3d.js (a troca de alvo é a ação alvoProx/alvoAnt; D-397): ${l.trim().slice(0, 110)}`); });
+  const iu = (src['incui.js'] || []).join('\n'); if (!/Input3D\.def\('alvoProx'/.test(iu) || !/Input3D\.def\('alvoAnt'/.test(iu)) fails.push('a roda por uma ação: o incui.js não traz as ações alvoProx e alvoAnt (D-397)'); }
 // === 20f: o combate ===
 // 145. "o golpe fere só pelas portas do mundo" (D-410, D-414): o combate tira vida de alguém só pelo G.Vg.damage (as pessoas) e pelo
 // G.Animals.damage (os bichos) — nunca a vida escrita à mão —; e o que só se vê e as mãos (combate-ui.js, combate3d.js,

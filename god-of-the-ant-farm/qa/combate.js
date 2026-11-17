@@ -276,8 +276,8 @@ if (want('c8')) {
   else {
     used.add(war.id); war.courage = Math.max(war.courage, 0.9); stand(war, 1.5, 0); war.hp = 100;
     // the F on the person: the verb of the provider, «Desafiar»
-    const p = G.Interact.list.find(q => q.id === 'pessoa'); const vb = p && p.verbs ? p.verbs(G.Interact.ctx(), { o: war, X: war.x * TL, Z: war.y * TL }) : [];
-    const fv = vb.find(x => x.k === 'outra'); res.push(`o F: ${fv ? '«' + fv.label(G.Interact.ctx(), { o: war }) + '»' : 'NENHUM VERBO'}`); if (!fv) bad.push('sem o verbo Desafiar');
+    const p = G.Interact.list.find(q => q.id === 'pessoa'); const of = p && G.Interact.offer({ id: 'v:' + war.id, p, t: { o: war, X: war.x * TL, Z: war.y * TL }, label: '', ok: true });
+    const fv = of && of.verbs.find(x => x.k === 'outra'); res.push(`o F: ${fv ? '«' + fv.label + '»' : 'NENHUM VERBO'}`); if (!fv || !/^Desafiar/.test(fv.label)) bad.push('sem o verbo Desafiar no F');
     const r = god(() => Cb.challenge(v, war)); res.push(`${war.name} (${war.role}): ${r.ok ? 'aceitou' : 'recusou: ' + r.why}`);
     if (!r.ok) bad.push('o guerreiro recusou');
     else {
