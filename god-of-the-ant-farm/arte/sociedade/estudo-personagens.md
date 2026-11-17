@@ -639,3 +639,11 @@ idoso), de perto (0,85 m), pelo desenho do jogo (`qa/visual/rostos-fotos.js`, `Q
   canal `wide`), a boca com o arco, o volume, a cor, a sombra e os cantos, o rosto que não se sombreia a si mesmo no mapa de sombra
   (as manchas eram isso, não a oclusão nem as normais), a sobrancelha com forma e fios, os alvos de identidade com alcance de ver a
   alguns passos, a luz quente da pele estreita e fraca.
+- O corpo e a família (fase 5): `corpo-fila.jpg` — a fila de meia distância (o bebê, a criança, a menina, o adolescente, os
+  adultos, os velhos, o crespo, o ferreiro, o gordo, o magro, a grávida, o sem braço: os pesos de cada um no `rostos.txt` das
+  fotos); `familia.jpg` — os pais e três filhos (a pele de cada filho, de um dos dois). A forma do corpo ainda se lê pouco sob a
+  roupa solta a três passos: as provas dele são as de Node (o r5, o pano com a largura do corpo; o r6, o coto), e uma silhueta
+  mais forte fica para a onda 2, com o dono.
+- A mesma pessoa ao longo dos anos (fase 4): `anos.jpg` — o mesmo genoma aos 15, 25, 45, 5 e 70 anos (o chapéu aos 25 e aos 45 é
+  o do ofício). Os recortes do rosto, cinzentos e normalizados, comparados por correlação: a mesma pessoa entre as idades 0,81;
+  quatro outras pessoas na mesma idade 0,64 — mais perto de si que dos outros.
