@@ -41,7 +41,7 @@
     qa('mataR', { baixa: 0, media: 16, alta: 34, ultra: 50 });
     qa('mataRD', { baixa: 0, media: 0.55, alta: 0.85, ultra: 1 });
     qa('mataA', { baixa: 30, media: 64, alta: 120, ultra: 190 });
-    qa('mataAD', { baixa: 0.3, media: 0.65, alta: 1, ultra: 1 });
+    qa('mataAD', { baixa: 0, media: 0.65, alta: 1, ultra: 1 }); // (the Leve: only the hard stems — the body meets them, so they are seen —, a few calls)
     qa('cipo', { baixa: 0, media: 1, alta: 1, ultra: 2 });
   };
   M3.qual();
