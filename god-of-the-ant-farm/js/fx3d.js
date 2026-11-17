@@ -593,10 +593,10 @@
   let PW = null, PWU = null, wake = null, wakeN = 0, wkT = 0; const NWK = 96; let fallsNear = [], fallsKey = '', fallsT = -1e9;
   const _wv = [0, 0, 0];
   // (the wind of the 3D, as the water's shader reads it)
-  function windV() { const w = R3.U.wind.value; _wv[0] = w ? w.x : 0; _wv[1] = w ? w.y : 0; _wv[2] = w ? w.z : 0; return _wv; }
+  function windV() { const w = G.Realm.U.wind.value; _wv[0] = w ? w.x : 0; _wv[1] = w ? w.y : 0; _wv[2] = w ? w.z : 0; return _wv; }
   // (the drawn wave under a ship: [its height, its pitch, its roll] — what is on the water is drawn on it, D-506)
   function shipRide(X, Z, yaw, D) {
-    const Ag = G.Agua; if (!Ag || !Ag.waveY) return [0, 0, 0]; const t = R3.time(), w = windV(); const H = G.Space.HM, L = G.Space.TILE, sea = G.SEA * H;
+    const Ag = G.Agua; if (!Ag || !Ag.waveY) return [0, 0, 0]; const t = G.Realm.time(), w = windV(); const H = G.Space.HM, L = G.Space.TILE, sea = G.SEA * H;
     const at = (x, z) => { const dep = sea - (W.hAt(x / L, z / L) * H - G.Space.bedDrop(x / L, z / L)); return Ag.waveY(x, z, t, w, 1, dep); };
     const c = Math.cos(yaw), sn = Math.sin(yaw); const hl = D[0] * 0.45, hb = D[1] * 0.5;
     const y0 = at(X, Z), yb = at(X + c * hl, Z + sn * hl), ys = at(X - c * hl, Z - sn * hl), yr = at(X - sn * hb, Z + c * hb), yp = at(X + sn * hb, Z - c * hb);

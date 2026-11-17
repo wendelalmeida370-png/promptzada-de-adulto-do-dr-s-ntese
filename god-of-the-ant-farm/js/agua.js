@@ -39,6 +39,11 @@
   // (the level of the water's face of a tile, in height units: a river's own, the sea's; NaN on land or on the parted sea)
   function level(S, i) { const t = S.type[i]; if (t === T.RIVER) return S.wl[i]; if (t <= T.SEA && !(S.dry && S.dry[i])) return G.SEA; return NaN; }
   Ag.level = i => level(G.S, i);
+  // (a river's level over the sea in hundredths of a height unit, as the save keeps it (save.js: wl - SEA, × 100, rounded, none under
+  // the sea): every choice here is made on it, so the water a save carries back runs and steps as it did in the world it was saved
+  // from — the levels a load gives back differ by a fraction of a centimetre, and a tie broken otherwise would turn a river)
+  const lq = (S, i) => (S.type[i] === T.RIVER ? Math.max(0, Math.round((S.wl[i] - G.SEA) * 100)) : 0);
+  Ag.levelQ = i => lq(G.S, i);
 
   // ------------------------------ the current ------------------------------
   // The world's rivers fall to the sea, level by level, and its lakes lie level. Each river tile runs toward its mouth: the way
@@ -54,12 +59,12 @@
   // (made from nothing, without the memory: the verifier compares the two)
   Ag.fresh = () => build(G.S);
   function build(S) {
-    const NN = N * N, wl = S.wl;
+    const NN = N * N; const wl = new Int32Array(NN); for (let i = 0; i < NN; i++) wl[i] = lq(S, i);
     const D = new Float32Array(NN).fill(Infinity), par = new Int32Array(NN).fill(-1);
     const h = new G.Heap();
     const grow = () => { while (h.size) { const a = h.pop(); const ax = a % N, ay = (a / N) | 0;
       for (let k = 0; k < 8; k++) { const nx = ax + D8[k][0], ny = ay + D8[k][1]; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx;
-        if (!isRiver(S, j) || wl[j] < wl[a] - 0.02) continue;
+        if (!isRiver(S, j) || wl[j] < wl[a] - 2) continue;
         // (a diagonal only where the water passes between the two tiles beside it, not across a corner of land)
         if (k >= 4 && !isRiver(S, ay * N + nx) && !isRiver(S, ny * N + ax)) continue;
         const c = D[a] + (k >= 4 ? 1.4142 : 1); if (c < D[j] - 1e-6) { D[j] = c; par[j] = a; h.push(j, c); } } } };
@@ -74,7 +79,7 @@
       const comp = []; let lo = Infinity; stack.push(i); seen[i] = 1;
       while (stack.length) { const a = stack.pop(); comp.push(a); if (wl[a] < lo) lo = wl[a]; const ax = a % N, ay = (a / N) | 0;
         for (const [dx, dy] of D4) { const nx = ax + dx, ny = ay + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (!seen[j] && isRiver(S, j) && D[j] === Infinity) { seen[j] = 1; stack.push(j); } } }
-      for (const a of comp) if (wl[a] <= lo + 0.02) { D[a] = 0.5; par[a] = -3; h.push(a, 0.5); } }
+      for (const a of comp) if (wl[a] <= lo + 2) { D[a] = 0.5; par[a] = -3; h.push(a, 0.5); } }
     grow();
     // the discharge: every tile gives its own and what came to it to the tile it runs to — farthest first
     const ord = []; for (let i = 0; i < NN; i++) if (isRiver(S, i) && D[i] < Infinity) ord.push(i);
@@ -89,17 +94,17 @@
         if (!(dj === dj) || dj === Infinity) continue; const l = k >= 4 ? 1.4142 : 1; const g = (D[i] - dj) / l; if (g > 0) { gx += D8[k][0] / l * g; gz += D8[k][1] / l * g; } }
       const l = Math.hypot(gx, gz); if (l < 1e-6) continue; dx[i] = gx / l; dz[i] = gz / l;
       // (the slope of the face toward where it runs: a step down is a torrent)
-      const p = par[i]; const lp = p >= 0 ? level(S, p) : p === -2 ? wl[i] : NaN; const run = p >= 0 ? Math.hypot((p % N) - x, ((p / N) | 0) - y) * TL : TL;
-      const slope = lp === lp ? G.clamp((wl[i] - lp) * HM / run, 0, 0.8) : 0;
+      const p = par[i]; const lp = p >= 0 ? (isRiver(S, p) ? wl[p] : 0) : p === -2 ? wl[i] : NaN; const run = p >= 0 ? Math.hypot((p % N) - x, ((p / N) | 0) - y) * TL : TL;
+      const slope = lp === lp ? G.clamp((wl[i] - lp) / 100 * HM / run, 0, 0.8) : 0;
       // (how wide the water lies at its own level: the middle of a lake hardly moves)
-      let wide = 0; for (let ey = -2; ey <= 2; ey++) for (let ex = -2; ex <= 2; ex++) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && Math.abs(wl[j] - wl[i]) < 0.05) wide++; }
+      let wide = 0; for (let ey = -2; ey <= 2; ey++) for (let ex = -2; ex <= 2; ex++) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && Math.abs(wl[j] - wl[i]) < 5) wide++; }
       const flowK = 0.55 + 0.45 * Math.min(1, Math.log2(1 + q[i]) / 5);
       sp[i] = G.clamp((0.3 + 2.4 * Math.sqrt(slope)) * flowK * (1 - 0.88 * G.smooth(0.42, 0.9, wide / 25)), 0, 3);
     }
     // (the way smoothed along the river: a bend turns, it does not snap tile to tile)
     for (let r = 0; r < 2; r++) { const px = dx.slice(), pz = dz.slice();
       for (const i of ord) { if (!sp[i]) continue; const x = i % N, y = (i / N) | 0; let sx = px[i] * 2, sz = pz[i] * 2;
-        for (const [ex, ey] of D4) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && sp[j] && Math.abs(wl[j] - wl[i]) < 0.3) { sx += px[j]; sz += pz[j]; } }
+        for (const [ex, ey] of D4) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && sp[j] && Math.abs(wl[j] - wl[i]) < 30) { sx += px[j]; sz += pz[j]; } }
         const l = Math.hypot(sx, sz); if (l > 1e-4) { dx[i] = sx / l; dz[i] = sz / l; } } }
     const sh = shoreOf(S);
     return { S, N, tv: S.typeVer || 0, wv: S.walkVer || 0, D, par, q, dx, dz, sp, dist: sh.dist, cx: sh.cx, cz: sh.cz, reach: ord.length, river: ord.length + countUnreached(S, D) };
@@ -139,7 +144,9 @@
   // fall from a world's fall (S.relief.falls, its name too), a rapid below that — the 3D draws its sheet, the god's view its
   // lip. Not across a bridge (the deck is the feet's), a building or a parted sea; frozen under the ice of a sudden winter.
   // Each: the two tiles (i the higher, j the lower), the shared side (from a to b, in tiles), the way out of the higher (n),
-  // the faces (m: the river's face is drawn 5 cm over its level), the drop, the discharge and the speed coming over it
+  // the faces (m: the river's face is drawn 5 cm over its level), the drop between them; dq the drop by the levels the save keeps
+  // (Ag.levelQ: whether there is a step, and whether a fall, is the same in the world and in the save it is carried back from); the
+  // discharge and the speed coming over it
   let fallIx = null, fallFor = null, fallLen = -1;
   function fallsAt(S) {
     const L = (S.relief && S.relief.falls) || []; if (fallFor === L && fallLen === L.length && fallIx) return fallIx;
@@ -158,11 +165,11 @@
       for (let k = 0; k < 4; k++) {
         const nx = x + D4[k][0], ny = y + D4[k][1]; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx;
         const lj = level(S, j); if (!(lj === lj)) continue;
-        const top = faceOf(S, i), low = faceOf(S, j); const drop = top - low; if (drop < Ag.STEP) continue;
+        const top = faceOf(S, i), low = faceOf(S, j); const drop = top - low; const dq = (lq(S, i) - lq(S, j)) / 100 * HM; if (dq < Ag.STEP) continue;
         if (S.road[i] || S.road[j] || S.occ[i] || S.occ[j]) continue;
         const [ex, ey] = D4[k]; const ax = ex > 0 ? x + 1 : ex < 0 ? x : x, ay = ey > 0 ? y + 1 : ey < 0 ? y : y, bx = ex !== 0 ? ax : x + 1, by = ex !== 0 ? y + 1 : ay;
         const f = fi.get(i * 4 + k) || null;
-        out.push({ i, j, x, y, tx: nx, ty: ny, ax, ay, bx, by, nx: ex, ny: ey, top, low, drop, q: fl.q[i] || 1, sp: fl.sp[i] || 0, fall: f, name: f && f.name || '', kind: drop >= Ag.FALL ? 'queda' : 'corredeira',
+        out.push({ i, j, x, y, tx: nx, ty: ny, ax, ay, bx, by, nx: ex, ny: ey, top, low, drop, q: fl.q[i] || 1, sp: fl.sp[i] || 0, fall: f, name: f && f.name || '', dq, kind: dq >= Ag.FALL - 0.02 ? 'queda' : 'corredeira',
           frozen: !!(S.ice && (S.ice[i] || S.ice[j])), sea: !isRiver(S, j) });
       }
     }
@@ -189,11 +196,11 @@
       const F = G.Sea && G.Sea.F, fl = G.Sea && G.Sea.floor ? G.Sea.floor[i] : 0;
       kind = F && fl === F.REEF ? 'recife' : F && fl === F.MUD ? 'mangue' : F && fl === F.KELP ? 'alga' : tp > 0.58 ? 'quente' : tp < 0.34 ? 'frio' : 'ameno';
     } else if (S.type[i] === T.RIVER) {
-      const f = Ag.field(); const alt = S.wl[i] - G.SEA; const bio = S.biome ? S.biome[i] : 0;
+      const f = Ag.field(); const alt = lq(S, i) / 100; const bio = S.biome ? S.biome[i] : 0;
       let n = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < N && ny < N && isRiver(S, ny * N + nx)) n++; }
       const lake = n >= 13;
       // (a pool a fall pours into, in the warm lands: the turquoise of the reference)
-      let pool = false; if (tp > 0.5) for (const [ex, ey] of D4) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && (S.wl[j] - S.wl[i]) * HM >= Ag.FALL) { pool = true; break; } }
+      let pool = false; if (tp > 0.5) for (const [ex, ey] of D4) { const nx = x + ex, ny = y + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (isRiver(S, j) && (lq(S, j) - lq(S, i)) / 100 * HM >= Ag.FALL) { pool = true; break; } }
       if (pool) kind = 'poco';
       else if (tp < 0.3 && alt > 4) kind = 'glacial';
       else if (lake) kind = tp > 0.58 ? 'lagoQuente' : tp < 0.34 ? 'lagoFrio' : 'lago';
@@ -224,7 +231,7 @@
     // (the foot of a step: this tile under one, or a few tiles down from one)
     let c = i; for (let k = 0; k < 4 && c >= 0; k++) { const cx = c % N, cy = (c / N) | 0;
       for (const [ex, ey] of D4) { const nx = cx + ex, ny = cy + ey; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; if (!isRiver(S, j)) continue;
-        const d = (S.wl[j] - S.wl[c]) * HM; if (d >= Ag.STEP) churn = Math.max(churn, G.clamp(0.25 + d * 0.22, 0, 1) * Math.min(1, 0.4 + Math.log2(1 + f.q[j]) * 0.15) * (1 - k * 0.28)); }
+        const d = (lq(S, j) - lq(S, c)) / 100 * HM; if (d >= Ag.STEP) churn = Math.max(churn, G.clamp(0.25 + d * 0.22, 0, 1) * Math.min(1, 0.4 + Math.log2(1 + f.q[j]) * 0.15) * (1 - k * 0.28)); }
       const p = f.par[c]; c = p >= 0 && isRiver(S, p) ? p : -1; }
     // (the current against the land: a bank beside a running river, a stone standing in it)
     let edge = 0; const sp = f.sp[i];
