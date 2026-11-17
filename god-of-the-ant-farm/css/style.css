@@ -1433,7 +1433,7 @@ canvas#game3d { touch-action: none; transition: none; }
 
 /* === 20g: os ofícios === */
 /* the work's card (js/trabalho-ui.js, D-432): by the right corner, over the buttons of the thumb's side; on a narrow screen,
-   under the compass — the stick and the buttons keep the bottom corners */
+   under the panel of who one is, on the left — the stick and the buttons keep the bottom corners, the clock and the compass the right */
 #inc-hud .ih-work { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); width: 236px; padding: 9px 12px 10px; animation: ihIn .18s ease both; }
 .ih-work .iw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .ih-work .iw-head b { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 14px; color: var(--ih-gold-2); letter-spacing: .03em; text-shadow: var(--ih-ts); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1451,7 +1451,7 @@ canvas#game3d { touch-action: none; transition: none; }
 .ih-work .iw-warn { font-size: 11px; line-height: 1.35; color: #ff9a86; font-weight: 800; margin-top: 5px; }
 .ih-work .iw-warn.soft { color: #ffc89a; }
 #inc-root.hud-off .ih-work { display: none !important; }
-@media (max-width: 720px) { #inc-hud .ih-work { right: auto; left: 50%; transform: translateX(-50%); top: calc(46px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(260px, calc(100vw - 32px)); } }
+@media (max-width: 720px) { #inc-hud .ih-work { right: auto; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(118px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(236px, 46vw); padding: 7px 10px 8px; } }
 /* === 20h: a origem das coisas === */
 
 /* ================= the letters, inside the game ================= */

@@ -124,6 +124,8 @@
   // another tool, or with the bare hands, is drawn as it is done (20g, D-426))
   function act(v, out, bag, own) {
     let t = ACT_TOOL[v.act]; if (!t) return;
+    // (a hand holding a fishing gear of its own fishes with it — the rod, the net, the spear the hand chose: not the people's way)
+    if (t === 'vara' && out.mao && It.has(out.mao, 'pescar')) return;
     if (FIGHT[v.act] && out.mao && (It.has(out.mao, 'lutar') || It.has(out.mao, 'golpe'))) return;
     if (t === 'vara') { t = fishGear(v); if (!t || v.gear) return; }
     let key = null;
@@ -160,7 +162,7 @@
       const k = Inv.trade(v);
       for (const s of SLOTS) if (!out[s] && k[s] && !(HANDS.includes(s) && (twoIn(out) || It.def(k[s]).maos >= 2 && out[s === 'mao' ? 'outra' : 'mao']))) out[s] = k[s];
     }
-    act(v, out, bag, !!(e && e.kit));
+    act(v, out, bag, !!(e && e.kit) || !!(G.Possess && G.Possess.is && G.Possess.is(v))); // (the god's body: only its own, D-426)
     if (loaded(v) || v.gear) freeHands(out);
     return out;
   };

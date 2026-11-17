@@ -1167,7 +1167,7 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // dele — a ferramenta do ofício que não tem não aparece (o made do kit fica para quem nunca teve coisas): o js/inventario.js guarda
 // o made do ato atrás do own, e o held passa a marca do kit
 { const inv = (src['inventario.js'] || []).join('\n');
-  if (!/if \(!key && !own\) key = made\(t, /.test(inv) || !/act\(v, out, bag, !!\(e && e\.kit\)\);/.test(inv)) fails.push('o que se segura é de verdade: o act() do inventario.js põe na mão a ferramenta do ofício a quem tem as coisas de verdade (o made atrás do own; o held com a marca do kit — D-426)'); }
+  if (!/if \(!key && !own\) key = made\(t, /.test(inv) || !/act\(v, out, bag, !!\(e && e\.kit\)/.test(inv)) fails.push('o que se segura é de verdade: o act() do inventario.js põe na mão a ferramenta do ofício a quem tem as coisas de verdade (o made atrás do own; o held com a marca do kit — D-426)'); }
 // 156. "a tela do trabalho só lê, pelo gancho" (D-432, D-462): o js/trabalho-ui.js desenha pela lista G.IncUI.frames (nunca editando
 // o incui.js), não tira de acaso nenhum do mundo, não move bens nem pede ao mundo por conta própria (o próximo golpe de um trabalho
 // segurado é o E do provedor, pelo Tr.pump), e as moedas da banca vêm do G.Biz (o dia da banca), nunca de uma casa

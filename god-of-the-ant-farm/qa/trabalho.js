@@ -119,13 +119,13 @@ if (on('t1')) {
     const refMul = ref ? res[ref].mul : null;
     clearBag(v); give(v, 'martelo.bronze'); const ham = Tr.tool(v, 'quebrar'); give(v, 'picareta.bronze'); const pick = Tr.tool(v, 'quebrar');
     clearBag(v); const bareDig = Tr.tool(v, 'cavar'); give(v, 'enxada.bronze'); const hoe = Tr.tool(v, 'cavar'); give(v, 'pa.bronze'); const spade = Tr.tool(v, 'cavar');
-    clearBag(v); const bareReap = Tr.tool(v, 'ceifar'); const bareFish = Tr.tool(v, 'pescar'); give(v, 'vara'); const rod = Tr.tool(v, 'pescar'); give(v, 'rede'); const net = Tr.tool(v, 'pescar');
+    clearBag(v); const bareReap = Tr.tool(v, 'ceifar'); const bareFish = Tr.tool(v, 'pescar'); give(v, 'vara'); const rodBag = Tr.gear(v).how; god(() => Inv.equip(v, 'vara')); const rod = Tr.gear(v); give(v, 'rede'); god(() => Inv.equip(v, 'rede')); const net = Tr.gear(v);
     clearBag(v); const skin0 = Tr.tool(v, 'esfolar');
     ok('t1 sem a ferramenta: o trabalho que não se faz diz por quê', !none.key && none.mul === 0 && /machado/.test(none.why) && !c0.ok && /machado/.test(c0.why) && !skin0.key && /faca/.test(skin0.why), `cortar sem nada: «${none.why}» · o E: «${c0.why}» · esfolar: «${skin0.why}»`);
     ok('t1 o material: a pedra devagar, o bronze, o ferro mais depressa; a do povo, o ritmo do mundo', m[0] < m[1] && m[1] < m[2] && Math.abs(refMul - 1) < 1e-9, `machado ${mats('machado').map((k, i) => k.split('.')[1] + ' ×' + m[i].toFixed(3)).join(', ')} · o do povo (${ref}): ×${refMul}`);
     ok('t1 o que se faz pior diz que demora: o martelo na pedra, a enxada e as mãos na margem, as mãos no campo', ham.key === 'martelo.bronze' && ham.mul < pick.mul && pick.key === 'picareta.bronze' && !bareDig.key && bareDig.mul > 0 && bareDig.mul < hoe.mul && hoe.mul < spade.mul && /devagar|mais/.test(bareDig.slow) && !bareReap.key && bareReap.mul === 0.5 && /dobro/.test(bareReap.slow),
       `martelo ×${ham.mul.toFixed(2)} contra a picareta ×${pick.mul.toFixed(2)} · cavar: mãos ×${bareDig.mul}, enxada ×${hoe.mul.toFixed(2)}, pá ×${spade.mul.toFixed(2)} («${bareDig.slow}») · colher sem foice ×${bareReap.mul}`);
-    ok('t1 pescar: o jeito é o da coisa na mão (as mãos, a linha da vara, a rede)', !bareFish.key && bareFish.how === 'maos' && rod.how === 'linha' && (net.how === 'rede' || net.how === 'linha'), `sem nada: ${bareFish.how} · com a vara: ${rod.how} · com a vara e a rede: ${net.how} (${net.key})`);
+    ok('t1 pescar: o jeito é o da coisa na mão (as mãos; a vara nas costas não lança sozinha; a linha da vara na mão; a rede na mão)', !bareFish.key && bareFish.how === 'maos' && rodBag === 'maos' && rod.how === 'linha' && net.how === 'rede', `sem nada: ${bareFish.how} · a vara na mochila: ${rodBag} · a vara na mão: ${rod.how} · a rede na mão: ${net.how} (${net.key})`);
   } }
 
 // ------------------------------ t2: felling ------------------------------
@@ -212,7 +212,7 @@ function castWith(key, pl) {
   safe(pl.ford[0], pl.ford[1]);
   const v = Po.body(); clearBag(v); clearHands(v); if (key) { give(v, key); god(() => Inv.equip(v, key)); } // (the gear in the hand: from the bank only with it there — the player's quick key)
   // (with a gear, at the bank's edge, the water a stride on; with the hands, in the ford)
-  const at = key ? [pl.bank[0] + pl.wx * 0.38, pl.bank[1] + pl.wy * 0.38] : pl.ford; G.Avatar.place(at[0], at[1]); frames(3); const b = G.Avatar.state(); b.yaw = Math.atan2(pl.wy, pl.wx); G.Avatar.input.camYaw = b.yaw; frames(2);
+  const at = key ? [pl.bank[0] + pl.wx * 0.38, pl.bank[1] + pl.wy * 0.38] : pl.ford; G.Avatar.place(at[0], at[1]); frames(3); const b = G.Avatar.state(); b.yaw = Math.atan2(pl.wy, pl.wx); G.Avatar.input.camYaw = b.yaw; frames(2); if (process.env.DBG) console.log('  castWith', key, JSON.stringify(Inv.bag(v)), JSON.stringify(Inv.equipOf(v)), 'gear', v.gear, 'held', JSON.stringify(Inv.held(v)));
   const P = G.Pesca; const cast0 = P.cast; const hows = []; P.cast = function (w, x, y, o) { const r = cast0.apply(this, arguments); if (w === v) hows.push([o && o.how, r.ok, S.clock]); return r; };
   const wm = G.Vg.workMul(v); const n0 = ledN(); let durs = new Set(), tries = 0, why = '', heldNow = null;
   try {
@@ -274,7 +274,7 @@ if (on('t7')) {
       if (!v) break; clearBag(v); clearHands(v); if (key) give(v, key);
       // (the test's hand: the patch ripe, the farmers of the world sent to another errand for the case — they take a ripe patch first,
       // and one came between the ripening and the stroke — and the body back at the patch: T-1470)
-      for (const o of S.villagers.values()) if (o.task && o.task.type === 'farm' && o.task.id === farm.id) G.Vg.endTask(o);
+      for (const o of S.villagers.values()) if (o !== v && o.set === farm.set && !o.sleeping && (o.role === 'agricultor' || o.role === 'lavrador' || (o.task && o.task.type === 'farm'))) { const st = S.settlements.get(farm.set); G.Vg.setTask(o, { type: 'olhar', x: st.cx, y: st.cy, until: S.clock + 40, fx: 1, fy: 0, pri: 5 }); } // (they would take the ripe patch first: they watch for the case)
       const c = farm.crops[4]; c.s = 3; c.c = 0; G.Avatar.place(px + 0.45, py); frames(2);
       face(v, px, py); frames(2); const t = target('campo', q => q.b === farm && q.k === 4); const wm = G.Vg.workMul(v); const n0 = ledN();
       const { r, a, ts: t0 } = t ? act1('campo', t) : { r: null, a: null, ts: S.clock };

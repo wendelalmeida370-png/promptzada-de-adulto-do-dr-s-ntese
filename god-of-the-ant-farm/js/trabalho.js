@@ -204,6 +204,9 @@
   };
   // (the strokes still wanted at a counter: what is left ÷ what a stroke does)
   const strokesLeft = (left, per) => (per > EPS ? Math.max(1, Math.ceil(left / per - 1e-9)) : Infinity);
+  // (a work done worse says so as it begins — once, not at every stroke of a work held: the hammer on the stone, the bare hands at
+  // the bank and in the field)
+  const slowSay = (id, tl) => { if (chain && chain.n > 0) return; const w = WORKS[id]; const s = tl.key ? (tl.share < 1 ? w.pior : '') : tl.slow; if (s) say(s, 2.6); };
 
   // ============================== the works ==============================
   // ------------------------------ a tree ------------------------------
@@ -358,7 +361,7 @@
       return { ok: true };
     },
     run(ctx, t) {
-      const r = t.r; const P = G.Possess; const f = face(ctx, t.X, t.Z); const tl = Tr.tool(ctx.v, 'quebrar');
+      const r = t.r; const P = G.Possess; const f = face(ctx, t.X, t.Z); const tl = Tr.tool(ctx.v, 'quebrar'); slowSay('quebrar', tl);
       stroke({ id: 'quebrar', p: 'pedra', target: t, t: tl, dur: WT.mine, contact: WT.mine * 0.62, f, vact: tl.kind === 'martelo' ? 'hammer' : 'mine', anim: tl.kind === 'martelo' ? 'hammer' : null,
         op: (w, k) => {
           if (!G.S.rocks.has(r.id) || r.stone < 1) { mineW = null; return { ok: false, why: 'Não sobrou pedra aqui.' }; }
@@ -416,16 +419,16 @@
   // cast the world's gesture of that gear (G.Pesca.castDur), the world's dice, into the hands through the ledger ('pesca').
   // With a gear, from the bank or wading; with the hands, only wading. What bites is that water's own
   const isFishWater = (S, i) => (S.type[i] === G.T.RIVER || S.type[i] <= G.T.SEA) && !(S.ice && S.ice[i]) && !(S.dry && S.dry[i]);
-  // (the way the body fishes now: the gear of its own in the hand or the bag — the net where the water suits it —, else the hands)
-  Tr.gear = function (v, x, y) {
-    const tl = Tr.tool(v, 'pescar'); const P = G.Pesca;
-    if (tl.key && P && x !== undefined) { const c = P.can(v, x, y, tl.how); if (!c.ok && /funda/.test(c.why || '')) { const o = WORKS.pescar.tools.find(q => q[1] !== tl.how && Inv.list(v).some(it => it.d.kind === q[0])); if (o) { const k = Inv.list(v).find(it => it.d.kind === o[0]).k; return { key: k, kind: o[0], how: o[1], mul: 1, hand: false }; } } }
-    return tl;
+  // (the way the body fishes now is the thing in its hand — the net, the rod, the spear —, the player's choice by the quick keys;
+  // with none in the hand, the hands: a rod on the back does not cast itself)
+  Tr.gear = function (v) {
+    const tl = Tr.tool(v, 'pescar');
+    return tl.key && tl.hand ? tl : { key: null, kind: null, mul: 1, how: 'maos', why: '', slow: '', hand: false };
   };
   I.add({
     id: 'peixe', prio: 3.2, reach: 1.6, here: true, work: 'pescar', // (here: always a stride straight before the body, wherever it looks)
     find(ctx) {
-      const S = G.S; const wade = G.Avatar.wade(); const tl = Tr.tool(ctx.v, 'pescar');
+      const S = G.S; const wade = G.Avatar.wade(); const tl = Tr.gear(ctx.v);
       // (with a gear in the hand the water may be a stride or two before the feet — the bank of a river, the edge of the sea; a gear
       // in the bag, or the bare hands, only where the body stands in it: at the water's edge the drink and the rest come first)
       const bank = !!(tl.key && tl.hand); const reachW = bank ? (tl.how === 'linha' ? 2.4 : tl.how === 'rede' ? 2 : 1.3) : 0.7;
@@ -558,7 +561,7 @@
     run(ctx, t) {
       const b = t.b; const v = ctx.v; const f = face(ctx, t.X, t.Z); let tl = Tr.tool(v, 'ceifar');
       if (tl.key && loaded(v)) tl = { key: null, mul: WORKS.ceifar.bare, kind: null }; // (the arms full: the hands pull the next sheaf)
-      const dur = WT.reap / wm(v) / Math.max(0.05, tl.mul);
+      const dur = WT.reap / wm(v) / Math.max(0.05, tl.mul); slowSay('ceifar', tl);
       stroke({ id: 'ceifar', p: 'campo', target: t, t: tl.key ? tl : null, dur, contact: dur * 0.82, f, anim: tl.key ? 'ceifar' : 'colher-mato',
         op: w => {
           const c = b.crops && b.crops[t.k]; if (!G.S.buildings.has(b.id) || !c || c.s !== 3) return { ok: false, why: 'Não há o que colher aqui agora.' };
@@ -614,7 +617,7 @@
     },
     run(ctx, t) {
       const v = ctx.v; const f = face(ctx, t.X, t.Z); const tl = Tr.tool(v, 'cavar'); const g = AN('cavar');
-      const dur = (g.dur || WT.clay) / wm(v) / Math.max(0.05, tl.mul);
+      const dur = (g.dur || WT.clay) / wm(v) / Math.max(0.05, tl.mul); slowSay('cavar', tl);
       stroke({ id: 'cavar', p: 'barro', target: t, t: tl.key ? tl : null, dur, contact: dur * 0.92, f, anim: tl.kind === 'enxada' ? 'hoe' : tl.key ? 'pa' : 'cavar-maos', vact: tl.kind === 'enxada' ? 'rake' : tl.key ? 'dig' : 'gather',
         op: w => {
           if (!bankAt(G.S, Math.floor(t.x), Math.floor(t.y))) return { ok: false, why: 'Aqui não há mais barro.' };
