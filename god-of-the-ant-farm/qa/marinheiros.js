@@ -197,11 +197,14 @@ if (on('m5')) {
   if (!s || !live(() => s.st === 'go', 90)) ok('m5 a tripulação morre a bordo', false, 'nenhum navio saiu');
   else {
     M.viver(8); const crew0 = Nv.aboardOf(s); const rid = s.route; led.length = 0;
+    // (another merchant of the same route already out when the case armed it — the ready world can open with one on its way home,
+    // and the case's hand sends a second on the route at once —: the drifting hull is what must not hold it, T-1500)
+    const out0 = new Set(S.ships.filter(q => q.route === rid && q !== s).map(q => q.id));
     god(() => { for (const v of crew0) V.kill(v, 'god', true); }); M.viver(1);
     const adrift = !!s.ghost && s.st === 'deriva' && !s.route; const nv1 = novas();
     // (the hull drifts until it breaks or is found; and the route is free for another ship of the towns)
-    live(() => !S.ships.includes(s), 300, 2); const free = !S.ships.some(q => q.route === rid); const nv2 = novas();
-    ok('m5 a tripulação morre a bordo: o casco fica à deriva, a rota fica livre', adrift && free && !led.filter(e => e[8] === 'soldo' && crew0.some(v => v.id === e[9])).length && !nv1.length && !nv2.length, `${crew0.length} mortos a bordo; o casco: ${adrift ? 'à deriva' : `«${s.st}»`}${S.ships.includes(s) ? ', ainda no mar' : ', levado pelo mar'}; a rota livre: ${free}; verificador: ${nv1.concat(nv2).length ? nv1.concat(nv2).slice(0, 2).join(' | ') : 'limpo'}`);
+    live(() => !S.ships.includes(s), 300, 2); const free = !S.ships.some(q => q.route === rid && !out0.has(q.id)); const nv2 = novas();
+    ok('m5 a tripulação morre a bordo: o casco fica à deriva, a rota fica livre', adrift && free && !led.filter(e => e[8] === 'soldo' && crew0.some(v => v.id === e[9])).length && !nv1.length && !nv2.length, `${crew0.length} mortos a bordo; o casco: ${adrift ? 'à deriva' : `«${s.st}»`}${S.ships.includes(s) ? ', ainda no mar' : ', levado pelo mar'}; a rota livre: ${free}${out0.size ? ` (${out0.size} mercante(s) da mesma rota já no mar antes do caso)` : ''}${free ? '' : ' (nela: ' + S.ships.filter(q => q.route === rid && !out0.has(q.id)).map(q => `#${q.id} ${q.kind} «${q.st}» ${q.id > s.id ? 'nascido depois' : 'de antes'}, tr ${q.tr ? 1 : 0}`).join('; ') + `; a rota t ${(S.seaRoutes.find(q => q.id === rid) || {}).t})`}; verificador: ${nv1.concat(nv2).length ? nv1.concat(nv2).slice(0, 2).join(' | ') : 'limpo'}`);
   }
 }
 
