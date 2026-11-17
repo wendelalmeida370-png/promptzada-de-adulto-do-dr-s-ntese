@@ -46,6 +46,9 @@
   // (the presets in the order the menu shows them, with their names)
   R3.QNAMES = [['baixa', 'Leve'], ['media', 'Média'], ['alta', 'Alta'], ['ultra', 'Ultra']];
   R3.QUAL = QUAL;
+  // (a part with presets of its own — the nature's pillars, NATUREZA.md — adds its fields to every preset from its own file, never by
+  // editing this table: R3.qualAdd('mata', { baixa: 0, media: 0.5, alta: 0.8, ultra: 1 }); D-466)
+  R3.qualAdd = function (k, byQ) { if (!byQ) return; for (const q in QUAL) if (byQ[q] !== undefined) QUAL[q][k] = byQ[q]; qc = null; };
   R3.q = (() => { try { return localStorage.getItem('gotaf-3dq') || 'media'; } catch (e) { return 'media'; } })();
   if (!QUAL[R3.q]) R3.q = 'media';
   // (a preset, and the player's own changes over it: view distance, people drawn, resolution, shadows, grass)
