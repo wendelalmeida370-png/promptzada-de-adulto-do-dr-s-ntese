@@ -366,5 +366,40 @@ if (on('o15')) {
   ok('o15 a salga gasta carne ou peixe, nunca o grão: do peixe o bacalhau, da carne a carne-seca', !bad.length && !errs(), `${f ? f.name : '?'}: ${say.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
 }
 
+// ================================================================ o16 a batch of the forge in a save from before
+// (the forge of before had one recipe for each good — «armas», «ferramentas» — of the iron ore: a save of then with a batch in
+// the forge opens with the batch of iron, for a people that knows the iron, and it ends making weapons of iron; for one that does
+// not know the iron, the step of the world ends it — no iron forged without the art: D-441, L-1366)
+if (on('o16')) {
+  const bad = [], said = [];
+  for (const knows of [true, false]) {
+    const c = forgeWorld(); const { f, b } = c; const fr = 'f:' + f.id;
+    if (!b || !c.v) { bad.push('nenhuma forja ou ferreiro'); break; }
+    if (!b.built) god(() => V.completeBuilding(b));
+    teach(f, 'ferro'); give(fr, 'minerio', 12, null, 'mina'); for (const op of Of.batches(b)) god(() => Of.cut(op, 'prova'));
+    const op = god(() => Of.start(b, 'armas.ferro', c.v)); if (!op) { bad.push('a fornada de ferro não começou'); break; }
+    for (let k = 0; k < 600 && A.live(op) && op.data.s < 1; k++) { M.viver(0.1); if (k % 20 === 0) keepSmith(c); }
+    // (the save as the forge of before wrote it: the batch by the good's name alone; the people's art as the case asks)
+    if (!knows) delete f.tech.known.ferro;
+    const o = JSON.parse(G.Save.serialize()); const rec = (o.acts || []).find(q => q.id === op.id); if (rec) rec.data.p = 'armas';
+    const ore0 = D.get('b:' + b.id, 'minerio');
+    G.Save.apply(o); S = G.S; const p2 = A.get(op.id) && A.get(op.id).data.p; M.viver(knows ? 0.1 : 1.5); // (the overseer of the batches looks once a second)
+    const op2 = A.get(op.id);
+    if (knows) {
+      const a0 = O.amount(fr, 'armas', 'ferro') + O.amount('b:' + b.id, 'armas', 'ferro');
+      for (let k = 0; k < 9000 && op2 && A.live(op2); k++) { M.viver(0.1); if (k % 20 === 0) keepSmith(Object.assign({}, c, { v: S.villagers.get(c.v.id) })); }
+      const a1 = O.amount(fr, 'armas', 'ferro') + O.amount('b:' + b.id, 'armas', 'ferro') + O.amount('v:' + c.v.id, 'armas', 'ferro');
+      if (p2 !== 'armas.ferro' || !op2 || op2.st !== 'ok' || !(a1 > a0 + 0.5)) bad.push(`quem sabe o ferro: a fornada ${p2}, ${op2 ? op2.st : 'sumiu'}, armas de ferro ${a0} → ${a1}`);
+      said.push(`quem sabe o ferro: a fornada de antes abriu como ${p2} e acabou (${op2 ? op2.st : '?'}), ${Math.round((a1 - a0) * 100) / 100} armas de ferro`);
+    } else {
+      const ended = op2 && !A.live(op2);
+      const ore1 = D.get('b:' + b.id, 'minerio');
+      if (!ended || p2 !== 'armas' || (op2.end && op2.end.why !== 'sem receita') || ore1 < ore0 - 1e-6) bad.push(`quem não sabe o ferro: a fornada ${p2}, ${op2 ? op2.st + ' ' + JSON.stringify(op2.end) : 'sumiu'}, o minério na prateleira ${ore0} → ${ore1}`);
+      said.push(`quem não sabe o ferro: a fornada de antes ${ended ? 'acabou no passo do mundo (' + (op2.end && op2.end.why) + ')' : 'SEGUE'}, o minério dela na prateleira (${ore0} → ${ore1})`);
+    }
+  }
+  ok('o16 a fornada da forja de um save de antes: de ferro para quem sabe o ferro; para quem não sabe, acaba', !bad.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+}
+
 console.log(fails.length ? `FALHARAM: ${fails.join(', ')}` : 'tudo passou');
 process.exit(fails.length ? 1 : 0);

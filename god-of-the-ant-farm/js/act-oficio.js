@@ -667,6 +667,12 @@
     }
     return h;
   };
+  // (a batch of the forge in a save from before is of the iron ore — the only metal the forge of before worked —: it goes on as a
+  // batch of iron, the recipe it already is, for a people that knows the iron; for one that does not, the step of the world ends
+  // it, «sem receita», as a batch whose recipe is gone — 20h, D-441, L-1366)
+  (G.saveHooks = G.saveHooks || []).push({ save() {}, load() {
+    for (const op of A.all()) if (op.def === 'oficio' && live(op) && op.data && op.data.of === 'forja' && (op.data.p === 'armas' || op.data.p === 'ferramentas') && G.Civ && G.Civ.has(op.fac, 'ferro')) op.data.p += '.ferro';
+  } });
   A.hooks.canon.push(['oficio', () => A.all().filter(op => op.def === 'oficio' && live(op)).map(op => [op.id, op.at, op.data.p, op.data.s, r2(op.data.got), r2(op.data.massa), r2(op.data.cru), r2(op.data.forno), r2(op.data.feitos), r2(op.data.quebrados)])]);
 
   // (a workshop that falls: what was on its shelf is lost with it, in the ledger — the village's own door now, V.keptGone, for

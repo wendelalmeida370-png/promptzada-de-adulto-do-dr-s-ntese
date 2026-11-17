@@ -1058,7 +1058,7 @@
     if (t === 'curious') {
       // the monkeys: they come to look, at a few paces; the bold one takes the food from the hand and is up a tree with it
       const c = Me.trait(a, 'c');
-      if (d < 1.3 && v.carry && v.carry.k === 'food' && v.carry.n > 0.2 && G.R() < 0.3 + 0.4 * c && G.Depot.use('v:' + v.id, 'food', Math.min(1, v.carry.n), { code: 'macaco', by: a.id, part: true }).ok) {
+      if (d < 1.3 && v.carry && v.carry.k === 'food' && v.carry.n > 0.2 && G.R() < 0.3 + 0.4 * c && G.Depot.use('v:' + v.id, 'food', Math.min(1, v.carry.n), { op: v.carry.op || 0, code: 'macaco', by: a.id, part: true }).ok) { // (a load of an operation — the porter's crate — lost to the monkey in its books: L-1365)
         a.hunger = Math.max(0, a.hunger - 0.4); G.Vg.emote(v, 'angry', 2); Me.gesto1(a, ['threat', 'call'], undefined, v.id);
         L.count('gente:roubo-macaco'); const tr = A.treeNear(a.x, a.y, 6); if (tr) A.startClimb(a, tr, true); else shy(a, v, true);
         return true;
