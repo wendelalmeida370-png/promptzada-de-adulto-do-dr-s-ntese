@@ -1481,7 +1481,10 @@
       let ax, ay, bx, by;
       if (tx > x) { ax = x + 1; ay = y; bx = x + 1; by = y + 1; } else if (tx < x) { ax = x; ay = y; bx = x; by = y + 1; } else if (ty > y) { ax = x; ay = y + 1; bx = x + 1; by = y + 1; } else { ax = x; ay = y; bx = x + 1; by = y; }
       const mid = proj((ax + bx) / 2, (ay + by) / 2, low); if (!inV(mid)) continue;
-      if (st.frozen) continue;
+      // (a fall held in the ice of a sudden winter: its sheet still, white-blue, the icicles at its lip)
+      if (st.frozen) { if (st.drop < 0.3) continue; ctx.save(); const a0 = proj(ax, ay, top), b0 = proj(bx, by, top), a1 = proj(ax, ay, low), b1 = proj(bx, by, low);
+        ctx.fillStyle = 'rgba(214,234,246,0.85)'; ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(b0[0], b0[1]); ctx.lineTo(b1[0], b1[1]); ctx.lineTo(a1[0], a1[1]); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 0.8; ctx.beginPath(); for (let k = 0; k < 7; k++) { const u = (k + 0.5) / 7; const p0 = proj(ax + (bx - ax) * u, ay + (by - ay) * u, top); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p0[0], p0[1] + 2 + G.hash(k * 7 + x + y * 3) * 5); } ctx.stroke(); ctx.restore(); continue; }
       const big = st.kind === 'queda'; const qk = Math.min(1, 0.45 + Math.log2(1 + (st.q || 1)) * 0.08);
       ctx.save(); ctx.lineCap = 'round';
       if (big) {
