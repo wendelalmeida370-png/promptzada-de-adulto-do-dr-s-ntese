@@ -428,10 +428,56 @@ velocidade, o chão, o modo de andar, o ato). A 20a lê com defesa (se um campo 
 a disparada fazem a corrida, o andar abaixo de 2,6 m/s fica andar —; sem eles, o rumo e a velocidade do próprio corpo. O `strafe`, o
 `aimYaw`, o `crouch` e o `dodge` ainda não mudam a pose: o andar de lado e a esquiva têm a pose da onda 2.)
 
+**A forma final (20b, D-356, D-367).** `G.Avatar.motion()` → um objeto só, **refeito a cada chamada** (nada alocado por quadro: quem
+precisa guardar copia; ler não muda o corpo), ou `null` sem corpo:
+
+| Campo | O que é |
+|---|---|
+| `X, Y, Z`, `yaw` | o corpo **desenhado** agora, entre os dois últimos passos fixos (1/60 s): a posição e o rumo interpolados; `Y` com o degrau alisado |
+| `floorY`, `yOff` | onde os pés pisam no mundo (o chão do mundo, `b.Y`) e quanto a altura desenhada ainda está atrás dele (um degrau subido: negativo, volta a 0 em ~0,25 s) — **os pés da 20a acham o chão pelo mundo, a bacia pela altura desenhada** |
+| `vx, vz, vy`, `speed` | a velocidade de verdade (o que os pés andaram no último passo), m/s |
+| `fwd`, `side` | a velocidade no quadro do corpo: à frente (+Z do corpo, o rumo) e à direita |
+| `accX, accZ`, `accF, accS` | a aceleração do passo (m/s², alisada a 20/s), no mundo e no quadro do corpo — o arranque, a freada, a curva |
+| `turnV` | o giro medido do rumo, rad/s (+ para o lado de +yaw) |
+| `gait` | `'parado'` · `'andar'` · `'trote'` · `'disparada'` · `'agachado'` — pela velocidade contra os passos desta pessoa, com uma faixa de ±4–6% (não pisca) |
+| `paces` | `{ walk, jog, sprint }` desta pessoa agora (m/s: a estrada, a ladeira, a carga já contadas) — para casar a cadência com o passo |
+| `strafe`, `aimYaw` | andando de lado (a mira travada ou mirando: o rumo do corpo separado do passo) e para onde o corpo olha ou mira (o alvo, o olho) |
+| `crouch` | agachado (alternado) |
+| `dodge` | `{ kind: 'rolar' \| 'passo' \| 'recuo', u (0–1), yaw (o rumo da esquiva), t, dur }` ou `null` |
+| `pivot` | o giro de 180° em velocidade: `{ u (0–1), dir (±1, o lado do giro) }` ou `null` |
+| `ground`, `loco`, `wade`, `swim` | no chão; o estado do controle (`'ground'`, `'air'`, `'dodge'`, `'climb'`, `'stair'`, `'swim'`, `'seat'`, `'sleep'`, `'down'`, `'busy'`); a água nas pernas (m); nadando |
+| `stamina`, `winded`, `sprintK` | o fôlego (0–1), sem fôlego (o arquejo), quanto da disparada (0–1) |
+| `landT`, `airT`, `jumpT` | a aterrissagem dura em curso (s), há quanto está no ar, há quanto pulou |
+| `act`, `actU` | o ato em curso `{ anim, u, t, dur, drive (a velocidade do empurrão agora), moveScale }` ou `null`; `u` de 0 a 1 |
+| `f`, `step` | a fração do quadro entre os dois passos, e o passo (1/60) |
+
+Os mesmos campos vivem no estado do corpo (`G.Avatar.state()`, `b`: `gait`, `accX`, `turnV`, `strafe`, `aimYaw`, `crouch`, `dodge`,
+`pivot`, `drawX/drawY/drawZ/drawYaw`, `yOff`), escritos só pelo controle. **Para a linha do `People3D.avatar`** (da 20a): o lugar e o
+rumo a desenhar são `motion().X/Y/Z/yaw`; enquanto a linha não os lê, o `modes.js` chama `G.Avatar.present()` depois do
+`Avatar.frame`, que os escreve no `People3D.avatar`; a linha que já os lê marca `People3D.avatar.drawn = true` e o `present` não toca
+nela. `G.Avatar.crouched()`, `G.Avatar.dodging()` (`{ kind, u, yaw }`), `G.Avatar.paces()` e `G.Avatar.pos()` (o lugar desenhado,
+para a câmera e as mãos) são as perguntas curtas.
+
 ### 4.5 As ações com movimento (a 20b faz a porta, a onda 2 usa)
 O `Avatar.act` ganha: o empurrão do próprio gesto (`drive`: uma curva de velocidade no rumo do corpo — o avanço de um golpe, o
 rolar da esquiva), quanto o corpo ainda anda durante o ato (`moveScale`), as janelas em que o ato pode ser cortado por outro
 (`cancelAt`), o giro permitido durante o ato, e o ato que vira para o alvo travado. Documente a forma final aqui.
+
+**A forma final (20b, D-366).** `G.Avatar.act({ … })` aceita, além do de sempre (`anim`, `dur`, `lock`, `world`, `op`, `contact`,
+`then`, `fail`, `cut`, `keep`, `face`, `to`, `toT`, `free`, `reach`, `vact`, `at`, `done`):
+
+| Campo | O que faz |
+|---|---|
+| `drive` | o empurrão do próprio gesto, no rumo do corpo: `[[u, m/s], …]` (u de 0 a 1 no tempo do ato, linear entre os pontos) ou `u => m/s`. As paredes, os bichos e as pessoas o param como param os pés (`collide`); de uma borda o corpo cai. Ex.: a estocada — `drive: [[0, 4.5], [0.6, 3], [1, 0]]` em 0,5 s leva ~1,5 m |
+| `moveScale` | 0 a 1: quanto do passo do jogador fica durante o ato (0, o de sempre: os pés parados num ato `lock`; 0,3: andar devagar puxando o arco) — o mesmo passo, o mesmo peso, a mesma colisão |
+| `turn` | rad/s: quanto o corpo gira durante o ato — para `face` (em vez da virada de sempre), ou, com `moveScale`, para onde o jogador empurra |
+| `face: 'lock'` | virado para o alvo preso (`Cam3D.lockOn`) o ato inteiro, seguindo-o |
+| `cancelAt` | as janelas do tempo do ato em que ele pode ser cortado: `[[u0, u1], …]`. Fora delas, `Avatar.act` de outro ato devolve `false` (com `force: true` corta assim mesmo) e a esquiva espera; dentro delas (e depois do fim), o ato novo ou a esquiva o cortam pelo corte de sempre (`cut`, o que ele pedira ao mundo e o mundo não fez não acontece). Sem `cancelAt`, corta-se a qualquer hora, como antes. `G.Avatar.cuttable()` diz se agora pode |
+
+O tempo do ato (`u`) é o do mundo para um ato `world` (os segundos de quem faz o mesmo, D-035) e o do corpo para os outros; o
+`drive` é lido nesse tempo a cada passo do corpo. **A esquiva corta um ato** onde ele pode ser cortado (um ato sem janelas: sempre).
+O que um ato faz ao mundo continua só pelo `op` no contato, dentro do passo do mundo (L-139): o `drive` muda onde o corpo está, como
+os pés mudam.
 
 ### 4.6 Os clipes (a 20a faz e documenta aqui o guia para a onda 2)
 Um **clipe** é um gesto do corpo em chaves no tempo dele (0 a 1): o machado descendo, a picareta, a vara lançada. Mora no
@@ -496,6 +542,34 @@ erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa 
 - `G.Input3D.def(nome, rótulo, teclas)` (um módulo traz a sua ação), `on(nome, f)` (o aperto; `f` → true toma a ação),
   `onUp(nome, f)` (o soltar), `fire(nome)`, `press(nome, on)` (o botão da tela), `down[nome]` (segurando agora).
 - A 20b acrescenta os botões do mouse, o controle de jogo e os botões de toque por contexto, e documenta aqui.
+
+**A forma final (20b, D-355).**
+- **As teclas de toda ação**, num lugar só: `binds` (teclado e mouse: `e.key` em minúsculas, e `mouse0` o clique esquerdo, `mouse1` o
+  botão do meio, `mouse2` o direito, `mouse3`/`mouse4` os laterais, `wheelup`/`wheeldown` a roda) e `padBinds` (o controle, o mapa
+  padrão: `pad0` A, `pad1` B, `pad2` X, `pad3` Y, `pad4` LB, `pad5` RB, `pad6` LT, `pad7` RT, `pad8` Back, `pad9` Start, `pad10` L3,
+  `pad11` R3, `pad12`–`pad15` a cruz ↑ ↓ ← →, `pad16` o do meio). `G.Input3D.def(nome, rótulo, teclas, pad)` traz uma ação com as suas
+  teclas e o seu botão do controle; `rebind(a, k)` / `rebindPad(a, k)`; o menu (aba Controles) muda os dois pelo próximo aperto.
+- **As ações de agora e as teclas**: andar `W A S D` / setas (o trote; no controle e no toque o comprimento do empurrão), `correr`
+  Shift (disparar; no controle L3, uma trava), `andar` Caps Lock (o andar devagar, pela luz da tecla), `pular` Espaço / A, `esquivar`
+  Q / B, `agachar` C / LB (alternar), `interagir` E / X, `outra` F / Y, `atacar` clique esquerdo / RT, `defender` clique direito / LT,
+  `guardar` R / RB, `travar` botão do meio ou Z / R3, `ombro` T, `sentar` X, `acenar` V, `dancar` B, `ficha` Tab, `diario` J, `tela` H,
+  `deus` G, `menu` Esc / Start, `inventario` I / Back, `rapido1`…`rapido5` 1–5 (no controle a cruz: 1 ↑, 2 →, 3 ↓, 4 ←). Nada de Ctrl
+  (Ctrl+W fecha a aba) nem de Alt (tira o foco). `outra`, `atacar`, `defender` e `guardar` não fazem nada até a onda 2 as escutar
+  (`on`); `travar` sem quem a tome trava a pessoa ou o bicho mais perto à frente (`G.Modes.lockCandidate`) ou volta o olho para as
+  costas; `defender` é também o mirar do arco (a onda 2 chama `G.Cam3D.aim(true)` enquanto ele está segurado com um arco na mão).
+- `G.Input3D.label(a)` diz as teclas de uma ação como a tela as mostra — as do controle quando é ele nas mãos (`G.Input3D.device`:
+  `'kb'`, `'pad'`, `'touch'`); `keyLabel(a)` / `padLabel(a)` cada uma.
+- `G.Input3D.axes()` → `{ mx, mz, run, walk }` (analógico, de todos os aparelhos juntos); `G.Input3D.poll(rdt)` lê o controle (o
+  `modes.js` chama a cada quadro); `G.Input3D.PAD` (zonas mortas e curvas), `G.Input3D.TOUCH` (o anel, a zona morta, o limiar da
+  disparada).
+- **Os botões do toque são um registro**: `G.Input3D.button(ação, { label (palavra ou função), when () → mostrar agora, toggle, on () →
+  ligado, hold (apertar e soltar com o dedo), slot: 'acao' (em volta do polegar direito) | 'canto', order })`, `unbutton(ação)`. A
+  tela monta os botões do registro e os mostra conforme o `when` (alguns por segundo). Os de agora: Pular, E, Correr (alternar),
+  Esquivar (no chão), Agachar (alternar), Travar (com alguém à frente, ou travado), ☰. A 20c põe o da mochila na sua barra; a onda 2
+  registra os do golpe e da defesa (`hold: true`).
+- **O mouse e os painéis**: um painel que precisa do cursor chama `G.Input3D.free()` (nunca `unlock`/`clear`: regra 122) — as teclas
+  seguradas ficam —, e o `Modes.setPanel(null)` do fecho pede o mouse de volta (`regain`), sem outro clique onde o navegador deixa.
+  `G.Input3D.release()` solta tudo, cada soltar ouvido pelo `onUp` (o foco perdido, a saída do corpo).
 
 ### 4.8 A tela do corpo — `G.IncUI` e `G.Modes`
 - `G.IncUI.hud()`, `G.IncUI.root()`; o lugar da barra de atalhos `.ih-hotbar` (da 20c); `G.IncUI.closers` (cada painel novo põe o seu

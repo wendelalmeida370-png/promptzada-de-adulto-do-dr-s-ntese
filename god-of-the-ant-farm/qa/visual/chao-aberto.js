@@ -78,10 +78,15 @@ function check() {
     const q = ins.p.stairs.find(f => f.kind !== 'degraus' && f.lv0 === ins.lv && ins.x > f.r[0] && ins.x < f.r[2] && ins.z > f.r[1] && ins.z < f.r[3]); if (q) bad.push(`dentro do lance ${q.id} de ${ins.b.type}#${ins.b.id}, no piso de baixo, em ${ins.x.toFixed(2)},${ins.z.toFixed(2)}`); }
   else if (!W.walkableXY(v.x, v.y) && !G.Possess.afloat(v)) bad.push(`fora, num lugar onde o mundo não anda (${v.x.toFixed(2)},${v.y.toFixed(2)})`);
 }
+// (a ledge in the way — the edge of the lot standing more than a step over the street — is taken as a player takes it: pushed at a
+// moment, then the jump at it, the only way a ledge is climbed (D-360); the auto-climb of before took it after 0,22 s of pushing,
+// and the crossings counted it as walked — T-1383; how many needed the hands is said)
+let hands = 0;
 function walkTo(X, Z, max, near) {
-  let k = 0, still = 0, last = [st().X, st().Z];
+  let k = 0, still = 0, last = [st().X, st().Z], atLedge = 0;
   for (; k < (max || 300); k++) {
     const dx = X - st().X, dz = Z - st().Z; if (Math.hypot(dx, dz) < (near || 0.15)) break;
+    if (st().block === 'ledge' && st().loco === 'ground' && ++atLedge === 8) { IN.jump = true; hands++; } else if (st().block !== 'ledge') atLedge = 0;
     IN.camYaw = Math.atan2(dz, dx); IN.mz = 1; IN.mx = 0; frame(); check();
     if (Math.hypot(st().X - last[0], st().Z - last[1]) < 0.004) { if (++still > 25) break; } else still = 0; last = [st().X, st().Z];
   }
@@ -110,7 +115,7 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
     done.push(`${b.type}#${b.id} ${sd.name}`);
   }
   ok('2. o corpo entra andando da rua no chão da praça e da feira, por cada lado, e volta para a rua', tried > 0 && inN === tried && outN === tried && lots.some(b => b.type === 'praca') && lots.some(b => b.type === 'feira'),
-    `${tried} travessias (${lots.length} lotes): entrou em ${inN}, voltou em ${outN}${why.length ? ' — ' + why.slice(0, 3).join(' · ') : ''}`); }
+    `${tried} travessias (${lots.length} lotes): entrou em ${inN}, voltou em ${outN}; com as mãos (o pulo na borda) ${hands}${why.length ? ' — ' + why.slice(0, 3).join(' · ') : ''}`); }
 
 // ------------------------------ 3. the rostra ------------------------------
 { const rost = open.filter(b => b.type === 'praca').map(b => ({ b, p: Sp.planNow(b) })).filter(o => o.p && o.p.stairs.some(s => s.kind !== 'degraus' && s.lv0 === 0 && s.lv1 === 1));
@@ -158,9 +163,11 @@ const placeAt = (X, Z) => { const ok0 = G.Avatar.place(X / TL, Z / TL); for (let
   else { let runs = 0, wedged = 0, under = 0, top = 0, climbed = 0; const exW = [], exU = [], exT = [];
     for (const c of high) for (const j of [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]) {
       const { b, sd, a } = c; const o = sd.P(a, 2.3), i = sd.P(a, -1.0); placeAt(o[0], o[1]); stop(); runs++;
-      const yaw = Math.atan2(i[1] - o[1], i[0] - o[0]), edge = sd.P(a, 0); let jumped = false, w = 0, u = 0, cl = false;
+      const yaw = Math.atan2(i[1] - o[1], i[0] - o[0]), edge = sd.P(a, 0); let jumped = false, w = 0, u = 0, cl = false, again = false, atL = 0;
       for (let k = 0; k < 150; k++) {
         const s0 = st(); if (!jumped && Math.hypot(edge[0] - s0.X, edge[1] - s0.Z) <= j) { IN.jump = true; jumped = true; }
+        // (fallen short at its foot: the jump again, as the player — the subida automática of before took it after 0,22 s, T-1383)
+        else if (jumped && !again && s0.loco === 'ground' && s0.block === 'ledge' && ++atL > 10) { IN.jump = true; again = true; }
         IN.camYaw = yaw; IN.mz = 1; IN.mx = 0; frame(); check();
         const s = st(), fl = G.Avatar.floorAt(s.X, s.Z); if (s.loco === 'climb') cl = true;
         if (s.Y < fl - 0.05) { if (!u++ && exU.length < 2) exU.push(`${b.type}#${b.id} ${sd.name}, pulo a ${j} m: os pés ${(fl - s.Y).toFixed(2)} m sob o chão (${s.loco})`); }

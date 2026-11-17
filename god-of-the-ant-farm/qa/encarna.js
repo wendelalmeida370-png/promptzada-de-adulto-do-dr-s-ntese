@@ -658,6 +658,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // the key I, in the god's view: someone near the middle of the screen
     G.UI.select(null); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' })); window.dispatchEvent(new KeyboardEvent('keyup', { key: 'i' })); out.ikey = G.Modes.state !== 'GOD'; __E.until(() => G.Modes.state === 'INC', 300);
     // the fingers: a thumb on the left half pushed up walks the body forward; the on-screen buttons show
+    // (on a body out on the street, as every part that walks one takes it — __E.adults: the I key takes the nearest, who may be
+    // inside a house, a room's wall a hand ahead where the street's map is open; then one out of doors, T-1389)
+    { const b1 = G.Possess.body(); const o = b1 && b1.inside && __E.adults(s)[0]; if (o) { __E.leave(); __E.enter(o); } }
     { const cv = G.Realm.canvas(); const b = G.Possess.body(); const x0 = b.x, y0 = b.y; G.Cam3D.yaw = __E.openYaw(x0, y0); // (the thumb walks the body ahead, as the camera looks: toward open ground — the way the part before left the camera may be shut, T-1056)
       const T = (id, x, y) => new Touch({ identifier: id, target: cv, clientX: x, clientY: y });
       cv.dispatchEvent(new TouchEvent('touchstart', { changedTouches: [T(1, 200, 450)], touches: [T(1, 200, 450)], cancelable: true, bubbles: true }));
@@ -829,10 +832,13 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       const rk = G.Nature.addRock(spot[0] + 0.5, spot[1] + 0.5, 40); const st0 = G.Space.stones(rk)[0]; const top = G.Space.stoneTop(st0.X, st0.Z); const g0 = G.W.hAt(rk.x, rk.y) * HM;
       // (from the west, three metres off, pushing east: up its face with the hands, along the top, and down the other side)
       G.Avatar.place(rk.x - 3 / TL, rk.y); __E.f(4); G.Cam3D.yaw = 0; G.Cam3D.pitch = 0.2; G.Input3D.down.frente = true;
-      const y0 = st.Y; let bad = 0, climbF = 0, sunk = 0, maxY = -1e9, onTop = 0; const d0 = A().escalada || 0;
-      for (let k = 0; k < 150; k++) { G.Main.frameFor(33); st.yaw = 0; const b = __E.body(); if (!G.W.walkableXY(b.x, b.y)) bad++; if (G.Avatar.climbing()) climbF++; if (!G.Avatar.climbing() && st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.1) sunk++; maxY = Math.max(maxY, st.Y); if (!G.Avatar.climbing() && G.Space.stoneTop(st.X, st.Z) > g0 + 0.9 && Math.abs(st.Y - G.Space.stoneTop(st.X, st.Z)) < 0.05) onTop++; }
+      // (a ledge is taken only when the player asks — the jump at it, D-360: pushed against the face half a second the body stays at
+      // its foot; then the jump key, as a player presses it, and the hands take the edge — T-1381)
+      const y0 = st.Y; let bad = 0, climbF = 0, sunk = 0, maxY = -1e9, onTop = 0, atFace = 0, pushClimb = -1; const d0 = A().escalada || 0;
+      for (let k = 0; k < 150; k++) { G.Main.frameFor(33); st.yaw = 0; const b = __E.body(); if (!G.W.walkableXY(b.x, b.y)) bad++; if (G.Avatar.climbing()) climbF++; if (!G.Avatar.climbing() && st.Y < G.Avatar.floorAt(st.X, st.Z) - 0.1) sunk++; maxY = Math.max(maxY, st.Y); if (!G.Avatar.climbing() && G.Space.stoneTop(st.X, st.Z) > g0 + 0.9 && Math.abs(st.Y - G.Space.stoneTop(st.X, st.Z)) < 0.05) onTop++;
+        if (pushClimb < 0 && st.block === 'ledge' && ++atFace > 15) { pushClimb = climbF; G.Input3D.press('pular'); } }
       G.Input3D.down.frente = false; __E.f(10);
-      out.climb = { top: +(top - g0).toFixed(2), rose: +(maxY - y0).toFixed(2), climbF, onTop, deed: (A().escalada || 0) - d0, past: +(st.X - st0.X).toFixed(2), down: +(st.Y - G.Avatar.floorAt(st.X, st.Z)).toFixed(2), hurt: st.hurt || 0, bad, sunk, cam: G.Cam3D.inside };
+      out.climb = { top: +(top - g0).toFixed(2), rose: +(maxY - y0).toFixed(2), climbF, pushClimb, onTop, deed: (A().escalada || 0) - d0, past: +(st.X - st0.X).toFixed(2), down: +(st.Y - G.Avatar.floorAt(st.X, st.Z)).toFixed(2), hurt: st.hurt || 0, bad, sunk, cam: G.Cam3D.inside };
       G.Nature.removeRock(rk); __E.f(2);
     }
     // a house wall is no ledge: pushing against it, the body stays at its foot
@@ -882,7 +888,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     out.qa = __E.qa(); out.err = JSON.stringify(G.modErr);
     return out;
   });
-  ok('e13 uma pedra grande no caminho: o corpo a escala com as mãos, anda por cima e desce do outro lado', e13.climb && e13.climb.climbF > 5 && e13.climb.deed >= 1 && e13.climb.onTop > 3 && e13.climb.rose > e13.climb.top - 0.3 && e13.climb.past > 1 && Math.abs(e13.climb.down) < 0.06 && !e13.climb.hurt && !e13.climb.bad && !e13.climb.sunk, JSON.stringify(e13.climb));
+  ok('e13 uma pedra grande no caminho: empurrada, o corpo fica ao pé dela; pulando, a escala com as mãos, anda por cima e desce do outro lado', e13.climb && e13.climb.pushClimb === 0 && e13.climb.climbF > 5 && e13.climb.deed >= 1 && e13.climb.onTop > 3 && e13.climb.rose > e13.climb.top - 0.3 && e13.climb.past > 1 && Math.abs(e13.climb.down) < 0.06 && !e13.climb.hurt && !e13.climb.bad && !e13.climb.sunk, JSON.stringify(e13.climb));
   ok('e13 a parede de uma casa não se escala', !e13.tooHigh || (!e13.tooHigh.deed && !e13.tooHigh.climbF && !e13.tooHigh.bad && e13.tooHigh.rose < 0.3 && e13.tooHigh.x < e13.tooHigh.wall), e13.tooHigh ? JSON.stringify(e13.tooHigh) : 'nenhuma casa ao alcance (nada a provar)');
   ok('e13 sentar no chão (X) e levantar andando', e13.sit.ok && e13.sit.anim === 'rest' && e13.sit.after !== 'rest' && e13.sit.moved, JSON.stringify(e13.sit));
   ok('e13 acenar (V): o corpo acena e quem está perto responde', e13.wave.ok && e13.wave.anim === 'wave', JSON.stringify(e13.wave));

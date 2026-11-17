@@ -131,9 +131,12 @@ const inShell = (sh, q) => { const cx = (q.r[0] + q.r[2]) / 2, cz = (q.r[1] + q.
 // (the body walked with the world stopped — only the body moves —: each frame the stick toward a point, until there or stopped
 // fifteen frames; the highest it got, and whether it climbed with the hands)
 const still = () => G.Avatar.frame(RDT);
+// (a beast standing on the way — hard to the body, D-330 —, with the world stopped never leaves it: its ids are kept, for the proof's
+// hand to take it off and walk the flight again — T-1387)
+const beastsIn = new Set();
 const walkStill = (X, Z, max) => { let stuck = 0, hiY = -1e9, hands = false; let lastP = [st().X, st().Z];
   for (let k = 0; k < max; k++) { const s = st(); const dx = X - s.X, dz = Z - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mx = 0; IN.mz = 1; IN.run = false; s.yaw = yaw; still();
-    hiY = Math.max(hiY, st().Y); if (st().loco === 'climb') hands = true;
+    hiY = Math.max(hiY, st().Y); if (st().loco === 'climb') hands = true; if (st().block === 'beast' && G.Animals.near) G.Animals.near(st().X / TL, st().Z / TL, 1.2, a => beastsIn.add(a.id));
     if (Math.hypot(st().X - lastP[0], st().Z - lastP[1]) < 0.002) { if (++stuck > 15) break; } else stuck = 0; lastP = [st().X, st().Z]; }
   IN.mz = 0; return { hiY, hands }; };
 // (the body on a point of the world — metres —, facing a way: put there by the god's hand, lived again, a few frames)
@@ -183,6 +186,9 @@ if (part(1)) { const rows = []; let tried = 0, moved = 0, still = 0, lost = 0; c
     const pts = wayIn(d); let on = false; pathTo(pts[0][0], pts[0][1]);
     for (const q of pts) { for (let k = 0; k < 260 && !on; k++) { const s = st(); const dx = q[0] - s.X, dz = q[1] - s.Z; if (Math.hypot(dx, dz) < 0.15) break; const yaw = Math.atan2(dz, dx); IN.camYaw = yaw; IN.mz = 0.4; s.yaw = yaw; frame(); if (!v.inside && !W.walkableXY(v.x, v.y)) on = true; } if (on) break; }
     IN.mz = 0; if (!on) continue;
+    // (brought to rest before the standing is counted: the body brakes with its weight — D-357 — and slid on 5 to 9 cm after the stick
+    // was let go; what is proven is standing, not stopping. One that slid off the doorstep is not counted — T-1380)
+    for (let q = 0; q < 40 && st().speed > 0.01; q++) frame(); if (v.inside || W.walkableXY(v.x, v.y)) continue;
     // (the house as it stands: the world may remake it while the body is on its doorstep — the city raising a sobrado to an
     // insula in its place, a building site with no plan yet (Ci.upgradeHomes); the turn of the day moving its door (L-195) —:
     // the doorstep goes with it, and the world takes the body out as anyone (L-175). Such a house is set apart, from the step it
@@ -253,7 +259,7 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
   // Avatar.TUNE.stepUp: on a steep slope that ground is lower than the ground the feet step up from, and it says more than the
   // body finds)
   const UP = G.Avatar.TUNE.stepUp; let nf = 0, hi = 0, nw = 0, up1 = 0, noFoot = 0, maxRise = 0; const far = [], stops = [], besides = [], shallows = [];
-  let nNo = 0, upNo = 0, footNo = 0; const left = [];
+  let nNo = 0, upNo = 0, footNo = 0, beastsOff = 0; const left = [];
   for (const b of [...S.buildings.values()].filter(q => q.built && In.has(q)).sort((a, c) => a.id - c.id)) {
     const p = Sp.planNow(b); if (!p || !p.ok) continue; const y0 = Sp.plinth(b).y0; const lot = { w: b.w * TL, d: b.h * TL }; const fls = [];
     for (const h of p.holes) { const dd = h.door >= 0 ? p.doors[h.door] : null; if (!dd || !dd.outer || h.kind === 'janela') continue; const w = p.walls[h.wall]; if (!w) continue; const l = p.levels.find(q => q.lv === w.lv); fls.push([Sp.doorFlight(b, p.shell, lot, w, h, l ? l.y : 0, raisedOf(p)), true, h]); }
@@ -282,7 +288,10 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       if (!putAt(s0[0], s0[1], Math.atan2(c0[1] - s0[1], c0[0] - s0[0]))) { if (fits) noFoot++; else footNo++; continue; } if (fits) nw++; else nNo++;
       // (each leg walked until the body is there or stops — fifteen frames without a step —: the frames are only a net, as many
       // as the leg is long, for the body the world gives after the proofs before, tired and hungry, slower — T-113)
-      let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
+      beastsIn.clear(); let hiY = st().Y, hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; }
+      // (a beast stood on the way and the body did not get to the door: the beast taken off by the proof's hand, the flight walked again)
+      if (beastsIn.size && Math.hypot(st().X - Wd(fl.P(0, 0))[0], st().Z - Wd(fl.P(0, 0))[1]) >= 0.45) { const ids = [...beastsIn]; god(() => { for (const id of ids) { const a = G.S.animals.get(id); if (a) G.Animals.remove(a); } }); G.debug.step(0.3); beastsOff += ids.length; // (a step of the world: the beasts' grid has it gone — T-1350)
+        if (putAt(s0[0], s0[1], Math.atan2(c0[1] - s0[1], c0[0] - s0[0]))) { hiY = st().Y; hands = false; for (const c of pts.slice(1)) { const leg = Math.hypot(c[0] - st().X, c[1] - st().Z); const r = walkStill(c[0], c[1], Math.min(1200, Math.ceil(200 + 60 * leg))); hiY = Math.max(hiY, r.hiY); hands = hands || r.hands; } } }
       // (up, and at the door: the height of the top tread reached at the flight's end is not the door reached — a landing over a
       // wall, over a cliff — T-102)
       const D = Wd(fl.P(0, 0)), dD = Math.hypot(st().X - D[0], st().Z - D[1]);
@@ -320,7 +329,7 @@ if (part(4)) { for (const b of houses.slice(0, 80)) { const d = door(b); if (d &
       else if (left.length < 4) { const to = b.ip ? In.fitSide(b) : null; left.push(`${how()}, ${[!fl.walks && 'os pés não sobem', !fl.ground && 'sem chão diante do pé', !fl.stand && 'o corpo não pisa'].filter(Boolean).join(', ')}: ${!to ? 'não cabe em lado nenhum, a porta fica (L-195)' : to.s !== b.ip.s ? `cabe do lado ${to.s}, para onde a virada do dia a leva` : `a entrada cabe do lado ${to.s}, o dela`}`); } }
   }
   ok('4b. cada lance diante de uma porta de fora, em todo o mundo, onde o mundo diz que a entrada cabe: subido andando, do chão a um passo do pé até a porta, em cima, sem as mãos', nw >= 60 && up1 === nw && !noFoot,
-    `${nw} lances subidos: ${up1} até a porta${besides.length ? ` (${besides.length} diante da porta fechada, ao lado do meio, e por ela adentro aberta: ${besides.slice(0, 4).join(' · ')})` : ''}${shallows.length ? ` (${shallows.length} contra a porta fechada com o último degrau mais raso que o corpo, e subidos por ela aberta: ${shallows.slice(0, 4).join(' · ')})` : ''}${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; à parte, onde o mundo diz que não cabe: ${nNo + footNo} (${upNo} subidos assim mesmo; ${footNo} sem chão diante do pé${left.length ? '; ' + left.join(' · ') : ''}); o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
+    `${nw} lances subidos: ${up1} até a porta${beastsOff ? ` (${beastsOff} bicho(s) parado(s) no caminho tirado(s) pela mão da prova, e o lance andado de novo)` : ''}${besides.length ? ` (${besides.length} diante da porta fechada, ao lado do meio, e por ela adentro aberta: ${besides.slice(0, 4).join(' · ')})` : ''}${shallows.length ? ` (${shallows.length} contra a porta fechada com o último degrau mais raso que o corpo, e subidos por ela aberta: ${shallows.slice(0, 4).join(' · ')})` : ''}${stops.length ? ' — PAROU: ' + stops.join(' · ') : ''}; sem chão a um passo do pé ${noFoot}; à parte, onde o mundo diz que não cabe: ${nNo + footNo} (${upNo} subidos assim mesmo; ${footNo} sem chão diante do pé${left.length ? '; ' + left.join(' · ') : ''}); o degrau mais alto ${maxRise.toFixed(2)} m; ${nf} lances ao todo, ${hi} acima de um passo pela medida parada${far.length ? ' (' + far.join(' · ') + ')' : ''}`);
   if (S.avatar) G.Possess.release('deus');
   // (and a door moved to the other side of its shell — a reform, the day's turn, L-195 — with the same wall id and the same place
   // along it: the flight is the new side's, not the one kept for the old side — L-196)

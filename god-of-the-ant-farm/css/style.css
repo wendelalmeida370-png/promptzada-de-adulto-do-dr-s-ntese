@@ -1310,6 +1310,21 @@ canvas#game3d { touch-action: none; transition: none; }
 /* === 20a: a animação === */
 
 /* === 20b: o movimento (os controles de toque, a câmera) === */
+/* (the fingers' buttons, built from Input3D's registry and laid round the right thumb by IncUI; the jump the biggest; a toggle lit when on) */
+.ih-tb .ih-tbtn { font-size: 11px; letter-spacing: .02em; touch-action: none; -webkit-user-select: none; user-select: none; }
+.ih-tb .ih-tbtn.main { width: 68px; height: 68px; font-size: 12px; }
+.ih-tb .ih-tbtn.on { background: rgba(245, 200, 107, .34); border-color: rgba(245, 200, 107, .85); color: #fff3d6; }
+.ih-tb .ih-tbtn:active { transform: scale(.94); }
+/* (the stick past its ring: the sprint — the ring glows) */
+.ih-stick.run { border-color: rgba(245, 200, 107, .75); box-shadow: 0 0 18px rgba(245, 200, 107, .35); }
+/* (the target held: a gold diamond over it; aiming, the reticle grows into a cross) */
+.ih-lockmark { position: absolute; left: 0; top: 0; width: 22px; height: 22px; pointer-events: none; }
+.ih-lockmark i { position: absolute; inset: 3px; border: 2px solid rgba(245, 200, 107, .95); transform: rotate(45deg); box-shadow: 0 0 6px rgba(0, 0, 0, .6); }
+#inc-hud.aiming .ih-reticle { width: 18px; height: 18px; margin: -9px 0 0 -9px; background: none; border: 2px solid rgba(255, 255, 255, .8); box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
+#inc-root.hud-off .ih-lockmark { display: none !important; }
+/* (the controls tab: three columns — the action, the keyboard and mouse, the controller) */
+#inc-menu .im-keys th { font-size: 11px; font-weight: 800; color: var(--ih-mute, #b8a98f); text-align: left; padding: 2px 4px; }
+#inc-menu .im-keys td button { min-width: 74px; }
 
 /* === 20c: o inventário e o equipamento === */
 /* the bag and the body (js/inv-ui.js, D-377): the cards' glass and gold, wider — the body with its six places, the bag as a grid,

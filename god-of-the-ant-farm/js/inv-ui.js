@@ -115,7 +115,7 @@
   UI.isOpen = () => open;
   UI.open = function () {
     if (!G.Modes.inc() || !G.Possess.body() || !build()) return false;
-    G.IncUI.closeAll(); G.Modes.setPanel('mochila'); G.Input3D.unlock(); G.Input3D.clear();
+    G.IncUI.closeAll(); G.Modes.setPanel('mochila'); G.Input3D.free(); // (the cursor for the screen; the keys held stay held and the mouse comes back when it closes — the panel's mark stops the body: rule 122, L-1142)
     open = true; sel = null; hover = null; sig = ''; panel.classList.remove('hidden'); render(true);
     return true;
   };
