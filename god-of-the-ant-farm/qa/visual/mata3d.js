@@ -60,9 +60,10 @@ if (on('v3')) {
 }
 
 if (on('v4')) {
-  S = novo(); const c = bestChunk(4); const gen = M3._gen ? M3._gen(c.cx, c.cy) : null; let worst = 0, total = 0, slices = 0;
-  if (gen) { let r; do { const t0 = process.hrtime.bigint(); r = gen.next(); const d = ms(t0); worst = Math.max(worst, d); total += d; slices++; } while (!r.done); }
-  ok('v4', gen && slices > 6 && worst < 60, `o plano do pedaço ${c.cx},${c.cy} da selva em ${slices} fatias: ${total.toFixed(0)} ms ao todo, a maior ${worst.toFixed(1)} ms (o teto: 60 ms numa máquina carregada; o quadro pede ≈ 2,5–4 ms por quadro: o laço para no orçamento entre as fatias)`);
+  // (the code warmed first by the plan of the next chunk — the first plan of all also pays the compiling of its code, once)
+  S = novo(); const c = bestChunk(4); M3.plan(c.cx + 1, c.cy); const gen = M3._gen ? M3._gen(c.cx, c.cy) : null; let worst = 0, total = 0, slices = 0;
+  const all = []; if (gen) { let r; do { const t0 = process.hrtime.bigint(); r = gen.next(); const d = ms(t0); all.push(d.toFixed(1)); worst = Math.max(worst, d); total += d; slices++; } while (!r.done); } if (process.env.VERB) console.log(all.join(" "));
+  ok('v4', gen && slices > 6 && worst < 60, `o plano do pedaço ${c.cx},${c.cy} da selva em ${slices} fatias: ${total.toFixed(0)} ms ao todo, a maior ${worst.toFixed(1)} ms (o teto: 60 ms numa máquina carregada; o quadro pede ≈ 2,5–4 ms por quadro: o laço para no orçamento entre as fatias; o primeiro plano de todos paga a compilação do código, uma vez)`);
 }
 
 if (on('v5')) {

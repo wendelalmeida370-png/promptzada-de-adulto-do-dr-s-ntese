@@ -107,7 +107,9 @@
       const t = S.trees.get(S.treeAt[i]); if (t) { const tx = Ma.r2(t.x) * TL, tz = Ma.r2(t.y) * TL; const tr = t.stage === 'grow' ? (G.Space.trunk(t, Math.ceil(Ma.r2(t.size) * 10) / 10) || 0.2) + 0.03 : t.stage === 'log' || t.stage === 'fall' ? 0 : 0.35; if (tr) trunks.push([tx, tz, tr]);
         if (t.stage === 'log') { const L2 = 4.5 * Math.max(0.4, Ma.r2(t.size)) / 2; for (let q = -2; q <= 2; q++) trunks.push([tx + q * L2 / 2, tz, 0.35]); } }
       const o = S.objAt[i]; if (o) { const rk2 = S.rocks.get(o); if (rk2) for (const st of G.Space.stones(rk2)) stones.push([st.X, st.Z, Math.max(st.sx, st.sz) * 0.55]); else { const b = S.bushes.get(o); if (b) stones.push([b.x * TL, b.y * TL, 0.8]); } }
-      for (const st of Ma.stemsOf(i)) stems.push(st); }
+      // (each tile's stems from its region as the world is now: the chunk's own just made, a neighbour's checked once this instant)
+      const rr = x >= x0 && y >= y0 && x < x0 + C && y < y0 + C ? reg : Ma.regionNow(Math.floor(x / R), Math.floor(y / R)); if (rr) for (const st of Ma.stemsOf(i, rr)) stems.push(st); }
+    yield null;
     const clear = (X, Z, rr, soft) => { for (const t of trunks) if ((X - t[0]) ** 2 + (Z - t[1]) ** 2 < (t[2] + rr) ** 2) return false; for (const s of stones) if ((X - s[0]) ** 2 + (Z - s[1]) ** 2 < (s[2] + rr) ** 2) return false;
       for (const s of stems) if ((X - s[0]) ** 2 + (Z - s[1]) ** 2 < (s[2] + (soft ? 0.08 : rr)) ** 2) return false; return true; };
     const landOK = i => { const ty = S.type[i]; if ((ty <= T.RIVER && !(S.dry && S.dry[i])) || S.road[i] || S.occ[i] || S.wall[i] || S.cliff[i] || S.fire[i] > 0.05 || G.pathLevel(S.wear[i]) >= 2) return false; return !(G.Caves && G.Caves.isMouth && G.Caves.isMouth(i)); };
@@ -134,7 +136,7 @@
         const acc = PF.BY[kid].acc ? Math.floor(hh(X * 5, Z * 7) * 3) : 0;
         add(kid, kid === 'tronco' ? 'a' : 'r', X, Z, s, hh(X * 29, Z * 31) * TAU, Math.cos(la) * lean, Math.sin(la) * lean, colOf(kid, b, nc, X, Z), acc, hh(X * 37, Z * 47), hh(X * 53, Z * 59));
       }
-      if (++rows % 9 === 0) yield null;
+      if (++rows % 3 === 0) yield null;
     }
     // the shrubs: a cell of 2,56 m
     for (let gz = 0; gz < 25; gz++) {
@@ -148,7 +150,7 @@
         const lean = 0.03 + nc.borda * 0.15; const la = hh(X * 79, Z * 81) * TAU;
         add(kid, 'a', X, Z, s, hh(X * 83, Z * 87) * TAU, Math.cos(la) * lean, Math.sin(la) * lean, colOf(kid, b, nc, X, Z), PF.BY[kid].acc ? Math.floor(hh(X * 5, Z * 3) * 3) : 0, hh(X * 89, Z * 97), hh(X * 101, Z * 103));
       }
-      if (gz % 7 === 6) yield null;
+      if (gz % 3 === 2) yield null;
     }
     // the hard stems: where the forest's rule puts them, exactly (the body meets them there)
     for (const st of stems) { const x = Math.floor(st[0] / TL), y = Math.floor(st[1] / TL); if (at(x, y) < 0) continue; const i = y * N + x; const b = S.biome ? S.biome[i] : 0;
