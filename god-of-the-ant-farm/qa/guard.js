@@ -1201,6 +1201,10 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // regra muda com o protocolo inteiro
 { const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js']));
   for (const f of files) { if (MATA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Mata\b/.test(c)) fails.push(`a mata só se vê: ${f}:${k + 1} lê o G.Mata num módulo do mundo (a fase A não muda o mundo; D-465): ${l.trim().slice(0, 110)}`); }); } }
+// 170. "as formas das plantas são puras" (D-472): o js/planta-formas.js faz as formas da mata como números, sempre as mesmas — sem acaso
+// nenhum (nem o do mundo nem o do que só se vê: a variação é da instância, pelo G.hash), sem o three.js, sem o mundo, sem relógio
+{ (src['planta-formas.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\.|performance\.now|\bTHREE\b|\bG\.S\b/.test(c)) fails.push(`as formas puras: planta-formas.js:${k + 1} tira de um acaso, lê o relógio, o three.js ou o mundo (D-472): ${l.trim().slice(0, 110)}`); }); }
 // === 21b: o relevo ===
 // === 21c: a água ===
 // === 21d: o céu ===

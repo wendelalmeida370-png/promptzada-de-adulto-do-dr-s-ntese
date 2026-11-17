@@ -104,7 +104,7 @@
   }
 
   // ------------------------------ making a region ------------------------------
-  const FIELDS = Ma.FIELDS = ['dens', 'dossel', 'umid', 'borda', 'clar', 'alto', 'mata'];
+  const FIELDS = Ma.FIELDS = ['dens', 'dossel', 'umid', 'borda', 'clar', 'alto', 'mata', 'agua'];
   // the forest of a region, made from the world: per tile (0..255)
   //  dens   how full the growth between the ground and the crowns is (0 bare, 255 shut, all but impassable)
   //  dossel how much of the sky the crowns of the trees of the world hide over it (the canopy: the sky's light under the trees)
@@ -113,6 +113,7 @@
   //  clar   a light gap in the forest: a fallen tree's place, an opening in the canopy with the forest round it
   //  alto   the top of the canopy over it, a quarter of a metre a step (the forest's roof seen from far)
   //  mata   how much of a forest the place is (the trees round it, the patches of the seed): the drawing's choice of what grows
+  //  agua   the water beside it: 255 on a bank, nothing three tiles from any water (the reeds, the banks' palms)
   function make(rx, ry) {
     const S = G.S; const x0 = rx * R, y0 = ry * R; const W0 = R + M * 2; const bx = x0 - M, by = y0 - M;
     const out = { rx, ry, x0, y0, sig: 0 }; for (const f of FIELDS) out[f] = new Uint8Array(R * R);
@@ -157,7 +158,7 @@
       out.dossel[k] = Math.round(G.clamp(crown[w], 0, 1) * 255); out.alto[k] = Math.round(G.clamp(top[w] * 4, 0, 255));
       if (wat[w]) continue;
       const b = S.biome ? S.biome[i] : 0; const rc = recOf(b); const mo = S.moist ? S.moist[i] / 255 : 0.5;
-      const wd = wetAt(wx, wy); const um = G.clamp(mo * 0.85 + (wd < 4 ? (4 - wd) / 4 * 0.45 : 0), 0, 1); out.umid[k] = Math.round(um * 255);
+      const wd = wetAt(wx, wy); out.agua[k] = Math.round(G.clamp(1 - (wd - 1) / 2.5, 0, 1) * 255); const um = G.clamp(mo * 0.85 + (wd < 4 ? (4 - wd) / 4 * 0.45 : 0), 0, 1); out.umid[k] = Math.round(um * 255);
       const f = mataW[w]; out.mata[k] = Math.round(f * 255);
       // (the edge: a forest tile with open land, a trail or a clearing near it — the most open of the tiles round it, nearer weighs more)
       let open = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { if (!dx && !dy) continue; const qx = wx + dx, qy = wy + dy; const q = qy * W0 + qx; const d = Math.max(Math.abs(dx), Math.abs(dy)); const o = Math.max(cut[q] > 0.5 ? 1 : 0, 1 - mataW[q] * 1.4, gap[q]) * (d === 1 ? 1 : 0.6); if (o > open) open = o; }
@@ -231,7 +232,7 @@
   Ma.niche = function (r, lx, ly, x, y) {
     const k = ly * R + lx; const S = G.S; const i = y * N + x;
     const sl = S.slope ? S.slope[i] : 0;
-    return { luz: 1 - r.dossel[k] / 255 * 0.85, umid: r.umid[k] / 255, borda: r.borda[k] / 255, clar: r.clar[k] / 255, dens: r.dens[k] / 255, mata: r.mata[k] / 255, encosta: sl, bioma: S.biome ? S.biome[i] : 0 };
+    return { luz: 1 - r.dossel[k] / 255 * 0.85, umid: r.umid[k] / 255, agua: r.agua[k] / 255, borda: r.borda[k] / 255, clar: r.clar[k] / 255, dens: r.dens[k] / 255, mata: r.mata[k] / 255, encosta: sl, bioma: S.biome ? S.biome[i] : 0 };
   };
 
   // ------------------------------ the hard stems ------------------------------

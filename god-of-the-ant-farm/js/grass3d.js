@@ -146,6 +146,7 @@
     mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.receiveShadow = true; mesh.castShadow = false; mesh.visible = false;
     realm.scene().add(mesh);
     littleInit(realm);
+    G.Mata3D && G.Mata3D.init && G.Mata3D.init(THREE, realm); // (the forest between the ground and the crowns: 21a)
   };
   // ------------------------------ the small things on the ground ------------------------------
   // the shapes, all in one piece (each point knows which shape it belongs to; a cell shows one, or none): 0 a pebble, 1 three
@@ -276,6 +277,7 @@
   }
   GR.update = function (dt, focus, cam) {
     if (!mesh) return; const q = R3.Q();
+    if (G.Mata3D && G.Mata3D.update) G.Mata3D.update(dt, focus, cam); // (the forest's layers round the eye: 21a)
     const R = q.grass ? q.field || 0 : 0; GR.on = R > 0 && !!G.Ground3D.grassMap();
     mesh.visible = GR.on; if (lmesh) lmesh.visible = GR.on && !!G.Ground3D.floorMap();
     if (!GR.on) { GR.clumps = 0; GR.bits = 0; return; }

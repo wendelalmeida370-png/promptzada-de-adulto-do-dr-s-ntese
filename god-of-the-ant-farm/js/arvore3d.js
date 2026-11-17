@@ -35,7 +35,7 @@
       Object.assign(sh.uniforms, { uTime: U.time, uWind: U.wind, uDet: { value: G.Ground3D.detail() }, uFine: UFINE }, G.Ground3D.U3());
       sh.vertexShader = 'attribute float aK; uniform float uTime; uniform vec3 uWind; varying vec3 vFP; varying float vFK; varying vec3 vFN;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wq = modelMatrix * vec4(transformed, 1.0); vFP = wq.xyz; vFK = aK; vFN = normalize(mat3(modelMatrix) * objectNormal);
-        float sk = aK < -2.5 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK > 3.5 ? aK - 4.0 : aK > 1.5 ? aK - 2.0 : aK; // (a conifer's crown +4, a fruit +2)
+        float sk = aK < -1.45 ? 0.0 : aK < -0.5 ? -aK - 1.0 : aK > 3.5 ? aK - 4.0 : aK > 1.5 ? aK - 2.0 : aK; // (a conifer's crown +4, a fruit +2)
         float ph = uTime * (0.9 + uWind.z) + wq.x * 0.11 + wq.z * 0.07;
         transformed.xz += uWind.xy * (sin(ph) * 0.6 + sin(ph * 2.7 + 1.3) * 0.25 + 0.3) * sk * (0.25 + uWind.z * 0.6);`);
       sh.fragmentShader = 'uniform sampler2D uDet; uniform float uFine; varying vec3 vFP; varying float vFK; varying vec3 vFN; float fHgt = 0.0; float fCrown = 0.0; float fFine = 0.0;\n' + sh.fragmentShader
@@ -120,7 +120,13 @@
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 1.02, 0.66), smoothstep(0.55, 0.75, pt) * 0.55);
           }
         }
-        #endif`)
+        #endif
+        // (moss on the trunks of the wet forests: on the side of the rain and low on the trunk, in patches, never on the stone's mark)
+        if (vFK < -1.45 && vFK > -2.5) { float mo = clamp(-vFK - 1.5, 0.0, 1.0); vec3 n = normalize(vFN);
+          float pt = texture2D(uDet, vec2(vFP.x * 0.6 + vFP.z * 0.4, vFP.y * 0.22)).r * 0.6 + texture2D(uDet, vFP.xz * 0.9 + vFP.y * 0.13).a * 0.4;
+          float side = 0.55 + 0.45 * dot(n, normalize(vec3(-0.4, 0.3, 0.85)));
+          float mm = smoothstep(0.42, 0.62, pt * side + mo * 0.55 - 0.25 - max(vFP.y - 6.0, 0.0) * 0.01) * mo;
+          diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.085, 0.14, 0.045) * (0.8 + pt * 0.5), mm); }`)
         // (the relief of the bark and of the stone, from the heights of their pictures)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         #ifndef NOPAT
@@ -263,10 +269,10 @@
   const LCALM = 0.3;
   const calmCol = (f, k) => (X, Y, Z, nx, ny, nz) => calm(f(X, Y, Z, nx, ny, nz), k);
   // (the measures of a standing tree, the same for its drawing and for the leaves it lets fall: height, crown's heart and radius)
+  // (G.Mata.tree: the forest's own rule — the canopy's map reads the same crowns; a temperate tree keeps the measures it had)
   function treeDims(t) {
-    const k = KIND[t.kind] || KIND.oak; const sz = G.clamp(t.size, 0.15, 1.4); const h = G.hash(t.id * 7); const s = 0.85 + h * 0.3;
-    const H = (5 + 7 * sz) * s; const tall = k[0] === 'tall' ? 1.35 : 1;
-    return { k, sz, h, s, H, tall, r: (2.6 * sz + 0.8) * tall, cy: H * 0.66 * tall };
+    const k = KIND[t.kind] || KIND.oak; const D = G.Mata.tree(t);
+    return { k, sz: D.sz, h: D.h, s: D.s, H: D.H, tall: 1, r: D.r, cy: D.cy, fl: D.fl, top: D.top, emerg: D.emerg, arq: D.arq };
   }
   // (where a tree's crown hangs, for the leaves it lets fall: [X, Y, Z, its radius, its colour 0..1], or null)
   R3.crownOf = function (t) {
@@ -293,6 +299,8 @@
   // (the bark's mark: a sway below -0.5 is wood — trunks, branches, roots, stumps, logs — read back as -1 - sway: the crown's
   // own sway for a branch, none for a trunk; the drawing paints it with bark. Below -2.5 it is stone: -3 - its moss)
   const BARK = -1, ROCK = -3, CACTUS = -6, FRUIT = 2, CONIF = 4; // (a cactus's skin; a fruit and a conifer's crown: their sway, raised)
+  // (a trunk with moss on it — the wet forests: -1,5 - its moss, 0..1; it does not sway)
+  const MOSS = m => -1.5 - G.clamp(m, 0, 0.99);
   const barkCol = (bark, snow) => (X, Y, Z, nx, ny) => (snow > 0 && ny > 0.6 ? G.lerpColor(bark, SNOW, snow) : bark);
   // the plants' own shapes, made once
   let FS = null;
@@ -311,6 +319,12 @@
       if (under) { const b = P.length / 3; P.push(0, 0.3, 0); rim(); for (let k = 0; k < n * 2; k++) I.push(b, b + 1 + k, b + 1 + ((k + 1) % (n * 2))); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); return g; };
     FS.tier = tier(true); FS.tierT = tier(false);
+    // (a buttress root of the great trees of the south: a thin flange, from high on the trunk down to the ground a stride or two out,
+    // its outer edge a hollow curve; x out from the trunk, y up, z its thickness)
+    { const pr = [[0, 1], [0.08, 0.72], [0.2, 0.46], [0.42, 0.22], [0.7, 0.08], [1, 0]]; const P = [], I = [];
+      for (const z of [-0.5, 0.5]) { for (const [x, y] of pr) P.push(x, y, z); P.push(0, 0, z); } // (each face: the curve and the foot at the trunk)
+      const n = pr.length + 1; for (let q = 0; q < pr.length - 1; q++) { I.push(pr.length, q, q + 1); I.push(n + pr.length, n + q + 1, n + q); I.push(q, n + q, n + q + 1, q, n + q + 1, q + 1); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(I); g.computeVertexNormals(); FS.butt = g; }
     // (a cactus: a column of ribs — a dozen round the trunk, eight round an arm — and its crown, the same ribs closing over)
     const ribbed = (g, n) => { const P = g.attributes.position; for (let k = 0; k < P.count; k++) { const x = P.getX(k), z = P.getZ(k); const f = 1 + 0.09 * Math.cos(Math.atan2(z, x) * n); P.setX(k, x * f); P.setZ(k, z * f); } g.computeVertexNormals(); return g; };
     { const g = new THREE.CylinderGeometry(0.5, 0.5, 1, 24, 2, true); g.translate(0, 0.5, 0); FS.cact = ribbed(g, 12); }
@@ -372,6 +386,60 @@
   // (the lowest of the ground round a foot, in metres — on a slope a trunk goes down to it, no foot standing out of the
   // hillside on its lower side)
   function footY(x, y, r) { const TL = G.Space.TILE, HM = G.Space.HM; let lo = W.groundH(x, y) * HM; const d = r / TL; for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; lo = Math.min(lo, W.groundH(x + Math.cos(a) * d, y + Math.sin(a) * d) * HM); } return lo; }
+
+  // ------------------------------ the great trees of the south ------------------------------
+  // (the trunk's radius at the foot of a great tree: its form and whether it is an emergent)
+  const jungleGirth = D => (0.3 * D.sz + 0.16) * (D.emerg ? 1.35 : 1) * (D.arq === 3 ? 1.2 : 1);
+  // the bark of each form: the umbrella's pale grey, the tiers' red-brown, the column's grey-green, the fig's dark and netted
+  const JBARK = [[150, 144, 128], [124, 92, 70], [122, 128, 110], [96, 86, 72]];
+  // a great tree of the tropical forest (D-471): a straight smooth trunk to the roof of the forest, buttress roots at its foot, its
+  // boughs opening under a crown of its form — the umbrella wide and flat, the tiers in storeys, the column narrow and tall, the
+  // fig spreading low with its aerial roots —, the emergent's umbrella above the roof of the others; moss on the trunk in the wet;
+  // near the body, its hanging lianas and the bromeliads on its boughs
+  function jungleInto(g, gp, gl, t, D, X, Y, Z, Yb, dY, rot, pal, snow, burnt, fine) {
+    const { H, r, cy, fl, arq, emerg, sz, h } = D; const id = t.id;
+    const r0 = jungleGirth(D); const i0 = W.idx(Math.floor(t.x), Math.floor(t.y)); const wet = G.S.moist ? G.S.moist[i0] / 255 : 0.6;
+    const bk = burnt ? [30, 26, 24] : JBARK[arq].map(v => v * (0.9 + G.hash(id * 61) * 0.2)); const bc = barkCol(bk, snow); const moss = burnt ? 0 : G.clamp(0.25 + wet * 0.7, 0, 0.95);
+    const base = Y + cy - r * fl * 0.5; // (where the trunk opens into its boughs)
+    const lean = (h - 0.5) * 0.12, la = rot + 1.3; const tx = X + Math.cos(la) * lean * (base - Y), tz = Z + Math.sin(la) * lean * (base - Y);
+    limb(g, FS.trunk, X, Yb, Z, tx, base + 0.4, tz, r0, bc, MOSS(moss));
+    // (the buttresses: thin flanges round the foot, taller under the emergents; the fig has none — its roots hang from above)
+    if (arq !== 3 && sz > 0.45) { const nb = 4 + Math.floor(G.hash(id * 67) * 3) + (emerg ? 1 : 0);
+      for (let q = 0; q < nb; q++) { const a = rot + q / nb * TAU + (G.hash(id * 71 + q) - 0.5) * 0.7; const hb = (1.4 + G.hash(id * 73 + q) * 1.6) * (0.6 + sz * 0.5) * (emerg ? 1.5 : 1), lb = hb * (0.65 + G.hash(id * 79 + q) * 0.35);
+        const ex = X + Math.cos(a) * r0 * 0.5, ez = Z + Math.sin(a) * r0 * 0.5; const fy = Math.min(Yb, G.Space.floorY(X + Math.cos(a) * (r0 + lb), Z + Math.sin(a) * (r0 + lb))) - 0.08;
+        g.put(FS.butt, R3.mat(ex, fy, ez, -a, lb + r0 * 0.6, hb + (Yb - fy), 0.1 + r0 * 0.12), bc, MOSS(moss * 0.9)); } }
+    // (the fig: aerial roots hanging from its boughs into the ground, and the net of the strangler round the trunk)
+    if (arq === 3 && sz > 0.45) { const nr = fine ? 9 : 5;
+      for (let q = 0; q < nr; q++) { const a = rot + q / nr * TAU + G.hash(id * 83 + q) * 0.5, d = r * (0.25 + G.hash(id * 89 + q) * 0.45); const rx = X + Math.cos(a) * d, rz = Z + Math.sin(a) * d; const top = base + r * fl * 0.2;
+        limb(g, FS.limb, rx, G.Space.floorY(rx, rz) - 0.1, rz, rx + (G.hash(id + q) - 0.5) * 0.4, top, rz + (G.hash(id * 3 + q) - 0.5) * 0.4, 0.05 + G.hash(id * 97 + q) * 0.05, bc, MOSS(moss * 0.6)); }
+      for (let q = 0; q < 5; q++) { const a0 = rot + q * 1.25; let px = X + Math.cos(a0) * r0 * 0.95, pz = Z + Math.sin(a0) * r0 * 0.95, py = Yb;
+        for (let j = 0; j < 4; j++) { const a1 = a0 + (j + 1) * 0.55; const nx = X + Math.cos(a1) * r0 * (0.95 - j * 0.04), nz = Z + Math.sin(a1) * r0 * (0.95 - j * 0.04), ny = Yb + (base - Yb) * (j + 1) / 4; limb(g, FS.limb, px, py, pz, nx, ny, nz, 0.07, bc, MOSS(moss * 0.7)); px = nx; py = ny; pz = nz; } } }
+    // (the boughs: rising and opening from the trunk's top into the crown, seen from below between its masses)
+    const nb2 = arq === 2 ? 3 : 5; const ends = [];
+    for (let q = 0; q < nb2; q++) { const a = rot + q / nb2 * TAU + G.hash(id * 101 + q) * 0.6; const e = r * (arq === 2 ? 0.35 : 0.55 + G.hash(id * 103 + q) * 0.2); const ex = tx + Math.cos(a) * e, ez = tz + Math.sin(a) * e, ey = base + r * fl * (0.25 + G.hash(id * 107 + q) * 0.3);
+      limb(g, FS.limb, tx, base - 0.6, tz, ex, ey, ez, r0 * 0.42, bc, BARK - 0.05); ends.push([ex, ey, ez, a]);
+      if (fine) limb(g, FS.limb, ex, ey, ez, ex + Math.cos(a + 0.7) * r * 0.3, ey + r * fl * 0.3, ez + Math.sin(a + 0.7) * r * 0.3, r0 * 0.2, bc, BARK - 0.1); }
+    if (burnt) return;
+    // (the crown of its form: masses of leaves round a wide heart — the umbrella in a ring and flat, the tiers in two storeys, the
+    // column tall, the fig a low dome; the big leaves of the south at its edge where the body is near)
+    const ccy = Y + cy; const cards = arq === 1 ? 2 : 3;
+    if (arq === 1) { crownInto(g, gl, id, tx, ccy - r * 0.35, tz, r, 9, 0.45, pal, snow, 0.22, 3, cards); crownInto(g, gl, id + 7, tx + Math.cos(rot) * r * 0.2, ccy + r * 0.35, tz + Math.sin(rot) * r * 0.2, r * 0.68, 7, 0.5, pal, snow, 0.26, 3, cards); }
+    else if (arq === 2) { crownInto(g, gl, id, tx, ccy, tz, r, 9, fl, pal, snow, 0.24, 3, cards); crownInto(g, gl, id + 5, tx, ccy + r * 0.9, tz, r * 0.6, 6, 0.9, pal, snow, 0.27, 3, 2); }
+    else { crownInto(g, gl, id, tx, ccy, tz, r, 11, fl, pal, snow, 0.22, arq === 3 ? 0 : 3, cards);
+      // (the umbrella's under-storey: a few masses under the rim, so its underside is leaves, not a lid)
+      for (let q = 0; q < 4; q++) { const a = rot + q * 1.57 + 0.6, d = r * 0.6; const lc = leafCol(pal, snow, tx, tz, r * 1.2); g.sph = [tx, ccy, tz, 0.8]; g.put(SH.ico0, R3.mat(tx + Math.cos(a) * d, ccy - r * fl * 0.55, tz + Math.sin(a) * d, a, r * 0.55, r * 0.22, r * 0.5), lc, 0.2); g.sph = null; } }
+    // (near: the lianas hanging from the boughs, swaying a little, and the bromeliads in the forks — the forest's quality says how many)
+    const cq = R3.Q().cipo; if (!fine || !(cq > 0)) return;
+    const nl = (2 + Math.floor(G.hash(id * 109) * 3)) * (cq > 1 ? 2 : 1); const lv = [64, 74, 48];
+    for (let q = 0; q < nl; q++) { const a = rot + q * 2.39 + G.hash(id * 113 + q), d = r * (0.3 + G.hash(id * 127 + q) * 0.55); const sx = tx + Math.cos(a) * d, sz2 = tz + Math.sin(a) * d, sy = ccy - r * fl * (0.6 + G.hash(id * 131 + q) * 0.2);
+      const gy = G.Space.floorY(sx, sz2); const ey = gy + 0.4 + G.hash(id * 137 + q) * Math.max(0.5, (sy - gy) * 0.6); let px = sx, py = sy, pz = sz2; const n = 4;
+      for (let j = 1; j <= n; j++) { const u = j / n; const nx = sx + Math.sin(u * 3 + q) * 0.35, nz = sz2 + Math.cos(u * 2.6 + q) * 0.3, ny = sy + (ey - sy) * u; limb(g, FS.limb, px, py, pz, nx, ny, nz, 0.035 - u * 0.01, lv, BARK - 0.12 * u); px = nx; py = ny; pz = nz; }
+      if (q % 2 === 0) { const c0 = calm(pal[1], LCALM), c1 = calm(pal[0], LCALM); for (let j = 0; j < 3; j++) { const ly = sy + (ey - sy) * (0.3 + j * 0.25), lx = sx + Math.sin((0.3 + j * 0.25) * 3 + q) * 0.35, lz = sz2 + Math.cos((0.3 + j * 0.25) * 2.6 + q) * 0.3; const aa = a + j * 2.1;
+        gp.blade(lx, ly, lz, 0.14, aa, lx + Math.cos(aa) * 0.28, ly - 0.08, lz + Math.sin(aa) * 0.28, c0, c1, 0.5); } } }
+    // (the bromeliads in the forks of the boughs: a rosette of strap leaves round a red heart)
+    for (let q = 0; q < Math.min(ends.length, cq > 1 ? 5 : 3); q++) { const [ex, ey, ez] = ends[q]; const c0 = calm([60, 104, 50], 0.2), c1 = calm([110, 140, 64], 0.2);
+      for (let j = 0; j < 7; j++) { const aa = j / 7 * TAU + q; gp.blade(ex, ey, ez, 0.07, aa + Math.PI / 2, ex + Math.cos(aa) * 0.32, ey + 0.22, ez + Math.sin(aa) * 0.32, j < 2 ? [150, 40, 50] : c0, c1, 0.3); } }
+  }
   // a tree of the world as it stands: the god's shapes and tones in the round. A broad tree: a tapering trunk with roots at
   // its foot, boughs forking up into a crown of lumps and leaves, each tree its own shade; a conifer: tiers of ragged boughs
   // narrowing to the top; palms with drooping fronds; the snow on top where the land is cold. gp: the plants that bend
@@ -383,9 +451,10 @@
     const rot = h * TAU;
     const snow = t.kind === 'snowpine' ? 0.85 : snowAt(W.idx(Math.floor(t.x), Math.floor(t.y))) * 0.85;
     const bark0 = G.hex2rgb(k[2] || '#6b4a2e');
-    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Yb, Z, rot, 0.6, 0.45 + dY, 0.6), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0), BARK); return; }
+    const gr = k[0] === 'tall' ? jungleGirth(D) / 0.27 : 1; // (a great tree of the south leaves a stump, and lies as a log, of its own girth)
+    if (t.stage === 'stump') { g.put(SH.cyl, R3.mat(X, Yb, Z, rot, 0.6 * gr, 0.45 + dY, 0.6 * gr), (X2, Y2, Z2, nx, ny) => (ny > 0.9 ? [214, 180, 128] : bark0), BARK); return; }
     if (t.stage === 'fall' && !t._standing) return; // (a tree falling is drawn moving, by FX3D, until it lies)
-    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3, Z, rot, 0.5, 4.5 * sz, 0.5, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0), BARK); return; }
+    if (t.stage === 'log' || t.stage === 'fall') { g.put(SH.cyl, R3.mat(X, Y + 0.3 * gr, Z, rot, 0.5 * gr, 4.5 * sz * (gr > 1 ? 1.6 : 1), 0.5 * gr, 0, Math.PI / 2), (X2, Y2, Z2, nx, ny) => (Math.abs(ny) < 0.2 && Math.abs(nx) < 0.3 ? [214, 180, 128] : bark0), k[0] === 'tall' ? MOSS(0.5) : BARK); return; }
     const burnt = t.stage === 'burnt';
     const pal = burnt ? [[42, 36, 32], [26, 22, 20], [58, 50, 44]] : tpal(t); const bark = burnt ? [30, 26, 24] : bark0;
     const bc = barkCol(bark, snow);
@@ -479,7 +548,8 @@
         }
         break;
       }
-      default: { // broad crowns: oak, birch, the fruit trees, the tall trees of the forests of the south
+      case 'tall': jungleInto(g, gp, gl, t, D, X, Y, Z, Yb, dY, rot, pal, snow, burnt, fine); break;
+      default: { // broad crowns: oak, birch, the fruit trees
         const { tall, r } = D; const birch = t.kind === 'birch'; const jung = k[0] === 'tall'; const olive = t.kind === 'olive';
         const r0 = (olive ? 0.36 : 0.27) * sz + 0.1; const tc = birch ? (X2, Y2, Z2, nx, ny) => (Math.floor((Y2 - Y) * 2.6 + h * 5) % 4 === 0 ? [46, 42, 38] : bark) : bc;
         const cy = Y + D.cy;
