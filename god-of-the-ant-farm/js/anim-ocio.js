@@ -26,7 +26,7 @@
     'oc-olhar-porta': { espera: 2.5 }, 'oc-acenar-cabeca': { conhecido: 3, notavel: 2, small: 1 },
     'oc-cocar-cabeca': { base: 1, small: 1 }, 'oc-cocar-nuca': { base: 1, calor: 0.5, small: 1 }, 'oc-cocar-braco': { base: 0.8, frio: 1.5, small: 1 }, 'oc-cocar-queixo': { base: 0.8, espera: 0.8, small: 1 },
     'oc-ajeitar-cinto': { base: 0.8, small: 1 }, 'oc-ajeitar-cabelo': { base: 0.8, calor: 0.6, small: 1 }, 'oc-ajeitar-roupa': { base: 0.8, frio: 0.8, small: 1 },
-    'oc-maos-cintura': { base: 0.9, confia: 2 }, 'oc-maos-costas': { base: 0.7, nobre: 3, gravida: 1 }, 'oc-maos-juntas': { base: 0.7, espera: 1, timido: 2, luto: 1.5, frio: 1 },
+    'oc-bracos-cruzados': { base: 0.9, confia: 2 }, 'oc-maos-costas': { base: 0.7, nobre: 3, gravida: 1 }, 'oc-maos-juntas': { base: 0.7, espera: 1, timido: 2, luto: 1.5, frio: 1 },
     'oc-espreguicar': { cansado: 2, manha: 1 }, 'oc-bocejar': { cansado: 2.5, manha: 1 }, 'oc-suspirar': { base: 0.3, luto: 2.5, cansado: 1, espera: 0.5 },
     'oc-esfregar-maos': { frio: 3 }, 'oc-soprar-maos': { frio: 3 }, 'oc-abanar-se': { calor: 3 }, 'oc-enxugar-testa': { calor: 2.5, cansado: 1 },
     'oc-tossir': { doente: 3 }, 'oc-mao-peito': { doente: 2, medo: 1 }, 'oc-enxugar-olhos': { luto: 3 }, 'oc-arquejar': { cansado: 1.5 },

@@ -18,6 +18,7 @@
 //       the cadence the porte asks, the standing foot still under 2 cm (the legs never added on top, D-595).
 //   node qa/visual/gestos-vida.js            ONLY=g1,g9 for some parts; V=1 lists every clip's numbers
 //   GRUPO=22c                                only the clips of the life that is seen (vida-clips.js, social-clips.js)
+//   CLIPES=a,b                               only those clips (to try one in seconds)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const L0 = require('./corpo-rig.js');
 const { G, THREE, P3, A, LOOK } = L0; const B = P3.B;
@@ -27,7 +28,7 @@ for (const f of ['js/interacao-clips.js', 'js/trabalho-clips.js', 'js/combate-cl
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null; const on = k => !ONLY || ONLY.has(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | gestos-vida ${name} | ${info}`); if (!c) fails.push(name); };
 const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
-const ids = Object.keys(A.CLIPS).filter(id => process.env.GRUPO !== '22c' || OURS.has(id)).sort();
+const ids = Object.keys(A.CLIPS).filter(id => (process.env.GRUPO !== '22c' || OURS.has(id)) && (!process.env.CLIPES || process.env.CLIPES.split(',').includes(id))).sort();
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
 // the bodies: a man and a woman at three ages — the size of the age (People3D's lookFill: a child of 8 is 1.2 m, an elder of 75 1.68 m)
 const BODIES = [['homem 30', { s: 1, fem: false }], ['mulher 30', { s: 0.95, fem: true }], ['menino 8', { s: (0.75 + 0.5 * 0.9) / 1.75, fem: false, headK: 1.18 }], ['menina 8', { s: (0.75 + 0.5 * 0.9) / 1.75, fem: true, headK: 1.18 }], ['velho 75', { s: 1.68 / 1.75, fem: false }], ['velha 75', { s: 1.68 / 1.75 * 0.95, fem: true }]];
@@ -117,9 +118,9 @@ if (on('g9')) {
   // the porte walks by the stride: the cadence it asks, the standing foot still
   const P = k => Object.assign(Object.fromEntries(A.PORTE.map(q => [q, 0])), k);
   const CASES = [['nada', P({})], ['velho', P({ velho: 1 })], ['frio', P({ frio: 1 })], ['grávida', P({ gravida: 1 })], ['medo', P({ medo: 1 })], ['manca', P({ manca: 1 })], ['cansado e velho', P({ cansado: 1, velho: 1 })], ['calor', P({ calor: 1 })], ['nobre', P({ nobre: 1 })]];
-  const walk = (porte, v) => { const L = Object.assign({}, LOOK, { plant: [{ on: 0 }, { on: 0 }], ground: 0, gnd: null, held: null, carry: false, reach: null, pair: null, lod: 0 }); const a = A.memory(), pose = A.POSE0(), I = {};
+  const walk = (porte, v, push) => { const L = Object.assign({}, LOOK, { plant: [{ on: 0 }, { on: 0 }], ground: 0, gnd: null, held: null, carry: false, reach: null, pair: null, lod: 0 }); const a = A.memory(), pose = A.POSE0(), I = {};
     const dt = 1 / 240; let z = 0, slip = 0; const ts = [], st0 = [null, null], on0 = [0, 0];
-    for (let i = 0; i < 240 * 7; i++) { z += v * dt; Object.assign(I, { st: 'walk', t: i * dt, sp: v, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s: 1, run: 0, walk: 1, over: null, overK: undefined, clipK: undefined, drunk: 0, tired: porte.cansado, id: 7, porte, clock: i * dt, lefty: false });
+    for (let i = 0; i < 240 * 7; i++) { z += v * dt; Object.assign(I, { st: 'walk', t: i * dt, sp: v, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s: 1, run: 0, walk: 1, over: null, overK: undefined, clipK: undefined, drunk: 0, tired: porte.cansado, id: 7, porte, clock: i * dt, lefty: false, push: push || 0 });
       A.drive(a, I, pose, L, dt); const R = P3.rig(0, 0, z, Math.PI / 2, pose, L); if (i < 240 * 1.5) { for (let k = 0; k < 2; k++) on0[k] = L.plant[k].on ? 1 : 0; continue; }
       for (let k = 0; k < 2; k++) { const ft = L.plant[k], onk = ft.on ? 1 : 0; if (onk && !on0[k]) { st0[k] = { h: null, b: null }; ts.push(i * dt); }
         // (the point of the foot on the ground, the heel then the ball, against where it first touched in this stance)
@@ -128,10 +129,12 @@ if (on('g9')) {
           if (b[1] < 0.008) { if (!st0[k].b) st0[k].b = b; else slip = Math.max(slip, Math.hypot(b[0] - st0[k].b[0], b[2] - st0[k].b[2])); } }
         if (!onk) st0[k] = null; on0[k] = onk; } }
     const cad = ts.length > 2 ? (ts.length - 1) / (ts[ts.length - 1] - ts[0]) * 60 : 0;
-    return { slip, cad, go: A.gaitOpts ? Object.assign({}, A.gaitOpts({ pz: porte }, I) || {}) : {} }; };
+    return { slip, cad, go: A.gaitOpts ? Object.assign({}, A.gaitOpts({ pz: porte, pu: push ? 1 : 0 }, I) || {}) : {} }; };
   const out = [], badw = []; const base = {};
   for (const v of [1.0, 1.4]) base[v] = walk(P({}), v).cad;
-  for (const [n, p] of CASES) for (const v of [1.0, 1.4]) { const r = walk(p, v); const want = base[v] * (r.go.cad || 1); const okc = Math.abs(r.cad - want) / want < 0.05; out.push(`${n} ${v} m/s: ${r1(r.cad)} passos/min (quer ${r1(want)}), o pé ${r1(r.slip * 100)} cm`); if (!(r.slip < 0.02) || !okc) badw.push(n + ' ' + v); }
+  // (and the one who walks out of step with a neighbour: the quicker cadence, the feet as still — D-599)
+  CASES.push(['fora do compasso', P({}), 1]);
+  for (const [n, p, push] of CASES) for (const v of [1.0, 1.4]) { const r = walk(p, v, push); const want = base[v] * (r.go.cad || 1); const okc = Math.abs(r.cad - want) / want < 0.05; out.push(`${n} ${v} m/s: ${r1(r.cad)} passos/min (quer ${r1(want)}), o pé ${r1(r.slip * 100)} cm`); if (!(r.slip < 0.02) || !okc) badw.push(n + ' ' + v); }
   ok('g9 o porte anda pela passada: a cadência que pede, o pé de apoio parado (< 2 cm)', !badw.length, (badw.length ? 'FORA: ' + badw.join(', ') + ' · ' : '') + out.join(' · '));
 }
 if (on('g10')) {

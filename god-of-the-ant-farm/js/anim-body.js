@@ -45,7 +45,7 @@
   const RAW = ['stL', 'stR', 'swL', 'swR', 'pgL', 'pgR', 'pitL', 'pitR', 'rel', 'tool', 'prone'];
   // a body's animator memory (the view's own, a body each)
   Anim.memory = () => ({ base: '', st: '', clip: null, t: 0, sinceT: 0, ph: 0, run: false, rw: 0, sp: 0, lastSp: 0, stop: 0, prev: new Float32Array(NC), off: new Float32Array(NC), offT: 1, offD: 0.25, has: false,
-    over: null, ok: 0, ow: 0, ck: 0, stepK: 0, stepWait: 0, lean: 0, bank: 0 });
+    over: null, ok: 0, ow: 0, ck: 0, pu: 0, stepK: 0, stepWait: 0, lean: 0, bank: 0 });
   const TMP = Anim.POSE0();
 
   // ------------------------------ the base: a posture or the stride ------------------------------
@@ -116,6 +116,9 @@
     const C = Anim.CLIPS && ((I.lefty && Anim.CLIPS[st + '~m']) || Anim.CLIPS[st]);
     // (the porte the reader gives — eased in the memory — and the stride's options it asks: the legs and the pace go by the stride)
     if (Anim.porteEase) Anim.porteEase(a, I, dt);
+    // (away from another in step with them — the reader's I.push, −1..1, eased in a third of a second: the stride by its cadence, a
+    // gesture by its clock; D-599)
+    a.pu = (a.pu || 0) + ((I.push || 0) - (a.pu || 0)) * (1 - Math.exp(-dt / 0.3)); if (Math.abs(a.pu) < 1e-3) a.pu = 0;
     const go = Anim.gaitOpts ? Anim.gaitOpts(a, I) : I.tired ? { arms: 1 - 0.45 * I.tired, lean: 0.06 * I.tired } : null;
     // (the body's lean into its turns and into the speed it gains or loses — eased, only seen)
     a.bank += (clamp((I.yawV || 0) * sp * 0.035, -0.2, 0.2) - a.bank) * (1 - Math.exp(-8 * dt));
@@ -142,7 +145,8 @@
         // foot's swing begins)
         const P = L.plant; let k = 1;
         if (P && P[0].on && P[1].on) { const c = Math.cos(I.yaw), n = Math.sin(I.yaw); k = (P[0].x - I.X) * c + (P[0].z - I.Z) * n < (P[1].x - I.X) * c + (P[1].z - I.Z) * n ? 0 : 1; }
-        a.ph = Ga.startPhase(k, Math.max(v, 0.8), s, a.rw);
+        // (and a little on or back by the id: two who set off in the same frame do not walk in step — D-599)
+        a.ph = Ga.startPhase(k, Math.max(v, 0.8), s, a.rw) + 0.12 * (G.hash((I.id || 0) * 59 + 11) - 0.5);
       }
       a.ph += Ga.freq(v, s, a.rw) * Ga.cad(go) * dt;
       stride(out, a, st, v, s, I, go);
@@ -159,9 +163,10 @@
     let ovk = I.over, ovu = I.overK; a.oc = null;
     if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = o.k; ovu = o.u; a.oc = o.k; a.ocU = o.u; } }
     const O = ovk && Anim.CLIPS ? (I.lefty && Anim.CLIPS[ovk + '~m']) || Anim.CLIPS[ovk] : null;
-    if (O && O !== a.over) { a.over = O; a.ck = 0; }
+    // (the clip over the top on a clock of its own, a.ok: a wave over a seated meal does not start the meal's clip again — L-1771)
+    if (O && O !== a.over) { a.over = O; a.ok = 0; }
     a.ow = clamp(a.ow + (O ? dt / Math.max(0.01, O.bin) : -dt / Math.max(0.01, a.over ? a.over.bout : 0.2)), 0, 1);
-    if (a.over && a.ow > 0) { const u = ovu !== undefined && O ? ovu : (a.ck += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
+    if (a.over && a.ow > 0) { const u = ovu !== undefined && O ? ovu : (a.ok += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
     if (!O && a.ow <= 0) a.over = null;
     // the additive: the porte (the years, the cold, the grief… — anim-porte.js), the drink in the body (Anim.stagger), the tiredness
     if (Anim.porte && a.pz) Anim.porte(a, I, out, base, C);
@@ -187,9 +192,9 @@
   // a clip on the base: its time from the world (I.clipK) or its own clock
   // (a gesture of no world's stroke goes at each one's own pace — I.tempo, the reader's — and never quite even: a little quicker,
   // a little slower, in a swell of three to six seconds of the world's clock that is each one's own by the id; two people never
-  // move in step for long, D-599; the world's strokes keep the world's clock)
+  // move in step for long, D-599 — and drawing away from another in step with them, a.pu; the world's strokes keep the world's clock)
   function playClip(out, a, C, I, dt, w) {
-    let u; if (I.clipK !== undefined) u = I.clipK; else { const id = I.id || 0; const j = I.tempo ? I.tempo * (1 + 0.15 * Math.sin(TAU * (I.clock || 0) / (3 + 3 * G.hash(id * 41 + 1)) + TAU * G.hash(id * 43 + 2))) : 1; a.ck = (a.ck || 0) + dt / C.dur * j; u = a.ck; }
+    let u; if (I.clipK !== undefined) u = I.clipK; else { const id = I.id || 0; const j = I.tempo ? (1 + 0.03 * (I.tempo - 1) / 0.08) * (1 + 0 * Math.sin(TAU * (I.clock || 0) / (3 + 3 * G.hash(id * 41 + 1)) + TAU * G.hash(id * 43 + 2))) : 1; a.ck = (a.ck || 0) + dt / C.dur * (j + 0.5 * (a.pu || 0)); u = a.ck; }
     Anim.playClip(out, C, u, w); out.tool = C.item ? 1 : out.tool;
   }
 

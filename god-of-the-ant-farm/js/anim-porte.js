@@ -29,12 +29,12 @@
   // the speed's own (the elder's and the cold's quicker, shorter steps; the hot noon's slower), the steps' width
   const GO = { arms: 1, lean: 0, cad: 1, wide: 0 };
   Anim.gaitOpts = function (a, I) {
-    const p = a.pz, t = I.tired || 0; if (!p && !t) return null;
-    if (!p) { GO.arms = 1 - 0.45 * t; GO.lean = 0.06 * t; GO.cad = 1; GO.wide = 0; return GO; }
+    const p = a.pz, t = I.tired || 0, pu = 1 + 0.15 * clamp(a.pu || 0, -1, 1); if (!p && !t && pu === 1) return null;
+    if (!p) { GO.arms = 1 - 0.45 * t; GO.lean = 0.06 * t; GO.cad = pu; GO.wide = 0; return GO; }
     GO.arms = clamp((1 - 0.45 * t) * (1 - 0.4 * p.velho) * (1 - 0.6 * p.frio) * (1 - 0.5 * p.luto) * (1 - 0.45 * p.medo) * (1 - 0.5 * p.nobre) * (1 - 0.3 * p.doente) * (1 - 0.3 * p.chuva) * (1 - 0.3 * p.gravida)
       * (1 + 0.2 * p.crianca) * (1 + 0.25 * p.furia) * (1 + 0.15 * p.expans), 0.15, 1.4);
     GO.lean = 0.06 * t + 0.13 * p.velho + 0.05 * p.frio + 0.07 * p.chuva + 0.08 * p.doente + 0.07 * p.luto + 0.06 * p.medo + 0.04 * p.furia - 0.05 * p.gravida - 0.03 * p.nobre - 0.03 * p.confia;
-    GO.cad = clamp((1 + 0.12 * p.velho) * (1 + 0.08 * p.frio) * (1 + 0.06 * p.chuva) * (1 + 0.1 * p.medo) * (1 + 0.05 * p.gravida) * (1 + 0.08 * Math.abs(p.manca)) * (1 - 0.07 * p.calor) * (1 - 0.06 * p.nobre) * (1 - 0.04 * p.luto), 0.85, 1.25);
+    GO.cad = clamp((1 + 0.12 * p.velho) * (1 + 0.08 * p.frio) * (1 + 0.06 * p.chuva) * (1 + 0.1 * p.medo) * (1 + 0.05 * p.gravida) * (1 + 0.08 * Math.abs(p.manca)) * (1 - 0.07 * p.calor) * (1 - 0.06 * p.nobre) * (1 - 0.04 * p.luto), 0.85, 1.25) * pu; // (pu: out of step with a neighbour, D-599)
     GO.wide = 0.018 * p.velho + 0.025 * p.gravida + 0.008 * p.frio;
     return GO;
   };

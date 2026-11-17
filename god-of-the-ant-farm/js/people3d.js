@@ -1590,7 +1590,7 @@
       const Xw = pl ? pl.X : v.x * TL, Zw = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
       // (each one's own clocks begun at their own place — the breath, the weight shifts, the gestures of no world's stroke —: two seen
       // first in the same frame never move in step, D-599)
-      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); vis.set(v.id, s); }
+      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); s.an.ph = G.hash(v.id * 7 + 3); vis.set(v.id, s); }
       // (where the view draws them: where the world has them — the corner of their way rounded ahead, the start and the stop
       // eased, a change of place inside walked: Anim.track, D-344)
       const pX = s.X, pZ = s.Z; Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
@@ -1598,9 +1598,10 @@
       // (far off — the last level of detail —, or out of the eye's field the last frame: the pose made again every second frame, or
       // every third farther than twice its edge or unseen, each one on their own beat by their id; between, the last pose goes along
       // with them — where they are and their turn are every frame's, the ground under them the last pose's. The time of the frames
-      // between is the next pose's: the stride's phase never lags their way, D-591)
+      // between is the next pose's: the stride's phase never lags their way, D-591 — only while the frames are short: the animator takes
+      // a tenth of a second at most a pose, and three frames of a slow machine would lose time to it, L-1772)
       const pr = pairOf.get(v.id) || null; s.dtA = (s.dtA || 0) + dt;
-      const beat = (s.lod < 2 && !s.cull) || pr || !s.made ? 1 : s.cull || (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2 > 4 * LODD[1] * LODD[1] ? 3 : 2;
+      const beat = (s.lod < 2 && !s.cull) || pr || !s.made || dt > 0.045 ? 1 : s.cull || (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2 > 4 * LODD[1] * LODD[1] ? 3 : 2;
       const fresh = beat === 1 || (frameNo + v.id) % beat === 0;
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
       // inside, on the floor, the bed, the bench the plan has there)
@@ -1638,8 +1639,8 @@
         // its breath; the hand one leads with)
         I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
         // (the idle's little things: the reader's context, near the eye — the middle level the big ones only, far off none)
-        I.ctx = s.lod >= 2 ? null : s.ctx; I.lod = s.lod; I.tempo = G.Vida3D.tempo(v);
-        Anim.drive(s.an, I, s.pose, Lv, dtA); s.made = 1;
+        I.ctx = s.lod >= 2 ? null : s.ctx; I.lod = s.lod; I.tempo = G.Vida3D.tempo(v); I.push = G.Vida3D.apart(s, v.id, st, DRAWN, visAt, vt);
+        Anim.drive(s.an, I, s.pose, Lv, dtA); s.made = 1; G.Vida3D.mark(s, st, vt);
         // (the look: the body, where it stands before them — and back when it goes —; else the one they are with; a blink now and then)
         const look = G.Vida3D.look(s, v, av, st, visAt);
         s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dtA));

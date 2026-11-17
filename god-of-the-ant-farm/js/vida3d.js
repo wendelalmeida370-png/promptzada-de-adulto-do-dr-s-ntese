@@ -142,6 +142,38 @@
   };
   // (each one's own pace, ±8%: the breath, the weight shifts, the gestures of no world's stroke — by the id)
   V3.tempo = v => 0.92 + 0.16 * G.hash(v.id * 19 + 7);
+  // (and never in step with another: one in a gesture of no world's stroke, or in a stride, as someone else drawn is in — the eye
+  // sees the whole crowd at once — and close to them on it — 0.3 s on a gesture, 0.15 s on a stride — draws away from them: a little
+  // slower if one is just ahead, a little quicker if one is just behind, toward the middle between the two nearest. Both do it, so a
+  // pair parts and a crowd on the same gesture spreads round it like beads on a ring (a push for one of the two only, the same push
+  // for many, or the pushes of all summed, kept some together).
+  // Each one's own pace alone let two close paces sway together for many seconds — the listeners of a speech, two children running
+  // together. −1..1: the gesture's clock ± half, the stride's cadence ± 15% (anim-body.js, anim-porte.js); only the view's memory is
+  // read, D-599)
+  V3.apart = function (s, id, st, near, visAt, now) {
+    const A = G.Anim3D, C = A.CLIPS && A.CLIPS[st], loco = !C && A.LOCO && A.LOCO[st]; if ((!C && !loco) || (C && C.period > 0) || !near || !s.an) return 0;
+    const per = loco ? 1 / Math.max(0.1, G.Gait.freq(s.an.sp || 1, 1, s.an.rw || 0)) : C.dur, lim = loco ? 0.15 : 0.3;
+    const u = s.gSt === st ? phaseAt(s, now) : loco ? s.an.ph || 0 : s.an.ck || 0;
+    // (the nearest one just ahead of me on it and the nearest just behind, round its cycle — dead level, the smaller id counts as
+    // ahead —: toward the middle between them, so a ring of them comes even)
+    let fa = lim, fb = lim;
+    for (let k = 0; k < near.length; k++) { const e = near[k]; if (e[0] === id) continue; const o = visAt(e[0]); if (!o || o.gSt !== st) continue;
+      let d = (phaseAt(o, now) - u) % 1; if (d < 0) d += 1;
+      const sec = Math.min(d, 1 - d) * per; if (sec >= lim) continue; if (d < 0.5 && !(d < 1e-6 && id < e[0])) { if (sec < fa) fa = sec; } else if (sec < fb) fb = sec; }
+    const f = (fa - fb) / lim; return f < -1 ? -1 : f > 1 ? 1 : f;
+  };
+  // (where someone is on their gesture or stride at a moment of the view, from the last time they were drawn and the pace they went
+  // at — the far ones are drawn every second or third frame, and in a frame some are drawn before others: compared as they were, two
+  // a hair apart read now one ahead, now the other, and never parted)
+  const phaseAt = (o, now) => o.gU + (o.gV || 0) * ((now || 0) - o.gT);
+  // (kept after each one is drawn: the gesture or stride they are on, where on it, how fast it goes, when — gSt, gU, gV, gT: the
+  // cloth has its own c- names in the same memory)
+  V3.mark = function (s, st, now) {
+    const A = G.Anim3D, C = A.CLIPS && A.CLIPS[st], loco = !C && A.LOCO && A.LOCO[st]; if ((!C && !loco) || (C && C.period > 0) || !s.an) { s.gSt = null; return; }
+    const u = loco ? s.an.ph || 0 : s.an.ck || 0;
+    s.gV = s.gSt === st && now > s.gT ? (u - s.gU) / (now - s.gT) : loco ? G.Gait.freq(s.an.sp || 1, 1, s.an.rw || 0) : 1 / C.dur;
+    s.gU = u; s.gT = now; s.gSt = st;
+  };
   // (the hand a person leads with: one in ten left-handed, by the id — the gestures of their hands on the other side)
   V3.lefty = v => G.hash(v.id * 31 + 7) < 0.1;
 

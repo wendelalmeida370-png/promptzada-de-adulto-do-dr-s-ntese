@@ -46,26 +46,29 @@
   oc('oc-olhar-porta', 3.5, HD, [[0, { lookY: 0 }], [0.2, { lookY: 48, neck: -4 }], [0.85, { lookY: 46, neck: -3 }], [1, { lookY: 0, neck: 0 }]]);
   oc('oc-acenar-cabeca', 1.2, HD, [[0, { neck: 0 }], [0.3, { neck: 16 }], [0.55, { neck: 2 }], [0.75, { neck: 10 }], [1, { neck: 0 }]], { in: 0.15, out: 0.2 });
   // the hand to the head, the nape, the arm, the chin, the hair: scratches and touches (the head goes to the hand a little)
-  oc('oc-cocar-cabeca', 2.4, RA.concat(HD), work(1, 'cabeca', 'elR', 9, 4, null, { neck: 8, grip: 0.45 }));
+  oc('oc-cocar-cabeca', 2.4, RA.concat(HD), work(1, 'cabeca', 'elR', 9, 4, { shRp: 20 }, { neck: 8, grip: 0.45 }));
   oc('oc-cocar-nuca', 2.2, RA.concat(HD), work(1, 'nuca', 'shRy', 8, 4, null, { neck: 12, grip: 0.4 }));
   oc('oc-cocar-braco', 2.4, RA, work(1, 'ombro', 'elR', 8, 4, { elR: 6 }, { grip: 0.35 }));
   oc('oc-cocar-queixo', 2.8, RA.concat(HD), work(1, 'boca', 'elR', 4, 2, { elR: -6, shRp: 4 }, { neck: -4, grip: 0.55 }));
-  oc('oc-ajeitar-cabelo', 1.8, RA.concat(HD), [[0, r0], [0.3, mix(at(1, 'testa'), { neck: 4 })], [0.6, mix(at(1, 'cabeca'), { neck: -2 })], [1, mix(r0, { neck: 0 })]]);
+  oc('oc-ajeitar-cabelo', 1.8, RA.concat(HD), [[0, r0], [0.3, mix(at(1, 'testa', { shRp: 10 }), { neck: 4 })], [0.6, mix(at(1, 'cabeca', { shRp: 20 }), { neck: -2 })], [1, mix(r0, { neck: 0 })]]);
   // the hands at the belt, the clothes; on the hips, behind the back, joined before the body
   oc('oc-ajeitar-cinto', 1.6, RA.concat(LA), both(work(1, 'juntas', 'elR', 6, 2, { shRy: -12 }, { grip: 0.8 }), work(-1, 'juntas', 'elL', 6, 2, { shLy: 12 }, { gripL: 0.8 })));
   oc('oc-ajeitar-roupa', 1.8, RA.concat(LA), both(work(1, 'barriga', 'shRp', 7, 2, { shRy: -18 }, { grip: 0.7 }), work(-1, 'barriga', 'shLp', 7, 2, { shLy: 18 }, { gripL: 0.7 })));
-  oc('oc-maos-cintura', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.2, mix(at(1, 'ladoBarriga'), at(-1, 'ladoBarriga'))], [0.85, mix(at(1, 'ladoBarriga', { elR: 3 }), at(-1, 'ladoBarriga', { elL: 3 }))], [1, mix(r0, l0)]]);
+  // (the arms folded across the chest — each hand at the other arm, the right forearm over the left: the hands on the hips themselves
+  // go inside a cape and the belly, T-1613; the reach of the side of the belly turned out, less far back and less bent)
+  const AK = { shRr: -20, shRp: -25, elR: -10 }, AKL = { shLr: 20, shLp: -15, elL: -10 };
+  oc('oc-bracos-cruzados', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.2, mix(at(1, 'ladoBarriga', AK), at(-1, 'ladoBarriga', AKL))], [0.85, mix(at(1, 'ladoBarriga', mix(AK, { elR: AK.elR + 3 })), at(-1, 'ladoBarriga', mix(AKL, { elL: AKL.elL + 3 })))], [1, mix(r0, l0)]]);
   oc('oc-maos-costas', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.22, mix(at(1, 'costas'), at(-1, 'costas'))], [0.85, mix(at(1, 'costas'), at(-1, 'costas'))], [1, mix(r0, l0)]]);
   oc('oc-maos-juntas', 3.6, RA.concat(LA), [[0, mix(r0, l0)], [0.22, mix(at(1, 'juntas'), at(-1, 'juntas'), { grip: 0.5, gripL: 0.5 })], [0.85, mix(at(1, 'juntas'), at(-1, 'juntas'), { grip: 0.5, gripL: 0.5 })], [1, mix(r0, l0)]]);
   // the tired: a stretch, a yawn, a sigh, the breath caught bent over
-  oc('oc-espreguicar', 3, RA.concat(LA, HD, ['lean']), [[0, mix(r0, l0, { lean: 0 })], [0.35, mix(at(1, 'alto'), at(-1, 'alto'), { lean: -8, neck: -12, grip: 0.7, gripL: 0.7 })], [0.62, mix(at(1, 'alto', { shRr: -8 }), at(-1, 'alto', { shLr: 8 }), { lean: -9, neck: -14 })], [1, mix(r0, l0, { lean: 0, neck: 0 })]], { in: 0.3, out: 0.4 });
+  oc('oc-espreguicar', 3, RA.concat(LA, HD, ['lean']), [[0, mix(r0, l0, { lean: 0 })], [0.35, mix(at(1, 'alto'), at(-1, 'alto'), { lean: -4, neck: -12, grip: 0.7, gripL: 0.7 })], [0.62, mix(at(1, 'alto', { shRr: -8 }), at(-1, 'alto', { shLr: 8 }), { lean: -5, neck: -14 })], [1, mix(r0, l0, { lean: 0, neck: 0 })]], { in: 0.3, out: 0.4 });
   oc('oc-bocejar', 2.4, RA.concat(HD), [[0, mix(r0, { neck: 0 })], [0.3, mix(at(1, 'boca'), { neck: -10 })], [0.7, mix(at(1, 'boca'), { neck: -8 })], [1, mix(r0, { neck: 0 })]]);
   oc('oc-suspirar', 2.4, ['lean', 'neck', 'breath', 'shLr', 'shRr'], [[0, { lean: 0, neck: 0, breath: 0, shLr: REST.shLr, shRr: REST.shRr }], [0.35, { lean: 3, neck: -4, breath: 0.9 }], [0.65, { lean: 7, neck: 13, breath: -0.6, shLr: 1, shRr: -1 }], [1, { lean: 0, neck: 0, breath: 0, shLr: REST.shLr, shRr: REST.shRr }]]);
   oc('oc-arquejar', 2.6, RA.concat(LA, HD, ['lean', 'breath']), [[0, mix(r0, l0, { lean: 0, breath: 0 })], [0.3, mix({ shRp: -32, shRr: 4, elR: 12, shLp: -32, shLr: -4, elL: 12 }, { lean: 28, neck: -12, breath: 1 })], [0.55, { lean: 29, neck: -12, breath: -1 }], [0.8, mix({ shRp: -30, shRr: 4, elR: 14, shLp: -30, shLr: -4, elL: 14 }, { lean: 27, neck: -10, breath: 1 })], [1, mix(r0, l0, { lean: 0, neck: 0, breath: 0 })]]);
   // the cold: the hands rubbed, blown on; the heat: the face fanned, the brow wiped
   oc('oc-esfregar-maos', 2.6, RA.concat(LA, HD), both(work(1, 'barriga', 'shRy', 10, 6, { shRp: -10, elR: 10 }, { grip: 0.3, neck: 6 }), work(-1, 'barriga', 'shLy', -10, 6, { shLp: -10, elL: 10 }, { gripL: 0.3 })));
   oc('oc-soprar-maos', 2.4, RA.concat(LA, HD), [[0, mix(r0, l0)], [0.28, mix(at(1, 'boca', { elR: -4 }), at(-1, 'boca', { elL: -4 }), { grip: 0.5, gripL: 0.5, neck: 8 })], [0.75, mix(at(1, 'boca', { elR: -4 }), at(-1, 'boca', { elL: -4 }), { neck: 9 })], [1, mix(r0, l0, { neck: 0 })]]);
-  oc('oc-abanar-se', 2.6, RA.concat(HD), work(1, 'rosto', 'shRy', 18, 8, { elR: -28, shRp: -6 }, { grip: 0.05, neck: -6 }));
+  oc('oc-abanar-se', 2.6, RA.concat(HD), work(1, 'rosto', 'shRy', 18, 8, { elR: -28, shRp: 2 }, { grip: 0.05, neck: -6 }));
   oc('oc-enxugar-testa', 1.8, RA.concat(HD), [[0, r0], [0.35, mix(at(1, 'testa'), { neck: -4 })], [0.62, mix(at(1, 'testa', { shRy: -36, shRr: -10 }), { neck: -2 })], [1, mix(r0, { neck: 0 })]]);
   // the sick: a cough, a hand to the chest; the grieving: the eyes wiped
   oc('oc-tossir', 1.8, RA.concat(HD, ['lean']), [[0, mix(r0, { lean: 0, neck: 0 })], [0.25, mix(at(1, 'boca'), { lean: 4, neck: 6 })], [0.35, { lean: 12, neck: 12 }], [0.45, { lean: 5, neck: 6 }], [0.55, { lean: 12, neck: 12 }], [0.75, mix(at(1, 'boca'), { lean: 4, neck: 6 })], [1, mix(r0, { lean: 0, neck: 0 })]], { in: 0.18 });

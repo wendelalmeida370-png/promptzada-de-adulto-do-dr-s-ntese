@@ -160,7 +160,8 @@ if (on('v6') || on('v7')) {
 
 if (on('v7')) {
   // the variety, measured (the study's 3.13): a plaza of the metropole — the eye at its busiest one, the people drawn whole there at
-  // Alta (60) — for 120 s of the world: (a) no two people in the same gesture and the same phase (±0.1 s) for more than 2 s; (b) no
+  // Alta (60) — for 120 s of the world: (a) no two people in the same gesture (a clip or the little thing over the top; the stride is
+  // said apart) and the same phase (±0.1 s) for more than 2 s; (b) no
   // little thing over 35% of a person's own, over ten minutes of their world clock, and never the same one twice in a row; (c) at
   // least 25 gestures and stances seen
   M.pronto('metropole'); S = G.S; let lived = 0; for (; lived < 240; lived += 20) { let sl = 0; for (const v of S.villagers.values()) if (v.sleeping) sl++; if (sl / S.villagers.size < 0.25) break; M.viver(20); }
@@ -168,16 +169,23 @@ if (on('v7')) {
   let set = null; for (const s of S.settlements.values()) if (!set || G.Village.pop(s.id) > G.Village.pop(set.id)) set = s;
   const fx = pz ? pz.x + 1 : set.cx, fy = pz ? pz.y + 1 : set.cy; const focus = { X: fx * TL, Z: fy * TL };
   const rq = G.Realm.Q; G.Realm.Q = () => Object.assign({}, rq ? rq() : {}, { view: 640, npcs: 60, lod: 1 }); P3.clear();
-  const run = new Map(); let worst = 0, worstPair = ''; const seen = new Set(); const DT = 0.1; let drawnMax = 0;
-  const keyOf = (id, s) => { const a = s.an; if (a.over && a.ow > 0.5) return ['+' + a.over.id, a.oc ? (a.ocU || 0) * a.over.dur : (a.ck || 0) * a.over.dur];
-    const C = A.CLIPS[s.st]; if (C) { const v = S.villagers.get(id); const k = v ? P3.clipClock(v, s.st) : undefined; return [s.st, (k !== undefined ? k : a.ck || 0) * C.dur]; }
-    if (A.LOCO[s.st]) return [s.st, (a.ph || 0) / Math.max(0.1, G.Gait.freq(a.sp || 1, 1, a.rw || 0))]; return [s.st, s.t]; };
+  const run = new Map(); let worst = 0, worstPair = '', worstLoco = 0, locoPair = ''; const seen = new Set(); const DT = 0.1; let drawnMax = 0;
+  // (each one's gesture and where they are on it, in seconds, and its period: the phase of a loop taken round its cycle — two on the
+  // same gesture one cycle apart are in step —, a gesture of one go and a stance's own clock along it)
+  const fr = x => x - Math.floor(x);
+  const keyOf = (id, s) => { const a = s.an; if (a.over && a.ow > 0.5) return a.oc ? ['+' + a.over.id, (a.ocU || 0) * a.over.dur, 0] : ['+' + a.over.id, fr(a.ok || 0) * a.over.dur, a.over.dur];
+    const C = A.CLIPS[s.st]; if (C) { const v = S.villagers.get(id); const k = v ? P3.clipClock(v, s.st) : undefined; return [s.st, fr(k !== undefined ? k : a.ck || 0) * C.dur, C.dur]; }
+    if (A.LOCO[s.st]) { const per = 1 / Math.max(0.1, G.Gait.freq(a.sp || 1, 1, a.rw || 0)); return [s.st, fr(a.ph || 0) * per, per]; } return [s.st, s.t, 0]; };
+  const apart = (p, q) => { const d = Math.abs(p[1] - q[1]); return p[2] > 0 ? Math.min(d % p[2], p[2] - d % p[2]) : d; };
   for (let i = 0; i < 120 / DT; i++) {
     M.viver(DT); P3.update(DT, focus); const ids = P3.walkers.map(w => w[7]).slice(0, 60); drawnMax = Math.max(drawnMax, ids.length);
     const K = ids.map(id => { const s = P3.visOf(id); return s ? keyOf(id, s) : null; }); for (const k of K) if (k) seen.add(k[0]);
     const now = new Set();
-    for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) { const p = K[a], q = K[b]; if (!p || !q || p[0] !== q[0] || Math.abs(p[1] - q[1]) > 0.1) continue;
-      const key = ids[a] + ':' + ids[b]; now.add(key); const r = (run.get(key) || 0) + DT; run.set(key, r); if (r > worst) { worst = r; worstPair = `#${ids[a]} e #${ids[b]} em «${p[0]}»`; } }
+    for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) { const p = K[a], q = K[b]; if (!p || !q || p[0] !== q[0] || apart(p, q) > 0.1) continue;
+      const key = ids[a] + ':' + ids[b]; now.add(key); const r = (run.get(key) || 0) + DT; run.set(key, r);
+      // (the strides apart: thirty running in a chase cannot all be out of step — a stride of 0.7 s holds three or four ±0.1 s apart —,
+      // and the feet keep the stride's phase; said, not judged: T-1612)
+      if (A.LOCO[p[0]]) { if (r > worstLoco) { worstLoco = r; locoPair = `#${ids[a]} e #${ids[b]} em «${p[0]}»`; } } else if (r > worst) { worst = r; worstPair = `#${ids[a]} e #${ids[b]} em «${p[0]}»`; } }
     for (const key of run.keys()) if (!now.has(key)) run.delete(key);
   }
   G.Realm.Q = rq;
@@ -187,7 +195,7 @@ if (on('v7')) {
     for (let t = 0; t < 600; t += 0.25) { const o = A.ocioAt(v.id, S.clock + t, ctx, 0); if (!o) continue; if (o.n === lastN) continue; lastN = o.n; cnt[o.k] = (cnt[o.k] || 0) + 1; tot++; ocSeen.add(o.k); if (o.k === last) twice++; last = o.k; }
     if (tot >= 10) { people++; for (const k in cnt) { const sh = cnt[k] / tot; if (sh > topShare) { topShare = sh; topWho = `#${v.id}: «${k}» ${cnt[k]} de ${tot}`; } } } }
   ok('v7 a variedade: uma praça da metrópole por 120 s', worst <= 2 && topShare <= 0.35 && !twice && seen.size >= 25,
-    `${drawnMax} desenhadas; o par mais tempo no mesmo gesto e na mesma fase: ${r2(worst)} s${worstPair ? ' (' + worstPair + ')' : ''} · a micro-ação mais repetida de uma pessoa em 10 min: ${Math.round(topShare * 100)}% (${topWho}), ${people} pessoas, ${ocSeen.size} micro-ações diferentes; repetidas em seguida: ${twice} · ${seen.size} gestos e estados vistos: ${[...seen].slice(0, 40).join(', ')}`);
+    `${drawnMax} desenhadas; o par mais tempo no mesmo gesto e na mesma fase: ${r2(worst)} s${worstPair ? ' (' + worstPair + ')' : ''} (na mesma passada, dito e não julgado: ${r2(worstLoco)} s${locoPair ? ', ' + locoPair : ''}) · a micro-ação mais repetida de uma pessoa em 10 min: ${Math.round(topShare * 100)}% (${topWho}), ${people} pessoas, ${ocSeen.size} micro-ações diferentes; repetidas em seguida: ${twice} · ${seen.size} gestos e estados vistos: ${[...seen].slice(0, 40).join(', ')}`);
 }
 
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
