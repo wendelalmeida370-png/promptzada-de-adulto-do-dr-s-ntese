@@ -78,7 +78,7 @@
     let food = s.cargo, good = 0;
     if (f.good) { good = Math.max(1, Math.round(s.cargo * 0.45)); food = s.cargo - good; G.Village.addStock(f.good, good, s.fac); const fa = G.Fac.get(s.fac); if (fa) E.made(fa, f.good, good); }
     else food = Math.round(food * f.n / 2.2);
-    if (food > 0) G.Village.addStock('food', food, s.fac);
+    if (food > 0) G.Village.addStock('food', food, s.fac, 'peixe'); // (the catch is fish, in the store's parts: 20h)
     G.Riches && G.Riches.noteFood(s.fac, 'peixe:' + k, s.cargo);
     G.FX && G.FX.floater(s.x, s.y, `+${s.cargo} ${f.name}`, '#b8e070', 1.6);
     noteCatch({ fac: s.fac }, k, s.x, s.y, s.cargo);

@@ -309,11 +309,16 @@ console.log(`(${town.name}: ${G.Village.pop(town.id)} habitantes; a beira d'águ
   // (and a people that does not know the boat — the test's hand on what it knows, put back after: with bronze the line,
   // without it the spear; a people of the water knows the net anyway)
   const f = G.Fac.all().find(q => !({ nordico: 1, egipcio: 1, asteca: 1 })[q.civ]) || G.Fac.all()[0]; const k0 = Object.assign({}, f.tech.known);
-  delete f.tech.known.navegacao; const withBronze = (f.tech.known.bronze = f.tech.known.bronze || G.S.day, P.how(f.id));
+  // (the hook is of a metal the people had, not of the art alone — 20h, D-443: the art without the bronze ever in its hands is
+  // still the spear; a tool of bronze into its store by the test's hand, and taken back, and the bronze is a metal it had)
+  delete f.tech.known.navegacao; f.tech.known.bronze = f.tech.known.bronze || G.S.day; const Or = G.Origem;
+  const artOnly = Or.had(f.id, 'bronze') ? null : P.how(f.id);
+  if (!Or.had(f.id, 'bronze')) { G.inSim++; try { G.Depot.make('f:' + f.id, 'ferramentas', 1, { code: 'teste', of: 'bronze', part: true }); G.Depot.use('f:' + f.id, 'ferramentas', 1, { code: 'teste', of: 'bronze' }); } finally { G.inSim--; } }
+  const withBronze = P.how(f.id);
   delete f.tech.known.bronze; delete f.tech.known.ferro; const bare = P.how(f.id);
   f.tech.known = k0;
-  const civOk = withBronze === 'linha' && bare === 'arpao';
-  ok('p12 o jeito de cada povo', all && ways.length >= 2 && civOk, `${ways.join(' · ')}; ${f.name} sem barco: com bronze ${P.GEAR[withBronze].name}, sem metal ${P.GEAR[bare].name}`);
+  const civOk = withBronze === 'linha' && bare === 'arpao' && (artOnly === null || artOnly === 'arpao');
+  ok('p12 o jeito de cada povo', all && ways.length >= 2 && civOk, `${ways.join(' · ')}; ${f.name} sem barco: ${artOnly ? 'com a arte do bronze sem o metal ' + P.GEAR[artOnly].name + ', ' : ''}com o bronze ${P.GEAR[withBronze].name}, sem metal ${P.GEAR[bare].name}`);
 }
 const e = M.erros();
 ok('limpo', M.limpo(), M.limpo() ? 'sem erro de módulo nem aviso no console' : `erros de módulo ${JSON.stringify(e.mod)}; console: ${e.console.slice(0, 3).join(' | ')}`);

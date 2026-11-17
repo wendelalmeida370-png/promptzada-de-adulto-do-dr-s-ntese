@@ -18,7 +18,7 @@ G.FX = new Proxy({}, { get: () => () => undefined }); G.Talk = new Proxy({}, { g
 const H = { setTask: (v, t) => { t.age = 0; if (t.st === undefined) t.st = 0; v.task = t; v.actT = 0; return t; }, end: v => G.Vg.endTask(v), move: v => { if (v._go) { v.x = v._go[0]; v.y = v._go[1]; v._go = null; } return true; }, goto: (v, x, y) => { v._go = [x, y]; return true; } };
 G.Vg.H = H;
 function world(stock) {
-  const f = { id: 1, name: 'Pólis de teste', alive: true, civ: 'grego', stock: Object.assign({ food: 100, wood: 30, moedas: 60, la: 30, minerio: 20, ouro: 6, ferramentas: 10, armas: 0 }, stock || {}), tech: { known: { moeda: 1 } }, rel: {} };
+  const f = { id: 1, name: 'Pólis de teste', alive: true, civ: 'grego', stock: Object.assign({ food: 100, wood: 30, moedas: 60, la: 30, minerio: 20, ouro: 6, ferramentas: 10, armas: 0 }, stock || {}), tech: { known: { moeda: 1, ferro: 1 } }, rel: {} }; // (the iron ore is forged only with the art of the iron: 20h, D-441)
   const set = { id: 2, name: 'Vila', fac: 1, cx: 10, cy: 10, tier: 2 };
   const B = (id, type, x, y) => ({ id, type, x, y, w: 2, h: 2, built: true, progress: 1, set: 2, inv: {}, need: { wood: 0, stone: 0 }, incoming: {}, hp: 140, maxHp: 140, ip: null, style: 'grego' });
   const S = G.S = { day: 3, clock: 600, time: 0.3, nextId: 100, rng: 777, buildings: new Map([[3, B(3, 'tecelagem', 8, 8)], [4, B(4, 'storehouse', 12, 8)], [5, B(5, 'forja', 4, 8)], [6, B(6, 'ourives', 8, 4)]]), villagers: new Map(), factions: new Map([[1, f]]), settlements: new Map([[2, set]]), ships: [], acts: [], ledger: [], ledgerN: 0, loose: [], weather: { rain: 0, storm: 0, drought: 0 }, stats: { foodProduced: 0, woodProduced: 0, stoneProduced: 0 }, history: [], dead: new Map(), milestones: {} };
@@ -48,14 +48,15 @@ const sum = (L, k) => Math.round(L.filter(e => !k || e[5] === k).reduce((n, e) =
   const la0 = f.stock.la, mi0 = f.stock.minerio, ouro0 = f.stock.ouro, w0 = f.stock.wood, wantF = E.forgeOut(f);
   sec(1, all);
   const btec = O.batches(tec)[0], bfor = O.batches(forja)[0], bour = O.batches(our)[0];
-  ok('comecam', !!btec && !!bfor && !!bour && btec.data.p === 'tecido' && bfor.data.p === wantF && bour.data.p === 'joias', `tecelagem: ${btec ? btec.data.p : '-'}; forja: ${bfor ? bfor.data.p : '-'} (o reino pede ${wantF}); ourivesaria: ${bour ? bour.data.p : '-'}`);
+  ok('comecam', !!btec && !!bfor && !!bour && btec.data.p === 'tecido' && O.rx(bfor).k === wantF && O.rx(bfor).mat === 'ferro' && bour.data.p === 'joias', `tecelagem: ${btec ? btec.data.p : '-'}; forja: ${bfor ? bfor.data.p : '-'} (o reino pede ${wantF}); ourivesaria: ${bour ? bour.data.p : '-'}`);
   let stages = new Set(); for (let k = 0; k < 160 && (A.live(btec) || A.live(bfor) || A.live(bour)); k++) { sec(1, all); for (const op of [btec, bfor, bour]) { const s = A.live(op) && O.stage(op); if (s) stages.add(op.data.of + ':' + s.id); } }
   ok('etapas', ['tecelagem:fiar', 'tecelagem:tecer', 'forja:acender', 'forja:forjar', 'ourives:fundir', 'ourives:lavrar'].every(x => stages.has(x)), [...stages].join(', '));
   ok('fornadas-prontas', btec.st === 'ok' && bfor.st === 'ok' && bour.st === 'ok' && btec.data.feitos === 6 && bfor.data.feitos === 6 && bour.data.feitos === 2, `tecido ${btec.data.feitos} (${btec.st}), ${bfor.data.p} ${bfor.data.feitos} (${bfor.st}), joias ${bour.data.feitos} (${bour.st})`);
   // (what left the store of each input left it by the ledger, fetched for a batch — and the next batches have begun meanwhile)
   const took = k => sum(S.ledger.filter(e => e[3] === 'f:1' && e[8] === 'buscar'), k);
   ok('insumos', [['la', la0], ['minerio', mi0], ['ouro', ouro0]].every(([k, n0]) => n0 - f.stock[k] >= (k === 'la' ? 12 : k === 'ouro' ? 2 : 6) && Math.abs((n0 - f.stock[k]) - took(k)) < 0.01), `lã ${la0} → ${f.stock.la} (buscada ${took('la')}), minério ${mi0} → ${f.stock.minerio} (${took('minerio')}), ouro ${ouro0} → ${f.stock.ouro} (${took('ouro')})`);
-  ok('lenha-do-fogo', bfor.data.lenha === 2 && bour.data.lenha === 1 && f.stock.wood <= w0 - 3, `a forja queimou ${bfor.data.lenha}, o cadinho ${bour.data.lenha}; armazém ${w0} → ${f.stock.wood}`);
+  // (the iron asks more of the fire than the bronze: three of wood — 20h, D-441)
+  ok('lenha-do-fogo', bfor.data.lenha === 3 && bour.data.lenha === 1 && f.stock.wood <= w0 - 4, `a forja queimou ${bfor.data.lenha}, o cadinho ${bour.data.lenha}; armazém ${w0} → ${f.stock.wood}`);
   // the goods to the store, with the wage of who takes them
   const st0 = { tecido: f.stock.tecido || 0, joias: f.stock.joias || 0, [wantF]: f.stock[wantF] || 0 };
   for (let k = 0; k < 40 && (D.get('b:3', 'tecido') + D.get('b:5', wantF) + D.get('b:6', 'joias') > 0.5 || all.some(v => v.carry)); k++) sec(1, all);
@@ -87,9 +88,9 @@ const sum = (L, k) => Math.round(L.filter(e => !k || e[5] === k).reduce((n, e) =
 {
   const { person, forja } = world();
   const fe = person('Hefesto', { job: 5, role: 'ferreiro' });
-  const X = O.start(forja, 'armas', fe); let Y = null, most = 0, waited = false;
+  const X = O.start(forja, 'armas.ferro', fe); let Y = null, most = 0, waited = false;
   for (let k = 0; k < 240 && (!Y || A.live(X) || A.live(Y)); k++) {
-    if (!Y && A.live(X) && O.stage(X).kiln) Y = O.start(forja, 'ferramentas', fe);
+    if (!Y && A.live(X) && O.stage(X).kiln) Y = O.start(forja, 'ferramentas.ferro', fe);
     sec(1, [fe]);
     most = Math.max(most, O.batches(forja).filter(op => O.stage(op) && O.stage(op).kiln).length);
     if (Y && A.live(Y) && Y.st === 'wait' && Y.wait === 'forno') waited = true;

@@ -312,11 +312,15 @@
       return H.setTask(v, { type: 'estate', id: b.id, do: 'leaves', x: src[0], y: src[1], tree: src[2], pri: 1 });
     }
     if (b.type === 'salga') {
-      if ((I.carne_seca || 0) >= 4) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: ['carne_seca'] });
-      if ((I.sal || 0) >= 1 && (I.food || 0) >= 4) return H.setTask(v, { type: 'estate', id: b.id, do: 'salt', pri: 1 });
+      // (the salt and the meat — or the fish — of the people: what is salted is what spoils, never the grain; the meat becomes
+      // dried meat, the fish salted fish — 20h, D-445)
+      const O = G.Origem; const MEAT = O ? O.MEAT : null; const meat = MEAT ? O.amount('b:' + b.id, 'food', MEAT) : (I.food || 0);
+      if ((I.carne_seca || 0) >= 4 || (I.bacalhau || 0) >= 4) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: ['carne_seca', 'bacalhau'] });
+      if ((I.sal || 0) >= 1 && meat >= 4) return H.setTask(v, { type: 'estate', id: b.id, do: 'salt', pri: 1 });
       const need = (I.sal || 0) < 1 ? 'sal' : 'food';
-      if ((f.stock[need] || 0) >= (need === 'sal' ? 1 : 8)) return H.setTask(v, { type: 'fetch', id: b.id, k: need, n: need === 'sal' ? Math.min(3, Math.floor(f.stock.sal)) : 8, pri: 1 });
-      if ((I.carne_seca || 0) > 0) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: ['carne_seca'] });
+      const store = need === 'food' && MEAT ? O.free('f:' + f.id, 'food', MEAT) : (f.stock[need] || 0);
+      if (store >= (need === 'sal' ? 1 : 8)) return H.setTask(v, { type: 'fetch', id: b.id, k: need, n: need === 'sal' ? Math.min(3, Math.floor(f.stock.sal)) : 8, of: need === 'food' ? MEAT || undefined : undefined, pri: 1 });
+      if ((I.carne_seca || 0) > 0 || (I.bacalhau || 0) > 0) return H.setTask(v, { type: 'haul', id: b.id, pri: 1, keys: ['carne_seca', 'bacalhau'] });
       return null;
     }
     return null;
@@ -435,10 +439,13 @@
         if (G.VR() < dt * 2) G.FX && G.FX.chips(v.x + v.face * 0.3, v.y, '#f4f4f0');
         if (v.actT < 6 / mul(v)) return;
         // (the salt and the meat used up, the dried meat born, on the shelf — in the ledger, L-384)
-        const D = G.Depot, ref = 'b:' + b.id;
-        if (D.free(ref, 'sal') < 1 || D.free(ref, 'food') < 4) return H.end(v);
-        D.use(ref, 'sal', 1, { code: 'salga', by: v.id }); D.use(ref, 'food', 4, { code: 'salga', by: v.id }); E.used(f, 'sal', 1); E.used(f, 'food', 4);
-        const r = D.make(ref, 'carne_seca', 2, { code: 'salga', by: v.id, part: true }); if (r.ok) { E.made(f, 'carne_seca', r.n); first(f, b, { out: 'carne_seca' }); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); }
+        const D = G.Depot, ref = 'b:' + b.id; const O = G.Origem;
+        // (four of the meat or of the fish on the shelf, the one there is more of: dried meat of the meat, salted fish of the fish)
+        const part = O ? (O.amount(ref, 'food', 'carne') >= 4 ? 'carne' : O.amount(ref, 'food', 'peixe') >= 4 ? 'peixe' : null) : 'carne';
+        if (D.free(ref, 'sal') < 1 || D.free(ref, 'food') < 4 || !part) return H.end(v);
+        const out = part === 'peixe' ? 'bacalhau' : 'carne_seca';
+        D.use(ref, 'sal', 1, { code: 'salga', by: v.id }); D.use(ref, 'food', 4, { code: 'salga', by: v.id, of: O ? part : undefined }); E.used(f, 'sal', 1); E.used(f, 'food', 4);
+        const r = D.make(ref, out, 2, { code: 'salga', by: v.id, part: true }); if (r.ok) { E.made(f, out, r.n); first(f, b, { out }); if (G.Urban) G.Urban.noteB(b, 'oficio', 1); }
         return H.end(v);
       }
     }

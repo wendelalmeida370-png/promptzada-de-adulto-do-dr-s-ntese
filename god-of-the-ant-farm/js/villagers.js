@@ -1655,6 +1655,7 @@
               const y = Math.floor(yf) + (G.R() < yf % 1 ? 1 : 0);
               c.s = 0; c.g = 0;
               if (v.carry && v.carry.k === 'food') v.carry.n += y; else v.carry = { k: 'food', n: y, grain: 1 };
+              if (G.Origem && y > 0) G.Origem.came('v:' + v.id, 'food', y, G.Estates ? (G.Estates.grainOf(b), b.grain) : null, 'colheita'); // (the grain of this field, in the load's parts: 20h)
               G.FX && G.FX.chips(px, py, '#e8c24a');
               if (G.Urban) G.Urban.note(px, py, 'campo', 1); // (the life of the quarter: a harvest)
             } else { c.s = 1; c.g = 0.02; G.FX && G.FX.chips(px, py, '#7a5a36'); }

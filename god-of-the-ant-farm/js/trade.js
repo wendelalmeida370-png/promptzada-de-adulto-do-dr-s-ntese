@@ -20,8 +20,8 @@
   const DAY = () => G.DAY_LEN;
   const log = (t, ic, x, y) => G.Village.log(t, ic, x, y);
 
-  // what can be sold abroad: the riches, and the crafts
-  const TRADE = R.KEYS.concat(['joias', 'tecido', 'ceramica']);
+  // what can be sold abroad: the riches, the crafts, and the ores of the bronze — the tin above all, rare, bought from afar (20h)
+  const TRADE = R.KEYS.concat(['joias', 'tecido', 'ceramica', 'cobre', 'estanho']);
   const ROUTE_NAME = { marfim: 'Rota do Marfim', seda: 'Rota da Seda', especiarias: 'Rota das Especiarias', incenso: 'Rota do Incenso', cafe: 'Rota do Café', cacau: 'Rota do Cacau', sal: 'Rota do Sal', perolas: 'Rota das Pérolas', peles: 'Rota das Peles', pele_rara: 'Rota das Peles', vinho: 'Rota do Vinho', azeite: 'Rota do Azeite', bacalhau: 'Rota do Bacalhau', mel: 'Rota do Mel', joias: 'Rota do Ouro', tecido: 'Rota dos Tecidos', coral: 'Rota do Coral', plumas: 'Rota das Plumas', tamaras: 'Rota das Tâmaras', ceramica: 'Rota das Ânforas', couro_exotico: 'Rota dos Couros', chifre: 'Rota do Chifre' };
   const routeName = k => ROUTE_NAME[k] || ('Rota ' + (R.GOODS[k] && R.GOODS[k].g === 'f' ? 'da' : 'do') + (R.GOODS[k] && R.GOODS[k].pl ? 's' : '') + ' ' + G.cap(E.name(k)));
   const rkey = (a, b, k) => a + '>' + b + ':' + k;

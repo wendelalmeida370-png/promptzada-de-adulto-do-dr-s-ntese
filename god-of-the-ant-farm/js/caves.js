@@ -28,11 +28,11 @@
   const FT = C.FT = { STAL: 1, COL: 2, CRYS: 3, GLOW: 4, SHROOM: 5, BONES: 6, FOSSIL: 7, GUANO: 8 };
   // what shines in the walls
   const ORES = C.ORES = [null,
-    { id: 'cobre', name: 'cobre', col: '#4cbf96', good: 'minerio', n: 2 },
-    { id: 'estanho', name: 'estanho', col: '#cfd6e0', good: 'minerio', n: 2 },
+    { id: 'cobre', name: 'cobre', col: '#4cbf96', good: 'cobre', n: 2 }, // (a vein of copper gives copper, of tin, tin — never the iron ore: 20h, L-1363)
+    { id: 'estanho', name: 'estanho', col: '#cfd6e0', good: 'estanho', n: 2 },
     { id: 'ferro', name: 'ferro', col: '#c2633e', good: 'minerio', n: 3 },
     { id: 'ouro', name: 'ouro', col: '#f6c84e', good: 'ouro', n: 2 },
-    { id: 'sal', name: 'sal-gema', col: '#f6f1e6', good: 'food', n: 6 },
+    { id: 'sal', name: 'sal-gema', col: '#f6f1e6', good: 'sal', n: 6 }, // (the rock salt is salt, not food: 20h, L-1360)
     { id: 'gemas', name: 'gemas', col: '#cf62ea', good: 'joias', n: 1 }];
   const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const D8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
@@ -602,7 +602,7 @@
         if (dep) {
           // the mine's deposit: the face only marks what the miner will bring out — the vein gives it, and the town counts it,
           // when it comes out in the hands (the way out, case 4: L-381)
-          if (dep.amt > 0) { const n = Math.min(dep.amt, dep.kind === 'ouro' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0)); t.carry = { k: dep.kind === 'ouro' ? 'ouro' : 'minerio', n, dep: dep.id }; t.ore = o; }
+          if (dep.amt > 0) { const n = Math.min(dep.amt, dep.kind === 'ouro' || dep.kind === 'estanho' ? 1 + (G.R() < 0.4 ? 1 : 0) : 2 + (G.R() < 0.5 ? 1 : 0)); t.carry = { k: G.Eco ? G.Eco.oreGood(dep.kind) : 'minerio', n, dep: dep.id }; t.ore = o; }
         } else if (def) { t.carry = { k: def.good, n: def.good === 'food' ? 4 : def.good === 'joias' ? 1 : def.good === 'ouro' ? 1 : 2 }; t.ore = o; }
         U.oreN[t.vein] = Math.max(0, U.oreN[t.vein] - 1);
         // the vein gives out: the miners have dug a new gallery into the rock
@@ -889,7 +889,7 @@
       return;
     }
     G.Eco && G.Eco.ensure(f);
-    const take = (k, frac, cap) => { const n = Math.min(cap, Math.floor((f.stock[k] || 0) * frac)); if (n > 0) { f.stock[k] -= n; b.loot[k] = (b.loot[k] || 0) + n; } return n; };
+    const take = (k, frac, cap) => { const n = Math.min(cap, Math.floor((f.stock[k] || 0) * frac)); if (n > 0) { f.stock[k] -= n; b.loot[k] = (b.loot[k] || 0) + n; if (k === 'food' && G.Origem) b.lootOf = G.Origem.mix(b.lootOf, G.Origem.carried('f:' + f.id, null, 'food', n)); } return n; }; // (the stolen food keeps where it came from: 20h)
     const fo = take('food', 0.08, 14), go = take('ouro', 0.3, 3), te = take('tecido', 0.3, 3), mo = take('moedas', 0.15, 10);
     const what = [fo && fo + ' de comida', go && go + ' de ouro', te && te + ' de tecido', mo && mo + ' moedas'].filter(Boolean);
     b.raids++; b.victims[f.id] = (b.victims[f.id] || 0) + 1;
@@ -922,7 +922,7 @@
     const fallen = []; for (const o of here) if (G.R() < (win ? 0.12 : 0.35)) fallen.push(o);
     const f = G.Fac.get(b.hunt.fac);
     if (win) {
-      const lt = b.loot; if (f) { G.Eco && G.Eco.ensure(f); for (const k in lt) f.stock[k] = (f.stock[k] || 0) + lt[k]; }
+      const lt = b.loot; if (f) { G.Eco && G.Eco.ensure(f); for (const k in lt) f.stock[k] = (f.stock[k] || 0) + lt[k]; if (G.Origem && lt.food > 0) G.Origem.came('f:' + f.id, 'food', lt.food, b.lootOf || null, 'resgate'); } // (the food back with its parts: 20h)
       const got = Object.entries(lt).filter(([, n]) => n > 0).map(([k, n]) => n + ' de ' + (G.Eco ? G.Eco.name(k) : k)).join(', ');
       breakBand(cv, `Os guerreiros de ${f ? f.name : '?'} entraram ${C.na(cv)} com tochas e acabaram com ${b.name}. ${b.leader} caiu.${got ? ' Recuperaram ' + got + '.' : ''}`);
       for (const o of here) { o.kills = (o.kills || 0) + 1; bio(o, `Entrou ${C.na(cv)} e acabou com os bandidos.`, `Entrei ${C.na(cv)} com uma tocha e acabei com os bandidos`); }
@@ -1174,13 +1174,13 @@
   // A mine is a door into a cave the miners dig themselves: a shaft goes down from the pithead, a gallery
   // runs into the hill, and the deposit lies in the rock around it as veins. As it is worked the gallery
   // grows after the ore; if it breaks into a natural cave, the miners have found it.
-  const ORE_OF = { ferro: 3, ouro: 4 };
+  const ORE_OF = { cobre: 1, estanho: 2, ferro: 3, ouro: 4 };
   C.mineCave = function (b, o) {
     const S = G.S, U = C.U(); if (!U || !b || !o) return null;
     if (b.cave) { const cv = C.get(b.cave); if (cv && !cv.gone && cv.mine === b.id) return cv; }
     const i0 = b.y * N + b.x; if (U.id[i0] || b.x < 2 || b.y < 2 || b.x >= N - 2 || b.y >= N - 2) return null;
     const id = U.caves.length + 1; const set = S.settlements.get(b.set);
-    const cv = { id, name: `Mina de ${o.kind === 'ouro' ? 'Ouro' : 'Ferro'}${set ? ' de ' + set.name : ''}`, g: 'f', halls: [], mouths: [], n: 0, cx: b.x, cy: b.y, known: {}, found: null, paintings: [], tombs: [], oracle: null, bandits: null, treasures: [], sleepers: [], sheltered: [], guano: 0, bats: 0, roost: null, visits: 0, day: S.day, mine: b.id, deposit: o.id, den: 0, dug: 0 };
+    const cv = { id, name: `Mina de ${({ ouro: 'Ouro', cobre: 'Cobre', estanho: 'Estanho' })[o.kind] || 'Ferro'}${set ? ' de ' + set.name : ''}`, g: 'f', halls: [], mouths: [], n: 0, cx: b.x, cy: b.y, known: {}, found: null, paintings: [], tombs: [], oracle: null, bandits: null, treasures: [], sleepers: [], sheltered: [], guano: 0, bats: 0, roost: null, visits: 0, day: S.day, mine: b.id, deposit: o.id, den: 0, dug: 0 };
     U.caves.push(cv); b.cave = id;
     const dig = (x, y, k) => { if (x < 1 || y < 1 || x >= N - 1 || y >= N - 1) return false; const i = y * N + x; if (U.id[i] && U.id[i] !== id) { linkCave(cv, C.get(U.id[i]), x, y); return false; } U.k[i] = k; U.id[i] = id; U.f[i] = 0; U.ore[i] = 0; cv.n++; return true; };
     dig(b.x, b.y, MOUTH);

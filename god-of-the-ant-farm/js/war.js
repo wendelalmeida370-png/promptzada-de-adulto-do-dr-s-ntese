@@ -314,7 +314,7 @@
     const pe = G.Politics.leaderPe(f);
     const wasCapital = G.Fac.capitalOf(old.id) === set;
     const share = Math.min(0.8, G.Village.pop(set.id) / Math.max(1, G.Fac.pop(old.id)));
-    for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; G.Village.addStock(k, n, f.id); b.loot[k] += n; }
+    for (const k of ['food', 'wood', 'stone']) { const n = Math.floor(old.stock[k] * share); old.stock[k] -= n; G.Village.addStock(k, n, f.id, G.Origem ? G.Origem.carried('f:' + old.id, null, k, n) : null); b.loot[k] += n; } // (with its parts: 20h)
     set.fac = f.id; set.origFac = old.id; set.conq = S.day; set.loyalty = 30; set.lowT = 0;
     let enslaved = 0, killed = 0, freed = 0;
     const killer = S.villagers.get(b.members[0]);
@@ -584,10 +584,11 @@
     if (o.role === 'guerreiro' && Wr.armory.has(fo)) d *= 0.8;
     if (v.captive) d *= 0.85;
     else {
-      // culture and metallurgy: Norse fury, Roman discipline, bronze and iron
+      // culture and metallurgy: Norse fury, Roman discipline, bronze and iron — the art and the metal had (G.Origem.forged: a
+      // people that knows the bronze and never had the copper and the tin fights with stone, 20h)
       d *= G.Civ.t(fv, 'war');
-      if (G.Civ.has(fv, 'bronze')) d *= 1.1;
-      if (G.Civ.has(fv, 'ferro')) d *= 1.1;
+      if (G.Origem.forged(fv, 'bronze')) d *= 1.1;
+      if (G.Origem.forged(fv, 'ferro')) d *= 1.1;
     }
     if (v.elite) d *= v.elite === 'berserker' ? 1.6 : v.elite === 'carro' ? 1.4 : 1.3;
     if (v.arm === 'arco') d *= 0.65;
@@ -863,7 +864,7 @@
         if (goFront(v, t, drop, dt, H)) {
           const k = en.stock.food >= 3 ? 'food' : en.stock.stone >= 3 ? 'stone' : 'wood';
           const n = Math.min(Math.floor(en.stock[k]), 6);
-          if (n > 0) { en.stock[k] -= n; v.carry = { k, n }; b.loot[k] += n; G.Vg.emote(v, 'happy', 1.5); }
+          if (n > 0) { en.stock[k] -= n; v.carry = { k, n }; if (G.Origem) G.Origem.carried('f:' + en.id, 'v:' + v.id, k, n); b.loot[k] += n; G.Vg.emote(v, 'happy', 1.5); } // (the loot keeps where it came from: 20h)
           t.dest = null;
         }
         return;

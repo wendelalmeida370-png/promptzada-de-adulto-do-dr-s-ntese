@@ -1126,5 +1126,58 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // === 20f: o combate ===
 // === 20g: os ofícios ===
 // === 20h: a origem das coisas ===
+// 159. "a divisão é do origem.js" (D-441): as partes de cada bem (S.orig: a comida por origem, o metal das ferramentas e das armas) e o
+// que cada povo já teve de cada material (S.orig.had) só o js/origem.js escreve — os outros perguntam (G.Origem.parts, amount, free,
+// had, matOK, forged) e passam as partes do que movem à mão pelas portas dele (carried, came, levy, unlevy)
+{ for (const f of files) if (f !== 'origem.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\.orig\b\s*(=(?!=)|\.\w+\s*(=(?!=)|\[)|\[)/.test(c) || /\borig\.(p|had|q|qw|t)\b/.test(c)) fails.push(`a divisão: ${f}:${k + 1} escreve ou mexe nas partes (S.orig) fora do origem.js (D-441): ${l.trim().slice(0, 110)}`); });
+  if (!(src['origem.js'] || []).length) fails.push('a divisão: js/origem.js não existe (D-441)'); }
+// 160. "o minério nasce da mina" (D-441): o minério de ferro, o cobre e o estanho nascem só do veio — a mina (economy.js) e a galeria
+// da caverna (caves.js), no livro com o código 'mina' —; ninguém mais os faz (G.Depot.make) nem os põe à mão num armazém (addStock)
+{ const ORE = /(make|addStock)\(\s*[^)]*'(minerio|cobre|estanho)'/;
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (ORE.test(c) && f !== 'economy.js' && f !== 'caves.js') fails.push(`o minério da mina: ${f}:${k + 1} faz minério fora da mina (D-441): ${l.trim().slice(0, 110)}`); });
+  for (const f of ['economy.js', 'caves.js']) { const t = (src[f] || []).join('\n'); if (!/make\([^;]*code: 'mina'/.test(t)) fails.push(`o minério da mina: o ${f} sem a linha do livro «mina» (D-441)`); } }
+// 161. "só a forja faz bem de metal" (D-441): as ferramentas e as armas de um armazém nascem da fornada da forja (act-oficio.js, o
+// bem da receita, com o metal dela: of: R.mat) ou voltam de uma coisa feita delas (inventario.js); ninguém as faz com o bem escrito
+// (G.Depot.make(…'armas'…), addStock('armas'…)), e a escrita à mão do estoque só na volta da leva, com a parte dela (G.Origem.unlevy)
+{ const MK = /(make|addStock)\(\s*[^)]*'(armas|ferramentas)'/; const ADD = /stock\.(armas|ferramentas)\s*(\+=|=\s*\([^)]*\)\s*\+)/;
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (MK.test(c) && f !== 'devmode.js') fails.push(`o metal da forja: ${f}:${k + 1} faz ferramentas ou armas sem forja (D-441): ${l.trim().slice(0, 110)}`);
+    if (ADD.test(c) && f !== 'devmode.js' && !/Origem\.unlevy/.test(c)) fails.push(`o metal da forja: ${f}:${k + 1} soma ferramentas ou armas à mão sem a parte delas (G.Origem.unlevy; D-441): ${l.trim().slice(0, 110)}`); });
+  const of = (src['act-oficio.js'] || []).join('\n');
+  if (!/D\.make\('b:' \+ b\.id, R\.k, good, \{[^}]*of: R\.mat/.test(of)) fails.push('o metal da forja: a fornada do act-oficio.js não diz o metal do que faz (of: R.mat; D-441)'); }
+// 162. "toda fornada gasta a sua receita" (D-440): a receita da forja trabalha o minério do seu metal (o ferro, do minério de ferro; o
+// bronze, do cobre, com a etapa da liga que gasta o estanho pelo livro), e a mão que faz uma unidade gasta o que a receita tira
+// (G.Depot.use do insumo, com as partes que ela pede: of: R.of) — no act-oficio.js; e a salga gasta a carne ou o peixe que salga
+{ const of = (src['act-oficio.js'] || []).join('\n'), es = (src['estates.js'] || []).join('\n');
+  if (!/const forged = [^\n]*in: mat === 'ferro' \? 'minerio' : 'cobre'/.test(of)) fails.push('a receita gasta: a forja não trabalha o minério do seu metal (D-440)');
+  if (!/kind: 'liga', k: 'estanho'/.test(of) || !/code: 'liga'/.test(of)) fails.push('a receita gasta: o bronze sem a etapa da liga que gasta o estanho pelo livro (D-440)');
+  if (!/D\.use\('b:' \+ b\.id, R\.in, taken, \{[^}]*of: R\.of/.test(of)) fails.push('a receita gasta: a unidade de uma fornada não gasta as partes que a receita pede (of: R.of; D-440)');
+  if (!/D\.use\(ref, 'food', 4, \{[^}]*\bof: [^u}]/.test(es)) fails.push('a receita gasta: a salga não diz a carne ou o peixe que salga (D-445)'); }
+// 163. "ninguém escolhe o material de uma coisa só pela arte" (D-442, D-443): o material de uma coisa é o que o povo tem (G.Origem) —
+// o «melhor material que o povo sabe» (G.Itens.best, bestMat) é só do catálogo; e a luta, o anzol e a roupa perguntam pelo metal
+// tido (G.Origem.forged / had), nunca só pela arte (Civ.has(…, 'bronze' | 'ferro'))
+{ for (const f of files) if (f !== 'itens.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(It|Itens|T)\(?\)?\.(best|bestMat)\(/.test(c)) fails.push(`o material pela arte: ${f}:${k + 1} escolhe o material de uma coisa pelas artes (pergunte ao G.Origem / G.Inv.made; D-442): ${l.trim().slice(0, 110)}`); });
+  for (const f of ['war.js', 'army.js', 'siege.js', 'naval.js', 'act-pesca.js', 'atmos.js', 'inventario.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/Civ\.has\([^)]*'(bronze|ferro)'\)/.test(c)) fails.push(`o metal pela arte: ${f}:${k + 1} pergunta só pela arte do metal (G.Origem.forged; D-443): ${l.trim().slice(0, 110)}`); }); }
+// 164. "o kit e o armazém dão o material que o povo tem" (D-442): no js/inventario.js, o material do kit é o que o povo teve
+// (G.Origem.matOK) e o que o armazém dá é o que a divisão dele tem (Inv.offer, pelo que a coisa é feita: G.Itens.feitoDe)
+{ const iv = (src['inventario.js'] || []).join('\n');
+  if (!/\bOr\(\)\.matOK\(|Origem\.matOK\(/.test(iv)) fails.push('o kit pelo que o povo tem: o inventario.js não pergunta ao G.Origem.matOK (D-442)');
+  if (!/Inv\.offer = function/.test(iv) || !/It\.feitoDe\(/.test(iv)) fails.push('o armazém pelo que tem: o inventario.js sem o Inv.offer pelo que a coisa é feita (D-442)'); }
+// 165. "a comida diz de onde veio" (D-441): quem faz comida (G.Depot.make(…'food'…)) diz a causa que diz a origem (pesca, ordenha, ovos,
+// abate, caca, sacrificio, horta, fruta) ou a parte (of:, ou as marcas tag/rec), e quem a põe à mão num armazém (addStock('food'…))
+// diz a parte ou as partes que trouxe (o quarto argumento): nada de comida sem origem
+{ const FOOD_MK = /make\(\s*[^,]+,\s*'food'/; const CODE = /code: '(pesca|ordenha|ovos|abate|caca|sacrificio|horta|fruta)'|\bof:|tag: \{ meat|rec: \{ fish/;
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (FOOD_MK.test(c) && !CODE.test(c) && f !== 'devmode.js') fails.push(`a comida com origem: ${f}:${k + 1} faz comida sem dizer de onde (D-441): ${l.trim().slice(0, 110)}`);
+    for (const m of c.matchAll(/addStock\(\s*'food'\s*,([^;]*)/g)) { const args = m[1]; let depth = 1, n = 1; for (const ch of args) { if (ch === '(') depth++; else if (ch === ')') { depth--; if (!depth) break; } else if (ch === ',' && depth === 1) n++; } if (n < 3) fails.push(`a comida com origem: ${f}:${k + 1} põe comida num armazém sem a parte dela (o 4.º argumento do addStock; D-441): ${l.trim().slice(0, 110)}`); } }); }
+// 166. "o cobre e o estanho têm jazida, e toda jazida o seu bem" (D-441): o economy.js tem os bens do cobre e do estanho, faz as
+// jazidas deles pela semente (E.genBronze, chamado do genDeposits e do load de um save de antes) e diz o bem de cada tipo de jazida
+// (E.ORE_GOOD); o caves.js tira do veio de cobre o cobre e do de estanho o estanho
+{ const ec = (src['economy.js'] || []).join('\n'), cv = (src['caves.js'] || []).join('\n');
+  if (!/\bcobre: \{ name: 'cobre'/.test(ec) || !/\bestanho: \{ name: 'estanho'/.test(ec)) fails.push('a jazida do bronze: o economy.js sem os bens do cobre e do estanho (D-441)');
+  if (!/E\.ORE_GOOD = \{ ferro: 'minerio', ouro: 'ouro', cobre: 'cobre', estanho: 'estanho' \}/.test(ec)) fails.push('a jazida do bronze: o E.ORE_GOOD não diz o bem de cada jazida (D-441)');
+  if (!/E\.genBronze = function/.test(ec) || !/\n\s*E\.genBronze\(S\);\n/.test(ec) || !/E\.genBronze\(S\); else S\.oresV/.test(ec)) fails.push('a jazida do bronze: o E.genBronze não é chamado do genDeposits e do load (D-441)');
+  if (!/id: 'cobre', name: 'cobre', col: '[^']+', good: 'cobre'/.test(cv) || !/id: 'estanho', name: 'estanho', col: '[^']+', good: 'estanho'/.test(cv)) fails.push('a jazida do bronze: o veio de cobre ou de estanho da caverna não dá o seu metal (D-441)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

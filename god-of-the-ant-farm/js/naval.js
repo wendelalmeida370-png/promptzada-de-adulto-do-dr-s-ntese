@@ -404,7 +404,7 @@
         }
         break;
       }
-      case 'back': if (moveShip(s, dt)) { if (s.cargo) { if (G.Waters) G.Waters.landBoat(s); else G.Village.addStock('food', s.cargo, s.fac); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
+      case 'back': if (moveShip(s, dt)) { if (s.cargo) { if (G.Waters) G.Waters.landBoat(s); else G.Village.addStock('food', s.cargo, s.fac, 'peixe'); G.FX && G.FX.floater(s.x, s.y, '+' + s.cargo, '#b8e070', 1.4); s.cargo = 0; } s.st = 'idle'; s.t = 0; if (s.hp < s.maxHp) s.hp = Math.min(s.maxHp, s.hp + 20); } break;
     }
   }
   function updateShoals(dt) {
@@ -432,7 +432,7 @@
   function threat(s, r) { for (const o of enemiesNear(s, r)) if (o.kind === 'guerra') return o; return null; }
   function fire(s, o) {
     const def = Nv.SHIP[s.kind];
-    let dmg = (def.dmg || 4) * G.rr(0.7, 1.3) * Math.min(1.4, G.Civ.t(s.fac, 'naval')) * (G.Civ.has(s.fac, 'bronze') ? 1.1 : 1) * (G.Civ.has(s.fac, 'ferro') ? 1.1 : 1);
+    let dmg = (def.dmg || 4) * G.rr(0.7, 1.3) * Math.min(1.4, G.Civ.t(s.fac, 'naval')) * (G.Origem.forged(s.fac, 'bronze') ? 1.1 : 1) * (G.Origem.forged(s.fac, 'ferro') ? 1.1 : 1); // (the art and the metal had: 20h)
     if (G.R() < 0.3) dmg *= 0; // miss
     o.hp -= dmg; o.hurt = 0.3;
     // arrows / fire arrows arc across the water
@@ -495,7 +495,7 @@
   const BOARD = { romano: 'o corvo, a ponte de abordagem', nordico: 'ganchos e machados', grego: 'fuzileiros', egipcio: 'ganchos', asteca: null, classico: 'ganchos' };
   function ram(s, o) {
     const S = G.S;
-    const dmg = G.rr(34, 52) * (G.Civ.has(s.fac, 'bronze') ? 1.15 : 1);
+    const dmg = G.rr(34, 52) * (G.Origem.forged(s.fac, 'bronze') ? 1.15 : 1); // (the ram of a metal had: 20h)
     o.hp -= dmg; o.hurt = 0.5; s.hp -= dmg * 0.15;
     for (let k = 0; k < 10; k++) G.FX && G.FX.spawn({ x: o.x + G.vrr(-0.4, 0.4), y: o.y + G.vrr(-0.4, 0.4), h: G.SEA, z: G.vrr(2, 5), vz: G.vrr(15, 35), vx: G.vrr(-0.6, 0.6), vy: G.vrr(-0.6, 0.6), g: 60, life: G.vrr(0.8, 1.4), s0: 1.2, s1: 0.8, c: '#6e4a2c', k: 0 });
     G.FX && G.FX.splash(o.x, o.y, 1); G.Audio && G.Audio.at(o.x, o.y, 'collapse');
@@ -688,7 +688,7 @@
           const deal = 1.1 * G.Civ.t(fa.id, 'trade') * (G.Civ.has(fa.id, 'moeda') ? 1.15 : 1);
           const want = RES.filter(k => !s.goods || k !== s.goods.k).sort((x, y) => (fb.stock[y] - fa.stock[y]) - (fb.stock[x] - fa.stock[x]))[0];
           const m = Math.min(Math.round((s.goods ? s.goods.n : 6) * deal), Math.floor(fb.stock[want] * 0.12));
-          if (m > 0) { fb.stock[want] -= m; s.ret = { k: want, n: m }; }
+          if (m > 0) { fb.stock[want] -= m; s.ret = { k: want, n: m }; if (G.Origem) G.Origem.carried('f:' + fb.id, 'r:' + s.id, want, m); }
           const rel = G.Fac.rel(fa.id, fb.id); if (rel) { rel.op = Math.min(100, rel.op + 2); rel.trade = (rel.trade || 0) + 1; }
           r.trips++;
           if (r.trips === 1) { const st = S.settlements.get(ob.set); log(`${G.cap(shipName(s))} de ${fa.name} atracou em ${st ? st.name : fb.name}, carregad${G.gen(shipName(s).replace(/^(um|uma) /, ''))} de ${({ food: 'comida', wood: 'madeira', stone: 'pedra' })[s.goods ? s.goods.k : 'food']}.`, 'ship', s.x, s.y); }
@@ -993,7 +993,7 @@
         // (the cargo waits on the quay for the first of them to be free — the morning, if it is night —, not for the route's next turn)
         const crew = Nv.crewFor ? Nv.crewFor(f, mine) : null; if (Nv.crewFor && !(crew && crew.length)) { r.t = 6; continue; }
         const s = spawn('mercante', f, mine, { route: r.id }); if (!s) continue;
-        f.stock[give] -= n; s.goods = { k: give, n };
+        f.stock[give] -= n; s.goods = { k: give, n }; if (G.Origem) G.Origem.carried('f:' + f.id, 's:' + s.id, give, n); // (the cargo keeps where it came from: 20h)
         if (G.Urban) G.Urban.noteB(mine, 'cais', n); // (the life of the quarter: cargo aboard at the quay)
         G.Trade && G.Trade.loadShip(f, s, r);
         if (crew) { s.st = 'embark'; s.t = 0; s.tr = 1; board(s, crew); }

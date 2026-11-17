@@ -18,7 +18,7 @@ run('js/lib/three.min.js'); global.THREE = THREE;
 run('js/util.js');
 G.worldHooks = G.worldHooks || []; G.mapHooks = G.mapHooks || [];
 let night = 0;
-G.W = G.W || {}; G.Render = { nightness: () => night }; G.Art = { CLOTH: {}, icon: () => null }; G.Fac = { ofV: v => (v._fac ? { civ: v._fac, id: 1, leader: 0 } : null), hex: () => '#884422' };
+G.W = G.W || {}; G.Render = { nightness: () => night }; G.Art = { CLOTH: {}, icon: () => null }; G.Fac = { ofV: v => (v._fac ? { civ: v._fac, id: 1, leader: 0 } : null), idOfV: v => (v._fac ? 1 : null), hex: () => '#884422' }; // (idOfV: the kit asks for the people of each one — 20h)
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (20a: what the hands hold is the inventory's — G.Inv.held, D-336 —, and the body's animation is in the anim-*.js after people3d.js)

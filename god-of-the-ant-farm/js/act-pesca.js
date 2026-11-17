@@ -96,7 +96,7 @@
   P.how = function (fid) {
     const f = G.Fac.get(fid); if (!f) return 'maos';
     if (G.Civ.has(fid, 'navegacao') || NETS[f.civ]) return 'rede';
-    if (G.Civ.has(fid, 'bronze') || G.Civ.has(fid, 'ferro')) return 'linha';
+    if (G.Origem.forged(fid, 'bronze') || G.Origem.forged(fid, 'ferro')) return 'linha'; // (the hook of a metal the people had: 20h)
     return 'arpao';
   };
   // (the gear in the hands while fishing: what the 3D shows — the net it knows; a line or a spear it does not draw yet, and

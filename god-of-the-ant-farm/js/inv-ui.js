@@ -159,10 +159,12 @@
       <div class="iv-card"></div></div>`;
     // (at the people's store — what one's own people keeps is one's to know, G.Possess.knows.stock —: what it can give)
     if (st && G.Possess.knows.stock(v, st)) {
-      const f = G.Fac.get(G.Fac.idOfV(v)); const arts = I.artsOf(v); const have = g => Math.floor(((f && f.stock[g]) || 0) * 100) / 100;
-      const kinds = ['machado', 'picareta', 'pa', 'enxada', 'foice', 'martelo', 'faca', 'vara', 'rede', 'remo', 'espada', 'lanca', 'clava', 'arco', 'flecha', 'escudo', 'elmo', 'couraca', 'cajado', 'tocha', 'cesto', 'balde'].filter(kd => It().can(kd, arts));
-      h += `<div class="iv-store"><label>No armazém do seu povo — ferramentas ${have('ferramentas')}, armas ${have('armas')}, madeira ${Math.floor(have('wood'))}</label><div class="iv-take">${kinds.map(kd => { const k = It().best(kd, arts); const b = It().bemOf(k); const n = kd === 'flecha' ? 20 : 1; const can = b && have(b.k) + 1e-6 >= b.n * n;
-        return `<button data-a="make" data-kind="${kd}"${can ? '' : ' disabled'} title="${esc(`${G.cap(It().nome(k, n))} — ${b ? Math.round(b.n * n * 100) / 100 + ' de ' + G.Eco.name(b.k) : ''}`)}">${UI.sign(k)}<span>${esc(kd === 'flecha' ? '20 flechas' : It().def(k).nome)}</span></button>`; }).join('')}</div></div>`;
+      const f = G.Fac.get(G.Fac.idOfV(v)); const have = g => Math.floor(((f && f.stock[g]) || 0) * 100) / 100;
+      // (what the store gives is what it has: the material of what each thing is made of — I.offer, 20h)
+      const offs = ['machado', 'picareta', 'pa', 'enxada', 'foice', 'martelo', 'faca', 'vara', 'rede', 'remo', 'espada', 'lanca', 'clava', 'arco', 'flecha', 'escudo', 'elmo', 'couraca', 'cajado', 'tocha', 'cesto', 'balde'].map(kd => [kd, I.offer(v, kd)]).filter(x => x[1].k);
+      h += `<div class="iv-store"><label>No armazém do seu povo — ferramentas ${have('ferramentas')}, armas ${have('armas')}, madeira ${Math.floor(have('wood'))}, pedra ${Math.floor(have('stone'))}</label><div class="iv-take">${offs.map(([kd, o]) => { const k = o.k; const n = kd === 'flecha' ? 20 : 1;
+        const of = o.need.map(x => Math.round(x.n * 100) / 100 + ' de ' + G.Eco.name(x.k) + (x.of && G.Origem && G.Origem.METAL[x.of] ? ' ' + G.Origem.METAL[x.of].nome : '')).join(' e ');
+        return `<button data-a="make" data-kind="${kd}"${o.can ? '' : ' disabled'} title="${esc(`${G.cap(It().nome(k, n))} — ${o.can ? of : o.why}`)}">${UI.sign(k)}<span>${esc(kd === 'flecha' ? '20 flechas' : It().def(k).nome)}</span></button>`; }).join('')}</div></div>`;
     }
     if (ground.length) h += `<div class="iv-store"><label>No chão, ao alcance</label><div class="iv-take">${ground.slice(0, 8).map(o => `<button data-a="pick" data-g="${o.g}">${UI.sign(o.k)}<span>${esc(G.cap(It().nome(o.k, o.n)))}${o.n > 1 + 1e-6 ? ' ×' + Math.round(o.n * 100) / 100 : ''}</span></button>`).join('')}</div></div>`;
     h += `<div class="iv-hint">${G.Input3D.touch ? 'Toque numa coisa e depois num lugar do corpo, num atalho ou no chão.' : 'Arraste para o corpo, para um atalho ou para o chão · clique duplo equipa ou tira · 1–5 sobre uma coisa: atalho'} · <kbd>${esc(G.Input3D.label('inventario'))}</kbd> ou <kbd>Esc</kbd> fecha</div>`;
@@ -181,7 +183,7 @@
     const uses = T.usos(k); if (uses.length && d.coisa) rows.push(['Serve para', uses.join(', ')]);
     const meas = []; if (d.dano) meas.push(`golpe ${d.dano}`); if (d.alcance) meas.push(`alcance ${String(d.alcance).replace('.', ',')} m`); if (d.bloqueio) meas.push(`apara ${Math.round(d.bloqueio * 100)}%`); if (d.protecao) meas.push(`protege ${Math.round(d.protecao * 100)}%`);
     if (meas.length) rows.push(['Medidas', meas.join(' · ')]);
-    const b = T.bemOf(k); if (d.coisa && b) rows.push(['No armazém', `vale ${Math.round(b.n * 100) / 100} de ${G.Eco.name(b.k)}`]);
+    const fb = T.feitoDe(k); if (d.coisa && fb && fb.length) rows.push(['Feito de', fb.map(x => `${Math.round(x.n * 100) / 100} de ${G.Eco.name(x.k)}${x.of && G.Origem && G.Origem.METAL[x.of] ? ' ' + G.Origem.METAL[x.of].nome : ''}`).join(' e ')]); // (what it is made of, and gives back to the store: 20h)
     rows.push(['Onde', on.length ? on.map(s => WHERE[s]).join(', ') : 'na mochila']);
     const btn = [];
     if (d.coisa && (T.mao(k) || T.veste(k) || T.guarda(k))) btn.push(`<button data-a="wear" data-k2="${esc(k)}">${on.length ? 'Tirar' : T.veste(k) ? 'Vestir' : 'Equipar'}</button>`);

@@ -214,7 +214,9 @@
     let loom = false, worms = false;
     for (const b of S.buildings.values()) { if (!b.built || (b.type !== 'tecelagem' && b.type !== 'sericultura')) continue; const s = S.settlements.get(b.set); if (!s || s.fac !== f.id) continue; if (b.type === 'tecelagem') loom = true; else worms = true; }
     const K = (f.tech && f.tech.known) || NOINV;
-    a = { day: S.day, nb: S.buildings.size, weave: loom || !!(f.stock && f.stock.tecido >= 1), silk: worms || !!(f.stock && f.stock.seda >= 1), metal: K.ferro !== undefined ? 2 : K.bronze !== undefined ? 1 : 0 };
+    // (the metal worn is a metal the people had, never the art alone: G.Origem.had, 20h)
+    const had = m => !!(G.Origem && G.Origem.had(f.id, m));
+    a = { day: S.day, nb: S.buildings.size, weave: loom || !!(f.stock && f.stock.tecido >= 1), silk: worms || !!(f.stock && f.stock.seda >= 1), metal: K.ferro !== undefined && had('ferro') ? 2 : K.bronze !== undefined && had('bronze') ? 1 : 0 };
     arts.set(f.id, a); return a;
   }
   // the standing of a person among their people (polity.js: v.grp), as the clothes tell it

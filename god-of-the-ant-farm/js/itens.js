@@ -146,25 +146,51 @@
   It.can = (kind, known) => { const k = K[kind]; return !!k && (!k.tech || !!(known && known[k.tech])) && k.mats.some(m => knowsMat(m, known)); };
   // the best material of a kind a people with these arts knows (the last of its materials it knows), or null
   It.bestMat = function (kind, known) { const k = K[kind]; if (!k) return null; for (let i = k.mats.length - 1; i >= 0; i--) if (knowsMat(k.mats[i], known)) return k.mats[i]; return null; };
-  // the thing of that kind a people would make — its canonical key in the best material it knows —, or null if it cannot
+  // the thing of that kind a people would make — its canonical key in the best material it knows —, or null if it cannot (the art
+  // only: what a people makes and carries is asked of what it has, It.bestOf with the world's materials — 20h, D-442)
   It.best = (kind, known) => (It.can(kind, known) ? It.keyOf(kind, It.bestMat(kind, known)) : null);
+  // the best material of a kind among those a caller allows (ok: material → true or false — the materials a people has had, asked
+  // of the world by whoever asks: the catalog never reads a people), or null
+  It.bestOf = function (kind, ok) { const k = K[kind]; if (!k) return null; for (let i = k.mats.length - 1; i >= 0; i--) if (ok(k.mats[i])) return k.mats[i]; return null; };
   // may a people with these arts make this very thing (the kind's art and the material's)?
   It.knows = function (key, known) { const d = It.def(key); return !!d && d.coisa && It.can(d.kind, known) && knowsMat(d.mat, known); };
   // what a thing counts as in a people's store: { k: the good, n: how much of it } — its own good (bem/vale), or what it is
   // made of (feito) —, or null for what the store does not keep (a good of the economy is itself)
-  It.bemOf = function (key) {
-    const d = It.def(key); if (!d) return null;
-    if (!d.coisa) return { k: d.id, n: 1 };
-    if (d.bem && d.vale > 0) return { k: d.bem, n: d.vale };
-    if (d.feito) { for (const g in d.feito) return { k: g, n: d.feito[g] }; }
-    return null;
+  // (the first of what it is made of: It.feitoDe has them all — a stone axe is stone and wood)
+  It.bemOf = function (key) { const L = It.feitoDe(key); return L && L.length ? { k: L[0].k, n: L[0].n } : null; };
+  // what a thing is made of, by its material (20h, D-442, nada vem do nada): what making it takes from a store and what it gives
+  // back there — a list of { k: the good, n: how much, of: the part of the good it is (the metal of a store's tools and weapons) }.
+  // A thing of bronze or iron is one of the store's tools or weapons of that metal (bem, vale; the forge made it of its metal); a
+  // thing of leather is the hide of the store (couro); a thing of stone or wood is the stone and the wood of the store — the
+  // wicker and the cord are the fibres of the wood (the thin shoots and the inner bark of what is felled), never a good of their
+  // own; a thing that is no good of the store says it (feito)
+  const PLAIN = {
+    machado: { stone: 0.5, wood: 0.5 }, picareta: { stone: 0.5, wood: 0.5 }, pa: { wood: 1 }, enxada: { wood: 1 }, foice: { stone: 0.25, wood: 0.25 },
+    martelo: { stone: 0.5, wood: 0.25 }, faca: { stone: 0.25 }, vara: { wood: 0.5 }, rede: { wood: 1 }, remo: { wood: 1 },
+    lanca: { stone: 0.25, wood: 0.75 }, clava: { wood: 1 }, arco: { wood: 1 }, flecha: { stone: 0.0125, wood: 0.0125 }, funda: { wood: 0.25 }, escudo: { wood: 1 },
+  };
+  const HIDE = { elmo: 1, couraca: 3 };
+  It.METALS = { bronze: 1, ferro: 1 };
+  const feitoCache = new Map();
+  It.feitoDe = function (key) {
+    if (feitoCache.has(key)) return feitoCache.get(key);
+    const d = It.def(key); let out = null;
+    if (d && !d.coisa) out = [{ k: d.id, n: 1, of: null }];
+    else if (d) {
+      if (It.METALS[d.mat] && d.bem && d.vale > 0) out = [{ k: d.bem, n: d.vale, of: d.mat }];
+      else if (d.mat === 'couro' && HIDE[d.kind]) out = [{ k: 'couro', n: HIDE[d.kind], of: null }];
+      else if (d.feito) out = Object.keys(d.feito).map(g => ({ k: g, n: d.feito[g], of: null }));
+      else if (PLAIN[d.kind]) out = Object.keys(PLAIN[d.kind]).map(g => ({ k: g, n: PLAIN[d.kind][g], of: null }));
+      if (out) { for (const o of out) Object.freeze(o); Object.freeze(out); }
+    }
+    feitoCache.set(key, out); return out;
   };
   // the kinds a store's good can become (ferramentas → the tools, armas → the weapons; wood → the staff, the torch…)
   It.fromBem = g => Object.keys(K).filter(kind => K[kind].bem === g || (!K[kind].bem && K[kind].feito && K[kind].feito[g] > 0));
   // kilos of n of a key (a thing's or a good's own weight)
   It.peso = (key, n) => { const d = It.def(key); return d ? d.peso * (n === undefined ? 1 : n) : 0; };
   // what a thing is worth in coins: what it counts as in the store, at the economy's price (0 where there is none)
-  It.valor = function (key) { const b = It.bemOf(key); const P = G.Eco && G.Eco.PRICE; return b && P && P[b.k] ? +(b.n * P[b.k]).toFixed(2) : 0; };
+  It.valor = function (key) { const L = It.feitoDe(key); const P = G.Eco && G.Eco.PRICE; if (!L || !P) return 0; let v = 0; for (const o of L) v += o.n * (P[o.k] || 0); return +v.toFixed(2); };
   // what a thing is good for, said ('derrubar árvores, golpear')
   It.usos = key => { const d = It.def(key); return d ? d.tags.map(t => It.TAG_NOME[t] || t).filter((t, i, a) => a.indexOf(t) === i) : []; };
   // the place it is put away when the hands let it go (costas or cinto, or null: it goes to the bag), the hand it is held in

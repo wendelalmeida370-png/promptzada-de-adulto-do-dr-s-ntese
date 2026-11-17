@@ -58,8 +58,22 @@
   // (the arts of a person's people, for the material of what they carry: what their forge would make — read only)
   const artsOf = v => { const s = G.S && G.S.settlements.get(v.set); const f = s && G.Fac.get(s.fac); return f && f.tech ? f.tech.known : null; };
   Inv.artsOf = artsOf;
-  // a kind as the person's people would make it (the best material they know; a kind they cannot make at all, its plainest)
-  const made = (kind, arts) => (kind ? It.best(kind, arts) || It.keyOf(kind) : null);
+  // (and what the people has had of each material — G.Origem.had: 20h, D-442. Nada vem do nada: a thing is drawn and made only in
+  // a material the people has — wood, stone and the fibres of the wood always; leather once it had hides; bronze and iron with the
+  // art and the metal had. The art alone never gives a material)
+  const Or = () => G.Origem;
+  const matOK = (fid, m, arts) => (Or() ? Or().matOK(fid, m, arts) : !(It.MATS[m] && It.MATS[m].tech) || !!(arts && arts[It.MATS[m].tech] !== undefined));
+  // may this people make a kind at all: its art (the bow), the bronze hook of a rod (a metal of the kind's own, not its material)
+  function kindOK(kind, fid, arts) {
+    const k = It.KINDS[kind]; if (!k) return false; const t = k.tech; if (!t) return true;
+    if (It.METALS[t]) return k.mats.some(m => It.METALS[m]) || (Or() ? Or().forged(fid, t) : !!(arts && arts[t] !== undefined));
+    return !!(arts && arts[t] !== undefined);
+  }
+  Inv.kindOK = kindOK;
+  // a kind as the person's people would make it: the best material it has had; null — a kind of metal or leather only (the
+  // sword, the helmet) in a people that never had the metal or the hide — is nothing at all
+  const made = (kind, fid, arts) => { if (!kind || !kindOK(kind, fid, arts)) return null; const m = It.bestOf(kind, x => matOK(fid, x, arts)); return m ? It.keyOf(kind, m) : null; };
+  Inv.made = (kind, v) => (v ? made(kind, G.Fac.idOfV(v), artsOf(v)) : null);
   // the fisher's gear by the way the people fish (G.Pesca.how: the net, the line, the harpoon, the hands)
   const fishGear = v => { const P = G.Pesca; const how = P && P.how ? P.how(G.Fac.idOfV(v)) : 'linha'; return how === 'rede' ? 'rede' : how === 'arpao' ? 'lanca' : how === 'maos' ? null : 'vara'; };
   // what a person carries by trade alone, with the hands free (no act, no load): the things that are theirs by trade — the ones
@@ -68,28 +82,30 @@
   Inv.trade = function (v) {
     const out = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, real: false };
     if (!v || v.age < 2) return out;
-    const arts = artsOf(v);
+    const arts = artsOf(v); const fid = G.Fac.idOfV(v); const mk = kind => made(kind, fid, arts);
     const fighter = v.age >= 14 && !v.captive && (v.role === 'guerreiro' || !!v.unit);
     if (fighter) {
       // (the archer: the bow in the bow hand, a knife at the belt; the levy by its company; the warrior by the people's way)
-      if (v.arm === 'arco') { out.outra = made('arco', arts); out.cinto = made('faca', arts); }
+      if (v.arm === 'arco') { out.outra = mk('arco'); out.cinto = mk('faca'); }
       else {
         const civ = G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ;
         let w = WAR_UNIT[v.unit] || (v.elite === 'berserker' ? ['machado', null] : WAR_CIV[civ]) || ['lanca', 'escudo'];
-        if (w[0] === 'espada' && !It.can('espada', arts)) w = ['lanca', w[1]];
-        out.mao = made(w[0], arts); out.outra = made(w[1], arts);
+        if (w[0] && !mk(w[0])) w = ['lanca', w[1]]; // (a sword with no metal had is a spear of stone: 20h)
+        out.mao = mk(w[0]); out.outra = mk(w[1]);
       }
-      // (the helmet of the warriors and the archers, as the god's view draws it — never the militia's)
-      if (v.unit !== 'milicia') out.cabeca = It.can('elmo', arts) ? made('elmo', arts) : It.keyOf('elmo', 'couro');
+      // (the helmet of the warriors and the archers, as the god's view draws it — never the militia's — in what the people had: the
+      // bronze, the iron, the leather of its hides; with none of them, no helmet: 20h)
+      if (v.unit !== 'milicia') out.cabeca = mk('elmo');
       return out;
     }
-    if (v.role === 'arqueiro' && v.age >= 14 && !v.captive) { out.outra = made('arco', arts); out.cinto = made('faca', arts); out.cabeca = It.can('elmo', arts) ? made('elmo', arts) : It.keyOf('elmo', 'couro'); return out; }
+    if (v.role === 'arqueiro' && v.age >= 14 && !v.captive) { out.outra = mk('arco'); out.cinto = mk('faca'); out.cabeca = mk('elmo'); return out; }
     if (v.age < 14) return out;
-    if ((v.role === 'cacador' || v.role === 'vigia') && !v.captive) { if (v.arm === 'arco') out.outra = made('arco', arts); else out.mao = made('lanca', arts); if (v.role === 'cacador') out.cinto = made('faca', arts); return out; }
-    if (v.role === 'anciao' && v.age >= 60) { out.mao = made('cajado', arts); return out; }
+    if ((v.role === 'cacador' || v.role === 'vigia') && !v.captive) { if (v.arm === 'arco') out.outra = mk('arco'); else out.mao = mk('lanca'); if (v.role === 'cacador') out.cinto = mk('faca'); return out; }
+    if (v.role === 'anciao' && v.age >= 60) { out.mao = mk('cajado'); return out; }
     const t = TRADE[v.role]; if (!t) return out;
     const kind = v.role === 'pescador' ? fishGear(v) : t[0];
-    if (kind) { const key = made(kind, arts); const s = It.fits(key, t[1]) ? t[1] : It.guarda(key) || It.mao(key); if (s) out[s] = key; }
+    const key = kind ? mk(kind) : null;
+    if (key) { const s = It.fits(key, t[1]) ? t[1] : It.guarda(key) || It.mao(key); if (s) out[s] = key; }
     return out;
   };
   // what a person with no things of their own carries by trade and act: a place for each slot (null: nothing there). Pure, as
@@ -111,7 +127,8 @@
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
-    if (!key) key = made(t, artsOf(v));
+    if (!key) key = made(t, G.Fac.idOfV(v), artsOf(v));
+    if (!key) return; // (a tool of a material the people never had: the act's hands are empty, 20h)
     out.mao = key;
     // (a thing of two hands empties the other: what it held rides on the back if the back is free)
     if (It.def(key).maos >= 2 && out.outra) { const o = out.outra; out.outra = null; if (!out.costas && It.fits(o, 'costas')) out.costas = o; }
@@ -247,7 +264,7 @@
     return move0.apply(this, arguments);
   };
   function intoStore(from, to, k, n, c) {
-    c = c || {}; const b = It.bemOf(k);
+    c = c || {}; const L = It.feitoDe(k);
     if (!D.exists(from)) return { ok: false, n: 0, why: 'a origem não existe mais' };
     if (!D.exists(to)) return { ok: false, n: 0, why: 'o destino não existe mais' };
     const m = Math.floor(Math.min(n, D.get(from, k)) + EPS); if (!(m >= 1)) return { ok: false, n: 0, why: 'não há' };
@@ -255,7 +272,8 @@
     const code = c.code || 'coisa', by = c.by || 0;
     const u = D.use(from, k, m, { code, by, mine: true, key: c.key ? c.key + ':u' : undefined });
     if (!u.ok) return u;
-    if (b && b.n > 0) D.make(to, b.k, r4(b.n * m), { code, by, part: true, key: c.key ? c.key + ':m' : undefined });
+    // (what it is made of comes back, each good with its part — the bronze of a bronze axe, the stone and the wood of a stone one: 20h)
+    if (L) L.forEach((o, i) => { if (o.n > 0) D.make(to, o.k, r4(o.n * m), { code, by, part: true, of: o.of || undefined, key: c.key ? c.key + ':m' + (i ? i : '') : undefined }); });
     return { ok: true, n: m, e: u.e };
   }
   // (the weight of a thing in the arms — the depot counts loads in units of six kilos —, and its name in every sentence of the
@@ -508,10 +526,31 @@
     }
     return best;
   };
-  // a store's good made a thing (D-371): at a store of one's own people (Inv.storeNear), the kind in the best material the people
-  // knows (or the one asked, if they know it), from its good — ferramentas → a tool, armas → a weapon, wood → a staff, a torch —,
-  // in the ledger: the good out of the store ('@uso'), the thing into the bag ('@mundo'), the same cause ('coisa'). Both or
-  // neither: the store has it free, the bag takes it. n: how many (the arrows come by the score). → { ok, why, k, n }
+  // what the people's store would give of a kind now — only read: the door below, the screen, the body's offer. The material:
+  // the one asked, or the best the store has what it is made of — a thing of bronze is one of the store's bronze tools or
+  // weapons, of stone the stone and the wood (never «the best the people knows»: 20h, D-442), and the metal's art too.
+  // → { k: the key, can, need: [{ k, n, of }], why }
+  Inv.offer = function (v, kind, mat, n) {
+    const K = It.KINDS[kind]; if (!K || !v) return { k: null, can: false, need: [], why: 'Isso não existe.' };
+    const fid = G.Fac.idOfV(v); const F = 'f:' + fid; const arts = artsOf(v);
+    if (!kindOK(kind, fid, arts)) return { k: null, can: false, need: [], why: `O seu povo não sabe fazer ${K.plural}.` };
+    if (mat && !K.mats.includes(mat)) return { k: null, can: false, need: [], why: `Não existe ${K.nome} ${It.MATS[mat] ? It.MATS[mat].nome : mat}.` };
+    const cnt = Math.max(1, Math.floor((n === undefined ? (kind === 'flecha' ? 20 : 1) : n) + EPS));
+    const have = o => (o.of && Or() ? Or().free(F, o.k, o.of) : D.free(F, o.k));
+    const art = m => !It.METALS[m] || !!(arts && arts[m] !== undefined);
+    const can = m => { const L = It.feitoDe(It.keyOf(kind, m)); return !!L && art(m) && L.every(o => have(o) + EPS >= r4(o.n * cnt)); };
+    const need = key => (It.feitoDe(key) || []).map(o => ({ k: o.k, n: r4(o.n * cnt), of: o.of || null }));
+    const m = mat || It.bestOf(kind, can);
+    if (m && can(m)) { const key = It.keyOf(kind, m); return { k: key, can: true, need: need(key), n: cnt, why: '' }; }
+    // (none: what it would take, in the material asked or the plainest the people may make)
+    const m2 = mat || It.bestOf(kind, x => art(x) && matOK(fid, x, arts)) || K.mats[0]; const key = It.keyOf(kind, m2);
+    const what = need(key).map(o => G.Eco.name(o.k) + (o.of && Or() && Or().METAL[o.of] ? ' ' + Or().METAL[o.of].nome : '')).join(' e ');
+    if (!art(m2)) return { k: key, can: false, need: need(key), n: cnt, why: `O seu povo não sabe fazer ${It.nome(key, 2)}.` };
+    return { k: key, can: false, need: need(key), n: cnt, why: `Não há ${what} no armazém para ${It.nome(key, cnt)}.` };
+  };
+  // a store's good made a thing (D-371, D-442): at a store of one's own people (Inv.storeNear), what Inv.offer says — the goods
+  // out of the store ('@uso'), the thing into the bag ('@mundo'), the same cause ('coisa'). Both or neither: the store has them
+  // free, the bag takes it. n: how many (the arrows come by the score). → { ok, why, k, n }
   Inv.make = function (v, kind, mat, n) {
     if (!inStep()) return NO_STEP;
     if (!alive(v)) return { ok: false, why: 'Ninguém para pegar.' };
@@ -519,20 +558,17 @@
     const st = Inv.storeNear(v); if (!st) return { ok: false, why: 'É preciso estar no armazém do seu povo.' };
     const fid = G.Fac.idOfV(v); const F = 'f:' + fid;
     const may = D.may(v, F, 'take'); if (!may.ok) return { ok: false, why: may.why };
-    const arts = artsOf(v);
-    if (!It.can(kind, arts)) return { ok: false, why: `O seu povo não sabe fazer ${K.plural}.` };
-    const m0 = mat && K.mats.includes(mat) ? mat : null;
-    const key = m0 ? It.keyOf(kind, m0) : It.best(kind, arts);
-    if (m0 && !It.knows(key, arts)) return { ok: false, why: `O seu povo não sabe fazer ${It.nome(key, 2)}.` };
-    const b = It.bemOf(key); if (!b) return { ok: false, why: `O armazém não guarda ${K.plural}.` };
-    const cnt = Math.max(1, Math.floor((n === undefined ? (kind === 'flecha' ? 20 : 1) : n) + EPS));
-    const need = r4(b.n * cnt);
-    if (D.free(F, b.k) + EPS < need) return { ok: false, why: `Não há ${G.Eco.name(b.k)} no armazém${b.n * cnt > 1.0001 ? ` (são precisas ${r2(need)})` : ''}.` };
+    const o = Inv.offer(v, kind, mat, n); if (!o.can) return { ok: false, why: o.why };
+    const key = o.k; const cnt = o.n;
     if (Inv.room(v, key) < cnt) return { ok: false, why: 'A mochila está cheia.' };
-    const by = v.id; const u = D.use(F, b.k, need, { code: 'coisa', by });
-    if (!u.ok) return { ok: false, why: u.why };
+    const by = v.id; const used = [];
+    for (const x of o.need) {
+      const u = D.use(F, x.k, x.n, { code: 'coisa', by, of: x.of || undefined });
+      if (!u.ok) { for (const y of used) D.make(F, y.k, y.n, { code: 'desfeito', by, part: true, of: y.of || undefined }); return { ok: false, why: u.why }; }
+      used.push(x);
+    }
     const r = D.make(ME(v), key, cnt, { code: 'coisa', by });
-    if (!r.ok) { D.make(F, b.k, need, { code: 'desfeito', by, part: true }); return { ok: false, why: r.why }; } // (checked a moment ago: never half a deal)
+    if (!r.ok) { for (const y of used) D.make(F, y.k, y.n, { code: 'desfeito', by, part: true, of: y.of || undefined }); return { ok: false, why: r.why }; } // (checked a moment ago: never half a deal)
     return { ok: true, k: key, n: cnt };
   };
   // a thing given back to the people's store, counted as its good (the same door any thing reaches a store by: D.move)
