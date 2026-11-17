@@ -1033,8 +1033,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     merry.sort((p, q) => G.dist(p.x, p.y, body().x, body().y) - G.dist(q.x, q.y, body().x, body().y));
     out.dance = { near: merry.length }; out.wave = null;
     const seenSt = () => { const p = G.Avatar.pos(), c = {}; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && (vs.X - p.X) ** 2 + (vs.Z - p.Z) ** 2 < 81) c[vs.st] = (c[vs.st] || 0) + 1; } return c; };
-    // (a wave in the daylight, beside someone: they wave back — e13 waves in the night, with no one about: T-036)
-    if (merry[0] && beside(merry[0])) { G.Input3D.onAction('acenar'); let most = 0; for (let k = 0; k < 60; k++) { G.Main.frameFor(33); let n = 0; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && vs.st === 'wave') n++; } most = Math.max(most, n); } out.wave = { most, deed: A().aceno || 0, near: seenSt() }; __E.f(10); }
+    // (a wave in the daylight, beside someone: they wave back — e13 waves in the night, with no one about: T-036; one walking by
+    // waves back as he goes, the wave over the stride — people3d's greeting, «over»: T-1406)
+    if (merry[0] && beside(merry[0])) { G.Input3D.onAction('acenar'); let most = 0; for (let k = 0; k < 60; k++) { G.Main.frameFor(33); let n = 0; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && (vs.st === 'wave' || (vs.st === 'walk' && vs.greetT > 0 && vs.greetD <= 0))) n++; } most = Math.max(most, n); } out.wave = { most, deed: A().aceno || 0, near: seenSt() }; __E.f(10); }
     if (merry[0] && beside(merry[0])) {
       const d0 = A().danca || 0; G.Input3D.onAction('dancar'); __E.f(20);
       const joined = [...S.villagers.values()].filter(q => q.task && q.task.type === 'talk' && q.task.dance && q.task.id === id);
