@@ -2246,6 +2246,8 @@
     execution: (v) => `foi executad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     coup: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`,
     riot: (v) => `foi mort${v.g === 'f' ? 'a' : 'o'} pela guarda num motim aos ${Math.floor(v.age)} anos`,
+    // (a death by the hand of one of the world — the society, 22b D-580: a murder; a fight that went too far)
+    homicidio: (v) => `foi assassinad${v.g === 'f' ? 'a' : 'o'} aos ${Math.floor(v.age)} anos`, brawl: (v) => `morreu de uma briga aos ${Math.floor(v.age)} anos`,
     sacrifice: (v) => `foi sacrificad${v.g === 'f' ? 'a' : 'o'} aos deuses aos ${Math.floor(v.age)} anos`,
     lava: (v) => `foi engolid${v.g === 'f' ? 'a' : 'o'} pela lava aos ${Math.floor(v.age)} anos`,
     // (by what killed: the hunters devour; a giant, a horn, a hoof kill; the viper's venom — a hippo does not devour: D-334)
@@ -2272,6 +2274,7 @@
       id: v.id, name: v.name, g: v.g, born: v.born, died: S.day, age: v.age, mother: v.mother, father: v.father,
       partner: v.partner, kids: v.kids.slice(), cause, role: v.role, dead: true, traits: v.traits,
       fac: G.Fac.idOfV(v), captive: !!v.captive, ord: v.ord, ep: v.ep, reigned: v.reigned, kills: v.kills, hero: v.hero, by: v.lastBy || 0, skin: v.skin, hair: v.hair,
+      indole: v.indole, // (who the person was: a child born after, and one brought back, take it — 22b D-570)
     };
     if (v.bio) rec.bio = v.bio;
     if (v.lost) rec.lost = v.lost;
@@ -2288,6 +2291,8 @@
     for (const o of S.villagers.values()) {
       const rel = o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (o.mother && o.mother === v.mother);
       if (rel) { o.mourn = Math.max(o.mourn, G.DAY_LEN * 0.8); o.emo = { k: 'sad', t: 5 }; if (byGod) { o.devotion = Math.max(0, o.devotion - 25); o.fear = Math.min(100, o.fear + 20); } }
+      // (and a friend mourns a friend: a shorter grief for one who held the dead dear — G.Lacos.sente, 22b D-575)
+      else if (G.Lacos && o.lacos && G.Lacos.find(o, v.id)) { const s = G.Lacos.sente(o, v); if (s && s.afeto >= 45) { o.mourn = Math.max(o.mourn, G.DAY_LEN * (s.afeto >= 70 ? 0.45 : 0.3)); o.emo = { k: 'sad', t: 4 }; } }
     }
     const txt = `${v.name} ${(CAUSE[cause] || CAUSE.unknown)(v)}${v.captive ? ', no cativeiro' : ''}.`;
     if (!violent && !wasRuler) { V.log(txt, cause === 'old' ? 'grave' : 'skull', v.x, v.y); V.notice(txt, 'grave'); }
