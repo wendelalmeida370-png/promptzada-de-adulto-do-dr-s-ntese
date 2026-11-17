@@ -323,7 +323,7 @@
       G.Vg.emote(v, 'happy', 3);
       v.task = { type: 'migrate', pri: 1.5, st: 0, age: 0 };
     }
-    if (b.couple && mother && father) { mother.partner = father.id; father.partner = mother.id; }
+    if (b.couple && mother && father) G.Vg.pair(mother, father, 'chegada');
     S.stats.immigrants += made.length;
     const names = made.filter(v => v.age >= 16).map(v => v.name);
     const txt = b.empty ? `Viajantes encontraram a ilha deserta e decidiram ficar: ${names.join(', ')}.`

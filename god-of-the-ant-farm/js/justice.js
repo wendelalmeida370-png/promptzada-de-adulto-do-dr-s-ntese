@@ -231,10 +231,12 @@
   function stance(o, e, f) {
     if (o.age < 12) return 'fear';
     for (const id of e.ids) { const v = G.person(id); if (v && G.Stories && G.Stories.relOf(o, v)) return 'weep'; if (v && (o.partner === id)) return 'weep'; }
+    // (what one feels for the condemned: the friend weeps, the enemy cheers — G.Lacos.sente, 22b D-575)
+    let tie = 0; if (G.Lacos) for (const id of e.ids) { const v = G.person(id); const s = v && G.Lacos.sente(o, v); if (!s) continue; if (s.afeto >= 40) return 'weep'; if (s.afeto <= -40) tie = Math.max(tie, 1.6); }
     const g = f && f.grp && f.grp[o.grp]; const sat = g ? g.sat : 50;
     const vg = (G.person(e.ids[0]) || {}).grp;
     const pe = P.persona(o); const set = G.S.settlements.get(o.set); const loy = set ? set.loyalty : 50;
-    let s = (loy - 50) / 25 + (sat - 50) / 25 + pe.cru * 1.6 - pe.pie * 0.3 + (G.hash(o.id * 3 + e.id) - 0.5) * 1.2;
+    let s = (loy - 50) / 25 + (sat - 50) / 25 + pe.cru * 1.6 - pe.pie * 0.3 + (G.hash(o.id * 3 + e.id) - 0.5) * 1.2 + tie;
     if (vg && vg === o.grp && sat < 50) s -= 1.6;
     if (e.sac) s += pe.pie * 1.6;
     if (/insolência|pedir|petição|sonhar|murmurar|rezar/.test(e.reason)) s -= 0.8;

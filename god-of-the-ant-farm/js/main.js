@@ -26,7 +26,7 @@
       if (!ok) { const p = W.nearestLand(x, y, 8); if (p) { x = p[0]; y = p[1]; } }
       return G.Vg.create(Object.assign({ x, y, set: set.id }, o));
     };
-    const pair = (a, b) => { a.partner = b.id; b.partner = a.id; };
+    const pair = (a, b) => G.Vg.pair(a, b, 'inicio');
     const first = k === 0 && !civ;
     const mara = make({ name: first ? 'Mara' : undefined, g: 'f', age: 38 }), oren = make({ name: first ? 'Oren' : undefined, g: 'm', age: 41 }); pair(mara, oren);
     const lina = make({ name: first ? 'Lina' : undefined, g: 'f', age: 19, mother: mara.id, father: oren.id }); mara.kids.push(lina.id); oren.kids.push(lina.id);

@@ -426,6 +426,9 @@ if (on('s1', 's2', 's3')) {
       take(v); put(v, spotIn(q)); if (st) meet(st.id); if (loc) meet(loc.id);
       const probe = () => { const b = Po.body(); return b ? JSON.stringify([b.id, K.where(b).txt, people(x => x.set === set.id).map(x => K.how(b, x).n).join(''), U.districtsOf(S.settlements.get(set.id)).map(d => K.district(b, d)).join(','), b.ken]) : 'sem corpo'; };
       if (on('s1')) {
+        // (the houses settled first, as the round trip of the save does — QA.roundTrip, T-022: the load joins under one roof a couple
+        // the family wed today that still lived apart, and the house of the body gained one of its own; T-1592)
+        { const homes = () => people(() => true).map(o => o.home || 0).join(','); for (let k = 0, h = null; k < 30; k++) { G.Village.forceUpdate(); const h2 = homes(); if (h2 === h) break; h = h2; } }
         const before = probe(), ken0 = JSON.stringify(v.ken); const n = M.salvarCarregar(); S = G.S; M.viver(0.1); const after = probe(); const v2 = S.villagers.get(v.id);
         ok('s1 save/load no meio: o corpo volta e sabe o mesmo', before === after && !!S.avatar && S.avatar.id === v.id && JSON.stringify(v2.ken) === ken0 && v2.ken.p.length >= 1 && v2.ken.q.length >= 1,
           `${v.name}: «${K.where(v2).txt}», ${v2.ken.p.length} conhecidos e ${v2.ken.q.length} lugares no registro, antes e depois (${n} caracteres)${before === after ? '' : ' — DIFERENTE: ' + before.slice(0, 120) + ' ≠ ' + after.slice(0, 120)}`);

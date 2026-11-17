@@ -85,6 +85,9 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 - **O pulque** é o aguamiel do maguey (o agave); o mundo ainda **não tem o maguey**: a receita pede `aguamiel`, e o povo do pulque,
   sem ele, faz **a cerveja do seu milho** (`tavern.js`: `asteca: { k: 'pulque', alt: 'cerveja' }`). O agaval é o plano (§6).
 - **O prato** da taverna é do que se come: `T.dish(b)` — «um prato de peixe», «tortilhas de milho», «um caldo de cevada»…
+- **A dádiva** (22b, D-587): a refeição que um bondoso dá a quem passa fome sai da despensa da casa dele, pelo livro (`G.Depot.use`,
+  código `dadiva`), e é comida ali — nada nasce. O empréstimo entre amigos (D-588) é moeda de uma casa a outra (`emprestimo`, e a
+  volta, `divida`): a dívida é a lembrança dele (a marca `deve`), não uma moeda a mais.
 - **A salga** (D-445) busca no armazém só carne ou peixe (`of: ['carne', 'peixe']`) e faz carne-seca da carne, bacalhau do peixe —
   nunca do grão.
 

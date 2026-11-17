@@ -80,7 +80,9 @@
     const g = o.g || (G.R() < 0.5 ? 'f' : 'm');
     const traits = o.traits || rollTraits([m, f]);
     const home = S.settlements.get(o.set); const civId = o.civ || (home ? G.Civ.idOfFac(home.fac) : null); const civ = G.CIVS[civId];
-    let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0) + (civ && civ.traits.courage || 0), 0, 1);
+    // (the courage is the person's, never the people's — 22b D-572: the culture's boldness stays in the people's institutions, the
+    // risk of its expeditions and the weight of its levies, civs.js traits)
+    let courage = G.clamp(0.45 + (G.R() - 0.5) * 0.5 + (traits.includes('Corajoso') ? 0.35 : 0) - (traits.includes('Medroso') ? 0.35 : 0), 0, 1);
     // (a child comes with the role its age gives — 'bebe' under 2, 'crianca' under 16, the dealing's own rule (assignJobs) —, not
     // with none until the next dealing, four seconds on: the load gave it at once, and a newborn's role changed across a save,
     // L-630. A grown one waits for the dealing, where the elder's comes with its story, G.Life.onRole)
@@ -738,30 +740,72 @@
     if (b.mother === a.id || b.father === a.id) return true;
     return false;
   }
+  // ------------------------------ the couple's door (22b, D-565) ------------------------------
+  // (every writer of partner passes here — the courtship, the royal match, the love across borders, the Divine Love, the death,
+  // the one back from the dead, the first families, the newcomers —, so the society hears every couple made and undone in one
+  // place: Vg.pairHooks, in the order registered; guard rule 207. The door does what each writer did: both partners, the
+  // widowhood over; and the death leaves the survivor a widow of the dead)
+  Vg.pairHooks = [];
+  Vg.pair = function (a, b, como) {
+    if (!a || !b || a === b) return false;
+    a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;
+    for (let i = 0; i < Vg.pairHooks.length; i++) Vg.pairHooks[i](a, b, como || '', true);
+    return true;
+  };
+  Vg.unpair = function (v, como, de) {
+    if (!v) return 0; const was = v.partner;
+    v.partner = 0; if (como === 'morte') v.widow = de || was;
+    if (was) for (let i = 0; i < Vg.pairHooks.length; i++) Vg.pairHooks[i](v, was, como || '', false);
+    return was;
+  };
+  // ------------------------------ the society's registries (22b, D-566) ------------------------------
+  // (the weight of who one is on a choice of the free time: Vg.weigh(kind, fn(v, kind) → multiplier), multiplied into that
+  // choice's score; and a wish of one's own, Vg.want(name, { urge(v, cur) → score, pri, go(v, H) → task }), offered as a choice
+  // like the services' — both in the order registered, both pure in their asking, and neither draws a chance: the same draws
+  // of the world, whatever is registered)
+  const WEIGH = Object.create(null), WANTS = [];
+  Vg.weigh = function (kind, fn) { (WEIGH[kind] || (WEIGH[kind] = [])).push(fn); };
+  Vg.want = function (name, o) { if (WANTS.some(w => w.name === name)) return; WANTS.push({ name, kind: 'want:' + name, urge: o.urge, pri: o.pri || 0, go: o.go }); };
+  Vg.wants = () => WANTS.map(w => w.name);
+  const weighOf = (v, kind, s) => { const ws = WEIGH[kind]; if (ws) for (let i = 0; i < ws.length; i++) s *= ws[i](v, kind); return s; };
+  // (the courtship goes to the one the person knows and is drawn to — G.Lacos.peso —; a stranger only near, to meet: 22b D-573)
   function courtTarget(v) {
-    const S = G.S; let best = null, bd = 1e9;
-    for (const o of S.villagers.values()) {
+    let best = null, bs = -Infinity; const L = G.Lacos;
+    for (const o of L.roster(v.set)) {
       if (o === v || o.g === v.g || o.partner || o.set !== v.set || o.age < 17 || o.age > 55 || o.mourn > 0 || o.sleeping || o.inside || !o.captive !== !v.captive) continue;
       if (Math.abs(o.age - v.age) > 16 || relatedClose(v, o)) continue;
       if (o.task && o.task.pri > 1) continue;
-      const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd && d < 400) { bd = d; best = o; }
+      const d = G.dist2(v.x, v.y, o.x, o.y); if (d >= 400) continue;
+      const s = L.peso(v, o, 'corte', d); if (s > bs) { bs = s; best = o; }
     }
     return best;
   }
   const canCourt = v => !v.partner && v.age >= 17 && v.age <= 50 && v.mourn <= 0 && v.courtCD <= 0;
+  // (a talk goes to whom one is fond of, the nearest still counting — a friend ten houses off before a stranger three; whoever one
+  // hates is not sought: G.Lacos.peso, the town's own people only, 22b D-573)
   function socialTarget(v) {
-    const S = G.S; let best = null, bd = 1e9;
-    for (const o of S.villagers.values()) {
+    let best = null, bs = -Infinity; const L = G.Lacos;
+    for (const o of L.roster(v.set)) {
       if (o === v || o.age < 10 || o.set !== v.set || o.sleeping || o.inside || o.held || o.air || !o.captive !== !v.captive) continue;
       if (o.task && o.task.pri >= 1) continue;
-      const d = G.dist2(v.x, v.y, o.x, o.y); if (d < bd && d < 144) { bd = d; best = o; }
+      const d = G.dist2(v.x, v.y, o.x, o.y); if (d >= 400) continue;
+      const s = L.peso(v, o, 'conversa', d); if (s > bs) { bs = s; best = o; }
     }
     return best;
   }
+  // (a visit to one of the family, or to a dear friend, of the same town — the dearer and the older, the likelier: one draw)
   function relativeTarget(v) {
     const S = G.S; const ids = [v.mother, v.father, v.partner, ...v.kids];
-    const list = ids.map(id => S.villagers.get(id)).filter(o => o && o.age >= 2 && o.set === v.set && !o.inside && !o.sleeping && !o.air && !o.held);
-    return list.length ? G.pick(list) : null;
+    for (const t of v.lacos || []) if (!ids.includes(t[0])) ids.push(t[0]);
+    const list = [], w = [];
+    for (const id of ids) {
+      const o = S.villagers.get(id); if (!o || o.age < 2 || o.set !== v.set || o.inside || o.sleeping || o.air || o.held) continue;
+      const s = G.Lacos.peso(v, o, 'visita', G.dist2(v.x, v.y, o.x, o.y)); if (!(s > 0)) continue;
+      list.push(o); w.push(s);
+    }
+    if (!list.length) return null;
+    let r = G.R() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < list.length; i++) { r -= w[i]; if (r <= 0) return list[i]; }
+    return list[list.length - 1];
   }
 
   function decide(v) {
@@ -775,7 +819,7 @@
     // (bed at one's own hour — the clock of each one, G.Lar.clock —, not all at the fall of night: L-225, D-071)
     const sleepy = G.Lar ? G.Lar.sleepy(v) : night;
     let best = null, bs = -1, bp = 0;
-    const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
+    const opt = (score, pri, kind) => { score = weighOf(v, kind, score); if (score > bs) { bs = score; best = kind; bp = pri; } };
     // (the stoker at his post — the fire of his baths not yet fed to their closing: G.Termas.onDuty — leaves it for a meal
     // only starving; his meal is before the doors open: G.Termas.mealFirst, D-227)
     const post = !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v));
@@ -841,6 +885,8 @@
       if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
     opt(0.04, 0, 'wander');
+    // (the wishes of one's own the society registers — Vg.want, D-566 —, asked in the order registered)
+    for (let i = 0; i < WANTS.length; i++) { const w = WANTS[i]; const u = w.urge(v, cur, night); if (u > 0) opt(u, w.pri, w.kind); }
     // (the one minding the little ones at home by day — G.Lar.minder — has no working day, as a child has none: a plain load in
     // the hands goes to the store before the day at home, as a child's does (L-186) — eating, sleep and a storm first. Under the
     // minding it stayed in the hands for days: Nefertari, the shepherd of Mênfis, 58, minded the little ones of her house with
@@ -895,6 +941,7 @@
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;
+      default: if (kind && kind.startsWith('want:')) { const w = WANTS.find(q => q.kind === kind); t = w && w.go(v, H); }
     }
     if (!t) { if (!v.task) wander(v, 4); }
     else t.kind = kind;
@@ -1720,10 +1767,12 @@
           v.act = 'talk'; G.faceTo(v, o.x - v.x, o.y - v.y);
           if (v.actT > 0.9 && (!v.emo || v.emo.t < 0.2)) emote(v, t.type === 'court' ? 'heart' : t.type === 'visit' ? 'heart' : 'chat', 1.2);
           if (v.actT > (t.type === 'visit' ? 2.5 : 4)) {
+            // (what the two lived ends here, and stays in what each feels — G.Lacos.ato; the courtship asks the yes of both, 22b D-573)
+            if (t.type !== 'court') G.Lacos.ato(v, o, t.type === 'visit' ? 'visita' : 'conversa');
             if (t.type === 'court') {
               v.courtCD = G.rr(20, 50);
-              if (!o.partner && !v.partner && G.R() < (v.traits.includes('Romântico') || o.traits.includes('Romântico') ? 0.85 : 0.62)) {
-                v.partner = o.id; o.partner = v.id; v.widow = 0; o.widow = 0;
+              if (!o.partner && !v.partner && G.Lacos.corte(v, o) === 'sim') {
+                Vg.pair(v, o, 'corte');
                 S.stats.couples++;
                 if (G.Life) { G.Life.bio(v, 'couple', o.id); G.Life.bio(o, 'couple', v.id); }
                 G.FX && G.FX.hearts((v.x + o.x) / 2, (v.y + o.y) / 2);

@@ -174,6 +174,8 @@
     const S = S_(); const b = S.buildings.get(op.at); const d = op.data;
     // everyone out: what is still in the hands is finished in a hurry, and the last ones leave by the door
     for (const id of Object.keys(d.mesa)) { const v = S.villagers.get(+id); if (!v) continue; finishCup(v, op); if (v.task && v.task.type === 'tavern' && v.task.op === op.id) G.Vg.endTask(v); }
+    // (the ones still at the tables at the closing drank together: a tie between each two — G.Lacos.ato, 22b D-575)
+    if (G.Lacos) { const ids = Object.keys(d.mesa); for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) { const a = S.villagers.get(+ids[i]), c = S.villagers.get(+ids[j]); if (a && c) G.Lacos.ato(a, c, 'mesa'); } }
     d.mesa = {}; d.fila = [];
     const k = b && keeperOf(b);
     if (k && st === 'ok' && d.servidos >= 3) A.note(k, 'memory', `Um dia na taverna: ${d.servidos} servidos${coin(b) ? `, ${String(r2(d.receita)).replace('.', ',')} de receita e ${String(r2(d.gasto)).replace('.', ',')} de custo` : ''}${d.faltas ? `; faltou o que pediam ${d.faltas} ${d.faltas > 1 ? 'vezes' : 'vez'}` : ''}.`);
@@ -312,6 +314,8 @@
   // (inside: the world keeps one at the door, L-217; the interiors seat one at a free place of the use, t.use)
   function goIn(v, t, b, use) { const dr = G.Vg.door(b); v.x = dr[0]; v.y = dr[1]; v.inside = b.id; t.use = use; }
   function leave(v, t, op, H) {
+    // (whoever leaves the table drank with the ones still at it: a tie with each — G.Lacos.ato, 22b D-575)
+    if (op && op.data && op.data.mesa[v.id] && G.Lacos) for (const id of Object.keys(op.data.mesa)) { const o = S_().villagers.get(+id); if (o && o !== v) G.Lacos.ato(v, o, 'mesa'); }
     if (op && op.data && op.data.mesa[v.id]) { finishCup(v, op); delete op.data.mesa[v.id]; op.data.fila = op.data.fila.filter(id => id !== v.id); }
     return H.end(v);
   }
@@ -381,10 +385,15 @@
       if (G.R() < dt * 1.5) { if (o.hp > 25) G.Vg.damage(o, 2, 'brawl'); o.stagT = S.clock + 0.3; G.Audio && G.Audio.at(v.x, v.y, 'hit'); }
       return;
     }
-    if (v.drunk > S.clock && night && G.R() < dt * 0.006 && v.age >= 18) {
-      let o = null; for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
+    // (a fight has a cause: how quarrelsome the drunk one is, and whom of the drunk at the tables he dislikes — G.Convivio, 22b D-581)
+    const cv = G.Convivio;
+    if (v.drunk > S.clock && night && G.R() < dt * 0.006 * (cv ? cv.briga(v) : 1) && v.age >= 18) {
+      let o = null;
+      if (cv) o = cv.rival(v, Object.keys(op.data.mesa).filter(id => !brawls.has(+id) && !op.data.mesa[id].body));
+      else for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
       if (o) {
         const until = S.clock + G.rr(4, 7); brawls.set(v.id, { with: o.id, t: until }); brawls.set(o.id, { with: v.id, t: until });
+        if (cv && cv.brigou(v, o)) { brawls.delete(v.id); brawls.delete(o.id); }
         if (G.Urban) G.Urban.noteB(b, 'crime', 1); // (the life of the quarter: a brawl)
         G.Vg.emote(v, 'angry', 3); G.Vg.emote(o, 'angry', 3);
         const set = S.settlements.get(b.set);

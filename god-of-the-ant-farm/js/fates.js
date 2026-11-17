@@ -145,7 +145,7 @@
   };
   function wed(rec, a, b) {
     const S = G.S; rec.done = 1;
-    a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;
+    G.Vg.pair(a, b, 'amor-divino');
     S.stats.couples++;
     if (G.Life) { G.Life.bio(a, 'couple', b.id); G.Life.bio(b, 'couple', a.id); }
     G.FX && G.FX.hearts((a.x + b.x) / 2, (a.y + b.y) / 2);

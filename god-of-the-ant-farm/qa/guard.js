@@ -1508,6 +1508,62 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
     if (/\bG\.(Lacos\.(ato|marca)|Indole\.(vive|nasce)|Boatos\.(nasce|leva|desmente)|Vg\.(pair|unpair))\s*\(/.test(c)) fails.push(`o desenho só lê a sociedade: ${f}:${k + 1} muda a sociedade de dentro do que só se vê (D-545): ${l.trim().slice(0, 110)}`); }); }
 // === 22a: os personagens ===
 // === 22b: a sociedade ===
+// (the body of a function found by its name — `name = function`, `name = (…) =>`, `function name(` —, to its closing brace)
+const fnBody = (f, name) => {
+  const L = src[f] || []; const esc = name.replace(/[.$]/g, '\\$&');
+  const k0 = L.findIndex(l => new RegExp(`(^|[^\\w.])${esc}\\s*=\\s*(function\\b|\\([^)]*\\)\\s*=>|[a-z]\\w*\\s*=>)|\\bfunction\\s+${esc}\\s*\\(`).test(l));
+  if (k0 < 0) return null; let depth = 0, seen = false; const out = [];
+  for (let k = k0; k < L.length; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, '').replace(/'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|"(?:[^"\\]|\\.)*"/g, "''"); out.push([k, L[k], c]);
+    for (const ch of c) { if (ch === '{') { depth++; seen = true; } else if (ch === '}') depth--; }
+    if ((seen && depth <= 0) || (!seen && /;\s*$/.test(c))) break; }
+  return out;
+};
+// 204. "quem a pessoa é é do soc-indole.js" (D-570): a índole (v.indole) só o js/soc-indole.js escreve — no nascimento, pela porta
+// G.Vg.born, e no load de um save de antes —; quem traz a sua (quem volta dos mortos, o registro dos mortos) a copia num objeto novo
+// (indole: …), nunca a escreve numa pessoa. (Um apelido — const a = v.indole; a[0] = … — a regra não acha: a revisão acha)
+for (const f of files) { if (f === 'soc-indole.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.indole\s*(=(?!=)|\+=|-=)|\.indole\[[^\]]*\]\s*(=(?!=)|\+=|-=|\+\+|--)|\.indole\.(push|splice|fill|sort|reverse)\(/.test(c)) fails.push(`quem a pessoa é é do soc-indole.js: ${f}:${k + 1} escreve a índole (D-570): ${l.trim().slice(0, 110)}`); }); }
+// 205. "os laços e as marcas são do soc-lacos.js" (D-571, D-577): os laços (v.lacos) e as marcas de quem fez o quê (v.marcas) só o
+// js/soc-lacos.js escreve; o mundo avisa pela porta G.Lacos.ato / marca / desmarca, só dentro do passo do mundo
+for (const f of files) { if (f === 'soc-lacos.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.(lacos|marcas)\s*(=(?!=)|\+=)|\.(lacos|marcas)\.(push|splice|shift|pop|unshift|sort|reverse|fill)\(|\.(lacos|marcas)\[[^\]]*\](\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\.(lacos|marcas)\.length\s*=(?!=)/.test(c)) fails.push(`os laços e as marcas são do soc-lacos.js: ${f}:${k + 1} escreve um laço ou uma marca fora da porta (D-571): ${l.trim().slice(0, 110)}`); }); }
+// 206. "a fama e a memória da cidade são do soc-fama.js" (D-584, D-585): a fama de uma pessoa (v.fama) e a memória de uma cidade
+// (set.memoria) só o js/soc-fama.js escreve — pelo G.Fama.feito / lembra / respondida e pelo dia da cidade
+for (const f of files) { if (f === 'soc-fama.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.(fama|memoria)\s*(=(?!=)|\+=)|\.(fama|memoria)\.(push|splice|shift|pop|unshift|sort|reverse|fill)\(|\.(fama|memoria)\[[^\]]*\](\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--|\|=)/.test(c)) fails.push(`a fama e a memória da cidade são do soc-fama.js: ${f}:${k + 1} escreve a fama ou a memória (D-584): ${l.trim().slice(0, 110)}`); }); }
+// 208. "as leituras sociais são puras" (D-545, D-571): as portas que o desenho, a tela e as decisões leem — a índole (de, ax,
+// faceta, humor, par, palavras, make), os laços (sente, de, base, kin, find, peso, alvo, lembra, marked, holds, ferido, ferida), a
+// fama (de, notavel, recebe, memoria, temida) e as perguntas da vida entre as pessoas (grudge, briga, rival, denuncia, casas,
+// fofoqueiro, suspeitos) — não tiram do acaso (nem do mundo, nem do que só se vê), não escrevem numa pessoa nem chamam as portas
+// que mudam a sociedade
+{ const PURE = { 'soc-indole.js': ['I.de', 'I.ax', 'I.faceta', 'I.humor', 'I.par', 'I.palavras', 'make'], 'soc-lacos.js': ['L.sente', 'L.de', 'L.base', 'kin', 'find', 'L.peso', 'L.alvo', 'L.lembra', 'L.marked', 'L.holds', 'L.ferido', 'L.ferida', 'labels'],
+    'soc-fama.js': ['F.de', 'F.notavel', 'F.recebe', 'F.memoria', 'F.temida'], 'soc-vida.js': ['C.grudge', 'C.briga', 'C.rival', 'C.denuncia', 'C.casas', 'C.fofoqueiro', 'C.suspeitos'] };
+  for (const f in PURE) for (const nm of PURE[f]) { const b = fnBody(f, nm); if (!b) { fails.push(`as leituras sociais são puras: não achei ${nm} no ${f} (D-545)`); continue; }
+    for (const [k, l, c] of b) if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\b(Lacos|L)\.(ato|marca|desmarca|corte)\(|\b(Fama|F)\.(feito|lembra|respondida)\(|\bsetTask\(|\b(v|o|a|b|q|th|say)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`as leituras sociais são puras: ${f}:${k + 1} (${nm}) sorteia ou escreve (D-545): ${l.trim().slice(0, 110)}`); } }
+// 209. "a sociedade nunca pelo olhar" (D-546): os arquivos do cérebro social não leem a câmera, a vista, o desenho nem a tela — os laços
+// nascem do que o mundo viveu, nunca do que alguém olhava
+for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\bG\.(Render|Cam3D|Realm|People3D|Build3D|Modes|Cinema|Photo|Minimap|IncUI|Input3D|Mira3D|Body3D|Atmos3D)\b|\bG\.UI\.(selected|viewFac|cam|panel)|\bcam\.(x|y|zoom)\b|\bG\.Audio\.ear\b/.test(c)) fails.push(`a sociedade nunca pelo olhar: ${f}:${k + 1} lê a câmera ou a vista (D-546): ${l.trim().slice(0, 110)}`); }); }
+// 210. "a aparência nunca decide", nas decisões que a sociedade tocou (D-542, a regra 194 estendida): quem furta e de quem
+// (crime.js desperate, victimFor), quem se levanta (polity.js uprising), quem chora ou aplaude no cadafalso (justice.js stance), quem a
+// fofoca acusa (secrets.js gossip), a corte, a conversa e a visita (villagers.js courtTarget, socialTarget, relativeTarget), o «sim»
+// e o casamento arranjado (soc-lacos.js), a persona de quem governa (politics.js P.persona): nenhuma lê a pele, o cabelo, a roupa de
+// criança, o genoma, nem o povo da pessoa
+{ const DEC = [['crime.js', 'desperate'], ['crime.js', 'victimFor'], ['polity.js', 'Po.uprising'], ['justice.js', 'stance'], ['secrets.js', 'gossip'], ['villagers.js', 'courtTarget'], ['villagers.js', 'socialTarget'], ['villagers.js', 'relativeTarget'], ['soc-lacos.js', 'L.corte'], ['soc-lacos.js', 'arrange'], ['politics.js', 'P.persona']];
+  for (const [f, nm] of DEC) { const b = fnBody(f, nm); if (!b) { fails.push(`a aparência nunca decide: não achei ${nm} no ${f} (D-542)`); continue; }
+    for (const [k, l, c] of b) if (/\.(skin|hair|kidCloth|genoma|robe)\b|\bG\.(Genoma|Feicao)\b|\.civ\b|\bCIVS\[/.test(c)) fails.push(`a aparência nunca decide: ${f}:${k + 1} (${nm}) lê a aparência ou o povo (D-542): ${l.trim().slice(0, 110)}`); } }
+// 211. "o temperamento sem o acaso do mundo" (D-570): o js/soc-indole.js não sorteia — a índole é do hash do id, dos pais e dos
+// traços, a mesma em cada carga e em cada mundo da mesma semente, sem deslocar o acaso de ninguém
+(src['soc-indole.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`o temperamento sem o acaso do mundo: soc-indole.js:${k + 1} sorteia (D-570): ${l.trim().slice(0, 110)}`); });
+// 212. "a coragem é da pessoa" (D-572): a coragem com que uma pessoa nasce (Vg.create) não lê o povo — o viés da cultura fica nas
+// instituições do povo (o risco das expedições, o peso das levas: civs.js)
+{ const L = src['villagers.js'] || []; const k = L.findIndex(l => /let courage = /.test(l)); if (k < 0) fails.push('a coragem é da pessoa: não achei a coragem no Vg.create (D-572)'); else if (/civ/.test(L[k].replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`a coragem é da pessoa: villagers.js:${k + 1} a coragem lê o povo (D-572): ${L[k].trim().slice(0, 110)}`); }
+// 207. "o casal tem uma porta" (D-565): o par de uma pessoa (v.partner) só o G.Vg.pair / G.Vg.unpair do villagers.js escreve — a
+// corte, o casamento real, o amor além da fronteira, o Amor Divino, a morte, quem volta dos mortos, as primeiras famílias, os que
+// chegam: todos pela porta, e a sociedade ouve cada casal feito e desfeito num lugar só (Vg.pairHooks)
+{ const PAIR_OK = [['villagers.js', 'a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;'], ['villagers.js', "v.partner = 0; if (como === 'morte')"]];
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if ((/\.partner\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.partner\b|\[['"]partner['"]\]\s*=(?!=)/.test(c)) && !ok(PAIR_OK, f, l)) fails.push(`o casal tem uma porta: ${f}:${k + 1} escreve o par fora do G.Vg.pair / unpair (D-565): ${l.trim().slice(0, 110)}`); }); }
 // === 22c: a vida que se vê ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

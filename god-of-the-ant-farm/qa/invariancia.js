@@ -137,9 +137,13 @@ caseB: {
   const zs = (S2.biz || []).filter(z => z.st === 'on'); let badBook = 0;
   for (const z of zs) { const own = S2.villagers.get(z.owner); if (!own) badBook++; else if (h0.has(z.id) && z.day.d !== S2.day) badBook++; }
   const bk = books();
+  // (22b: and the ties — the society lived the two days by its own causes, the day of each town: the caps, nobody tied to the dead past
+  // the day of their town, the day of the ties lived — D-571; the checker «sociedade»)
+  const soc = QA.check().filter(q => q.sys === 'sociedade' && q.sev <= 3); const tied = [...S2.villagers.values()].filter(v => v.lacos && v.lacos.length).length;
+  const socDay = G.mod('soc.day') === S2.day;
   // (with a stall at least: a world without stalls would pass it empty)
-  ok('C dois dias longe', zs.length > 0 && !orphan && !stuck && !badBook && !bk.open && !bk.unpaid && !bk.neg && !bad().length,
-    `do dia ${d0} ao ${S2.day} pelo salto: ${zs.length} banca(s) de pé, cada uma com dono vivo e o livro do dia de hoje; ${orphan} carga(s) de operação acabada, ${stuck} levando para lugar que não existe${why.length ? ' (' + why.slice(0, 2).join('; ') + ')' : ''}; contas abertas ${bk.open}, vendas sem pagamento ${bk.unpaid}, estoques negativos ${bk.neg}`);
+  ok('C dois dias longe', zs.length > 0 && !orphan && !stuck && !badBook && !bk.open && !bk.unpaid && !bk.neg && !bad().length && !soc.length && tied > 0 && socDay,
+    `do dia ${d0} ao ${S2.day} pelo salto: ${zs.length} banca(s) de pé, cada uma com dono vivo e o livro do dia de hoje; ${orphan} carga(s) de operação acabada, ${stuck} levando para lugar que não existe${why.length ? ' (' + why.slice(0, 2).join('; ') + ')' : ''}; contas abertas ${bk.open}, vendas sem pagamento ${bk.unpaid}, estoques negativos ${bk.neg}; ${tied} pessoas com laços, o dia dos laços ${socDay ? 'vivido' : 'NÃO VIVIDO'}, o verificador da sociedade ${soc.length ? soc.slice(0, 2).map(q => q.msg).join(' · ') : 'limpo'}`);
 }
 // ---------------- A: the skip × the step — the same town, the same books closing, the differences measured
 {
