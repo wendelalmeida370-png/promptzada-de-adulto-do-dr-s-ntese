@@ -26,7 +26,7 @@ def hairline(P):
 
 
 # ------------------------------ hair ------------------------------
-def cap(lift=0.0, back=0.0, front=0.0, vol=0.015, top=0.024, tufts=1.0):
+def cap(lift=0.0, back=0.0, front=0.0, vol=0.015, top=0.024, tufts=1.0, recede=0.0):
     """The hair on the skull: a shell of the skull's shape grown by vol (more on the top), above the hairline (raised by
     lift; at the back lowered by back), its locks in soft ridges."""
     c = CRAN_C + np.array([0, 0.004, -0.003])
@@ -38,6 +38,7 @@ def cap(lift=0.0, back=0.0, front=0.0, vol=0.015, top=0.024, tufts=1.0):
         # (locks: soft ridges running back from the crown, broken so they read as clumps, not as a pattern)
         d += tufts * 0.0036 * (np.sin(th * 9 + np.sin(ph * 4) * 1.6) * 0.65 + np.sin(th * 19 + ph * 7) * 0.35) * np.clip((ph + 0.5) * 1.2, 0, 1)
         hl = hairline(P) - lift + back * np.clip(-q[:, 2] / 0.09, 0, 1) - front * np.clip(q[:, 2] / 0.08, 0, 1)
+        if recede: hl = hl + recede * (np.exp(-((np.abs(th) - 0.55) / 0.3) ** 2) + 0.3 * np.exp(-(th / 0.3) ** 2))   # (22a: the line higher at the temples)
         return smax(d, hl, 0.006)
     lo = c - r - 0.03; hi = c + r + 0.03
     return Custom(f, (lo, hi))
@@ -95,6 +96,38 @@ def hair(style):
         P = [Custom(wig, (CRAN_C - np.array([0.17, 0.3, 0.17]), CRAN_C + np.array([0.17, 0.16, 0.17]))).set(bone='head')]
         for sd in (1, -1):
             P.append(RBox(np.array([0.088 * sd, 1.5, 0.045]), [0.028, 0.085, 0.01], 0.008, rot_z(0.06 * sd)).set(op='u', k=0.02, bone='chest', tau=0.03))
+    elif style == 'entradas':
+        # (22a: the hair going from the temples — the receding line of a man's years: the forehead higher at its two corners)
+        P = [cap(vol=0.012, tufts=0.8, recede=0.024).set(bone='head')]
+    elif style == 'crespo':
+        # (22a: the tight curls standing round the head — a soft round mass, its surface in small knots, not in locks)
+        c = CRAN_C + np.array([0, 0.014, -0.006]); r = CRAN_R + np.array([0.036, 0.042, 0.036])
+        def afro(P):
+            d = ell_sdf(P, c, r); q = P - c
+            d += 0.0032 * np.sin(q[:, 0] * 260 + np.sin(q[:, 1] * 190) * 1.8) * np.sin(q[:, 1] * 240 + q[:, 2] * 150) * np.sin(q[:, 2] * 230 + q[:, 0] * 110)
+            return smax(d, hairline(P) + 0.004, 0.01)
+        P = [Custom(afro, (c - r - 0.03, c + r + 0.03)).set(bone='head')]
+    elif style == 'cacheado':
+        # (22a: curls to the jaw — the hair of the skull fuller, falling round the head to below the ears in clumps of curls)
+        c = CRAN_C + np.array([0, -0.012, -0.006]); r = CRAN_R + np.array([0.03, 0.04, 0.028])
+        def curls(P):
+            q = P - CRAN_C; d = ell_sdf(P, c, r)
+            d = smax(d, (H([0, 1.6, 0])[1] - P[:, 1]) + 0.02 * np.clip(-q[:, 2] / 0.08, 0, 1), 0.012)
+            d += 0.0045 * np.sin(q[:, 0] * 170 + np.sin(q[:, 1] * 120) * 2) * np.sin(q[:, 1] * 150 + q[:, 2] * 90) * np.sin(q[:, 2] * 160)
+            face = np.minimum.reduce([0.07 * HK - np.abs(q[:, 0]), q[:, 2] - 0.032, H([0, 1.745, 0])[1] - P[:, 1]])
+            return smax(smax(d, face, 0.006), hairline(P) - 0.03 * np.clip(-q[:, 2] / 0.1, 0, 1) - 0.02, 0.008)
+        P = [Custom(curls, (CRAN_C - 0.17, CRAN_C + 0.17)).set(bone='head')]
+    elif style == 'ondulado':
+        # (22a: waves to the shoulders — the long hair in broad S-waves down the back and over the shoulders)
+        P = [cap(back=0.06, tufts=0.7).set(bone='head')]
+        for x, zl, yl, r, ph in [(0.0, -0.105, 1.39, 0.036, 0.0), (0.048, -0.1, 1.40, 0.033, 1.3), (-0.048, -0.1, 1.40, 0.033, 2.1), (0.085, -0.08, 1.42, 0.028, 0.7), (-0.085, -0.08, 1.42, 0.028, 2.9)]:
+            a = H([x * 0.8, 1.665, -0.085]); b = np.array([x, yl, zl]); n = 9
+            for i in range(n):
+                t0, t1 = i / n, (i + 1) / n; w0 = 0.012 * np.sin(t0 * 9 + ph); w1 = 0.012 * np.sin(t1 * 9 + ph)
+                pa = a + (b - a) * t0 + np.array([w0, 0, w0 * 0.4]); pb = a + (b - a) * t1 + np.array([w1, 0, w1 * 0.4])
+                P.append(RoundCone(pa, pb, r * (1 - 0.45 * t0), r * (1 - 0.45 * t1)).set(op='u', k=0.012, bone='chest' if t0 > 0.2 else 'head', tau=0.03))
+        for sd in (1, -1):
+            P.append(RoundCone(H([0.078 * sd, 1.668, -0.03]), [0.1 * sd, 1.45, -0.04], 0.03, 0.018).set(op='u', k=0.03, bone='chest', tau=0.03))
     else:
         raise ValueError(style)
     return P

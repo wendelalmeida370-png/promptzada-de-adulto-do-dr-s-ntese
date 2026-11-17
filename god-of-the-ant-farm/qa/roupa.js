@@ -197,7 +197,9 @@ if (run('r5')) {
   // (standing, or walking: with no gesture of a task — one in the middle of a stroke of work bends more than any drunk, and the
   // sober one of the case was «0.00 e 0.68» of sway and lean: T-852)
   const out = adults().filter(v => !v.inside && !v.sleeping && !v.act && G.W.inb(v.x, v.y) && !(v.drunk > S.clock));
-  let a = null, b = null; for (const p of out) { const q = out.find(o => o !== p && G.dist(o.x, o.y, p.x, p.y) < 6); if (q) { a = p; b = q; break; } }
+  // (the drunk one with no other feeling on the face: the drink shows only there — grief and the moment's feeling come first, by
+  // design (P3.look); with the friend's mourning of 22b a mourner was picked and «the face flushed» read as a fault: T-1582)
+  let a = null, b = null; for (const p of out) { if (p.mourn > 0 || (p.emo && p.emo.k)) continue; const q = out.find(o => o !== p && G.dist(o.x, o.y, p.x, p.y) < 6); if (q) { a = p; b = q; break; } }
   if (!a) ok('r5 a bebedeira', false, 'ninguém de pé na rua perto de outro');
   else {
     const at = v => [v.x, v.y, v.face, v.moving, JSON.stringify(v.path || null)].join('|');
@@ -216,8 +218,11 @@ if (run('r5')) {
     const god = Math.abs(G.Court.sway(a)) >= 0 && G.Court.sway(b) === 0; // (the god's view weaves the same one)
     const errs = P3.check();
     a.drunk = 0; a.drinks = 0;
+    // (the sober one's trunk: the weight passed from one leg to the other, standing, is ±0.05 of it (anim-pessoas idle) — 0.10 of
+    // span in a shift that falls inside the 200 frames; the drunk's weave is past 0.2: T-1582)
+    const SOBER = 0.12;
     ok('r5 a bebedeira: quem bebeu demais cambaleia no 3D — o tronco de um lado ao outro, a cabeça pendendo, o rosto corado — e quem não bebeu não; onde pisam no mundo é o mesmo',
-      na >= 150 && ma > 0.2 && mb < 0.1 && la.get() > lb.get() + 0.05 && moved === 0 && off < 1e-6 && La.drunk > 0 && !Lb.drunk && La.mood && La.mood.blush > 0.3 && god && !errs.length,
+      na >= 150 && ma > 0.2 && mb <= SOBER && la.get() > lb.get() + 0.05 && moved === 0 && off < 1e-6 && La.drunk > 0 && !Lb.drunk && La.mood && La.mood.blush > 0.3 && god && !errs.length,
       `${a.name} #${a.id} bêbado: o tronco balança ${ma.toFixed(2)} rad, a curvatura ${la.get().toFixed(2)}; ${b.name} #${b.id} sóbrio: ${mb.toFixed(2)} e ${lb.get().toFixed(2)} · ${na} quadros desenhados onde o mundo o tem (desvio ${off.toFixed(4)} m), ${moved} mudanças no mundo · rosto ${JSON.stringify(La.mood)}${errs.length ? ' · ' + errs[0] : ''}`);
   }
 }

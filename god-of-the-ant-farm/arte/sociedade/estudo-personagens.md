@@ -625,3 +625,33 @@ levar o `gen`.
 - `exp/rostos-fotos.js` — as fotos do jogo (navegador, pela fila): rostos de perto e a meia distância (nórdicos, asteca de 18
   anos, egípcia, grego e romana velhos, criança, bebê, sem braço, grávida), cinco humores num rosto, a vista «como a foto do
   celular» e o custo com 30, 60 e 90 corpos. A pasta é `personagens/fotos/` (ver a nota no fim, se houver).
+
+## Nota da 22a — as folhas de cinco rostos (`personagens/`)
+As mesmas cinco pessoas da metrópole pronta (um nórdico jovem, uma egípcia adulta, um asteca jovem, uma grega idosa, um romano
+idoso), de perto (0,85 m), pelo desenho do jogo (`qa/visual/rostos-fotos.js`, `Q=media`, parte `cinco`).
+- `cinco-rostos-0-antes.jpg` — antes da 22a (7555851): o olho pintado sem pálpebra, a boca uma linha, os cinco com a mesma
+  estrutura.
+- `cinco-rostos-1-primeira.jpg` — a primeira folha da cabeça nova (fase 3, 77366a8): as pálpebras, os cílios, o brilho e a
+  sobrancelha já se leem. As notas do arquiteto sobre ela: o olhar de boneca assustada (o branco em cima e embaixo da íris), a boca
+  ainda uma linha, as manchas escuras nas bochechas e no queixo, a sobrancelha listrada, os cinco ainda com a mesma estrutura — e,
+  das nossas, o vermelho na beira da sombra forte demais (lido como ruge a alguns passos).
+- O que mudou por elas (D-557): o olho calmo no repouso (a pálpebra de cima sobre 13% da íris, a de baixo na borda; o branco só no
+  canal `wide`), a boca com o arco, o volume, a cor, a sombra e os cantos, o rosto que não se sombreia a si mesmo no mapa de sombra
+  (as manchas eram isso, não a oclusão nem as normais), a sobrancelha com forma e fios, os alvos de identidade com alcance de ver a
+  alguns passos, a luz quente da pele estreita e fraca.
+- O corpo e a família (fase 5): `corpo-fila.jpg` — a fila de meia distância (o bebê, a criança, a menina, o adolescente, os
+  adultos, os velhos, o crespo, o ferreiro, o gordo, o magro, a grávida, o sem braço: os pesos de cada um no `rostos.txt` das
+  fotos); `familia.jpg` — os pais e três filhos (a pele de cada filho, de um dos dois). A forma do corpo ainda se lê pouco sob a
+  roupa solta a três passos: as provas dele são as de Node (o r5, o pano com a largura do corpo; o r6, o coto), e uma silhueta
+  mais forte fica para a onda 2, com o dono.
+- A mesma pessoa ao longo dos anos (fase 4): `anos.jpg` — o mesmo genoma aos 15, 25, 45, 5 e 70 anos (o chapéu aos 25 e aos 45 é
+  o do ofício). Os recortes do rosto, cinzentos e normalizados, comparados por correlação: a mesma pessoa entre as idades 0,81;
+  quatro outras pessoas na mesma idade 0,64 — mais perto de si que dos outros.
+- `cinco-rostos-2-depois.jpg` (e `-meio.jpg`, a três passos) — as mesmas cinco pessoas depois das notas e da decisão do olho
+  (D-557, D-558): o olho estilizado menor (a abertura ≈ 1,25×, a íris ≈ 1,1×) e calmo, a boca com lábios, o rosto sem as manchas
+  da própria sombra, a sobrancelha com forma, os rostos diferentes entre si; a pele sem o ruge (a luz quente na beira da sombra
+  mais fraca e menos vermelha, o rubor do repouso mais leve). A meia distância o rubor das bochechas claras ainda se vê — como
+  na folha de antes da 22a.
+- Os canais do rosto (fase 6): `humor.jpg` — um rosto em oito estados pelos canais do `G.Rosto` (a calma, a alegria com os dentes,
+  a tristeza, a raiva, o medo com o branco acima da íris e a boca aberta, a fala, o piscar com as pálpebras fechadas, o nojo),
+  contra `humor-0-antes.jpg`, os mesmos estados no rosto de antes.

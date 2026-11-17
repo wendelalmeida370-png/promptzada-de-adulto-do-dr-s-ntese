@@ -120,7 +120,7 @@
     const fac = G.Fac.idOfV(v);
     const levy = !!(v.unit && v.task && v.task.type === 'band');
     const look = {
-      id: v.id, g: v.g, age: v.age, skin: v.skin, hair: v.hair, kidCloth: v.kidCloth, role: v.role, captive: v.captive ? { from: v.captive.from } : null,
+      id: v.id, g: v.g, age: v.age, skin: v.skin, hair: v.hair, genoma: v.genoma, kidCloth: v.kidCloth, // (genoma, 22a: the body keeps the face it had) role: v.role, captive: v.captive ? { from: v.captive.from } : null,
       unit: v.unit, elite: v.elite, arm: v.arm, _armed: v._armed, _fc: v.captive ? null : G.Fac.hex(fac), _civ: v.captive ? v.civ : ((G.Fac.get(fac) || {}).civ || v.civ || null),
       task: levy ? { type: 'band' } : null, act: '', actT: 0, walkPh: 0, moving: false, face: v.face, hurt: 0, emo: null, carry: null, lost: v.lost || null, z: 0,
     };

@@ -22,7 +22,7 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/(?:anim-|vida|social-clips|rosto)[^"]+)"><\/script>/g)) run(m[1]); } // (and 22c's: the acting, the reader, the clips of life)
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
@@ -139,7 +139,8 @@ const STATES = process.env.ESTADOS ? A.STATES.filter(st => process.env.ESTADOS.s
 // ------------------------------ the proofs ------------------------------
 ok('o corpo contínuo começou', B3.ready && P3.skin(), JSON.stringify({ ready: B3.ready, failed: B3.failed, bindErr: B3.bindErr }));
 // (in the bind pose every bone's matrix is the identity: the mesh is drawn exactly as modelled)
-{ const p = A.POSE0(); Object.assign(p, { elL: 0, elR: 0, knL: 0, knR: 0, shLr: G.BODYMESH.roll - 0.05, shRr: -(G.BODYMESH.roll - 0.05) });
+// (the face at rest too: with the face's channels loaded, as in the game, the calm mood's smile lifts the lower lid — T-1581)
+{ const p = A.POSE0(); Object.assign(p, { elL: 0, elR: 0, knL: 0, knR: 0, shLr: G.BODYMESH.roll - 0.05, shRr: -(G.BODYMESH.roll - 0.05) }); if (G.Rosto) p.face = G.Rosto.fresh();
   B3.begin(); P3.body(0, 0, 0, 0, Math.PI / 2, p, LOOK, null); B3.end(); const P = bend(MESH.corpoM, 0); let e = 0;
   for (let i = 0; i < P.length; i++) e = Math.max(e, Math.abs(P[i] - MESH.corpoM.pos[i]));
   ok('na pose de modelagem a pele é a malha', e < 1e-4, `desvio máximo ${e.toExponential(2)} m`); }

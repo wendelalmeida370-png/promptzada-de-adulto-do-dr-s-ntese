@@ -27,7 +27,7 @@ run('js/itens.js');
 // those are bare shelves that answer nothing: what the hands hold, G.Inv.held, asks none of them — T-1367)
 G.Depot = G.Depot || { addKind() { }, onMove: [], may: () => ({ ok: false }), move: () => 0, weight: () => 0, parse: r => String(r).split(':') };
 G.Act = G.Act || { hooks: { tick: [], possess: [] } }; G.Eco = G.Eco || { name: k => k };
-run('js/inventario.js'); { const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/(?:anim-|vida|social-clips|rosto)[^"]+)"><\/script>/g)) run(m[1]); } // (and 22c's: the acting, the reader, the clips of life)
+run('js/inventario.js'); { const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
 G.People3D.init(THREE, realm);

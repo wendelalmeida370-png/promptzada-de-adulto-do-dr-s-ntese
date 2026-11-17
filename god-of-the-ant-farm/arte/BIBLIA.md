@@ -133,7 +133,7 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
 | Pedra rúnica (feita: 1.404) · portal entalhado (feito: 1.144) | ≤ 1,5 mil | ≤ 40 |
 | Ponta de empena recortada (cavalo: 252 · voluta: 524) | ≤ 600 | ≤ 20 |
 | Árvore | ≤ 1,2 mil | ≤ 40 |
-| Pessoa | ≤ 3 mil (corpo 2 mil + roupa e cabelo) | média ≤ 800 |
+| Pessoa (`bodymesh.js` v2, D-553) | perto ≤ 12 mil: o corpo 9,3 mil + os olhos (2 × 252) + as pálpebras (4 × 288) + a boca por dentro (≈ 700); o cabelo 1,4–2,2 mil (os cachos e as ondas 2,2 mil), a barba 0,7–1,1 mil, a roupa até ≈ 3,5 mil (a saia longa e a capa, refinadas para levar a forma: L-1671), o chapéu 0,6–1,6 mil · meio ≤ 3,2 mil (o corpo 2,4 mil + as pálpebras 4 × 120 + os olhos) | ≤ 480 |
 | Bicho (`faunamesh.js`, D-265, D-322: três níveis — o alvo é o computador) | perto ≤ 6 mil (corpo 4 × a espécie, ~3 mil, + peças + os olhos); meio ≤ 2 mil (corpo ~760 + peças; os do mar ~1,1 a 1,4 mil, D-267, em dois níveis) | ≤ 420 (~230 a 370, com os olhos; a baleia, 320) |
 | Dragão, o herói (`faunamesh.js` `dragon` e `dragon_voo`, D-270) | ≤ 5,5 mil (corpo 2,1 mil + asas 2 × 600 + dedos, cabeça, dentes, chifres, espinhos, garras) | ≤ 900 (com as asas: de longe é o que se lê) |
 
@@ -146,6 +146,9 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
 - Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`, no formato 3 das malhas — D-266): 2,4 MB para as 72 espécies (as 67 da terra, da beira d'água e do ar e as 5 do mar, D-267), as 11 malhas de voo e o dragão no chão e no voo (D-270), perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
+- As formas das pessoas (`G.Feicao.ALVOS`, D-554): 44 alvos, uma tabela de ≈ 0,58 milhão de texels (8,8 MB na placa, números de 32
+  bits), feita ao começar o 3D (≈ 0,5–1 s numa máquina ocupada); nenhuma chamada de desenho nova; até ≈ 30 buscas de texel a mais
+  por ponto desenhado (só as do corpo na sombra). O `bodymesh.js`, 2,2 MB.
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
   40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
 - Decoração só com `G.Realm.Q().detail`; densidade lida dos campos do preset, nunca fixa.
@@ -296,12 +299,18 @@ caça do A6); os lóbulos do arbusto lidos de cima como bolas lisas. *Próximo:*
 aparecendo em recorte, sem a mancha; o verde calmo do norte levado à selva.
 
 **Pessoas e bichos (A4).** *Cumpre:* o corpo contínuo com a roupa de cada povo — o huipil solto de barra bordada e a saia
-longa asteca, o vestido de alça nórdico, a tanga —, tranças e cabelos, olhos do tamanho de olho, os tecidos da pilha.
+longa asteca, o vestido de alça nórdico, a tanga —, tranças e cabelos, **olhos estilizados, um pouco maiores que os de verdade (a abertura ≈ 1,25×, a íris ≈ 1,1×: D-558)
+e calmos em repouso — a pálpebra de cima sobre o alto da íris, a de baixo na borda dela; o branco em cima e embaixo só no espanto
+(o canal `wide`) —, com pálpebras e cílio escuro, a sobrancelha de contraste com forma e fios, a boca com lábios (o arco, o volume,
+a sombra) que abre por dentro, o rosto de cada um pelos genes e pelos anos (D-553 a D-557)**, os tecidos da pilha.
+*Depois (22a):* a pele quente (a luz que sai na beira da sombra, estreita), as manchas do rosto (o rosto que se sombreia a si
+mesmo nos blocos do mapa de sombra) tiradas no passe da sombra; a saia, a toga, a blusa e a capa com a largura do corpo (L-1671).
 *Depois (D-265):* **os bichos** são uma pele contínua cada, com anatomia de família (casco, garra, pilar, ave, cobra, réptil, foca), a pelagem e o padrão da espécie pintados no shader e o passo medido pela perna (`arte/fauna.py`, `js/fauna3d.js`, `js/fauna-anim.js`). *Depois do refino (D-273 a D-275):* pernas robustas com as juntas à mostra (cotovelo, joelho, jarrete, boleto) e dedos nas patas, a sola no chão (os pés afundavam até 0,2 m: L-984), orelhas em folha, a cabeça de cada família de caçadores (o gato de almofadas e olhos grandes, o cão de focinho em caixa, o macaco de cara chata, o hipopótamo de focinho largo e olhos em torres), a juba do leão que emoldura a cara, o lobo de gola, o camelo de pescoço em S, a águia empoleirada de pé e a coruja de disco; e o movimento pelo pé — o casco que pousa fica (patinava: L-985), o sentar de verdade (L-986), cada pé no chão que tem debaixo dele, os filhotes de cabeça grande e pernas longas. *Antes:* os bichos — cão, lhama, cervo, aves — eram brinquedos facetados de pernas de palito (um cão cinza visto
 de trás, em Mênfis, lê como formiga gigante); o corpo atravessa a saia (duas manchas brancas nas coxas, de frente); as mangas de linho
 e os braços leem como manequim cinza de juntas (à noite, boneco de madeira); a pele pálida e acinzentada, que na sombra
 da mata faz o rosto parecer caveira. *Próximo:* os bichos do mar e o dragão na mesma pele (T-1283); o nado e o voo com prova de pose (T-1297);
 a saia sem o corpo passando; pele mais quente e manga com dobra.
+*Próximo (22a, onda 2):* a criança de pernas curtas (com a 22c), a vista do deus pelo `G.Feicao`, o retrato no painel, a câmera de conversa.
 
 **Luz, água e céu (A5).** *Cumpre:* a noite de verdade (estrelas, a poça quente da tocha, janela acesa, as tábuas lidas no
 escuro); o dia sem preto esmagado nem branco estourado, de sombra macia; a água com fundo e a beira acompanhando o chão;

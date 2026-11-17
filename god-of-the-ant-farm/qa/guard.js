@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -448,11 +448,12 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   need('props3d.js', /const aboutOf = K => \(G\.Atmos && G\.Atmos\.about \? G\.Atmos\.about\(K\.b\)/, 'aboutOf com G.Atmos.about');
   need('props3d.js', /if \(A\.wood\) \{/, 'a lenha só com A.wood');
   (src['props3d.js'] || []).forEach((l, k) => { if (/Build3D\.roles\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`o que se vê: props3d.js:${k + 1} lê os ofícios da casa fora do G.Atmos.about: ${l.trim().slice(0, 110)}`); });
-  const O = body('people3d.js', /^  function outfitOf\(v, L, fac\) \{/, /^  \}/);
-  if (!O) fails.push('o que se vê: people3d.js sem a função outfitOf — a regra 52 não acha a roupa');
-  else { O.forEach(l => { if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random/.test(l)) fails.push(`o que se vê: people3d.js: a roupa (outfitOf) tira de um acaso — a escolha é pelo id da pessoa (G.hash): ${l.trim().slice(0, 110)}`); });
-    if (!O.some(l => /const D = P3\.dressOf\(v\)/.test(l))) fails.push('o que se vê: people3d.js: a roupa (outfitOf) não pergunta ao G.Atmos.dress (P3.dressOf)');
-    if (!O.some(l => /const sig = `.*\$\{D\.code\}`/.test(l))) fails.push('o que se vê: people3d.js: a assinatura da roupa (sig) sem o código do que ela lê do mundo (D.code)'); }
+  // (the clothes are js/look3d.js's since the cut of the 22a, SOCIEDADE.md §3.9)
+  const O = body('look3d.js', /^  function outfitOf\(v, L, fac\) \{/, /^  \}/);
+  if (!O) fails.push('o que se vê: look3d.js sem a função outfitOf — a regra 52 não acha a roupa');
+  else { O.forEach(l => { if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\()|Math\.random/.test(l)) fails.push(`o que se vê: look3d.js: a roupa (outfitOf) tira de um acaso — a escolha é pelo id da pessoa (G.hash): ${l.trim().slice(0, 110)}`); });
+    if (!O.some(l => /const D = P3\.dressOf\(v\)/.test(l))) fails.push('o que se vê: look3d.js: a roupa (outfitOf) não pergunta ao G.Atmos.dress (P3.dressOf)');
+    if (!O.some(l => /const sig = `.*\$\{D\.code\}`/.test(l))) fails.push('o que se vê: look3d.js: a assinatura da roupa (sig) sem o código do que ela lê do mundo (D.code)'); }
   need('art.js', /const D = At\.dress\(v\)/, 'Art.rank com G.Atmos.dress'); }
 // 53. "a cena de som só lê" (D-166): o js/audio-src.js decide o que soa e mais nada — não sorteia (nem do acaso do mundo, nem
 // do G.VR: a mesma cena para o mesmo mundo e o mesmo ouvido; quem sorteia é o tocador, audio.js), não escreve em pessoa,
@@ -974,10 +975,10 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 // 114. "o que se segura é o que o inventário diz" (D-336, D-346): o 3D das pessoas não tem tabela própria do que cada ofício ou ato
 // segura (as velhas TOOL_OF e toolK): o que está nas mãos, nas costas e no cinto vem do G.Inv.held(v), e a forma de cada coisa do
 // G.ItemArt (com as formas de antes como reserva)
-{ for (const f of ['people3d.js', 'avatar.js', ...files.filter(f => /^anim-.*\.js$/.test(f))]) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+{ for (const f of ['people3d.js', 'look3d.js', 'avatar.js', ...files.filter(f => /^anim-.*\.js$/.test(f))]) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bTOOL_OF\b|\btoolK\b/.test(c)) fails.push(`o que se segura: ${f}:${k + 1} decide o que alguém segura por uma tabela própria, não pelo G.Inv.held (D-346, L-1106): ${l.trim().slice(0, 110)}`); });
   // (the drawer asks the inventory, with the memo the inventory keeps — G.Inv.heldFor, L-1114 — or plainly, G.Inv.held)
-  if (!(src['people3d.js'] || []).some(l => /G\.Inv\.heldFor\(v, L\._inv|G\.Inv\.held\(v\)/.test(l))) fails.push('o que se segura: o people3d.js não pergunta ao G.Inv (heldFor / held) o que cada um leva (D-346, L-1114)');
+  if (!(src['look3d.js'] || []).some(l => /G\.Inv\.heldFor\(v, L\._inv|G\.Inv\.held\(v\)/.test(l))) fails.push('o que se segura: o look3d.js não pergunta ao G.Inv (heldFor / held) o que cada um leva (D-346, L-1114; o look saiu do people3d.js, SOCIEDADE.md §3.9)');
   if (!(src['people3d.js'] || []).some(l => /G\.ItemArt\.geo\(/.test(l))) fails.push('o que se segura: o people3d.js não pede a forma das coisas ao G.ItemArt.geo (D-346)'); }
 // 115. "o andar é feito da fase, não de poses misturadas" (D-341, L-1107): a passada de quem anda e de quem corre sai do G.Gait.pose
 // pela fase de cada quadro — só o animador (anim-body.js) e a ponte das poses nomeadas (o gaitPose do people3d.js) a pedem; quem
@@ -1012,7 +1013,7 @@ for (const f of ['fauna-mente.js', 'fauna-luta.js']) (src[f] || []).forEach((l, 
 { const p3 = src['people3d.js'] || [];
   if (!p3.some(l => /if \(inv\.cabeca\) \{ RX\.kH = inv\.cabeca; RX\.cabeca\.copy\(R\[B\.head\]\); \}/.test(l))) fails.push('o que se veste: o people3d.js não desenha o elmo do inventário no osso da cabeça (D-349)');
   if (!p3.some(l => /if \(inv\.corpo\) \{ RX\.kT = inv\.corpo; RX\.corpo\.copy\(R\[B\.chest\]\);/.test(l))) fails.push('o que se veste: o people3d.js não desenha a couraça do inventário no osso do peito (D-349)');
-  if (!p3.some(l => /if \(inv\.cabeca\) \{ o\.hatM = null; o\.hairM = null; \}/.test(l))) fails.push('o que se veste: com o elmo do inventário, a roupa ainda põe o chapéu ou o cabelo por baixo (D-350)');
+  if (!(src['look3d.js'] || []).some(l => /if \(inv\.cabeca\) \{ o\.hatM = null; o\.hairM = null; \}/.test(l))) fails.push('o que se veste: com o elmo do inventário, a roupa (look3d.js) ainda põe o chapéu ou o cabelo por baixo (D-350)');
   if (!p3.some(l => /toolMat = G\.ItemArt\.material\(THREE, /.test(l))) fails.push('o que se veste: as coisas não usam o material da arte dos itens (G.ItemArt.material: o brilho do metal, L-1115)'); }
 // 119. "o corpo debaixo da couraça vai com o peito — no shader e na cópia da CPU, iguais" (D-351): o tronco da couraça para cima vai
 // com o osso do peito (a faixa de baixo da borda, os números da elipse do pé da couraça), e a coxa que sobe fica debaixo da borda;
@@ -1507,6 +1508,65 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   for (const f of LOOK) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bG\.(Lacos\.(ato|marca)|Indole\.(vive|nasce)|Boatos\.(nasce|leva|desmente)|Vg\.(pair|unpair))\s*\(/.test(c)) fails.push(`o desenho só lê a sociedade: ${f}:${k + 1} muda a sociedade de dentro do que só se vê (D-545): ${l.trim().slice(0, 110)}`); }); }
 // === 22a: os personagens ===
+// 197. "o genoma só o genoma.js escreve" (D-551): o genoma de uma pessoa (v.genoma — e o de um morto, de um corpo no chão) nasce só pela
+// porta do nascimento do js/genoma.js (G.Vg.born) e pelo conserto do load dele; fora dele, só as cópias ditas: o Vg.create passa o de
+// quem volta ou chega (villagers.js), o registro dos mortos (village.js), o corpo no chão (carnage.js), quem volta dos mortos (beyond.js)
+const GENOMA_OK = [
+  ['villagers.js', 'genoma: o.genoma, indole: o.indole'], // (one brought back from the dead, or come from elsewhere, keeps what was theirs)
+  ['village.js', "genoma: v.genoma, // (the look's genome"], // (the dead's record: a father dead before the birth still passes his genes)
+  ['carnage.js', 'genoma: v.genoma, kidCloth: v.kidCloth'], // (the body on the ground keeps the face it had)
+  ['beyond.js', 'genoma: r.genoma || look.genoma'], // (back from the dead with the face they had)
+];
+{ for (const f of files) { if (f === 'genoma.js') continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\.genoma\s*(=(?!=)|\+=)|\bgenoma\s*:/.test(c) && !ok(GENOMA_OK, f, l)) fails.push(`o genoma só o genoma.js escreve: ${f}:${k + 1} escreve o genoma de alguém (D-551; pela porta G.Vg.born do genoma.js, ou uma cópia dita na regra 197): ${l.trim().slice(0, 110)}`); }); }
+  const gs = (src['genoma.js'] || []).join('\n');
+  if (!gs) fails.push('o genoma só o genoma.js escreve: falta o js/genoma.js (D-551)');
+  else { if (!/G\.Vg\.born\.push\(/.test(gs)) fails.push('o genoma só o genoma.js escreve: o genoma.js não nasce pela porta G.Vg.born (D-541, D-551)');
+    if (!/G\.saveHooks[^\n]*\.push\(\{[^\n]*load\(\)[^\n]*Ge\.fill\(\)/.test(gs)) fails.push('o genoma só o genoma.js escreve: o genoma.js não enche os saves de antes no load (Ge.fill num G.saveHooks, D-551)'); } }
+// 198. "o genoma só o desenho lê" (D-542, a regra do dono): o genoma de alguém (.genoma), o G.Genoma e o G.Feicao são lidos só pelo
+// desenho — os arquivos do que só se vê (a lista LOOK, que tem o body3d.js, o look3d.js e o feicao.js) — e pelas cópias da regra 197;
+// um arquivo que decide algo do mundo não os lê (a aparência nunca decide: a prova g6 do qa/genoma.js)
+{ for (const f of files) { if (LOOK.includes(f) || f === 'genoma.js') continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\.genoma\b|\bG\.(Genoma|Feicao)\b/.test(c) && !ok(GENOMA_OK, f, l)) fails.push(`o genoma só o desenho lê: ${f}:${k + 1} lê o genoma ou a feição de alguém fora do desenho — a aparência nunca decide (D-542): ${l.trim().slice(0, 110)}`); }); } }
+// 199. "o genoma é puro" (D-551): o js/genoma.js não tira de acaso nenhum (nem do mundo, nem do que só se vê, nem o Math.random), não
+// pergunta ao relógio (Date, performance.now) nem ao THREE; a conta (os genes, o hash de 32 bits, o fundador, o filho, as cores) não lê o
+// mundo; só as portas do mundo (o nascimento e o load, abaixo da sua marca) leem a semente, o sol de um lugar e as pessoas — e lá o
+// único campo escrito é o genoma de uma pessoa (e, no load de um save de antes, o dia em que os genomas vieram, pelo G.mod: L-1674)
+{ const L = src['genoma.js'] || []; const at = L.findIndex(l => /-{20,} the world's doors -{20,}/.test(l));
+  if (L.length && at < 0) fails.push("o genoma é puro: o genoma.js sem a marca das portas do mundo («the world's doors»: a regra 199 não acha onde o mundo pode ser lido)");
+  L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now|\bTHREE\b/.test(c)) fails.push(`o genoma é puro: genoma.js:${k + 1} tira de um acaso ou pergunta ao relógio (D-551): ${l.trim().slice(0, 110)}`);
+    if (k < at && /\bG\.(S|W|Fac|Vg|Village|Biome)\b/.test(c)) fails.push(`o genoma é puro: genoma.js:${k + 1} a conta lê o mundo (só as portas do mundo, abaixo da marca: D-551): ${l.trim().slice(0, 110)}`);
+    if (k > at && at >= 0 && /\b(v|p|S|m|f|o|G\.S)\.(?!genoma\b)[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o genoma é puro: genoma.js:${k + 1} as portas do mundo escrevem outro campo que o genoma (D-551): ${l.trim().slice(0, 110)}`); }); }
+// 200. "o desenho lê os canais do rosto pelo nome" (D-543, D-556): o corpo (body3d.js), a feição e o retrato leem o pose.face só pelo
+// índice do G.Rosto (RI.nome, G.Rosto.IDX.nome) — nunca por um número —, e todo nome que leem está no js/rosto.js
+{ const ro = (src['rosto.js'] || []).join('\n'); const names = new Set([...ro.matchAll(/\['(\w+)', -?[\d.]+, -?[\d.]+, -?[\d.]+\]/g)].map(m => m[1]));
+  for (const f of ['body3d.js', 'feicao.js', 'look3d.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    for (const m of c.matchAll(/\b(?:RI|G\.Rosto\.IDX)\.(\w+)/g)) if (!names.has(m[1])) fails.push(`o rosto pelo nome: ${f}:${k + 1} lê o canal «${m[1]}», que não está no js/rosto.js (D-543; um canal novo se pede ao arquiteto): ${l.trim().slice(0, 110)}`);
+    if (/\bface\[\s*\d+\s*\]/.test(c)) fails.push(`o rosto pelo nome: ${f}:${k + 1} lê um canal do rosto por um número (pelo G.Rosto.IDX: D-543): ${l.trim().slice(0, 110)}`); }); }
+// 201. "a feição só se vê" (D-552): o js/feicao.js não escreve numa pessoa nem no mundo (só na sua memória), não tira de acaso nenhum,
+// não pergunta ao relógio e não chama porta que muda o mundo
+{ const FE_READS = new Set(['id', 'age', 'g', 'genoma', 'skin', 'hair', 'hunger', 'hp', 'role', 'preg', 'lost']);
+  (src['feicao.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} tira de um acaso ou pergunta ao relógio (D-552): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|w|p|S|G\.S)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bG\.(Vg|Village|Depot|Act|Possess|Inv|Urban)\.\w+\s*\(/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} escreve numa pessoa ou no mundo, ou chama uma porta do mundo (D-552): ${l.trim().slice(0, 110)}`);
+    // (22a, D-556: the body is marked by what was done to it — the years, the hunger, the health, the trade's work, a pregnancy, a
+    // limb lost — never by the house, the coins, the standing or the people: «the rich are fat» is not a cause)
+    for (const m of c.matchAll(/\bv\.([A-Za-z_]\w*)/g)) if (!FE_READS.has(m[1])) fails.push(`a feição só se vê: feicao.js:${k + 1} lê da pessoa «${m[1]}», que não é do corpo (a idade, o sexo, o genoma, a fome, a saúde, o ofício, a gravidez, o membro perdido: D-556; nunca a casa nem o povo): ${l.trim().slice(0, 110)}`);
+    if (/\bG\.(Fac|Eco|Trade|Casa|Court|Polity|Politics|Atmos|Estates|Crime)\b|\.(coin|elite|home|rank)\b/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} pergunta pela casa, as moedas, o grupo ou o povo (o corpo não sai da riqueza: D-556): ${l.trim().slice(0, 110)}`); }); }
+// 202. "a cor e a altura desenhadas vêm da feição" (D-552): o retrato do 3D (look3d.js) pede a feição de cada pessoa ao G.Feicao.of e
+// desenha por ela a altura, a pele, o cabelo e os olhos; só o feicao.js pede ao G.Genoma as cores e os genes de alguém (nenhum outro
+// desenho faz a conta por conta própria: as vistas iguais)
+{ const lk = (src['look3d.js'] || []).join('\n');
+  if (!/const Fe = G\.Feicao \? G\.Feicao\.of\(v\) : null;/.test(lk) || !/if \(Fe\) L\.s \*= Fe\.alt;/.test(lk) || !/const skin0 = Fe \? Fe\.skin : v\.skin, hair0 = Fe \? Fe\.hair : v\.hair;/.test(lk) || !/if \(L\.fe\) o\.iris = L\.fe\.iris;/.test(lk)) fails.push('a cor e a altura da feição: o look3d.js não desenha a altura, a pele, o cabelo e os olhos pelo G.Feicao.of (D-552)');
+  for (const f of files) { if (f === 'feicao.js' || f === 'genoma.js') continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Genoma\.(pheno|alleles|skinHex|hairHex|skinLab|hairLab|irisRGB|nearest)\s*\(/.test(c)) fails.push(`a cor e a altura da feição: ${f}:${k + 1} faz a conta do genoma por conta própria (só o G.Feicao: D-552): ${l.trim().slice(0, 110)}`); }); } }
+// 203. "o 3D lê a pessoa pela feição" (D-552): fora do feicao.js e do look3d.js, nenhum arquivo do 3D lê o genoma de alguém (.genoma) nem
+// o G.Genoma — o corpo, a pele, os alvos e a animação recebem a feição pelo retrato (L.fe), a mesma para todos
+{ for (const f of LOOK) { if (f === 'feicao.js' || f === 'look3d.js' || !src[f]) continue;
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.genoma\b|\bG\.Genoma\b/.test(c)) fails.push(`o 3D lê a pessoa pela feição: ${f}:${k + 1} lê o genoma de alguém direto (pelo retrato, L.fe, ou pelo G.Feicao: D-552): ${l.trim().slice(0, 110)}`); }); } }
 // === 22b: a sociedade ===
 // (the body of a function found by its name — `name = function`, `name = (…) =>`, `function name(` —, to its closing brace)
 const fnBody = (f, name) => {
