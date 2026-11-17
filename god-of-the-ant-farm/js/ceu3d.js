@@ -713,7 +713,10 @@ ${GXAIR}`;
       const kw = GX.gxKeyW.value, kv = L.byMoon ? L.md : L.sd; kw.x = kv.x; kw.y = kv.y; kw.z = kv.z; }
     // (the map of the air and the land's shade; the mist of each place as thick as the hour makes it)
     mapsTick(t, U.time.value);
-    { const mn = G.Ceu.mistNow(t, w, 0); const K = GX.gxAirK.value; K.x = mn.dawn; K.y = mn.last; K.z = 1; K.w = 0.012; }
+    // (and thicker where the land round the body is still wet from a rain the sun is drying: the land steaming)
+    { let wm = 0; if (focus && S.wet) { const N = G.N, cx = G.clamp(Math.floor(focus.X / G.Space.TILE), 0, N - 1), cy = G.clamp(Math.floor(focus.Z / G.Space.TILE), 0, N - 1); let n = 0;
+        for (let j = cy - 4; j <= cy + 4; j += 2) for (let i = cx - 4; i <= cx + 4; i += 2) { if (i < 0 || j < 0 || i >= N || j >= N) continue; wm += S.wet[j * N + i]; n++; } wm = n ? wm / n : 0; }
+      const mn = G.Ceu.mistNow(t, w, wm); const K = GX.gxAirK.value; K.x = mn.dawn; K.y = mn.last; K.z = 1; K.w = 0.012; }
     { const fx = focus ? focus.X / G.Space.TILE : G.N / 2, fy = focus ? focus.Z / G.Space.TILE : G.N / 2; const K = G.Ceu.sky(t, fx, fy, w, SKY);
       skyU.skB.value.set(K.band[0], K.band[1], K.band[2], K.band[3]); skyU.skM.value.set(K.halo[0], K.halo[1], K.halo[2], K.halo[3]); skyU.skE.value.set(K.shadow[0], K.shadow[1]); skyU.skU.value.setRGB(K.under[0], K.under[1], K.under[2]);
       // (and the far land goes blue as soon as the place's air says: the wet woods' milky, the desert's clear)
