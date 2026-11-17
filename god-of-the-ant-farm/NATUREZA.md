@@ -237,3 +237,31 @@ acima delas; as outras espécies têm as medidas de antes. **O vento** das plant
 escreve; quando o `G.Ceu.wind` existir, ele passa a escrevê-lo, e as plantas seguem sem mudar nada). **A fase B** lerá o `G.Mata` no
 passo do mundo: para isso a memória precisa de uma versão das árvores no `nature.js` (a leitura de uma casa em O(1)), que a fase A não
 pôs para não mexer no mundo.
+
+## 8c. As portas da água (21c)
+
+O `G.Agua` (`js/agua.js`) é a fonte pura da água: lê o mundo (o chão e o tipo de cada casa, o nível de cada rio `S.wl`, as quedas
+`S.relief.falls`, o gelo do inverno súbito, o mar aberto ao meio, as pontes e os prédios, o molhado `S.wet`, a chuva que cai, o clima, o
+fundo do mar do `G.Sea`) e não escreve nada; sem acaso nenhum; não pergunta ao `G.Space` (a regra 23). A corrente é refeita **inteira**
+quando pedida e o chão mudou (`S.typeVer`, `S.walkVer`); toda escolha dela é feita **no nível que o save guarda** (o centésimo da unidade
+de altura, `G.Agua.levelQ`: L-1590) — a mesma corrente num mundo e no mesmo mundo salvo e carregado. O desenho é o `G.Agua3D` (`js/agua3d.js`).
+
+| porta | o que dá | quem lê |
+|---|---|---|
+| `G.Agua.field()` / `G.Agua.flow(i)` | a corrente: `{ dx, dz, sp, q, D, par, dist, cx, cz }` (Float32Array por casa: o rumo, a velocidade em m/s, a vazão em casas de rio, a distância à foz, a casa para onde corre, a distância à praia em m e o rumo da terra); `flow(i)` uma casa (`{ x, z, sp, q }`; nada sob o gelo) | o 3D (o retrato da corrente), a vista do deus; na fase B, a corrente que empurra quem nada |
+| `G.Agua.steps(x0, y0, w, h)` | os degraus da água num retângulo: `{ i, j, x, y, tx, ty, ax, ay, bx, by, nx, ny, top, low, drop, dq, q, sp, fall, name, kind ('queda'\|'corredeira'), frozen, sea }` — o lado partilhado em casas, as faces em metros | a lâmina e o borrifo (21c), a vista do deus; **o céu (21d): a névoa da queda no mapa do ar** (o pé `tx, ty`, a altura `drop`, a vazão `q`) |
+| `G.Agua3D.sheetOf(s)` | o perfil desenhado da lâmina de um degrau (`{ sL, prof: [[d, y]…] }`, metros: onde ela bate na água de baixo) | o borrifo, as provas |
+| `G.Agua.look(i)` / `turbid(i)` | a cor da água pelo lugar (`{ kind, col: [r, g, b] sRGB, clar, tur }`) e o quanto está turva | o 3D, a vista do deus |
+| `G.Agua.foam(i)` | `[o pé de queda/corredeira, a corrente contra a margem ou uma pedra]`, 0..1 | o 3D |
+| `G.Agua.shore(i)` / `shoreAt(X, Z)` | a distância à praia (m) e o rumo da terra | o 3D (o trem da praia) |
+| `G.Agua.wet(i)` / `spray(i)` / `puddle(x, y)` / `rainNow(x, y)` | o molhado de uma casa de terra (0..1: o `S.wet` e a chuva de agora), o borrifo das quedas em volta do pé, onde a chuva empoça (0..1, um ponto em casas), a chuva que cai agora | o 3D, a vista do deus |
+| `G.Agua.waveY(X, Z, t, vento, mar, fundo)` / `waveGLSL()` / `WAVE` | **a altura da onda desenhada** (m, nunca mais de 15 cm: D-506) — a mesma conta do sombreador (`waveGLSL`, feita dos mesmos números `WAVE`); `t` o relógio da vista (`R3.time()`), `vento` o do 3D (`R3.U.wind`) | o navio (`fx3d.js`), a esteira, as provas; o que vier a boiar |
+| `G.Agua3D.wetU()` / `groundGLSL()` / `solidGLSL()` | o retrato do molhado (R a chuva agora, G onde empoça, B o borrifo; um texel por casa) e o pedaço de sombreador do chão molhado (`aguaWetGround`) e do telhado molhado (`aguaWetSolid`), com o brilho `gAgSheen` | o chão (`ground3d.js`, 21b), os prédios (`build3d.js`) |
+| `G.Agua3D.light(key, keyI, skyIrr, k)` | a luz do sol e do céu na água, e os retratos que andam com o mundo (chamada do `light()` — na junção, do `ceu3d.js`) | o céu (21d) |
+
+**O que a água lê do céu** (por referência, como hoje: a junção só passa): os pedaços do three.js remendados pelo `toon()` (o ar `gxHaze`,
+`gxAir`, a luz das chamas `gxLM`), o `skyU` (o alto do céu, o rumo da luz, as nuvens: `cover`, `cloudCol`, `cloudSh`, `uNoise` — a água
+reflete as nuvens do domo pela mesma conta dele), o `R3.U.wind` (o vento das ondas e do borrifo) e o arco-íris do `G.Ceu.rainbow` quando
+existir (hoje o borrifo faz o seu: o sol atrás do olho, os 42°). **A névoa da queda é do mapa do ar do céu** (`Ce.WHY.queda`): a água não
+desenha névoa. **A fase B** lerá o `G.Agua` no passo do mundo (a corrente que empurra o nadador e quem vadeia, a onda maior com quem nada
+nela): a regra 182 muda com o protocolo inteiro.

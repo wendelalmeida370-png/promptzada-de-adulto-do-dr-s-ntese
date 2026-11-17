@@ -100,9 +100,16 @@ if (on('a4')) {
   const fa = Ag.fresh(); M.viver(3); M.salvarCarregar(); const fb = Ag.field(); let same = 0, n = 0; for (let i = 0; i < N * N; i++) { if (G.S.type[i] !== T.RIVER) continue; n++; if (Math.abs(fa.sp[i] - fb.sp[i]) < 1e-6 && Math.abs(fa.dx[i] - fb.dx[i]) < 1e-6) same++; }
   lines.push(`o save e o load no meio: ${same}/${n} casas de rio com a mesma corrente`); good = good && same === n;
   // (the edge of the map: the mouth at the edge, the wave and the puddle outside it)
-  S = G.S; N = G.N; let edgeRiv = 0, edgeWay = 0; for (let k = 0; k < N; k++) for (const i of [k, (N - 1) * N + k, k * N, k * N + N - 1]) if (S.type[i] === T.RIVER) { edgeRiv++; if (Ag.flow(i).sp > 0 || Ag.field().par[i] === -3) edgeWay++; }
+  S = G.S; N = G.N;
   const wv = [Ag.waveY(-50, -50, 3, [1, 1, 1], 1, 9), Ag.waveY(N * 4 + 80, 9, 3, [1, 1, 1], 1, 9)]; const pz = [Ag.puddle(-1, 3), Ag.puddle(N + 2, 3)];
-  lines.push(`a borda: ${edgeWay}/${edgeRiv} casas de rio na borda com corrente, a onda fora do mapa ${wv.every(Number.isFinite) ? 'com número' : 'SEM NÚMERO'}, a poça fora ${pz.join(',')}`); good = good && edgeWay === edgeRiv && wv.every(Number.isFinite) && !pz[0] && !pz[1];
+  // (the generator puts no land at the map's edge — the sea goes round every map —: a river made by the proof's hand on the west edge, its
+  // first tile against the edge, runs out there (the edge is a mouth); every tile of it has a way, every number is a number)
+  let edgeLand = 0; for (let k = 0; k < N; k++) for (const i of [k, (N - 1) * N + k, k * N, k * N + N - 1]) if (S.type[i] >= T.SAND) edgeLand++;
+  const ey = N >> 1; for (let x = 0; x < 3; x++) { S.type[ey * N + x] = T.RIVER; S.wl[ey * N + x] = G.SEA + 0.3 + x * 0.04; } S.typeVer = (S.typeVer || 0) + 1;
+  const fe = Ag.field(); const mouth = fe.par[ey * N] === -2; let finite = true; for (let i = 0; i < N * N && finite; i++) if (!Number.isFinite(fe.dx[i]) || !Number.isFinite(fe.sp[i]) || !Number.isFinite(fe.dist[i])) finite = false;
+  const way = fe.dx[ey * N] < -0.5; /* (the tile against the edge runs out over it; the two beside it, with the sea on both sides, run to it as they can) */ const past = Ag.steps(-6, -6, N + 12, N + 12).length === Ag.steps(0, 0, N, N).length;
+  lines.push(`a borda: ${edgeLand} casas de terra na borda do mapa (o gerador não as faz); o rio feito à mão na borda oeste: ${mouth ? 'a borda é a foz' : 'A BORDA NÃO É FOZ'}, ${way ? 'a casa da borda corre para fora' : 'A CASA DA BORDA NÃO CORRE PARA FORA'}, ${finite ? 'tudo com número' : 'NÚMERO FALTANDO'}; os degraus pedidos além da borda ${past ? 'os mesmos' : 'OUTROS'}; a onda fora do mapa ${wv.every(Number.isFinite) ? 'com número' : 'SEM NÚMERO'}, a poça fora ${pz.join(',')}`);
+  good = good && mouth && way && finite && past && wv.every(Number.isFinite) && !pz[0] && !pz[1];
   ok('a4', good, lines.join(' · '));
 }
 
