@@ -660,6 +660,9 @@
       return;
     }
     const d = G.dist(v.x, v.y, o.x, o.y);
+    // (the one fighting the body the god lives reaches it by the bodies — its weapon's reach and the two skins: G.Combate.reach,
+    // 20f —; everyone else fights at the world's own distance, as always)
+    const R = G.Combate ? G.Combate.reach(v, o, 0.85) : 0.85;
     // archers keep their distance and loose arrows
     if (v.arm === 'arco' && !v.captive && d > 1.1 && d < 5.2) {
       v.path = null; v.moving = false; v.act = 'shoot';
@@ -670,14 +673,14 @@
       G.Siege.shoot(v, o, t, b);
       return;
     }
-    if (d > 0.85 && d < 5 && W.losClear(v.x, v.y, o.x, o.y)) {
+    if (d > R && d < 5 && W.losClear(v.x, v.y, o.x, o.y)) {
       // close and in the open: no need to plan a path
       const sp = v.speed * 1.2 * dt; const k = Math.min(1, sp / d);
       v.x += (o.x - v.x) * k; v.y += (o.y - v.y) * k; v.path = null; v.moving = true; v.walkPh += sp * 8.5; v.act = '';
       G.faceTo(v, o.x - v.x, o.y - v.y);
       return;
     }
-    if (d > 0.85) {
+    if (d > R) {
       t.rt = (t.rt || 0) - dt;
       if (t.rt <= 0 || H.arrived(v)) {
         t.rt = d > 6 ? 0.9 : 0.45;

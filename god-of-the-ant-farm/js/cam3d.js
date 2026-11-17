@@ -50,13 +50,13 @@
   C3.attach = function (pos, yaw) { C3.yaw = yaw; C3.pitch = 0.26; C3.dist = G.clamp(OPT.dist, DMIN, DMAX); C3.cur = C3.dist; piv = { X: pos.X, Y: pos.Y + 1.5, Z: pos.Z }; lookT = -1e9; fovNow = OPT.fov; lockGet = null; lockPt = null; C3.lock = null; aiming = false; aimK = 0; turnAsk = null; shNow = 0.32 * (OPT.side < 0 ? -1 : 1); };
   // the mouse turns it (pixels of movement) — not while a target is held: the eye keeps it in front
   C3.look = function (dx, dy) {
-    lookT = clock; if (lockPt) return;
+    lookT = clock; if (lockPt) { flick += dx; return; } // (held: the mouse's sideways push is kept for the fight's change of target — 20f, C3.flick)
     const k = 0.0028 * OPT.sens * (aiming ? 0.6 : 1); // (aiming, finer)
     C3.yaw += dx * k; C3.pitch = G.clamp(C3.pitch + dy * k * (OPT.invertY ? -1 : 1), PMIN, PMAX); turnAsk = null;
   };
   // the stick turns it (each axis -1 to 1 after its dead zone and curve; the frame's seconds): radians a second
   C3.lookPad = function (x, y, rdt) {
-    if (!x && !y) return; lookT = clock; if (lockPt) return;
+    if (!x && !y) return; lookT = clock; if (lockPt) { flick += x * 900 * rdt; return; }
     const k = 3.3 * OPT.padSens * (aiming ? 0.55 : 1) * rdt;
     C3.yaw += x * k; C3.pitch = G.clamp(C3.pitch + y * k * 0.62 * (OPT.invertY ? -1 : 1), PMIN, PMAX); turnAsk = null;
   };
@@ -82,7 +82,10 @@
     const p = get(); if (!p) return false;
     lockGet = get; lockPt = p; C3.lock = () => lockPt; return true;
   };
-  C3.unlock = function () { lockGet = null; lockPt = null; C3.lock = null; };
+  C3.unlock = function () { lockGet = null; lockPt = null; C3.lock = null; flick = 0; };
+  // (the sideways push of the mouse or the right stick while a target is held, in the mouse's pixels, since the last asking — the
+  // fight's change of target, 20f; read, it starts again from nothing)
+  let flick = 0; C3.flick = () => { const f = flick; flick = 0; return f; };
   C3.locked = () => lockPt; // (the target held now, as this frame has it: { X, Y, Z, id? }, or null)
   // the aim over the shoulder (the bow of the second wave): closer, over the shoulder, a narrower lens; the body faces where the
   // eye looks. aimRay: the ray through the middle of the picture, where the reticle is

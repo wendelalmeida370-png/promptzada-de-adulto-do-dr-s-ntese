@@ -168,6 +168,26 @@
     if (H.move(v, dt, 0.9) || t.age > 60) H.end(v);
   }
 
+  // the body's blow at one of its own people (20f, D-418): a crime as a theft is — seen by whoever is awake and near, told to the
+  // first guard they cross, hunted and judged by the same law; the victim and the deed said (kind: 'agressao' or 'homicidio')
+  Cr.assault = function (v, o, killed) {
+    const S = G.S; if (!v || !o || !G.inSim) return null;
+    const c0 = crimes().find(q => q.thief === v.id && q.victim === o.id && q.st === 'aberto' && q.day === S.day);
+    if (c0) { if (killed && c0.kind !== 'homicidio') c0.kind = 'homicidio'; return c0; } // (a blow after another, the same day: one crime)
+    const seen = [];
+    for (const w of S.villagers.values()) {
+      if (w === v || w.sleeping || w.inside || w.age < 8 || w.captive || w.aboard || w.ug) continue;
+      if (G.dist2(w.x, w.y, v.x, v.y) > 49) continue;
+      seen.push(w.id); w.saw = { crime: 0, day: S.day }; G.Vg.emote(w, LAW[w.role] ? 'angry' : 'fear', 1.6);
+    }
+    const c = { id: S.nextId++, kind: killed ? 'homicidio' : 'agressao', day: S.day, set: o.set, thief: v.id, victim: o.id, vname: o.name, n: 0, x: Math.round(o.x * 10) / 10, y: Math.round(o.y * 10) / 10, seen, told: 0, found: S.day, st: 'aberto' };
+    for (const id of seen) { const w = S.villagers.get(id); if (!w) continue; w.saw.crime = c.id; if (LAW[w.role] && !w.hunt && w.set === v.set) { w.hunt = c.id; c.told = S.day; c.flag = 1; w.saw = null; if (!(w.task && w.task.pri >= 1.65)) G.Vg.setTask(w, { type: 'prender', crime: c.id, id: v.id, pri: 1.65, st: 0, look: 0, kind: 'prender' }); } }
+    if (G.Urban) G.Urban.note(o.x, o.y, 'crime', 1); // (the life of the quarter: a blow in its street)
+    crimes().push(c); if (crimes().length > 60) crimes().shift();
+    return c;
+  };
+  // (what a crime was, in words: the coins of a house, a blow at someone, a death)
+  const deed = c => (c.kind === 'homicidio' ? `matar ${c.vname || 'alguém'}` : c.kind === 'agressao' ? `agredir ${c.vname || 'alguém'}` : null);
   // (the chronicle says the quarter of the house, in a city that has quarters: Bairros Vivos)
   const ofPlace = (c, set) => (G.Urban && G.Urban.ofPlace ? G.Urban.ofPlace(c.x, c.y, set) : ` de ${set.name}`);
   // ------------------------------ the watch: rounds, witnesses, the hunt, the arrest ------------------------------
@@ -274,17 +294,19 @@
     const jail = jailsOf(th.set).find(b => b.built && inmates(b) < G.BDEF.cadeia.cells);
     if (!law.days || !jail) {
       c.st = 'devolvido'; c.how = jail ? law.how : law.days ? 'não havia cela livre: só a devolução' : law.how;
-      bio(th, `Foi peg${oa(th)} por roubar moedas em ${set ? set.name : 'sua cidade'} e teve de devolvê-las.`, null);
+      bio(th, deed(c) ? `Foi peg${oa(th)} por ${deed(c)} em ${set ? set.name : 'sua cidade'}.` : `Foi peg${oa(th)} por roubar moedas em ${set ? set.name : 'sua cidade'} e teve de devolvê-las.`, null);
       G.Vg.endTask(th); G.Vg.emote(th, 'sad', 2);
-      if (set && (set.tier || 0) >= 2 && newsOK(set)) log(`${g.name} pegou ${th.name}, que tinha roubado ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}: ${c.how}.`, 'theft', th.x, th.y);
+      if (set && (set.tier || 0) >= 2 && newsOK(set)) log(deed(c) ? `${g.name} pegou ${th.name}, que ${c.kind === 'homicidio' ? 'matou' : 'agrediu'} ${c.vname || 'alguém'}${ofPlace(c, set)}: ${c.how}.` : `${g.name} pegou ${th.name}, que tinha roubado ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}: ${c.how}.`, 'theft', th.x, th.y);
       return H.end(g);
     }
     th.jail = jail.id; th.jailUntil = S.day + law.days; c.how = law.how; c.jail = jail.id;
+    if (deed(c)) { bio(th, `Foi pres${oa(th)} por ${deed(c)} em ${set ? set.name : 'sua cidade'}: ${law.how}.`, `Paguei na cela de ${set ? set.name : 'minha cidade'}`); bio(g, `Prendeu ${th.name}, que ${c.kind === 'homicidio' ? 'matou' : 'agrediu'} ${c.vname || 'alguém'} em ${set ? set.name : 'sua cidade'}.`, null); }
+    else {
     bio(th, `Foi pres${oa(th)} por roubar moedas de uma casa de ${set ? set.name : 'sua cidade'}: ${law.how}.`, `Roubei uma vez, e paguei na cela de ${set ? set.name : 'minha cidade'}`);
-    bio(g, `Prendeu ${th.name}, que tinha roubado uma casa de ${set ? set.name : 'sua cidade'}.`, `Peguei um ladrão com as moedas ainda no bolso`);
+    bio(g, `Prendeu ${th.name}, que tinha roubado uma casa de ${set ? set.name : 'sua cidade'}.`, `Peguei um ladrão com as moedas ainda no bolso`); }
     G.Vg.setTask(th, { type: 'levado', by: g.id, pri: 5.4, kind: 'levado' });
     G.Vg.setTask(g, { type: 'levar', id: th.id, jail: jail.id, pri: 3.2, kind: 'levar', st: 0 });
-    if (set && newsOK(set)) log(`${g.name} prendeu ${th.name}, que roubou ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}. Vai para a cadeia: ${law.how}.`, 'theft', th.x, th.y);
+    if (set && newsOK(set)) log(deed(c) ? `${g.name} prendeu ${th.name}, que ${c.kind === 'homicidio' ? 'matou' : 'agrediu'} ${c.vname || 'alguém'}${ofPlace(c, set)}. Vai para a cadeia: ${law.how}.` : `${g.name} prendeu ${th.name}, que roubou ${fmt(c.n)} moedas de uma casa${ofPlace(c, set)}. Vai para a cadeia: ${law.how}.`, 'theft', th.x, th.y);
     G.Stories && G.Stories.signal && G.Stories.signal('arrest', { fac: f ? f.id : 0, id: th.id, by: g.id, set: th.set, x: th.x, y: th.y });
   }
   const fmt = n => (Math.round(n * 10) / 10).toString().replace('.', ',');

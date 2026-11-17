@@ -43,6 +43,9 @@
   Po.on = () => !!(G.S && G.S.avatar);
   Po.body = () => { const id = Po.id(); return id ? G.S.villagers.get(id) || null : null; };
   Po.is = v => !!(v && G.S && G.S.avatar && G.S.avatar.id === v.id);
+  // (the world seconds a second of the body lasts, and the metres a unit of the world's height: for the world's side of the body
+  // — the fight's, 20f — that may not ask the space itself)
+  Po.time = () => G.Space.TIME; Po.hm = () => G.Space.HM;
 
   // ------------------------------ who can be lived ------------------------------
   const oa = v => (v.g === 'f' ? 'a' : 'o');
@@ -112,7 +115,7 @@
   Po.release = function (why, detail, keepTask) {
     const S = G.S; const a = S.avatar; if (!a) return null;
     const v = S.villagers.get(a.id);
-    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop(); if (G.Combate) G.Combate.onRelease(); // (the fight of the body: its guard down, its arrows down, its duel over — 20f)
     if (v) {
       if (!keepTask && v.task && v.task.type === 'avatar') { v.task = null; }
       if (!keepTask) { v.path = null; v.act = ''; v.sleeping = false; }
@@ -126,7 +129,7 @@
     const S = G.S; if (!a) return;
     // (what ended it, for the eye that sees the body fall: the cause, the beast, the last blow — D-334)
     a.end = { cause, beast: beast || null, hit: a.hits && a.hits.length ? Object.assign({}, a.hits[a.hits.length - 1]) : null, t: S.clock };
-    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop();
+    S.avatar = null; cur = null; drop(); if (G.Corpo) G.Corpo.drop(); if (G.Combate) G.Combate.onRelease();
     record(rec, a, 'morte', cause, beast);
     for (const f of Po.onEnd) f('morte', rec, cause, a);
   }
@@ -361,6 +364,8 @@
     // the one before left; one asked by a body no longer lived is dropped. Each is answered "not done" until it is done: one
     // that breaks — counted in G.modErr, as any module's error — leaves the rest answered, never a body waiting forever)
     if (queue.length) { const q = queue; queue = []; for (const it of q) it.res = { ok: false, why: '', dropped: 1 }; for (const it of q) { if (it.cancel || it.id !== a.id || S.avatar !== a || !S.villagers.has(v.id)) continue; it.res = it.fn(v) || { ok: true }; } }
+    // (the fight of the body, after what the hands asked: its arrows fly, its duel is kept to — 20f, G.Combate)
+    if (G.Combate && S.avatar === a && S.villagers.has(v.id)) G.Combate.step(v, dt);
     if (S.avatar === a && S.villagers.has(v.id)) { a.via = viaOf(v, a); remember(v); } // (the building the body is by, as the step leaves it; and where it is, kept as the person's own)
     void dt;
   };
@@ -381,8 +386,10 @@
   const dmg0 = G.Vg.damage;
   G.Vg.damage = function (v, amt, cause, byGod, by) {
     const S = G.S; const a = S && S.avatar;
-    if (a && v && a.id === v.id && S.villagers.has(v.id) && amt > 0) noteHit(v, a, amt, cause, by);
-    return dmg0.apply(this, arguments);
+    // (the guard of the body first — the dodge's window, the parry, the shield or the weapon across: G.Combate.shield, 20f —; what
+    // it lets through is what the world deals, and what is noted)
+    if (a && v && a.id === v.id && S.villagers.has(v.id) && amt > 0) { if (G.Combate) { amt = G.Combate.shield(v, amt, cause, by); if (!(amt > 0)) return; } noteHit(v, a, amt, cause, by); }
+    return dmg0.call(this, v, amt, cause, byGod, by);
   };
   const BEASTLY = { beast: 1, wolf: 1, boar: 1 };
   function noteHit(v, a, amt, cause, by) {
