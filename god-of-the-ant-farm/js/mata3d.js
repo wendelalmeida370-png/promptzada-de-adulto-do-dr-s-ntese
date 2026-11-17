@@ -291,7 +291,8 @@
       for (let sb = 0; sb < NS * NS; sb++) { const X = (cx * C + (sb % NS) * SUB + SUB / 2) * TL, Z = (cy * C + Math.floor(sb / NS) * SUB + SUB / 2) * TL; const d = Math.hypot(X - focus.X, Z - focus.Z); if (d > RA + 8) continue;
         if (cam) { sph.center.set(X, G.W.hAt(Math.min(N - 0.01, X / TL), Math.min(N - 0.01, Z / TL)) * G.Space.HM + 4, Z); if (!_fr.f.intersectsSphere(sph)) continue; }
         vis.push(k * 64 + sb); } }
-    const key = vis.join(',') + '|' + RR + '|' + RA + '|' + DR + '|' + DA;
+    // (what is seen, as one number: the blocks and the quality's reach and shares — no string of thousands built each frame)
+    let key = (vis.length * 31 + RR * 7 + RA * 13 + Math.round(DR * 100) * 17 + Math.round(DA * 100) * 19 + M3.stats.built * 23) | 0; for (const v of vis) key = (Math.imul(key, 16777619) ^ v) | 0;
     if (key !== packKey) { packKey = key; pack(vis, focus, RR, RA, DR, DA); M3.stats.packs++; }
     // (who walks in it: the people drawn nearest, and the beasts)
     const W3 = (G.People3D && G.People3D.walkers) || []; let j = 0;
