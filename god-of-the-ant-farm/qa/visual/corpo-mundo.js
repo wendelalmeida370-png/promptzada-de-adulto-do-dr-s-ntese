@@ -23,7 +23,7 @@
 // The frame here is the game's own (main.js frame): the world's step of rdt × Space.TIME, then the body's frame of rdt.
 const path = require('path');
 const M = require(path.join(__dirname, '..', 'nodemundo.js'));
-const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'qa/visual/corpo-qa.js', 'qa/atividades-inv.js'] });
+const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'js/trabalho.js', 'qa/visual/corpo-qa.js', 'qa/atividades-inv.js'] });
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | corpo-mundo ${name} | ${info}`); if (!c) fails.push(name); };
 const WORLD = process.argv[2] || 'cidade'; M.pronto(WORLD);
 if (WORLD !== 'cidade') console.log(`(corpo-mundo é feito para o mundo «cidade»: em «${WORLD}», uma falha é de precondição do teste — o lugar que a regra dele toma não é o que o «E» quer dizer ali —, não do jogo: T-091)`);
@@ -36,6 +36,9 @@ const frame = (world) => { if (world !== false) G.debug.step(RDT * G.Space.TIME)
 // world's step and in the ledger — a marked load never vanishes from hands unwritten, qa.js rule of the activities)
 const god = f => { G.inSim++; const r = f(); G.inSim--; return r; };
 const clearHands = v => { if (v.carry && v.carry.n > 0) god(() => G.Depot.use('v:' + v.id, v.carry.k, v.carry.n, { code: 'teste', mine: true })); v.carry = null; };
+// (the body's tools for the work of the hands — 20g, D-426: the body works with what is its own; the test's hand puts in its bag
+// the axe and the pick its people would give the trades, so that it works at the world's pace, D-035, D-427 — T-1473)
+const tools = v => { for (const kind of ['machado', 'picareta']) { const k = G.Inv.made(kind, v); if (k && G.Inv.count(v, k) < 1) god(() => G.Depot.make('m:' + v.id, k, 1, { code: 'teste', by: v.id })); } };
 // a grown person who can be lived, put next to a thing (a walkable point r tiles from it, facing it), lived
 function bodyAt(tx, ty, r) {
   const cand = [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 50 && !o.inside && G.Possess.can(o).ok).sort((a, b) => a.id - b.id);
@@ -43,7 +46,7 @@ function bodyAt(tx, ty, r) {
   for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = tx + Math.cos(a) * r, y = ty + Math.sin(a) * r; if (!W.walkableXY(x, y)) continue;
     if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
     G.Vg.endTask(v); v.x = x; v.y = y; v.path = null; const r0 = G.Possess.take(v); if (!r0.ok) return null;
-    G.Avatar.attach(v, Math.atan2(ty - y, tx - x)); G.Avatar.state().yaw = Math.atan2(ty - y, tx - x); G.Avatar.input.camYaw = G.Avatar.state().yaw; return v; }
+    G.Avatar.attach(v, Math.atan2(ty - y, tx - x)); G.Avatar.state().yaw = Math.atan2(ty - y, tx - x); G.Avatar.input.camYaw = G.Avatar.state().yaw; tools(v); return v; }
   return null;
 }
 // (holding E: the best act, again and again, as the HUD does)
@@ -92,7 +95,7 @@ const freshTree = () => [...S.trees.values()].filter(t => G.Nature.isChoppable(t
     const v = G.Possess.body(); v.carry = null; const wm = G.Vg.workMul(v); const cap = G.Vg.cap(v); const s0 = rock.stone, t0 = S.clock; let k = 0;
     // (E held until the hands are full or the rock is gone — its last stone takes it away —; what goes by in front a moment — a
     // hare that is for a moment the nearer thing one means — only makes the body wait, as anyone holding E: T-153)
-    for (; k < 4000; k++) { holdE('pedra'); frame(); if (v.carry && v.carry.n >= cap) break; if (!S.rocks.has(rock.id)) break; }
+    for (; k < 4000; k++) { holdE('pedra'); frame(); if (v.carry && v.carry.k === 'stone') break; if (!S.rocks.has(rock.id)) break; } // (one load a break: the arms full of stone put the pick away — 20g, T-1473)
     const dw = S.clock - t0, got = s0 - (S.rocks.has(rock.id) ? rock.stone : 0); const per = dw / Math.max(1, got), want = 3.8 / wm / cap;
     ok('quebrar pedra: cada pedra leva o tempo do mundo do pedreiro (3,8 s ÷ trabalho por carga)', got > 0 && per > want * 0.8, `${got} pedras em ${dw.toFixed(2)} s do mundo: ${per.toFixed(2)} s cada; o pedreiro: ${want.toFixed(2)} s cada (${(want / Math.max(1e-6, per)).toFixed(2)}× mais rápido o corpo)${got ? '' : '; diante do corpo: ' + front()}`);
   } }

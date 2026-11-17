@@ -545,6 +545,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
         if (!at) { const d = Math.hypot(e[0] - x, e[1] - y) || 1; for (const r of [0.3, 0.4, 0.22, 0.5]) { const qx = x + (e[0] - x) / d * r, qy = y + (e[1] - y) / d * r; if (G.W.walkableXY(qx, qy)) { px = qx; py = qy; break; } } } else { px = x; py = y; }
         G.Avatar.place(px, py); __E.f(6); G.Avatar.state().yaw = Math.atan2(y - v.y, x - v.x); return true; };
       const R = {};
+      // (the body's tools — 20g, D-426: the body works with what is its own; the test's hand puts in its bag the axe and the pick its
+      // people would give the trades, as the player would take them at the store — T-1473)
+      G.inSim++; try { for (const kind of ['machado', 'picareta']) { const k = G.Inv.made(kind, v); if (k && G.Inv.count(v, k) < 1) G.Depot.make('m:' + v.id, k, 1, { code: 'teste', by: v.id }); } } finally { G.inSim--; }
       if (tr && near(tr.x, tr.y)) {
         v.carry = null; // (empty hands for the axe: a woodcutter taken with a full load is told "your hands are full")
         const chop0 = tr.chop; let swings = 0;

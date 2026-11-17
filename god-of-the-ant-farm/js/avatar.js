@@ -65,6 +65,7 @@
   // (the body's doings the controller writes — v.act — and so takes back when the act ends; another's — a fight's — stays. An act's
   // vact is one of these)
   const VACT = new Set(['swim', 'dance', 'chop', 'mine', 'gather', 'eat', 'pray', 'fish', 'lift', 'arrange', 'give', 'sneak']);
+  Av.VACT = VACT; // (the second wave's works add the vacts of their acts: trabalho.js — the minimum, D-463)
   G.worldHooks.push(() => { b = null; Av.on = false; });
   Av.state = () => b;
   // the player's wishes, filled by the input each frame (axes relative to the camera)

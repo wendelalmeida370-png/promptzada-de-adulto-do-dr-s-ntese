@@ -92,7 +92,7 @@ const PORT_OK = { 'interiors.js': () => true, 'activity.js': line => /\bD\.store
 // velhos de que ela depende, lidos do mundo (L-206, L-618, L-619); outra
 // pergunta faria o passo do mundo depender do que o 3D guarda (os memos do space.js), e o mundo seria outro com ou sem alguém
 // olhando
-const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js'];
+const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js', /* 20g: as mãos do trabalho, D-461 */ 'trabalho.js'];
 // 24. "o diário só pede" (D-061): deixar um objetivo de lado é do corpo — G.Casa.giveUp só dentro de um G.Possess.apply (o
 // pedido das mãos, que o mundo faz no seu passo), na mesma linha; a tela do diário, e todo o resto, nunca o chama direto
 const GIVEUP = /\bCasa\.giveUp\s*\(/;
@@ -1127,6 +1127,64 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // === 20e: a interação ===
 // === 20f: o combate ===
 // === 20g: os ofícios ===
+// 152. "o trabalho do corpo muda o mundo só pelas portas e no passo" (D-425): no js/trabalho.js, o que um trabalho muda no mundo
+// (o contador da árvore, a lenha do tronco, as frutas, a pedra da rocha, o veio da mina, a carne do bicho, o canteiro) é escrito só
+// dentro do op de um ato — a função que o mundo roda no seu passo, pelo Possess.apply do contato —, nunca no aperto nem no quadro;
+// e as mãos se enchem pelo livro (give / G.Depot.make / G.Pesca.cast), nunca escrevendo v.carry nem pelo Village.addStock ou o
+// Vg.fillHands de antes
+{ const tr = src['trabalho.js'] || []; if (!tr.length) fails.push('o trabalho do corpo: js/trabalho.js não existe (D-425)');
+  const WRITE = /\b(tr\.(chop|wood|stage|claim)|b\.berries|r\.stone|o\.amt|a\.(meat|skinned|flay)|c\.(s|g))\s*(=(?!=)|\+=|-=)/;
+  tr.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b\w+\.carry\s*=(?!=)|\bVillage\.addStock\(|\bfillHands\(/.test(c)) fails.push(`o trabalho do corpo: trabalho.js:${k + 1} enche as mãos ou o armazém à mão, fora do livro (D-425): ${l.trim().slice(0, 110)}`);
+    if (!WRITE.test(c)) return;
+    let inOp = /\bop:\s*(\(w|w\s*=>)/.test(c);
+    for (let j = k - 1; j >= Math.max(0, k - 30) && !inOp; j--) { if (/\bop:\s*(\(w|w\s*=>)/.test(tr[j])) { inOp = true; break; } if (/^\s{4}(run|can|label|find|info|verbs)\s*\(|^\s{2}(I\.add|function|const \w+ = )/.test(tr[j])) break; }
+    if (!inOp) fails.push(`o trabalho do corpo: trabalho.js:${k + 1} muda o mundo fora do op de um ato (no passo do mundo, pelo contato — D-425): ${l.trim().slice(0, 110)}`); }); }
+// 153. "nenhum trabalho sem a ferramenta que ele pede" (D-426): cada provedor do js/trabalho.js com o seu trabalho (work: '…') faz o
+// golpe pelo stroke({ id: '…' }) — que pergunta a ferramenta de novo no passo e a põe na mão — e pergunta ao Tr.tool no can; cada
+// trabalho da tabela que não se faz sem ferramenta (bare: 0) diz por quê (sem: '…')
+{ const t = (src['trabalho.js'] || []).join('\n');
+  const works = {}; const wt = t.slice(t.indexOf('const WORKS = Tr.WORKS = {'), t.indexOf('};', t.indexOf('const WORKS = Tr.WORKS = {')));
+  for (const l of wt.split('\n')) { const m = l.match(/^\s+(\w+): \{ nome: '[^']*', tools: .*?\], bare: ([^,}]+)[,}](.*)$/); if (m) works[m[1]] = { bare: m[2].trim(), rest: m[3] }; }
+  if (!Object.keys(works).length) fails.push('a ferramenta do trabalho: não achei a tabela dos trabalhos (Tr.WORKS) no js/trabalho.js (D-426)');
+  for (const w in works) if (works[w].bare === '0' && !/\bsem: '/.test(works[w].rest)) fails.push(`a ferramenta do trabalho: o trabalho «${w}» não se faz sem ferramenta e não diz por quê (sem: '…'; D-426)`);
+  const blocks = t.split(/\n  I\.add\(\{/).slice(1);
+  for (const b of blocks) { const id = (b.match(/^\s*\n\s*id: '(\w+)'/) || [])[1]; const w = (b.match(/\bwork: '(\w+)'/) || [])[1]; if (!w) continue;
+    if (!works[w]) { fails.push(`a ferramenta do trabalho: o provedor «${id}» diz o trabalho «${w}», que a tabela não tem (D-426)`); continue; }
+    if (!new RegExp(`stroke\\(\\{ id: '${w}'`).test(b)) fails.push(`a ferramenta do trabalho: o provedor «${id}» não faz o golpe de «${w}» pelo stroke (a ferramenta perguntada no passo — D-426)`);
+    if (works[w].bare === '0' && !new RegExp(`Tr\\.tool\\(v, '${w}'\\)`).test(b.slice(b.indexOf('can(ctx'), b.indexOf('run(ctx')))) fails.push(`a ferramenta do trabalho: o provedor «${id}» não pergunta ao Tr.tool no can (o E diz por quê antes — D-426)`); } }
+// 154. "os gestos dos ofícios pelo registro" (D-428): os clipes do js/trabalho-clips.js nascem pela fila G.ANIM_CLIPS (nunca no
+// Anim3D.CLIPS nem no CLIP_OF à mão: só o anim-clips.js escreve o CLIP_OF, também pelo «takes» de um clipe); e todo gesto que o
+// trabalho dá ao corpo (o anim de um ato do trabalho.js) é um clipe registrado ou um estado do 3D de antes
+{ const tc = src['trabalho-clips.js'] || []; if (!tc.length) fails.push('os gestos dos ofícios: js/trabalho-clips.js não existe (D-428)');
+  for (const f of files) if (f !== 'anim-clips.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bCLIP_OF\s*(\[[^\]]+\]|\.\w+)\s*=(?!=)/.test(c)) fails.push(`os gestos dos ofícios: ${f}:${k + 1} escreve o CLIP_OF à mão — um clipe diz os atos que toma (takes) pelo registro (D-428): ${l.trim().slice(0, 110)}`); });
+  const ids = new Set(); for (const f of ['anim-clips.js', 'trabalho-clips.js']) (src[f] || []).forEach(l => { const m = l.match(/^\s+K\('([\w-]+)'/); if (m) ids.add(m[1]); });
+  const OLD = new Set(['carry', 'low', 'swing', 'interact', 'hammer', 'hoe', 'harvest', 'dig', 'skin', 'fish', 'reel']);
+  const tr = (src['trabalho.js'] || []).join('\n');
+  const g = tr.slice(tr.indexOf('const GEST = Tr.GEST = {'), tr.indexOf('};', tr.indexOf('const GEST = Tr.GEST = {'))); for (const m of g.matchAll(/\['([\w-]+)', '(\w+)'\]/g)) if (!ids.has(m[1]) && !OLD.has(m[1])) fails.push(`os gestos dos ofícios: o trabalho dá ao corpo o gesto «${m[1]}», que nenhum clipe registra (D-428)`);
+  for (const m of tr.matchAll(/\banim: (?:[^,]*\? )?'([\w-]+)'(?: : '([\w-]+)')?(?: : '([\w-]+)')?/g)) for (const a of m.slice(1)) if (a && !ids.has(a) && !OLD.has(a)) fails.push(`os gestos dos ofícios: o trabalho dá ao corpo o gesto «${a}», que nenhum clipe registra (D-428)`); }
+// 155. "o que se segura é de verdade" (D-426): quem tem as coisas do ofício feitas verdade (equip.kit) segura na mão, no ato, só o que é
+// dele — a ferramenta do ofício que não tem não aparece (o made do kit fica para quem nunca teve coisas): o js/inventario.js guarda
+// o made do ato atrás do own, e o held passa a marca do kit
+{ const inv = (src['inventario.js'] || []).join('\n');
+  if (!/if \(!key && !own\) key = made\(t, /.test(inv) || !/act\(v, out, bag, !!\(e && e\.kit\)\);/.test(inv)) fails.push('o que se segura é de verdade: o act() do inventario.js põe na mão a ferramenta do ofício a quem tem as coisas de verdade (o made atrás do own; o held com a marca do kit — D-426)'); }
+// 156. "a tela do trabalho só lê, pelo gancho" (D-432, D-462): o js/trabalho-ui.js desenha pela lista G.IncUI.frames (nunca editando
+// o incui.js), não tira de acaso nenhum do mundo, não move bens nem pede ao mundo por conta própria (o próximo golpe de um trabalho
+// segurado é o E do provedor, pelo Tr.pump), e as moedas da banca vêm do G.Biz (o dia da banca), nunca de uma casa
+{ const ui = src['trabalho-ui.js'] || []; if (!ui.length) fails.push('a tela do trabalho: js/trabalho-ui.js não existe (D-432)');
+  if (ui.length && !ui.some(l => /G\.IncUI\.frames\.push\(/.test(l))) fails.push('a tela do trabalho: o trabalho-ui.js não se desenha pelo gancho G.IncUI.frames (D-462)');
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\()|Math\.random|\bD(epot)?\.(move|make|use|drop|swap)\(|\.carry\s*=(?!=)|Possess\.apply\(|\.coin\b/.test(c)) fails.push(`a tela do trabalho: trabalho-ui.js:${k + 1} tira do acaso do mundo, move bens, pede ao mundo ou lê as moedas de uma casa (só lê: D-432): ${l.trim().slice(0, 110)}`); }); }
+// 157. "o golpe do trabalho dura o tempo do mundo" (D-035, D-429): no js/trabalho.js todo ato das mãos é do relógio do mundo (world:
+// true — o stroke os faz assim), a não ser o catar do ouro do chão, um gesto das próprias mãos; e os clipes do js/trabalho-clips.js
+// não leem o mundo nem tiram de acaso (só se veem, como os do anim-clips.js — regra 113)
+{ (src['trabalho.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Avatar\.act\(\{/.test(c) && !/world: true/.test(c) && !/anim: 'low', dur: 1\.1, face: f, contact: 0\.5/.test(c)) fails.push(`o tempo do trabalho: trabalho.js:${k + 1} faz um ato das mãos fora do relógio do mundo (world: true — D-035): ${l.trim().slice(0, 110)}`); });
+  (src['trabalho-clips.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\()|Math\.random|\bDate\b|performance\.now|\bG\.(Act|Depot|Possess|Inv|Vg)\b/.test(c)) fails.push(`os gestos dos ofícios: trabalho-clips.js:${k + 1} lê o mundo ou tira de um acaso (os clipes só se veem — regra 113): ${l.trim().slice(0, 110)}`); }); }
+// 158. "o verificador e a prova do trabalho" (D-433): o qa/trabalho-inv.js está no bloco do qa/qa.js (o junta-inv.js o lista) e o
+// qa/trabalho.js existe — a regra que se lê no código tem a sua prova que se vive
+{ let jv = '', te = false; try { jv = fs.readFileSync(path.join(dir, '..', 'qa', 'junta-inv.js'), 'utf8'); te = fs.existsSync(path.join(dir, '..', 'qa', 'trabalho.js')); } catch (e) { }
+  if (!/'qa\/trabalho-inv\.js'/.test(jv)) fails.push('o verificador do trabalho: o qa/junta-inv.js não lista o qa/trabalho-inv.js (D-433)');
+  if (!te) fails.push('a prova do trabalho: o qa/trabalho.js não existe (D-433)'); }
 // === 20h: a origem das coisas ===
 // 159. "a divisão é do origem.js" (D-441): as partes de cada bem (S.orig: a comida por origem, o metal das ferramentas e das armas) e o
 // que cada povo já teve de cada material (S.orig.had) só o js/origem.js escreve — os outros perguntam (G.Origem.parts, amount, free,
