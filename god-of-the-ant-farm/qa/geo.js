@@ -9,7 +9,7 @@
 // g3 o save e o load no meio: a mesma rocha, a mesma dobra, as mesmas formações (ao centímetro) e o mesmo entalhe depois de um load;
 // g4 o deus muda o chão: a terra erguida num penhasco — a memória (as formações, o alto do mapa) refeita, o entalhe ainda nada nas bordas, o
 //    pedaço do 3D com outra assinatura;
-// g5 o inverno: a neve do deus sobre a rocha — o musgo some, as pedras e as formações na neve;
+// g5 o inverno: a neve do deus sobre a rocha — o musgo some, as pedras e as formações na neve; a neve do frio sobre as pedras da terra fria;
 // g6 a chuva e a tempestade: a rocha molhada (S.wet) e o borrifo ao pé de uma queda d'água;
 // g7 o penhasco junto da estrada e do prédio: a casa com estrada ou prédio nunca entalhada, a borda com ela nada; uma estrada aberta numa
 //    face já entalhada a desfaz ali (a assinatura do pedaço muda);
@@ -107,6 +107,12 @@ if (on('g5') || on('g6')) {
     // (a wet land's cliff, its moss; then the god's winter over it)
     let wetC = -1, mb = -1; for (const i of cliffs) { const m = G.Ground3D.geoOf(i, i % N, (i / N) | 0)[3] >> 4; if (m > mb) { mb = m; wetC = i; } }
     const x = wetC % N, y = (wetC / N) | 0; const before = G.Ground3D.geoOf(wetC, x, y)[3] >> 4;
+    // (the cold's snow on the stones of a cold land — the white the stones had when the plants drew them, at every preset: each piece on a
+    // tile the cold whitens carries that snow, whatever the floor's picture says there)
+    let cold = 0, bare = 0; for (let cy = 0; cy < N / 16; cy++) for (let cx = 0; cx < N / 16; cx++) for (const p of G3.piecesOf(cx * 16, cy * 16, 16)) { const sa = G.Ground3D.snowAt(p.i); if (sa <= 0.4) continue; cold++; if (!(p.snow >= sa)) bare++; }
+    // (L-1554: the feet tread the floor's snow away on a path — a stone standing on a trodden tile keeps the snow that falls on it)
+    let trod = null; for (const r of S.rocks.values()) { const ri = Math.floor(r.y) * N + Math.floor(r.x); if (G.Ground3D.snowAt(ri) > 0.8) { trod = ri; break; } }
+    let trodF = -1, trodP = -1; if (trod !== null) { const w0 = S.wear[trod]; S.wear[trod] = 60; trodF = G.Ground3D.snowOf(trod, trod % N, (trod / N) | 0); const tx = (trod % N) & ~15, ty = ((trod / N) | 0) & ~15; const ps = G3.piecesOf(tx, ty, 16).filter(p => p.i === trod); trodP = ps.length ? Math.min(...ps.map(p => p.snow)) : -1; S.wear[trod] = w0; }
     S.winters = S.winters || []; S.winters.push({ x: x + 0.5, y: y + 0.5, r: 6, t: 60 });
     const after = G.Ground3D.geoOf(wetC, x, y)[3] >> 4; const snowy = G.Ground3D.snowAt(wetC);
     // (the stones and the formations read the snow and the moss of the ground where they stand — the floor's picture and the rock's, as
@@ -114,7 +120,7 @@ if (on('g5') || on('g6')) {
     G.Ground3D.full(); for (let k = 0; k <= N; k++) G.Ground3D.tick(null); let inW = 0, snowed = 0, mossy = 0; const fl = G.Ground3D.floorMap().image.data, ge = G.Ground3D.geoMap().image.data;
     for (let cy = 0; cy < N / 16; cy++) for (let cx = 0; cx < N / 16; cx++) for (const p of G3.piecesOf(cx * 16, cy * 16, 16)) { const X = p.m[12] / TL, Z = p.m[14] / TL; if (Math.hypot(X - x - 0.5, Z - y - 0.5) > 4 || !W.inb(X, Z)) continue; const i = W.idx(X, Z); inW++; if (fl[i * 4 + 3] > 120) snowed++; if ((ge[i * 4 + 3] >> 4) > 2 || (G.Ground3D.geoOf(i, i % N, (i / N) | 0)[3] >> 4) > 2) mossy++; }
     const snowW = G.Ground3D.snowOf(wetC, x, y); S.winters.length = 0;
-    ok('g5', before > 3 && after < before && snowW > 0.5 && inW > 0 && snowed === inW && !mossy, `a rocha mais musgosa (${x},${y}): o musgo ${before}/15; no inverno do deus (a neve ${snowW.toFixed(2)}; a do clima ${snowy.toFixed(2)}) ${after}/15; as ${inW} pedras e formações no círculo do inverno: ${snowed} com a neve do chão debaixo delas, ${mossy} com musgo`);
+    ok('g5', before > 3 && after < before && snowW > 0.5 && inW > 0 && snowed === inW && !mossy && cold > 0 && !bare && trodF >= 0 && trodF < 0.3 && trodP > 0.8, `a rocha mais musgosa (${x},${y}): o musgo ${before}/15; no inverno do deus (a neve ${snowW.toFixed(2)}; a do clima ${snowy.toFixed(2)}) ${after}/15; as ${inW} pedras e formações no círculo do inverno: ${snowed} com a neve do chão debaixo delas, ${mossy} com musgo; ${cold} pedras e formações na terra fria, ${bare} sem a neve do frio; a pedra num caminho pisado: a neve do chão ${trodF.toFixed(2)}, a dela ${trodP.toFixed(2)} (L-1554)`);
   }
   if (on('g6')) {
     const i = cliffs[Math.floor(cliffs.length / 2)]; const x = i % N, y = (i / N) | 0; const dry = G.Ground3D.geoOf(i, x, y)[3] & 15;

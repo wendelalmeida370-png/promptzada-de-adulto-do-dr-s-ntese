@@ -210,9 +210,9 @@
 
   // ------------------------------ the material of the rock ------------------------------
   // (the pieces' own: lit as everything is (Lambert, the light's patch), the stone's picture from the three sides, the bands of its rock at
-  // the height of its layers (aGeo.x the rock, aGeo.w the fold where it stands); the moss of the wet lands on its top and its shaded side
-  // and the wet of the rain, read from the ground's own picture of the rock where it stands, and the snow lying there from the floor's —
-  // the same the ground under it has, the god's winter too; the colour of the instance its tint)
+  // the height of its layers (aGeo.x the rock, aGeo.y the cold's snow on its tile, aGeo.w the fold where it stands); the moss of the wet
+  // lands on its top and its shaded side and the wet of the rain, read from the ground's own picture of the rock where it stands, and the
+  // snow lying there from the floor's — the same the ground under it has, the god's winter too; the colour of the instance its tint)
   function rockMat() {
     const m = new THREE.MeshLambertMaterial({ color: 0xffffff });
     const U = G.Ground3D.U3(); const GU = G.Ground3D.geoU ? G.Ground3D.geoU() : {}; const stm = { value: G.Ground3D.strataMap ? G.Ground3D.strataMap() : null };
@@ -221,7 +221,9 @@
       Object.assign(sh.uniforms, U, GU, { uStrata: stm, uCN: { value: G.Ground3D.cloudNoise() } });
       const R = Ge().ROCKS; const n = R.length;
       sh.vertexShader = 'attribute vec4 aGeo; varying vec4 vGeo; varying vec3 vRP; varying vec3 vRN;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-        vGeo = aGeo; vec4 rq = modelMatrix * instanceMatrix * vec4(transformed, 1.0); vRP = rq.xyz; vRN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);`);
+        vGeo = aGeo; vec4 rq = modelMatrix * instanceMatrix * vec4(transformed, 1.0); vRP = rq.xyz;
+        { mat3 rIm = mat3(instanceMatrix), rMm = mat3(modelMatrix); vec3 rWn = rIm * (objectNormal / vec3(dot(rIm[0], rIm[0]), dot(rIm[1], rIm[1]), dot(rIm[2], rIm[2]))); // (the normal by the inverse of the scale, as three.js turns it: a flattened stone's top still looks up)
+          vRN = normalize(rMm * (rWn / vec3(dot(rMm[0], rMm[0]), dot(rMm[1], rMm[1]), dot(rMm[2], rMm[2])))); }`);
       sh.fragmentShader = `varying vec4 vGeo; varying vec3 vRP; varying vec3 vRN; uniform sampler2D uStrata; uniform sampler2D uCN; uniform sampler2D uGeo; uniform sampler2D uFMap; uniform float uN; uniform float uTL; float rHgt = 0.0;
         const float RSTL[${n}] = float[${n}](${R.map(r => r.L.toFixed(1)).join(', ')});
         ` + sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Ground3D.texGLSL() + `
@@ -255,7 +257,8 @@
           { vec3 fn = normalize(cross(dFdx(vRP), dFdy(vRP))); float fh = fract(sin(dot(floor(fn * 3.0 + 0.5), vec3(12.9898, 78.233, 37.719))) * 43758.5453); rc *= 0.88 + fh * 0.22; }
           // (the ground's picture where it stands: the moss and the wet of the rock, the snow lying)
           vec4 ge = texelFetch(uGeo, ivec2(clamp(floor(vRP.xz / uTL), vec2(0.0), vec2(uN - 1.0))), 0); float gb = floor(ge.a * 255.0 + 0.5);
-          float moss = floor(gb / 16.0) / 15.0, wet = mod(gb, 16.0) / 15.0; float snow = texture2D(uFMap, vRP.xz / (uTL * uN)).a;
+          float moss = floor(gb / 16.0) / 15.0, wet = mod(gb, 16.0) / 15.0; float snow = max(texture2D(uFMap, vRP.xz / (uTL * uN)).a, vGeo.y);
+          moss *= 1.0 - smoothstep(0.3, 0.6, snow); // (no moss under the snow: the cold's, the god's winter)
           float top = smoothstep(0.2, 0.85, n.y);
           float mz = moss * (top * 0.9 + smoothstep(0.0, 0.6, -n.z) * 0.5) * smoothstep(0.36, 0.62, texture2D(uCN, vRP.xz / 5.0 + vRP.y * 0.07).g + (moss - 0.5) * 0.4);
           vec4 mt = vec4(0.5);
@@ -294,7 +297,7 @@
       if (L.length > m.instanceMatrix.count) { const cap = Math.ceil(L.length * 1.5) + 8; const nm = new THREE.InstancedMesh(m.geometry, m.material, cap); nm.frustumCulled = false; nm.castShadow = true; nm.receiveShadow = true; nm.name = m.name; nm.matrixAutoUpdate = false; R3.scene().remove(m); m.dispose && m.dispose(); R3.scene().add(nm); IM[key] = m = nm; }
       if (!m.geometry.attributes.aGeo || m.geometry.attributes.aGeo.count < m.instanceMatrix.count) m.geometry.setAttribute('aGeo', new THREE.InstancedBufferAttribute(new Float32Array(m.instanceMatrix.count * 4), 4));
       const A = m.instanceMatrix.array, B = m.geometry.attributes.aGeo.array;
-      for (let k = 0; k < L.length; k++) { const p = L[k]; A.set(p.m, k * 16); B[k * 4] = p.rock; B[k * 4 + 1] = 0; B[k * 4 + 2] = 0; B[k * 4 + 3] = p.fold; m.setColorAt(k, CO.setRGB(p.c[0], p.c[1], p.c[2])); }
+      for (let k = 0; k < L.length; k++) { const p = L[k]; A.set(p.m, k * 16); B[k * 4] = p.rock; B[k * 4 + 1] = p.snow; B[k * 4 + 2] = 0; B[k * 4 + 3] = p.fold; m.setColorAt(k, CO.setRGB(p.c[0], p.c[1], p.c[2])); }
       m.count = L.length; m.visible = L.length > 0; m.instanceMatrix.needsUpdate = true; m.geometry.attributes.aGeo.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; total += L.length;
     }
     G3D.stats.inst = total;
@@ -304,7 +307,8 @@
   function piece(list, shape, X, Y, Z, yaw, sx, sy, sz, rock, i, tilt) {
     const g = Ge(); E3.set(tilt ? tilt[0] : 0, -yaw, tilt ? tilt[1] : 0, 'YXZ'); QT.setFromEuler(E3); M4.compose(V3.set(X, Y, Z), QT, S3.set(sx, sy, sz));
     const tint = 0.9 + G.hash(Math.round(X * 7) * 31 + Math.round(Z * 7)) * 0.2;
-    list.push({ shape, m: Array.from(M4.elements), rock, fold: g.fold(X / G.Space.TILE, Z / G.Space.TILE), i, c: [tint, tint * (0.98 + G.hash(rock * 7) * 0.04), tint] });
+    // (snow: the cold's on its tile — the white the god's view gives the ground there; the god's winter comes by the floor's picture)
+    list.push({ shape, m: Array.from(M4.elements), rock, fold: g.fold(X / G.Space.TILE, Z / G.Space.TILE), i, snow: G.Ground3D.snowAt ? G.Ground3D.snowAt(i) : 0, c: [tint, tint * (0.98 + G.hash(rock * 7) * 0.04), tint] });
   }
   // the pieces of a chunk: the stones of the world (always — the feet stand on them) and, within the preset's reach of the body, the
   // formations of its faces and the stones round each mouth's lip
