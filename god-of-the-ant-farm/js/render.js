@@ -874,20 +874,11 @@
   R.rebuildShore = buildShore;
 
   // ------------------------------ ambient light ------------------------------
-  const AMB = [[0, [225, 186, 176]], [0.05, [255, 226, 206]], [0.12, [255, 255, 255]], [0.56, [255, 252, 244]], [0.63, [255, 216, 172]], [0.69, [232, 172, 140]], [0.725, [150, 138, 172]], [0.765, [104, 114, 172]], [0.965, [100, 110, 168]], [1.0, [225, 186, 176]]];
-  function ambient() {
-    const S = G.S; const t = S.time;
-    let c = AMB[0][1];
-    for (let k = 0; k < AMB.length - 1; k++) {
-      if (t >= AMB[k][0] && t <= AMB[k + 1][0]) { c = G.lerpColor(AMB[k][1], AMB[k + 1][1], (t - AMB[k][0]) / (AMB[k + 1][0] - AMB[k][0])); break; }
-    }
-    const w = S.weather;
-    if (w.rain > 0.05) c = G.lerpColor(c, [c[0] * 0.66, c[1] * 0.7, c[2] * 0.8], Math.min(1, w.rain * 1.2));
-    if (w.drought > 0) c = G.lerpColor(c, [c[0], c[1] * 0.95, c[2] * 0.85], 0.6);
-    return c;
-  }
+  // (the god's hue of the hour — the pink of his dawn, the gold of his afternoon, the blue of his night, the grey of his rain —
+  // is the sky's: G.Ceu.ambient, the one table the 3D's light takes its hue from too — 21d, D-469)
+  function ambient() { const S = G.S; return G.Ceu.ambient(S.time, S.weather); }
   R.ambient = ambient;
-  R.nightness = function () { const a = ambient(); return G.clamp(1 - (a[0] + a[1] + a[2]) / 3 / 255, 0, 1) / 0.58; };
+  R.nightness = function () { const S = G.S; return G.Ceu.nightness(S.time, S.weather); };
 
   // ------------------------------ cosmetic life ------------------------------
   const birds = [], skyClouds = [];
