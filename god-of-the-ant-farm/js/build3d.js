@@ -362,6 +362,7 @@ float m3scale(float p) {
   B3.dress = function (mat) {
     mat.onBeforeCompile = sh => {
       sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
+      if (G.Agua3D && mat === (G.Realm.mats && G.Realm.mats().solid)) { Object.assign(sh.uniforms, G.Agua3D.wetU()); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Agua3D.solidGLSL()).replace('#include <opaque_fragment>', 'outgoingLight += gAgSheen;\n#include <opaque_fragment>'); } // (21c: the rain wets the roofs and the walls out of doors)
       Object.assign(sh.uniforms, { uCutA: CUTU.a, uCutB: CUTU.b, uCutN: CUTU.n, uCutLo: CUTU.lo, uCutHi: CUTU.hi });
       sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3CUT\nuniform vec3 uCutA[16]; uniform vec3 uCutB[16]; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n' + G.Ground3D.texGLSL() + PFRAG)
@@ -396,7 +397,10 @@ float m3scale(float p) {
             diffuseColor.rgb *= pk;
           } else diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
           normal = normalize(normal + (viewMatrix * vec4(pt * bump.x + pb * bump.y, 0.0)).xyz * fade);
-        }`);
+        }
+        #ifdef AGUA_WET
+        aguaWetSolid(diffuseColor.rgb, vPP, vPN, uAgSky); // (21c: the rain that wets)
+        #endif`);
     };
     mat.needsUpdate = true;
   };

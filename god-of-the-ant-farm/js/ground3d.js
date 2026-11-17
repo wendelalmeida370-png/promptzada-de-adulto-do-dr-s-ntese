@@ -601,6 +601,9 @@ vec3 groundCol() {
     }
   }
 #endif
+#ifdef AGUA_WET
+  c = aguaWetGround(c, vGP, vGN, uAgSky, uTime, uDet); // (21c: the rain that wets — the water's picture of the wet, G.Agua3D)
+#endif
   return c;
 }
 `;
@@ -615,8 +618,9 @@ vec3 groundCol() {
       // (the sky's colour at the horizon, for what shines with it: the wet sand)
       if (G.Realm.skyU) U.uSkyH = G.Realm.skyU.hor;
       Object.assign(sh.uniforms, U, G3.U3());
+      if (G.Agua3D) Object.assign(sh.uniforms, G.Agua3D.wetU()); // (21c: the wet of the land and its puddles)
       sh.vertexShader = 'varying vec3 vGP; varying vec3 vGN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGN = normalize(mat3(modelMatrix) * objectNormal);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + FRAG).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + (G.Agua3D ? G.Agua3D.groundGLSL() : '') + FRAG).replace('#include <opaque_fragment>', '#ifdef AGUA_WET\n outgoingLight += gAgSheen;\n#endif\n#include <opaque_fragment>').replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
         // (the relief: from the stuff's heights once the pictures are in — the slopes of a pebble, a cobble, a tuft — and
         // from the drawn grain before)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
