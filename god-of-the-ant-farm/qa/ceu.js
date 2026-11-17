@@ -7,10 +7,11 @@
 // que muda (o mapa do ar refeito), o mesmo save carregado duas vezes.
 //   c1 pura e sem escrever · c2 o sol · c3 a lua · c4 as cores · c5 o matiz do deus · c6 o mapa do ar · c7 a sombra dos montes
 //   c8 as nuvens · c9 o raio · c10 save/load na tempestade · c11 o chão que muda · c12 o tempo do deus · c13 a hora dourada
+//   c14 o remendo da luz (cada pedaço do three.js achado, e o ar em todo material)
 //   [ONLY=c1,c2] node qa/ceu.js [cidade|metropole|…]
 // (the world with the 3D's own files loaded after it, as the page has them — no graphics card: the drawing's lists only)
 const T3 = require('./visual/tres-node.js');
-const { G, M } = T3.load({ extra: ['qa/ceu-inv.js'] });
+const { G, M, THREE } = T3.load({ extra: ['qa/ceu-inv.js'] });
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | ceu ${name} | ${info}`); if (!c) fails.push(name); };
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k => !ONLY || ONLY.includes(k);
@@ -166,6 +167,16 @@ if (on('c13')) {
   const deg = t => Math.asin(Ce.sun(t).y) * 180 / Math.PI; let a = null, b = null; for (let k = 0; k < 20000; k++) { const t = 0.5 + k / 20000 * 0.25; const d = deg(t); if (a === null && d < 6) a = t; if (b === null && d < 0) { b = t; break; } }
   const sec = (b - a) * G.DAY_LEN / (G.Space ? G.Space.TIME : 0.35); const rise = deg(Ce.RISE + 1e-4), set = deg(Ce.SET - 1e-4);
   ok('c13 a hora dourada', sec > (Ce.SHAPE > 1 ? 30 : 14) && Math.abs(rise) < 0.5 && Math.abs(set) < 0.5, `o sol de 6° a 0° leva ${sec.toFixed(1)} s do relógio do corpo (a forma da curva ${Ce.SHAPE}); nasce e se põe nas mesmas horas (${rise.toFixed(2)}°, ${set.toFixed(2)}°)`);
+}
+// c14 — the painter's light finds its place in every piece of three.js it patches (a three.js that changed under it says so
+// out loud: 'o pedaço … mudou'), and every lit material then has the air of the place and the share of the key light
+if (on('c14')) {
+  const warn = []; const w0 = console.warn; console.warn = (...a) => { warn.push(a.join(' ')); };
+  try { G.Ceu3D.toon(THREE); } finally { console.warn = w0; }
+  const SC = THREE.ShaderChunk; const lf = SC.lights_fragment_begin, lp = SC.lights_pars_begin, fp = SC.fog_pars_fragment, tf = SC.tonemapping_fragment;
+  const has = [/gxLightAt\( gxWP, gxKS, gxSK \)/.test(lf), /directLight\.color \*= gxKS/.test(lf), /\* gxSK;/.test(lf), /gxFlash\.rgb \* gxSK/.test(lf), /#define GX_AIR/.test(lp) && /#define GX_AIR/.test(fp), /gxAirMap/.test(tf)];
+  const lib = Object.keys(THREE.ShaderLib).filter(k => THREE.ShaderLib[k].uniforms && THREE.ShaderLib[k].uniforms.fogColor); const withAir = lib.filter(k => THREE.ShaderLib[k].uniforms.gxAirMap && THREE.ShaderLib[k].uniforms.gxShade && THREE.ShaderLib[k].uniforms.gxCloudN);
+  ok('c14 o remendo da luz', !warn.length && has.every(Boolean) && withAir.length === lib.length, `${warn.length} remendo(s) sem lugar${warn.length ? ': ' + warn[0] : ''}; as leituras no lugar: ${has.map(b => (b ? 'sim' : 'NÃO')).join(' ')}; os materiais da biblioteca com o ar: ${withAir.length} de ${lib.length}`);
 }
 // and the verifier with the sky's rules, clean; no module error
 { const bad = QA.check().filter(q => q.sev <= 2); ok('verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 4).map(q => `S${q.sev} ${q.sys}: ${q.msg}`).join(' · ') : 'limpo, sem erro de módulo'); }

@@ -87,7 +87,8 @@ void gxLightAt( vec3 wp, out float ks, out vec3 sk ) {
 				sk = mix( vec3( 1.0 ), gxCanopy.rgb, cano * below );
 				vec2 bx = abs( wp.xz - gxSunBox.xy ); float inBox = gxSunBox.w * ( 1.0 - smoothstep( gxSunBox.z * 0.72, gxSunBox.z * 0.92, max( bx.x, bx.y ) ) );
 				vec2 pl = wp.xz + kd.xz * ( ( top - wp.y ) / max( kd.y, 0.15 ) );
-				float lf = textureLod( gxCloudN, pl / 23.0, 0.5 ).g * 0.65 + textureLod( gxCloudN, pl / 7.3 + 0.41, 0.5 ).r * 0.35; // (read at a level of its own: only some of the pixels come here) float c = mix( 0.3, 0.86, cano );
+				// (the leaves read at a level of their own: only some of the pixels come here)
+				float lf = textureLod( gxCloudN, pl / 23.0, 0.5 ).g * 0.65 + textureLod( gxCloudN, pl / 7.3 + 0.41, 0.5 ).r * 0.35; float c = mix( 0.3, 0.86, cano );
 				ks *= mix( 1.0, smoothstep( c - 0.07, c + 0.07, lf ), cano * below * ( 1.0 - inBox ) );
 			} }
 	}
