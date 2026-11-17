@@ -185,6 +185,13 @@ if (on('c14')) {
   const has = [/gxLightAt\( gxWP, gxKS, gxSK \)/.test(lf), /directLight\.color \*= gxKS/.test(lf), /\* gxSK;/.test(lf), /gxFlash\.rgb \* gxSK/.test(lf), /#define GX_AIR/.test(lp) && /#define GX_AIR/.test(fp), /gxAirMap/.test(tf)];
   const lib = Object.keys(THREE.ShaderLib).filter(k => THREE.ShaderLib[k].uniforms && THREE.ShaderLib[k].uniforms.fogColor); const withAir = lib.filter(k => THREE.ShaderLib[k].uniforms.gxAirMap && THREE.ShaderLib[k].uniforms.gxShade && THREE.ShaderLib[k].uniforms.gxCloudN);
   ok('c14 o remendo da luz', !warn.length && has.every(Boolean) && withAir.length === lib.length, `${warn.length} remendo(s) sem lugar${warn.length ? ': ' + warn[0] : ''}; as leituras no lugar: ${has.map(b => (b ? 'sim' : 'NÃO')).join(' ')}; os materiais da biblioteca com o ar: ${withAir.length} de ${lib.length}`);
+  // (and no code hidden in a shader written in a JavaScript text — the line that only the browser's compiler sees, and that
+  // breaks every material with it: code after an #endif, an #else or the name of an #ifdef — L-1631 —, a declaration after a
+  // comment on the same line — L-1630. Every file of the game, read as text)
+  const fs = require('fs'), path = require('path'); const dir = path.join(__dirname, '..', 'js'); const hid = [];
+  for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.js'))) fs.readFileSync(path.join(dir, f), 'utf8').split('\n').forEach((l, i) => {
+    if (/#(endif|else)[ \t]+(?!\/\/)[^\s\\`'"]/.test(l) || /#ifn?def[ \t]+\w+[ \t]+(?!\/\/)[^\s\\`'"]/.test(l) || /\/\/[^\n]*\b(float|vec[234]|int|bool|mat[234])\s+[A-Za-z_]\w*\s*(=|;)/.test(l)) hid.push(f + ':' + (i + 1) + ' ' + l.trim().slice(0, 90)); });
+  ok('c14 nada escondido nos sombreadores', !hid.length, hid.length ? hid.slice(0, 3).join(' · ') : 'nenhuma linha com código depois de uma diretiva ou de um comentário');
 }
 // c15 — the bow and the lights of the north have their causes: the bow only with the land wet from a shower that has passed, no
 // rain there now and the sun low; the lights of the north only on a night of the cold lands with the sky clear

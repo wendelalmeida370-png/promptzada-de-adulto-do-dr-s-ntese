@@ -91,10 +91,11 @@ const VIEWS = [
     log.push(`${name}: ${JSON.stringify(info)} (${((Date.now() - t0) / 1000).toFixed(0)} s)`); console.log(log[log.length - 1]);
     fs.writeFileSync(path.join(OUT, 'log.txt'), log.join('\n') + '\n');
   }
-  // the drawing writes nothing of the world (D-465): the world held still (the speed 0), the save before and after drawing a few
+  // the drawing writes nothing of the world (D-465): the world held still — in the body's view by the menu (G.Modes.menu, as the
+  // e11 of the encarna holds it: the god's speed is not the body's clock, T-1563) —, the save before and after drawing a few
   // frames of the sky — the same, byte for byte (but for the hour it was written)
-  if (world) { const same = await page.evaluate(() => { let r0 = null; const r = G.Realm.renderer(); G.UI.setSpeed(0); const ser = () => { const o = JSON.parse(G.Save.serialize()); delete o.savedAt; return JSON.stringify(o); }; // (but for the hour it was written)
-      const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); void r0; void r; G.UI.setSpeed(1);
+  if (world) { const same = await page.evaluate(() => { const inc = G.Modes.state === 'INC'; if (inc) G.Modes.menu(true); else G.UI.setSpeed(0); const ser = () => { const o = JSON.parse(G.Save.serialize()); delete o.savedAt; return JSON.stringify(o); }; // (but for the hour it was written)
+      G.Main.frameFor(33); const s0 = ser(); for (let k = 0; k < 4; k++) G.Main.frameFor(33); const s1 = ser(); if (inc) G.Modes.menu(false); else G.UI.setSpeed(1);
       // (where they differ, if they do: the fields of the save, and in a list of things which ones and what)
       const diff = []; if (s0 !== s1) { const a = JSON.parse(s0), b = JSON.parse(s1); for (const k of Object.keys(b)) { const x = JSON.stringify(a[k]), y = JSON.stringify(b[k]); if (x === y) continue;
         if (Array.isArray(a[k]) && Array.isArray(b[k])) { for (let i = 0; i < Math.max(a[k].length, b[k].length) && diff.length < 12; i++) { const p = JSON.stringify(a[k][i]), q = JSON.stringify(b[k][i]); if (p === q) continue;

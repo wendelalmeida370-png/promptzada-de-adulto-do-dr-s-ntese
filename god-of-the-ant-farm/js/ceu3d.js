@@ -599,7 +599,8 @@ ${GXAIR}`;
             float cn = textureLod(gxCloudN, q, cl2).b; // (the Média: one read)
             #else
             float cn = textureLod(gxCloudN, q, cl2).b * 0.7 + textureLod(gxCloudN, q * 2.7 + 0.13, cl2 + 1.0).g * 0.3;
-            #endif float ci = smoothstep(0.52, 0.8, cn) * ciK.x * smoothstep(0.0, 0.18, h);
+            #endif
+            float ci = smoothstep(0.52, 0.8, cn) * ciK.x * smoothstep(0.0, 0.18, h);
             c = mix(c, ciCol + skU * 0.8, ci * 0.42); }
           // (the bow opposite the sun after a shower: red outside at 42°, violet in; a fainter second one at 51°, its colours turned)
           if (rbK > 0.001 && h > -0.02) { float ra = acos(clamp(dot(d, -gxSunW), -1.0, 1.0));
