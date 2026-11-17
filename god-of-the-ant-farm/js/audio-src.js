@@ -297,6 +297,25 @@
     return out;
   };
 
+  // ------------------------------ the little things that sound (22c fase 6, D-610) ------------------------------
+  // The micro-action of the idle the 3D draws for someone now — the same pure count (G.Anim3D.ocioAt: the id and the world's clock,
+  // with the reader's context — the view's own where it draws them, else read from the world) — and its sound at its moment: the
+  // cough, the sneeze, the yawn, the sigh, the drunk's hiccup; and the teeth chattering in the cold, a while apart. Only reads
+  const OCIO_R2 = 3.5 * 3.5; // (tiles: near the ear only — a cough is heard a few steps off)
+  const OC_SOM = { 'oc-tossir': ['cough', 0.3, 0.5], 'oc-espirrar': ['sneeze', 0.42, 0.55], 'oc-bocejar': ['yawn', 0.3, 0.4], 'oc-suspirar': ['sigh', 0.35, 0.35], 'oc-solucar': ['hiccup', 0.3, 0.45] };
+  const OC_P = {}, OC_C = {}, OC_R = { s: '', q: '', cada: 0, f: 0, c: 0, v: 0, n: 0, k: '' };
+  A.OC_SOM = OC_SOM;
+  A.ocioSom = function (v) {
+    const A3 = G.Anim3D, V3 = G.Vida3D; if (!A3 || !A3.ocioAt || !A3.stateOf || !V3 || v.moving || v.act || v.sleeping || v.inside || !G.S) return null;
+    const st = A3.stateOf(v, 0, null); if (st !== 'idle' && st !== 'sit' && st !== 'rest') return null;
+    const p = V3.porteOf(v, OC_P); const vs = G.People3D && G.People3D.visOf ? G.People3D.visOf(v.id) : null; const ctx = vs && vs.ctx ? vs.ctx : V3.ctxOf(v, p, null, OC_C);
+    const o = A3.ocioAt(v.id, G.S.clock, ctx, 0); const R = OC_R;
+    if (o) { const k = o.k.replace(/~m$/, ''), m = OC_SOM[k], C = A3.CLIPS && A3.CLIPS[o.k];
+      if (m && C) { R.s = m[0]; R.q = 'contato'; R.cada = 0; R.f = o.u * C.dur; R.c = m[1] * C.dur; R.v = m[2]; R.n = o.n; R.k = k; return R; } }
+    if (p.frio > 0.6) { R.s = 'teeth'; R.q = 'curso'; R.cada = 2.6; R.f = 0; R.c = 0; R.v = 0.3 * p.frio; R.n = 't'; R.k = 'frio'; return R; }
+    return null;
+  };
+
   // ------------------------------ the scene ------------------------------
   // what would sound now for this ear: the sources (each with what it is of — a person, a building and its operation, a
   // ship, a beast —, its sound, how loud, which side, how muffled), the quarter's bed, the people about, the music's people
@@ -318,7 +337,14 @@
       if (mine) count[fam] = (count[fam] || 0) + 1;
       const dx = v.x - ear.x, dy = v.y - ear.y;
       if (!v.inside && dx * dx + dy * dy < ear.r * ear.r) gente++;
-      if (!L) continue;
+      if (!L) {
+        // (no act that sounds: the little thing of the idle that does, near the ear — a cough, a sneeze, a yawn, a sigh, a hiccup, the
+        // teeth in the cold; 22c fase 6, D-610)
+        const oc = !v.inside && dx * dx + dy * dy < OCIO_R2 ? A.ocioSom(v) : null;
+        if (oc) push({ k: 'o' + v.id + ':' + oc.n, tipo: 'ocio', s: oc.s, g: null, ato: oc.k, de: { v: v.id, op: 0, b: 0 }, x: r3(v.x), y: r3(v.y), q: oc.q, cada: oc.cada, fase: r3(oc.f), contato: r3(oc.c), fam: null, notas: null,
+          tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))) }, A.hear(ear, v.x, v.y, 0, 0.45), oc);
+        continue;
+      }
       const h = A.hear(ear, v.x, v.y, shut(v.inside), L.alc);
       const o = { k: 'v' + v.id, tipo: r.tipo, s: L.s, g: r.g, ato: r.ato, de: { v: v.id, op: (v.task && Number.isInteger(v.task.op) && v.task.op) || 0, b: v.inside || 0 }, x: r3(v.x), y: r3(v.y), q: L.q, cada: L.cada || 0,
         fase: r3(v.actT || 0), contato: r.g ? G.Act.ANIM[r.g].contact : 0, fam, notas: L.s === 'lute' ? povo(v).notas : null, tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))) };

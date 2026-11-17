@@ -29,7 +29,7 @@
     'oc-bracos-cruzados': { base: 0.9, confia: 2 }, 'oc-maos-costas': { base: 0.7, nobre: 3, gravida: 1 }, 'oc-maos-juntas': { base: 0.7, espera: 1, timido: 2, luto: 1.5, frio: 1 },
     'oc-espreguicar': { cansado: 2, manha: 1 }, 'oc-bocejar': { cansado: 2.5, manha: 1 }, 'oc-suspirar': { base: 0.3, luto: 2.5, cansado: 1, espera: 0.5 },
     'oc-esfregar-maos': { frio: 3 }, 'oc-soprar-maos': { frio: 3 }, 'oc-abanar-se': { calor: 3 }, 'oc-enxugar-testa': { calor: 2.5, cansado: 1 },
-    'oc-tossir': { doente: 3 }, 'oc-mao-peito': { doente: 2, medo: 1 }, 'oc-enxugar-olhos': { luto: 3 }, 'oc-arquejar': { cansado: 1.5 },
+    'oc-tossir': { doente: 3 }, 'oc-espirrar': { frio: 1.2, doente: 1.5, chuva: 0.6 }, 'oc-mao-peito': { doente: 2, medo: 1 }, 'oc-enxugar-olhos': { luto: 3 }, 'oc-arquejar': { cansado: 1.5 },
     'oc-tamborilar': { espera: 2.5, small: 1 }, 'oc-afagar-barriga': { gravida: 3 }, 'oc-solucar': { bebado: 3 }, 'oc-apoiar': { bebado: 2.5 },
     'oc-apontar': { notavel: 1.5 }, 'oc-acenar': { conhecido: 2.5 },
   };

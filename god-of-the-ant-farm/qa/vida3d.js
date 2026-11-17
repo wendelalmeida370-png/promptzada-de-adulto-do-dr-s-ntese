@@ -290,6 +290,40 @@ if (on('v9')) {
     (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
 }
 
+if (on('v10')) {
+  // the little things that sound (D-610): the cough of one sick, standing near the ear, at the moment the 3D draws that little thing —
+  // the scene of the sound has it, on its moment, the same micro-action the view plays; the teeth of one in the cold; nothing for
+  // one well and warm. And the body the player lives carries itself too (D-609): the porte, the little things, the living face
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = new Map();
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const out = []; let okAll = true; const say = (c, t) => { out.push(t + (c ? '' : ' ✗')); if (!c) okAll = false; };
+  const v = adult(); blank(v); mild(v); v.sick = DAY * 0.5; v.act = ''; v.moving = false; G.Vg.setTask(v, { type: 'idle', pri: 0.1 }); v.act = '';
+  const ctx = V3.ctxOf(v, V3.porteOf(v, {}), null, {}); let t0 = -1; for (let t = S.clock; t < S.clock + 600; t += 0.25) { const o = A.ocioAt(v.id, t, ctx, 0); if (o && o.k.replace(/~m$/, '') === 'oc-tossir' && o.u > 0.31 && o.u < 0.4) { t0 = t; break; } }
+  say(t0 >= 0, `a tosse de quem está doente: ${t0 >= 0 ? 'aos ' + r2(t0 - S.clock) + ' s' : 'NUNCA em 10 min'}`);
+  if (t0 >= 0) { S.clock = t0; let src = null, drawn = '';
+    tryF('a cena do som', () => { P3.clear(); for (let k = 0; k < 3; k++) P3.update(1 / 60, { X: v.x * TL, Z: v.y * TL }); const sv = P3.visOf(v.id); drawn = sv && sv.an && sv.an.oc ? sv.an.oc : '';
+      const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); src = sc ? sc.fontes.find(f => f.de && f.de.v === v.id && f.tipo === 'ocio') : null; });
+    say(!!src && src.s === 'cough' && src.q === 'contato' && Math.abs(src.fase - src.contato) < 0.25 && drawn.replace(/~m$/, '') === 'oc-tossir', `a cena do som: ${src ? src.s + ' no ' + src.fase + ' (o momento ' + src.contato + ')' : 'NADA'}, o desenho em «${drawn}»`); }
+  // (the cold: the teeth; one well and warm: nothing)
+  v.sick = 0; S.temp[G.W.idx(v.x, v.y)] = 20; let cold = null; tryF('o frio', () => { const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); cold = sc ? sc.fontes.find(f => f.de && f.de.v === v.id && f.tipo === 'ocio') : null; });
+  say(!cold || cold.s === 'teeth' || A.OCIO[cold.ato] !== undefined, `no frio: ${cold ? cold.s : 'nada agora'}`);
+  mild(v); P3.clear(); let warm = []; tryF('o sossego', () => { // (the view's memory of before let go: the scene reads the view's own context where it draws someone)
+ for (let t = 0; t < 30; t += 1.3) { S.clock += 1.3; const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); const f = sc ? sc.fontes.find(q => q.de && q.de.v === v.id && q.tipo === 'ocio') : null; if (f) warm.push(f.s); } });
+  say(!warm.includes('cough') && !warm.includes('teeth') && !warm.includes('sneeze'), `quem está bem e no ameno: ${warm.length ? warm.join(', ') : 'nenhum som'} em 30 s`);
+  // (the body the player lives: the porte of its life — old and cold —, a little thing when left standing, the living face)
+  let bodyOk = false, bodyInfo = '';
+  tryF('o corpo do jogador', () => { const w = adult(); blank(w); w.age = 78; S.temp[G.W.idx(w.x, w.y)] = 20;
+    // (the body's controller as avatar.js hands it to the frame each frame — its place, its pose, its look, its drive —: here by hand,
+    // standing; the frame's part is what is proved: the reader's porte and the living face on it)
+    const X = w.x * TL, Z = w.y * TL, Y = G.W.groundH(w.x, w.y) * G.Space.HM;
+    P3.avatar = { id: w.id, X, Y, Z, yaw: 0, pose: A.POSE0(), look: Object.assign(P3.look(w), { plant: null }), ground: true, drive: { st: 'idle', t: 0, sp: 0, yaw: 0, yawV: 0, acc: 0, run: 0, walk: 0, clipK: undefined, over: null, overK: undefined } };
+    P3.clear(); for (let k = 0; k < 90; k++) { P3.avatar.drive.t += 0.1; P3.update(0.1, { X, Z }); }
+    const av = P3.avatar; P3.avatar = null; const pz = av && av.drive && av.drive.porte; bodyOk = !!(pz && pz.velho > 0.5 && av.pose && av.pose.face);
+    bodyInfo = av ? `o porte ${pz ? 'velho ' + r2(pz.velho) + ', frio ' + r2(pz.frio) : 'NENHUM'}, o rosto ${av.pose && av.pose.face ? 'vivo' : 'parado'}` : 'sem corpo desenhado (sem o 3D do corpo neste teste)'; });
+  say(bodyOk, 'o corpo do jogador: ' + bodyInfo);
+  ok('v10 o som das coisinhas na hora do desenho; o corpo do jogador com porte e rosto', !errs.length && okAll, (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · '));
+}
+
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `VIDA3D: ${fails.length} falha(s): ${fails.join(', ')}` : 'VIDA3D: ok');
 process.exit(fails.length ? 1 : 0);

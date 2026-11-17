@@ -1664,5 +1664,17 @@ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((
 { const v3 = (src['vida3d.js'] || []).join('\n'); const i = v3.indexOf('V3.dogOf = function'), j = v3.indexOf('\n  };', i); const f = i < 0 ? '' : v3.slice(i, j);
   if (!/a\.kind === 'cao' && !a\.dead && a\.kid === v\.id && a\.home === v\.home/.test(f)) fails.push('o cão da criança é o do mundo: o leitor não acha o cão pela casa e pelo kid que o mundo dá (pets.js, D-607)');
   if (/\ba\.\w+\s*=[^=]/.test(f)) fails.push('o cão da criança é o do mundo: o leitor escreve no cão (D-607)'); }
+// 224. "a coisinha que soa é a que se vê" (D-610): o som das coisinhas do ócio (a tosse, o espirro, o bocejo, o suspiro, o soluço)
+// sai da mesma conta pura do ócio (G.Anim3D.ocioAt, pelo id e pelo relógio do mundo, com o contexto do leitor — o da vista onde ela
+// desenha a pessoa), na hora da coisinha — nunca um sorteio do som nem um relógio próprio
+{ const au = (src['audio-src.js'] || []).join('\n'); const i = au.indexOf('A.ocioSom = function'), j = au.indexOf('\n  };', i); const f = i < 0 ? '' : au.slice(i, j);
+  if (!/const o = A3\.ocioAt\(v\.id, G\.S\.clock, ctx, 0\);/.test(f)) fails.push('a coisinha que soa é a que se vê: o som não sai da conta do ócio (G.Anim3D.ocioAt pelo id e pelo relógio do mundo, D-610)');
+  if (!/vs && vs\.ctx \? vs\.ctx : V3\.ctxOf\(v, p, null, OC_C\)/.test(f)) fails.push('a coisinha que soa é a que se vê: o som não lê o contexto do leitor (o da vista onde ela desenha, D-610)');
+  if (/\bG\.(?:R|VR|vrr|rr|chance|vchance)\(|Math\.random|performance\.now|Date\.now/.test(f)) fails.push('a coisinha que soa é a que se vê: o som da coisinha sorteia ou tem relógio próprio (D-610)'); }
+// 225. "o corpo do jogador se leva como a sua vida" (D-609, T-1614): o quadro dá ao corpo que o jogador vive o porte do leitor, o
+// contexto das coisinhas e o rosto vivo da pessoa que ele é — o passo, o giro, o ato e os clipes continuam do avatar.js
+{ const p3 = (src['people3d.js'] || []).join('\n');
+  if (!/I\.porte = G\.Vida3D\.read\(avFeet, avv, vt, DRAWN\);/.test(p3)) fails.push('o corpo do jogador: o quadro não dá ao corpo vivido o porte do leitor (D-609)');
+  if (!/Anim\.faceMix\(avFeet, av\.drive, av\.pose, av\.look\.mood, avFeet\.an, dt\)/.test(p3)) fails.push('o corpo do jogador: o corpo vivido sem o rosto vivo (D-609)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

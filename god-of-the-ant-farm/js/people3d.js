@@ -1608,8 +1608,15 @@
       // (the body's pose, made in this frame by the same animator as everyone's, from the motion its controller gives — the
       // frame's own time, interpolated: smooth at 60, 120 or 144 frames a second, 20a; a pose given whole — the fall of a death —
       // is drawn as it is)
-      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
+      // (the body the player lives carries itself as the people of the world do — the porte of its life, the little things when the
+      // player leaves it standing, the living face —: the reader's numbers of the person it is, T-1614, D-609; the stride, the turn,
+      // the act and the clips are the body's own, avatar.js's)
+      const avv = S.villagers.get(av.id);
+      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s;
+        if (avv) { avFeet.yaw = av.yaw; avFeet.sp = 0; I.porte = G.Vida3D.read(avFeet, avv, vt, DRAWN); I.clock = S.clock; I.id = av.id; I.tempo = G.Vida3D.tempo(avv); I.ctx = avFeet.ctx; I.lod = 0; I.tired = G.Vida3D.tired(avv); }
+        Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = Anim.blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = Anim.easeMood(avFeet, av.look.mood, dt);
+      if (avv && av.drive && Anim.faceMix) { av.drive.humor = G.Vida3D.humor(avv); Anim.faceMix(avFeet, av.drive, av.pose, av.look.mood, avFeet.an, dt); }
       av.look.lod = 0;
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
@@ -1732,8 +1739,12 @@
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
     mats(); let c = 0, ca = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
-      const e = crowdLook(v), L = e.L; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const pz = e.p | 0; const Y = Y0 + Math.abs(st) * 0.04 + CROWD_DY[pz] * s;
+      // (the ground under one of the crowd asked only of those in the eye's field: the field judged first by their last height — a
+      // frame old, a ball a little wider —, D-611)
+      const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const e0 = CROWD.get(v.id);
+      if (e0 && e0.Y !== undefined && !inField(X, e0.Y, Z, 1.6)) continue;
+      const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
+      const e = crowdLook(v), L = e.L; e.Y = Y0; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const pz = e.p | 0; const Y = Y0 + Math.abs(st) * 0.04 + CROWD_DY[pz] * s;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
       if (pz === 5) { M.b.makeRotationX(-Math.PI / 2); M.root.multiply(M.b); } // (lying on the ground: the whole body laid down)
