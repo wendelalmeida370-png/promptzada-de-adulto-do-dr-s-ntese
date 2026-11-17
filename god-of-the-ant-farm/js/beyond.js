@@ -121,7 +121,7 @@
     v.hunger = 20; v.energy = 80; v.devotion = 100; v.fear = 30;
     // the one left behind: a widow takes her husband back; one who married again does not
     const mate = S.villagers.get(r.partner); let news = '';
-    if (mate && !mate.partner) { mate.partner = v.id; v.partner = mate.id; mate.widow = 0; mate.mourn = 0; G.Vg.emote(mate, 'heart', 4); news = ` ${mate.name} correu para os seus braços.`; bio(mate, `Viu ${v.name} voltar dos mortos e recebeu-${v.g === 'f' ? 'a' : 'o'} de volta`, `Meu amor voltou dos mortos`); }
+    if (mate && !mate.partner) { G.Vg.pair(mate, v, 'volta'); mate.mourn = 0; G.Vg.emote(mate, 'heart', 4); news = ` ${mate.name} correu para os seus braços.`; bio(mate, `Viu ${v.name} voltar dos mortos e recebeu-${v.g === 'f' ? 'a' : 'o'} de volta`, `Meu amor voltou dos mortos`); }
     else if (mate) { G.Vg.emote(mate, 'fear', 3); const nw = S.villagers.get(mate.partner); news = ` Mas ${mate.name} já vive com ${nw ? nw.name : 'outra pessoa'}.`; bio(v, `Voltou dos mortos e encontrou ${mate.name} casad${oa(mate)} com outr${nw && nw.g === 'f' ? 'a' : 'o'}`, null); }
     // the family stops mourning; whoever saw it will never forget
     for (const o of S.villagers.values()) {

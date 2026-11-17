@@ -77,6 +77,7 @@
     if (a.mind) o.mind = G.Mente.pack(a); if (a.meio) o.meio = a.meio; if (a.wnd) o.wnd = G.Luta.pack(a);
     return o;
   };
+  const FIFTEEN = [['fx', 3], ['fy', 3], ['think', 2], ['scan', 2], ['courtCD', 2], ['speed', 3], ['courage', 3], ['work', 3]];
   Sv.serialize = function () {
     const S = G.S;
     const vill = [...S.villagers.values()].map(v => {
@@ -88,6 +89,11 @@
       if (o.inside) { const b = S.buildings.get(o.inside); if (b) { const d = G.Vg.door(b); o.x = d[0]; o.y = d[1]; } o.inside = 0; o.sleeping = false; }
       o.x = Sv.posR(o.x); o.y = Sv.posR(o.y); o.hunger = r(o.hunger, 1); o.energy = r(o.energy, 1); o.hp = r(o.hp, 1); o.age = Sv.ageR(o.age);
       o.devotion = r(o.devotion, 1); o.fear = r(o.fear, 1);
+      // (the numbers a person keeps with fifteen decimals, rounded — 22b, D-568: ~100 KB of a metropolis's save, more than the
+      // society's own fields cost. The walk's phase is only seen (as an angle, kept within its turns); the facing, the clocks of
+      // the next look and of the next courtship, the pace, the courage and the work's pace, to what the world can tell apart)
+      if (typeof o.walkPh === 'number') o.walkPh = r(o.walkPh % 62.832, 2);
+      for (const [k, d] of FIFTEEN) if (typeof o[k] === 'number' && Number.isFinite(o[k])) o[k] = r(o[k], d);
       return o;
     });
     const out = {

@@ -169,8 +169,13 @@
     if (used) commit(f);
     // stories that touched the fact keep it in their record (provenance of their chapters)
     for (const story of s.stories) if (story._touch) { delete story._touch; if (f.id && !story.facts.includes(f.id)) story.facts.push(f.id); }
+    // (the listeners of the offered facts, in the order registered — the society hears each fact with its witnesses, 22b D-567:
+    // one list, not a second observer — St.observe keeps one per kind)
+    for (let i = 0; i < LISTEN.length; i++) { try { LISTEN[i](f); } catch (e) { console.warn('stories listen', e); } }
     return f;
   }
+  const LISTEN = [];
+  St.listen = fn => { if (!LISTEN.includes(fn)) LISTEN.push(fn); };
   St.draft = (k, o) => draft(k, o); St.offer = f => offer(f); St.learn = (pid, fid, how) => learn(pid, fid, how);
   St.plantFrom = function (type, sd, fid) { const f = factById(fid) || { id: fid }; plant(type, Object.assign({ keyExtra: 'p' + fid }, sd), f); };
   function plant(type, sd, f) {

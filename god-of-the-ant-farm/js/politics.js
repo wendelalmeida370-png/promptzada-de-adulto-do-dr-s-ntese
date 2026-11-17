@@ -946,7 +946,7 @@
       if (!G.Vg.canSend(move)) continue;
       const dest = S.settlements.get(stay.set);
       move.set = stay.set; move.home = 0; G.Vg.endTask(move); G.Vg.setTask(move, { type: 'migrate', pri: 1.6 });
-      move.partner = stay.id; stay.partner = move.id; move.widow = 0; stay.widow = 0;
+      G.Vg.pair(move, stay, 'real');
       r.marr = (r.marr || 0) + 2; r.friend = Math.min(100, r.friend + 20);
       log(`Casamento real: ${x.name}, de ${a.name}, uniu-se a ${y.name}, de ${b.name}. ${move.name} foi viver em ${dest ? dest.name : mf.name}.`, 'heart', dest ? dest.cx : undefined, dest ? dest.cy : undefined);
       return;
@@ -1035,7 +1035,7 @@
       let o = null; for (const x of S.villagers.values()) if (x.set === G.Fac.capitalOf(b.id)?.id && !x.partner && !x.captive && x.g !== v.g && x.age >= 17 && x.age <= 45 && Math.abs(x.age - v.age) < 14 && x.id !== b.leader && !isKin(x, v)) { o = x; break; }
       if (o) {
         if (v.carry) G.Vg.toStore(v, b.id, 'caravana');
-        v.partner = o.id; o.partner = v.id; v.widow = 0; o.widow = 0; v.set = o.set; v.home = 0;
+        G.Vg.pair(v, o, 'fronteira'); v.set = o.set; v.home = 0;
         r.marr = (r.marr || 0) + 1; r.op = Math.min(100, r.op + 8);
         G.FX && G.FX.hearts(v.x, v.y);
         log(`O amor atravessou fronteiras: ${v.name}, mercador${v.g === 'f' ? 'a' : ''} de ${a.name}, casou-se com ${o.name} e ficou em ${b.name}.`, 'heart', v.x, v.y);

@@ -1508,6 +1508,12 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
     if (/\bG\.(Lacos\.(ato|marca)|Indole\.(vive|nasce)|Boatos\.(nasce|leva|desmente)|Vg\.(pair|unpair))\s*\(/.test(c)) fails.push(`o desenho só lê a sociedade: ${f}:${k + 1} muda a sociedade de dentro do que só se vê (D-545): ${l.trim().slice(0, 110)}`); }); }
 // === 22a: os personagens ===
 // === 22b: a sociedade ===
+// 207. "o casal tem uma porta" (D-565): o par de uma pessoa (v.partner) só o G.Vg.pair / G.Vg.unpair do villagers.js escreve — a
+// corte, o casamento real, o amor além da fronteira, o Amor Divino, a morte, quem volta dos mortos, as primeiras famílias, os que
+// chegam: todos pela porta, e a sociedade ouve cada casal feito e desfeito num lugar só (Vg.pairHooks)
+{ const PAIR_OK = [['villagers.js', 'a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;'], ['villagers.js', "v.partner = 0; if (como === 'morte')"]];
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if ((/\.partner\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.partner\b|\[['"]partner['"]\]\s*=(?!=)/.test(c)) && !ok(PAIR_OK, f, l)) fails.push(`o casal tem uma porta: ${f}:${k + 1} escreve o par fora do G.Vg.pair / unpair (D-565): ${l.trim().slice(0, 110)}`); }); }
 // === 22c: a vida que se vê ===
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

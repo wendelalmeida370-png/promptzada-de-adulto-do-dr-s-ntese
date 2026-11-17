@@ -738,6 +738,34 @@
     if (b.mother === a.id || b.father === a.id) return true;
     return false;
   }
+  // ------------------------------ the couple's door (22b, D-565) ------------------------------
+  // (every writer of partner passes here — the courtship, the royal match, the love across borders, the Divine Love, the death,
+  // the one back from the dead, the first families, the newcomers —, so the society hears every couple made and undone in one
+  // place: Vg.pairHooks, in the order registered; guard rule 207. The door does what each writer did: both partners, the
+  // widowhood over; and the death leaves the survivor a widow of the dead)
+  Vg.pairHooks = [];
+  Vg.pair = function (a, b, como) {
+    if (!a || !b || a === b) return false;
+    a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;
+    for (let i = 0; i < Vg.pairHooks.length; i++) Vg.pairHooks[i](a, b, como || '', true);
+    return true;
+  };
+  Vg.unpair = function (v, como, de) {
+    if (!v) return 0; const was = v.partner;
+    v.partner = 0; if (como === 'morte') v.widow = de || was;
+    if (was) for (let i = 0; i < Vg.pairHooks.length; i++) Vg.pairHooks[i](v, was, como || '', false);
+    return was;
+  };
+  // ------------------------------ the society's registries (22b, D-566) ------------------------------
+  // (the weight of who one is on a choice of the free time: Vg.weigh(kind, fn(v, kind) → multiplier), multiplied into that
+  // choice's score; and a wish of one's own, Vg.want(name, { urge(v, cur) → score, pri, go(v, H) → task }), offered as a choice
+  // like the services' — both in the order registered, both pure in their asking, and neither draws a chance: the same draws
+  // of the world, whatever is registered)
+  const WEIGH = Object.create(null), WANTS = [];
+  Vg.weigh = function (kind, fn) { (WEIGH[kind] || (WEIGH[kind] = [])).push(fn); };
+  Vg.want = function (name, o) { if (WANTS.some(w => w.name === name)) return; WANTS.push({ name, kind: 'want:' + name, urge: o.urge, pri: o.pri || 0, go: o.go }); };
+  Vg.wants = () => WANTS.map(w => w.name);
+  const weighOf = (v, kind, s) => { const ws = WEIGH[kind]; if (ws) for (let i = 0; i < ws.length; i++) s *= ws[i](v, kind); return s; };
   function courtTarget(v) {
     const S = G.S; let best = null, bd = 1e9;
     for (const o of S.villagers.values()) {
@@ -775,7 +803,7 @@
     // (bed at one's own hour — the clock of each one, G.Lar.clock —, not all at the fall of night: L-225, D-071)
     const sleepy = G.Lar ? G.Lar.sleepy(v) : night;
     let best = null, bs = -1, bp = 0;
-    const opt = (score, pri, kind) => { if (score > bs) { bs = score; best = kind; bp = pri; } };
+    const opt = (score, pri, kind) => { score = weighOf(v, kind, score); if (score > bs) { bs = score; best = kind; bp = pri; } };
     // (the stoker at his post — the fire of his baths not yet fed to their closing: G.Termas.onDuty — leaves it for a meal
     // only starving; his meal is before the doors open: G.Termas.mealFirst, D-227)
     const post = !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v));
@@ -841,6 +869,8 @@
       if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
     opt(0.04, 0, 'wander');
+    // (the wishes of one's own the society registers — Vg.want, D-566 —, asked in the order registered)
+    for (let i = 0; i < WANTS.length; i++) { const w = WANTS[i]; const u = w.urge(v, cur, night); if (u > 0) opt(u, w.pri, w.kind); }
     // (the one minding the little ones at home by day — G.Lar.minder — has no working day, as a child has none: a plain load in
     // the hands goes to the store before the day at home, as a child's does (L-186) — eating, sleep and a storm first. Under the
     // minding it stayed in the hands for days: Nefertari, the shepherd of Mênfis, 58, minded the little ones of her house with
@@ -895,6 +925,7 @@
       case 'compras': t = G.Compras && G.Compras.task(v, H); break;
       case 'garden': t = G.Urban && G.Urban.gardenTask(v, H); break;
       case 'saga': t = G.Stories && G.Stories.task(v, H); break;
+      default: if (kind && kind.startsWith('want:')) { const w = WANTS.find(q => q.kind === kind); t = w && w.go(v, H); }
     }
     if (!t) { if (!v.task) wander(v, 4); }
     else t.kind = kind;
@@ -1723,7 +1754,7 @@
             if (t.type === 'court') {
               v.courtCD = G.rr(20, 50);
               if (!o.partner && !v.partner && G.R() < (v.traits.includes('Romântico') || o.traits.includes('Romântico') ? 0.85 : 0.62)) {
-                v.partner = o.id; o.partner = v.id; v.widow = 0; o.widow = 0;
+                Vg.pair(v, o, 'corte');
                 S.stats.couples++;
                 if (G.Life) { G.Life.bio(v, 'couple', o.id); G.Life.bio(o, 'couple', v.id); }
                 G.FX && G.FX.hearts((v.x + o.x) / 2, (v.y + o.y) / 2);

@@ -2283,7 +2283,7 @@
     G.Naval && G.Naval.onGone(v); // (and the ships' rosters, L-810)
     const wasRuler = G.Fac.all().some(f => f.leader === v.id);
     const p = S.villagers.get(v.partner);
-    if (p) { p.partner = 0; p.widow = v.id; p.mourn = G.DAY_LEN * 1.5; p.emo = { k: 'sad', t: 6 }; }
+    if (p) { G.Vg.unpair(p, 'morte', v.id); p.mourn = G.DAY_LEN * 1.5; p.emo = { k: 'sad', t: 6 }; }
     // mourning & devotion effects on family
     for (const o of S.villagers.values()) {
       const rel = o.mother === v.id || o.father === v.id || v.mother === o.id || v.father === o.id || (o.mother && o.mother === v.mother);
