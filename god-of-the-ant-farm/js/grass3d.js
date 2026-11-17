@@ -308,7 +308,9 @@
     if (lmesh && lmesh.visible) { const lr = littleR(q); U.uLR.value = lr; layoutLittle(lr); U.uLOrigin.value.set(Math.floor(e.x / LCELL) - lside / 2, Math.floor(e.z / LCELL) - lside / 2); GR.bits = lside * lside; } else GR.bits = 0;
     // (the people walking nearest part it too)
     const W3 = (G.People3D && G.People3D.walkers) || []; let j = 0;
-    for (const w of W3) { if (j >= PUSH) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
+    for (const w of W3) { if (j >= PUSH - 2) break; if ((w[0] - e.x) ** 2 + (w[2] - e.z) ** 2 > R * R) continue; U.uPush.value[j++].set(w[0], w[1], w[2], 1); }
+    // (21a: and the beasts walking nearest the body part it too — the grass where a beast goes through it moves, D-472)
+    if (G.Animals && G.Animals.near && focus) G.Animals.near(focus.X / 4, focus.Z / 4, 5, a => { if (j >= PUSH || a.dead || a.air || a.swim) return; U.uPush.value[j++].set(a.x * 4, 0, a.y * 4, 1); });
     for (; j < PUSH; j++) U.uPush.value[j].set(0, -1e4, 0, 0);
     GR.clumps = side * side;
   };
