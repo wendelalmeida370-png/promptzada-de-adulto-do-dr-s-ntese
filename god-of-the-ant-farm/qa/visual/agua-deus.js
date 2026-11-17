@@ -19,9 +19,9 @@ const VIEWS = [['deus-queda', 'montanhoso', 'fall', 0], ['deus-queda-chuva', 'mo
         document.querySelector('#menu') && document.querySelector('#menu').classList.add('hidden'); document.querySelector('#intro') && document.querySelector('#intro').classList.add('hidden'); }
       const S = G.S, N = G.N, T = G.T; let at = null;
       if (place === 'fall') { const f = S.relief.falls.filter(q => !q.sub).sort((a, b) => (b.tot || b.drop) - (a.tot || a.drop) || a.y - b.y)[0]; at = [f.x + 0.5, f.y + 0.5]; }
-      else { let best = -1; for (let y = 8; y < N - 8; y++) for (let x = 8; x < N - 8; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || G.Waters.kind(x, y) !== 'river') continue; let n = 0, land = 0; for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const t = S.type[(y + dy) * N + x + dx]; if (t === T.RIVER) n++; else if (t >= T.SAND) land++; } const sc = n * 2 + land * 0.1 - Math.abs(S.wl[i] - G.SEA) * 4; if (sc > best) { best = sc; at = [x + 0.5, y + 0.5]; } } }
+      else { let best = -1; for (let y = 8; y < N - 8; y++) for (let x = 8; x < N - 8; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || G.Waters.kind(x, y) !== 'river') continue; let n = 0, land = 0; for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const t = S.type[(y + dy) * N + x + dx]; if (t === T.RIVER) n++; else if (t >= T.SAND) land++; } if (n < 18 || n > 48) continue; const sc = land * 0.2 + n * 0.5 - Math.abs(S.wl[i] - G.SEA) * 4; if (sc > best) { best = sc; at = [x + 0.5, y + 0.5]; } } }
       S.weather.rain = rain; S.weather.storm = 0; if (rain) for (let dy = -30; dy <= 30; dy++) for (let dx = -30; dx <= 30; dx++) { const x = Math.floor(at[0]) + dx, y = Math.floor(at[1]) + dy; if (G.W.inb(x, y)) S.wet[y * N + x] = 0.85; }
-      S.time = 0.42; G.Render.centerOn(at[0], at[1], 2.2);
+      S.time = 0.42; G.Render.centerOn(at[0], at[1], place === 'fall' ? 2.2 : 2.8);
       for (let k = 0; k < 8; k++) G.Main.frameFor(50);
       return { at, err: JSON.stringify(G.modErr) };
     }, [relevo, place, rain, world !== relevo]);

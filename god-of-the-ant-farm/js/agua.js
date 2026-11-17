@@ -216,10 +216,11 @@
   Ag.turbid = function (i) {
     const S = G.S; if (!S.wet) return 0; const x = i % N, y = (i / N) | 0; const riv = isRiver(S, i);
     if (!riv && !(S.type[i] <= T.SEA)) return 0;
-    let w = 0, n = 0, mouth = riv;
+    let w = 0, n = 0, mouth = riv, rv = 0;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue; const j = ny * N + nx; const t = S.type[j];
-      if (t >= T.SAND) { w += S.wet[j]; n++; } else if (t === T.RIVER) mouth = true; }
-    if (!n || !mouth) return 0; return G.clamp((w / n - 0.22) * 1.7, 0, 1) * (riv ? 1 : 0.55);
+      if (t >= T.SAND) { w += S.wet[j]; n++; } else if (t === T.RIVER) { mouth = true; rv++; } }
+    // (a river's channel the most; the edge of a lake a little — the mud stays at its shore; the sea at a river's mouth a little)
+    if (!n || !mouth) return 0; return G.clamp((w / n - 0.22) * 1.7, 0, 1) * (riv ? (rv >= 13 ? 0.4 : 1) : 0.55);
   };
 
   // ------------------------------ the foam ------------------------------

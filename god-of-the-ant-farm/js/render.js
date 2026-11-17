@@ -1449,10 +1449,10 @@
   function drawCurrents(t, inV) {
     const S = G.S; const tv = R.tileView; if (!tv || R.cam.zoom < 0.7) return; const Ag = G.Agua; const f = Ag ? Ag.field() : null;
     // (the river turbid with the earth the rain washed down: a brown veil over it)
-    if (Ag) { ctx.fillStyle = 'rgba(132,104,64,1)';
-      for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || (S.ice && S.ice[i])) continue; const tu = Ag.turbid(i); if (tu < 0.12) continue;
+    if (Ag) { ctx.fillStyle = 'rgba(150,112,62,1)';
+      for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || (S.ice && S.ice[i])) continue; const tu = Ag.turbid(i); if (tu < 0.15) continue;
         const lv = S.wl[i]; const a = proj(x, y, lv), b = proj(x + 1, y, lv), c = proj(x + 1, y + 1, lv), d = proj(x, y + 1, lv); if (!inV(a)) continue;
-        ctx.globalAlpha = Math.min(0.42, tu * 0.45); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); }
+        ctx.globalAlpha = Math.min(0.3, tu * 0.32); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); }
       ctx.globalAlpha = 1; }
     ctx.strokeStyle = 'rgba(235,250,255,0.55)'; ctx.lineWidth = 0.8; ctx.beginPath();
     for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) {
