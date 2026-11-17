@@ -4,6 +4,7 @@
 //                                                  its cycle, gives numbers (no NaN), feet on the ground when standing and
 //                                                  walking, the hands at the ends of the arms, nothing stretched
 //   node qa/visual/corpo-rig.js dump STATE T SP OUT.bin [mesh]  → the bent mesh (positions, triangles) for a picture
+//   ESTADOS=a,b node qa/visual/corpo-rig.js     → the proofs of the states over only those (to try a clip in seconds)
 // (G.People3D.rig and G.Body3D's matrices are the game's own: nothing here is a copy of them)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -21,7 +22,7 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/anim-[^"]+)"><\/script>/g)) run(m[1]); }
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); for (const m of html.matchAll(/<script src="(js\/(?:anim-|vida|social-clips|rosto)[^"]+)"><\/script>/g)) run(m[1]); } // (and 22c's: the acting, the reader, the clips of life)
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
@@ -130,6 +131,11 @@ if (process.argv[2] === 'dump') {
   process.exit(0);
 }
 
+// (22c's gestures on the knees or crouched — the condemned, the one who hides, the weeping and the begging on their knees, the
+// proposal on one knee, the child's prayer —: as the prayer and the knife at the hide are; the story told seated, as sit —, and
+// their left-handed twins)
+const KNEELERS = ['ato-condenado', 'ato-esconder', 'ato-chorar-joelhos', 'ato-implorar', 'ato-propor', 'ato-enforcado', 'ato-contar'].flatMap(k => [k, k + '~m']);
+const STATES = process.env.ESTADOS ? A.STATES.filter(st => process.env.ESTADOS.split(',').concat(['idle', 'walk', 'talk', 'carry', 'wave', 'interact', 'turn']).includes(st)) : A.STATES; // (and the stances the feet are measured on)
 // ------------------------------ the proofs ------------------------------
 ok('o corpo contínuo começou', B3.ready && P3.skin(), JSON.stringify({ ready: B3.ready, failed: B3.failed, bindErr: B3.bindErr }));
 // (in the bind pose every bone's matrix is the identity: the mesh is drawn exactly as modelled)
@@ -144,7 +150,7 @@ for (let i = 0; i < M0.idx.length; i += 3) for (const [a, b] of [[0, 1], [1, 2],
 const FOOT = new Set(['ftL', 'ftR', 'toeL', 'toeR'].map(b => G.BODYMESH.bones.indexOf(b)));
 const footV = []; for (let i = 0; i < M0.n; i++) if (FOOT.has(M0.bi[i * 4]) && M0.bw[i * 4] > 128) footV.push(i);
 const res = {}; const chk = new Set();
-for (const st of A.STATES) {
+for (const st of STATES) {
   let nan = 0, stretch = 0, minY = 1e9, maxY = -1e9;
   for (let k = 0; k < 8; k++) {
     const t = k / 8 * Math.PI * 2; pose(st, t, st === 'run' ? 4.5 : 1.4); const P = bend(M0, 0); for (const e of B3.check()) chk.add(st + ': ' + e);
@@ -156,7 +162,7 @@ for (const st of A.STATES) {
 }
 ok('o verificador do desenho (Body3D.check) limpo em todas as poses', !chk.size, [...chk].slice(0, 3).join(' · ') || 'limpo');
 const bad = Object.entries(res).filter(([, r]) => r.nan || r.stretch > 2.6);
-ok('todas as animações: números, nada esticado', !bad.length, bad.length ? JSON.stringify(Object.fromEntries(bad)) : `${A.STATES.length} estados, 8 momentos cada; maior aresta ${Math.max(...Object.values(res).map(r => r.stretch))}× a da malha`);
+ok('todas as animações: números, nada esticado', !bad.length, bad.length ? JSON.stringify(Object.fromEntries(bad)) : `${STATES.length} estados, 8 momentos cada; maior aresta ${Math.max(...Object.values(res).map(r => r.stretch))}× a da malha`);
 const stand = ['idle', 'walk', 'talk', 'carry', 'wave', 'interact', 'turn'];
 const sunk = stand.filter(s => res[s] && (res[s].feet[0] < -0.045 || res[s].feet[0] > 0.03));
 ok('de pé e andando, os pés no chão (nem afundados nem no ar)', !sunk.length, stand.map(s => `${s} ${res[s].feet.join('..')}`).join(' · '));
@@ -206,9 +212,9 @@ const inside = (cm, bm) => {
 // their distance from the hips' line and fall from the knees. A blouse: in every state but the deep seats — sitting, on the
 // ground, crouching, lying —, where a skin bent by bones cannot lay it over the belly folded on the thighs: there at most
 // 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
-{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin']); // (20a's gestures: the harvest bent double over the plants as low is; the knife at a carcass on one knee as rise is) // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
+{ const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin', ...KNEELERS]); // (20a's gestures: the harvest bent double over the plants as low is; the knife at a carcass on one knee as rise is) // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
-    for (const st of A.STATES) { let fr = 0, wo = 0;
+    for (const st of STATES) { let fr = 0, wo = 0;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
       const seat = nm === 'bata' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
@@ -252,9 +258,9 @@ const through = (cm, bm, hem) => {
   }
   return { out, shown, worst };
 };
-{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin']); // (the gestures of 20a bent double or on one knee: as low and rise) // (the falls of D-333 and D-334: on the ground, as sleep and cook)
+{ const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin', ...KNEELERS]); // (the gestures of 20a bent double or on one knee: as low and rise) // (the falls of D-333 and D-334: on the ground, as sleep and cook)
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
-    for (const st of A.STATES) { let o = 0, sh = 0, wo = 0;
+    for (const st of STATES) { let o = 0, sh = 0, wo = 0;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }
       const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && o > 0));
       if (o) row.push(`${st} ${o}${sh ? ' (' + sh + ' à mostra)' : ''} até ${(wo * 100).toFixed(1)} cm${bad ? ' FALHA' : ''}`); if (bad) fail++; }

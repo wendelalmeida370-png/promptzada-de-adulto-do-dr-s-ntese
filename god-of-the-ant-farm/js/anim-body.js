@@ -34,16 +34,18 @@
   const wrapA = a => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
   // the states of the stride, and the postures whose feet are free (seated, kneeling, lying, in the water, in the air, dancing)
   const LOCO = Anim.LOCO = { walk: 1, run: 1, carryWalk: 1, sneak: 1, wade: 1 };
+  // (the stances under which the idle's little things come: standing, seated, resting — the hands free)
+  const IDLE = Anim.IDLE = new Set(['idle', 'sit', 'rest']);
   const FREE = Anim.FREE = new Set(['sit', 'eat', 'rock', 'pray', 'rest', 'eatg', 'rockg', 'sleep', 'sick', 'swim', 'tread', 'drown', 'jump', 'fall', 'climb', 'knocked', 'rise', 'crumple', 'dance', 'bound', 'cook']);
   // the channels a change of state eases (the stride's own clocks — the stance, the swing, the foot's pitch on the ground — are
   // the stride's: never eased)
-  const CH = ['bob', 'crouch', 'lean', 'twist', 'neck', 'shLp', 'shLr', 'shRp', 'shRr', 'elL', 'elR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'pelY', 'pelR', 'pelP', 'shift', 'sway', 'lie', 'grip', 'gripL', 'wrist', 'wristL', 'holdW', 'adL', 'adR', 'hyL', 'hyR', 'tyL', 'tyR', 'offW', 'shLy', 'shRy', 'talk', 'breath'];
+  const CH = ['bob', 'crouch', 'lean', 'twist', 'neck', 'shLp', 'shLr', 'shRp', 'shRr', 'elL', 'elR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'pelY', 'pelR', 'pelP', 'shift', 'sway', 'lie', 'grip', 'gripL', 'wrist', 'wristL', 'holdW', 'adL', 'adR', 'hyL', 'hyR', 'tyL', 'tyR', 'offW', 'shLy', 'shRy', 'talk', 'breath', 'tilt', 'headR'];
   const NC = CH.length; Anim.CH = CH;
   const REST = Anim.POSE0();
   const RAW = ['stL', 'stR', 'swL', 'swR', 'pgL', 'pgR', 'pitL', 'pitR', 'rel', 'tool', 'prone'];
   // a body's animator memory (the view's own, a body each)
   Anim.memory = () => ({ base: '', st: '', clip: null, t: 0, sinceT: 0, ph: 0, run: false, rw: 0, sp: 0, lastSp: 0, stop: 0, prev: new Float32Array(NC), off: new Float32Array(NC), offT: 1, offD: 0.25, has: false,
-    over: null, ok: 0, ow: 0, ck: 0, stepK: 0, stepWait: 0, lean: 0, bank: 0 });
+    over: null, ok: 0, ow: 0, ck: 0, pu: 0, stepK: 0, stepWait: 0, lean: 0, bank: 0 });
   const TMP = Anim.POSE0();
 
   // ------------------------------ the base: a posture or the stride ------------------------------
@@ -52,9 +54,9 @@
   // (a posture of the old table — Anim.pose, ST — copied in, its feet standing: the stance's clocks say both on the ground)
   function posture(out, st, t, sp) { reset(out); const p = Anim.pose(st, t, sp); for (const k in p) out[k] = p[k]; out.stL = out.stR = 1; out.swL = out.swR = -1; out.pgL = out.pgR = -1; return out; }
   // the stride at the mind's phase and speed, and what its kind adds: crouched to sneak, the knees high to wade
-  function stride(out, a, st, sp, s, I) {
+  function stride(out, a, st, sp, s, I, go) {
     reset(out);
-    Ga.pose(out, a.ph, sp, s, a.rw, I.tired ? { arms: 1 - 0.45 * I.tired, lean: 0.06 * I.tired } : null);
+    Ga.pose(out, a.ph, sp, s, a.rw, go);
     if (st === 'sneak') { out.crouch += 0.2; out.lean += 0.32; out.neck -= 0.12; out.shLp -= 0.35; out.shRp -= 0.3; out.elL += 0.65; out.elR += 0.7; out.shLr += 0.1; out.shRr -= 0.1; out.grip = 0.4; }
     else if (st === 'wade') { const lift = 0.5 * Math.max(0, Math.sin(TAU * a.ph)); out.knL += out.stL ? 0 : 0.5; out.knR += out.stR ? 0 : 0.5; out.shLr += 0.4; out.shRr -= 0.4; out.elL += 0.35; out.elR += 0.35; out.lean += 0.1 + lift * 0; }
     // (leaning into a turn and into the speed it gains — the hips swing out of a curve, the trunk bows as it speeds up)
@@ -110,7 +112,14 @@
   Anim.drive = function (a, I, out, L, dt) {
     dt = Math.max(0, Math.min(dt || 0, 0.1)); a.t += dt;
     const s = I.s || 1, sp = Math.max(0, I.sp || 0); let st = I.st || 'idle';
-    const C = Anim.CLIPS && Anim.CLIPS[st];
+    // (the clip of the state — the left-handed one's twin where it has one: I.lefty, D-596)
+    const C = Anim.CLIPS && ((I.lefty && Anim.CLIPS[st + '~m']) || Anim.CLIPS[st]);
+    // (the porte the reader gives — eased in the memory — and the stride's options it asks: the legs and the pace go by the stride)
+    if (Anim.porteEase) Anim.porteEase(a, I, dt);
+    // (away from another in step with them — the reader's I.push, −1..1, eased in a third of a second: the stride by its cadence, a
+    // gesture by its clock; D-599)
+    a.pu = (a.pu || 0) + ((I.push || 0) - (a.pu || 0)) * (1 - Math.exp(-dt / 0.3)); if (Math.abs(a.pu) < 1e-3) a.pu = 0;
+    const go = Anim.gaitOpts ? Anim.gaitOpts(a, I) : I.tired ? { arms: 1 - 0.45 * I.tired, lean: 0.06 * I.tired } : null;
     // (the body's lean into its turns and into the speed it gains or loses — eased, only seen)
     a.bank += (clamp((I.yawV || 0) * sp * 0.035, -0.2, 0.2) - a.bank) * (1 - Math.exp(-8 * dt));
     a.lean += (clamp((I.acc || 0) * 0.03, -0.14, 0.18) - a.lean) * (1 - Math.exp(-6 * dt));
@@ -136,10 +145,11 @@
         // foot's swing begins)
         const P = L.plant; let k = 1;
         if (P && P[0].on && P[1].on) { const c = Math.cos(I.yaw), n = Math.sin(I.yaw); k = (P[0].x - I.X) * c + (P[0].z - I.Z) * n < (P[1].x - I.X) * c + (P[1].z - I.Z) * n ? 0 : 1; }
-        a.ph = Ga.startPhase(k, Math.max(v, 0.8), s, a.rw);
+        // (and a little on or back by the id: two who set off in the same frame do not walk in step — D-599)
+        a.ph = Ga.startPhase(k, Math.max(v, 0.8), s, a.rw) + 0.12 * (G.hash((I.id || 0) * 59 + 11) - 0.5);
       }
-      a.ph += Ga.freq(v, s, a.rw) * dt;
-      stride(out, a, st, v, s, I);
+      a.ph += Ga.freq(v, s, a.rw) * Ga.cad(go) * dt;
+      stride(out, a, st, v, s, I, go);
     } else {
       // (a posture's own clock — its breath, its weight shifts —, or the clip's base standing)
       posture(out, base, I.t !== undefined ? I.t : a.t, sp);
@@ -147,13 +157,19 @@
     }
     // the hands: the loads by their grip and the reach for a point (Anim.hold — the rig takes the hands there)
     if (Anim.hold) Anim.hold(out, L, base === 'move' ? (st === 'run' ? 'run' : st === 'carryWalk' ? 'carryWalk' : 'walk') : st, base === 'move' ? a.ph * TAU : I.t !== undefined ? I.t : a.t, a.sp || sp);
-    // a clip over the top (a wave, a word while walking; the next wave's blows): faded in and out by its own times
-    const O = I.over && Anim.CLIPS ? Anim.CLIPS[I.over] : null;
-    if (O && O !== a.over) { a.over = O; a.ck = 0; }
+    // a clip over the top (a wave, a word while walking; the next wave's blows): faded in and out by its own times — or, standing,
+    // seated or resting with the hands free and nothing else over it, the little thing of this moment (the idle: anim-ocio.js, its
+    // time on the world's clock, I.ctx the reader's weights; D-599)
+    let ovk = I.over, ovu = I.overK; a.oc = null;
+    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = o.k; ovu = o.u; a.oc = o.k; a.ocU = o.u; } }
+    const O = ovk && Anim.CLIPS ? (I.lefty && Anim.CLIPS[ovk + '~m']) || Anim.CLIPS[ovk] : null;
+    // (the clip over the top on a clock of its own, a.ok: a wave over a seated meal does not start the meal's clip again — L-1771)
+    if (O && O !== a.over) { a.over = O; a.ok = 0; }
     a.ow = clamp(a.ow + (O ? dt / Math.max(0.01, O.bin) : -dt / Math.max(0.01, a.over ? a.over.bout : 0.2)), 0, 1);
-    if (a.over && a.ow > 0) { const u = I.overK !== undefined && O ? I.overK : (a.ck += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
+    if (a.over && a.ow > 0) { const u = ovu !== undefined && O ? ovu : (a.ok += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
     if (!O && a.ow <= 0) a.over = null;
-    // the additive: the drink in the body (Anim.stagger), the tiredness
+    // the additive: the porte (the years, the cold, the grief… — anim-porte.js), the drink in the body (Anim.stagger), the tiredness
+    if (Anim.porte && a.pz) Anim.porte(a, I, out, base, C);
     if (I.drunk > 0 && Anim.stagger) Anim.stagger(out, a.t, I.id || 0, I.drunk, base === 'move' ? 'walk' : st);
     if (I.tired > 0 && base !== 'move') { out.lean += 0.06 * I.tired; out.neck += 0.1 * I.tired; }
     // a change of state: the difference it makes, eased out (the new pose moving as itself from the first frame)
@@ -174,8 +190,11 @@
   // (how much of a change of state is left t of the way through it: 1 → 0, a quintic — eased in and out)
   const fall = t => (t >= 1 ? 0 : t <= 0 ? 1 : 1 - t * t * t * (t * (t * 6 - 15) + 10));
   // a clip on the base: its time from the world (I.clipK) or its own clock
+  // (a gesture of no world's stroke goes at each one's own pace — I.tempo, the reader's — and never quite even: a little quicker,
+  // a little slower, in a swell of three to six seconds of the world's clock that is each one's own by the id; two people never
+  // move in step for long, D-599 — and drawing away from another in step with them, a.pu; the world's strokes keep the world's clock)
   function playClip(out, a, C, I, dt, w) {
-    let u; if (I.clipK !== undefined) u = I.clipK; else { a.ck = (a.ck || 0) + dt / C.dur; u = a.ck; }
+    let u; if (I.clipK !== undefined) u = I.clipK; else { const id = I.id || 0; const j = I.tempo ? (1 + 0.03 * (I.tempo - 1) / 0.08) * (1 + 0 * Math.sin(TAU * (I.clock || 0) / (3 + 3 * G.hash(id * 41 + 1)) + TAU * G.hash(id * 43 + 2))) : 1; a.ck = (a.ck || 0) + dt / C.dur * (j + 0.5 * (a.pu || 0)); u = a.ck; }
     Anim.playClip(out, C, u, w); out.tool = C.item ? 1 : out.tool;
   }
 

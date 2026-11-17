@@ -206,6 +206,18 @@
     if (c < 2 && tp < 0.45) { const w = S.weather || NOINV; if (G.isNight() || w.rain > 0.3 || w.storm > 0) c++; }
     return c;
   };
+  // the heat where one stands (22c, D-594), 0 mild … 1 scorching: a hot land's (the map's warmth, S.temp, over 0.55) under a sun
+  // that is up — its height at the hour, G.Ceu's —, less in the rain, none at night nor in the god's sudden winter. The cold and
+  // the heat are one scale: a land warm enough to be hot is never cold (At.cold gives nothing over 0.45) — nobody shivers in it
+  const SUN = {};
+  At.heat = function (x, y) {
+    const S = G.S; if (!S || !W.inb(x, y)) return 0; const i = W.idx(x, y); const tp = S.temp ? S.temp[i] / 255 : 0.5;
+    if (tp <= 0.55 || G.isNight()) return 0;
+    if (S.winters && S.winters.length) for (const q of S.winters) if (q.t > 2 && G.dist(x, y, q.x, q.y) <= q.r) return 0;
+    const w = S.weather || NOINV; if (w.storm > 0) return 0;
+    const sun = G.Ceu && G.Ceu.sun ? G.clamp(G.Ceu.sun(S.time, SUN).s / 0.7, 0, 1) : 1;
+    return G.clamp((tp - 0.55) / 0.3, 0, 1) * (0.3 + 0.7 * sun) * G.clamp(1 - (w.rain || 0) * 1.4, 0, 1);
+  };
   // what a people can make and has (kept for the day): a loom standing in one of its towns — or cloth in its stores, come by
   // trade —, a house of silk or silk in its stores, the bronze and the iron it has learnt
   const arts = new Map(); const ARTS0 = Object.freeze({ weave: true, silk: false, metal: 1 });

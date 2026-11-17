@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1565,5 +1565,70 @@ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((
   for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if ((/\.partner\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.partner\b|\[['"]partner['"]\]\s*=(?!=)/.test(c)) && !ok(PAIR_OK, f, l)) fails.push(`o casal tem uma porta: ${f}:${k + 1} escreve o par fora do G.Vg.pair / unpair (D-565): ${l.trim().slice(0, 110)}`); }); }
 // === 22c: a vida que se vê ===
+// 213. "o leitor da vida só lê" (D-590): o js/vida3d.js lê o mundo para o animador e não escreve nada nele — nem numa pessoa, nem
+// na tarefa dela, nem no G.S —, não dá tarefa nem ato, não tira de acaso nenhum (nem o do mundo, nem o do que só se vê: a variedade
+// é do G.hash do id) e não lê o relógio da máquina; só escreve na memória da vista (s, r) e nos números do quadro (I, L, out)
+{ const vr = src['vida3d.js'] || []; if (!vr.length) fails.push('o leitor da vida só lê: falta o js/vida3d.js (D-590)');
+  vr.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now|\bsetTask\(|\.give\(|\bG\.(Depot|Act)\.\w+\(/.test(c)) fails.push(`o leitor da vida só lê: vida3d.js:${k + 1} tira de um acaso, dá uma tarefa ou mexe no livro (D-590): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o|t|w|m|S|vill|person|task)\.[\w.]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bG\.S\.[\w.]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+(v|o|t|S)\./.test(c)) fails.push(`o leitor da vida só lê: vida3d.js:${k + 1} escreve no mundo (D-590): ${l.trim().slice(0, 110)}`); }); }
+// 214. "toda tarefa tem pose, ou diz que a pose é a do movimento" (D-592): toda tarefa que o mundo dá (setTask / give com o tipo
+// escrito) está no TASK_OF do js/vida3d.js — com o estado do desenho que ela mostra quando o ato não diz nada, uma função que o dá,
+// ou MOVE, dito de propósito (como o silêncio do som, still('…')): a pose é a do movimento e a do ato que o afazer dá; e todo estado
+// que o TASK_OF nomeia existe (uma postura do anim-pessoas.js ou um clipe registrado)
+{ const vr = (src['vida3d.js'] || []).join('\n'); const i0 = vr.indexOf('const TASK_OF = V3.TASK_OF = {'), i1 = vr.indexOf('\n  };', i0);
+  if (i0 < 0) fails.push('toda tarefa tem pose: o vida3d.js sem o TASK_OF (D-592)');
+  else { const body = vr.slice(i0, i1); const keys = new Set([...body.matchAll(/\b(\w+):\s*(MOVE|'[\w-]*'|\()/g)].map(m => m[1]));
+    const states = new Set(); for (const m of (src['anim-pessoas.js'] || []).join('\n').matchAll(/^    (\w+): \(/gm)) states.add(m[1]);
+    for (const f of files) if (/clips\.js$/.test(f)) for (const m of src[f].join('\n').matchAll(/(?:\bK|\badd|\bguard|\bblow|\bworld|\bcharge|\bc|\boc)\(\s*[`'](cb-[\w-]+|[\w-]+)[`']/g)) states.add(m[1]);
+    for (const f of files) if (/clips\.js$/.test(f)) for (const m of src[f].join('\n').matchAll(/push\(\[\s*'([\w-]+)'/g)) states.add(m[1]);
+    for (const m of body.matchAll(/'([\w-]+)'/g)) if (!states.has(m[1])) fails.push(`toda tarefa tem pose: o TASK_OF nomeia o estado «${m[1]}», que não é postura nem clipe (D-592)`);
+    const given = new Set(); for (const f of files) src[f].forEach(l => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/(?:setTask|\.give)\([^,()]+,\s*\{\s*type:\s*'(\w+)'/g)) given.add(m[1]); });
+    for (const t of given) if (!keys.has(t)) fails.push(`toda tarefa tem pose: a tarefa «${t}» que o mundo dá não está no TASK_OF do vida3d.js — dê o estado que ela mostra, ou MOVE (D-592)`); } }
+// 215. "o porte vem do leitor" (D-594, D-595): as causas do porte (os anos, o frio, o luto…) só o js/vida3d.js lê do mundo, e só o
+// laço do quadro do people3d.js o entrega ao animador (I.porte = G.Vida3D.read…); os js/anim-*.js leem o porte só do I.porte (nunca
+// da figura, da pessoa ou do mundo) e não o escrevem; e as pernas e o passo do porte vão pela passada (as opções do G.Gait.pose):
+// o anim-porte.js não soma nas juntas das pernas nem na bacia, que deslizam o pé de apoio
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(?<!Anim)\.porte\s*=(?!=)/.test(c) && !(f === 'vida3d.js' || (f === 'people3d.js' && /\bI\.porte = G\.Vida3D\.read\(/.test(c)))) fails.push(`o porte vem do leitor: ${f}:${k + 1} escreve um porte fora do vida3d.js (D-594): ${l.trim().slice(0, 110)}`);
+    if (/^anim-.*\.js$/.test(f) && /\b(L|v|w|o)\.porte\b/.test(c)) fails.push(`o porte vem do leitor: ${f}:${k + 1} lê o porte de outro lugar que não o I.porte (D-594): ${l.trim().slice(0, 110)}`); });
+  if (!(src['people3d.js'] || []).some(l => /\bI\.porte = G\.Vida3D\.read\(s, v, vt\b/.test(l))) fails.push('o porte vem do leitor: o laço do quadro do people3d.js não entrega o porte do leitor ao animador (I.porte = G.Vida3D.read, D-594)');
+  (src['anim-porte.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(add|both)\(\s*'(hipL|hipR|knL|knR|anL|anR|adL|adR|hyL|hyR|crouch|bob|pelY|pelR|pelP|shift|sway)'/.test(c)) fails.push(`o porte vem do leitor: anim-porte.js:${k + 1} soma o porte nas pernas ou na bacia — o passo vai pela passada, G.Gait (D-595): ${l.trim().slice(0, 110)}`); }); }
+// 216. "só o anim-rosto escreve o rosto, e só com os canais do G.Rosto" (D-543, D-601): o rosto vivo de uma pessoa (pose.face, um
+// Float32Array na ordem do G.Rosto.CH) só o js/anim-rosto.js escreve; ele escreve cada canal pelo nome (o índice X.nome do G.Rosto.IDX)
+// e todo nome que usa é um canal da lista do js/rosto.js — um canal fora da lista não existe (regra 196)
+{ const CHN = new Set([...((src['rosto.js'] || []).join('\n').matchAll(/\['(\w+)', -?[\d.]+, -?[\d.]+, -?[\d.]+\]/g))].map(m => m[1]));
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (f !== 'anim-rosto.js' && /\b\w+\.face\s*\[[^\]]+\]\s*(=(?!=)|\+=|-=)|\bpose\.face\s*=(?!=)/.test(c) && !/\bpose\.face = null\b/.test(c)) fails.push(`só o anim-rosto escreve o rosto: ${f}:${k + 1} escreve um canal do rosto fora do anim-rosto.js (D-601): ${l.trim().slice(0, 110)}`); });
+  (src['anim-rosto.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/\bX\.(\w+)/g)) if (!CHN.has(m[1])) fails.push(`só o anim-rosto escreve o rosto: anim-rosto.js:${k + 1} usa o canal «${m[1]}», que o js/rosto.js não tem (D-543): ${l.trim().slice(0, 110)}`); });
+  if (CHN.size < 15) fails.push(`só o anim-rosto escreve o rosto: o js/rosto.js com só ${CHN.size} canais lidos (D-543)`); }
+// 217. "a coisa do gesto é do inventário" (D-548): nenhum clipe da vida que se vê (vida-clips.js, social-clips.js) diz que coisa
+// segura — o clipe pede a mão (item: { hand }), e a coisa é a que o G.Inv.held dá, ou nenhuma: sem ela, o gesto é de mãos vazias —, e o
+// leitor (vida3d.js) nunca põe uma coisa na mão nem no corpo de alguém (a figura: L.held, L.inv, L.torch, L.carry)
+{ for (const f of ['vida-clips.js', 'social-clips.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bitem\s*:\s*\{[^}]*\b(key|kind|form|tipo|coisa|mesh)\s*:/.test(c)) fails.push(`a coisa do gesto é do inventário: ${f}:${k + 1} um gesto da vida diz que coisa segura — a coisa é a do G.Inv.held (D-548): ${l.trim().slice(0, 110)}`); });
+  (src['vida3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bL\.(held|inv|torch|lantern|carry|cuir)\s*=(?!=)/.test(c)) fails.push(`a coisa do gesto é do inventário: vida3d.js:${k + 1} o leitor põe uma coisa na figura (D-548): ${l.trim().slice(0, 110)}`); }); }
+// 218. "a micro-ação é uma conta" (D-599): o agendador do ócio (js/anim-ocio.js) escolhe a coisa de cada momento pelo id da pessoa
+// e pelo relógio do mundo (I.clock) — nenhum acaso, nem o do que só se vê, nenhum relógio da máquina; e o animador o pergunta com o
+// relógio do mundo
+{ const oc = src['anim-ocio.js'] || []; if (!oc.length) fails.push('a micro-ação é uma conta: falta o js/anim-ocio.js (D-599)');
+  oc.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now|\bG\.S\b/.test(c)) fails.push(`a micro-ação é uma conta: anim-ocio.js:${k + 1} tira de um acaso, lê o relógio da máquina ou o mundo (D-599): ${l.trim().slice(0, 110)}`); });
+  if (!(src['anim-body.js'] || []).some(l => /Anim\.ocioAt\(I\.id \|\| 0, I\.clock \|\| 0, I\.ctx/.test(l))) fails.push('a micro-ação é uma conta: o animador não pergunta ao agendador pelo id e pelo relógio do mundo (Anim.ocioAt(I.id, I.clock, I.ctx), D-599)'); }
+// 219. "todo ato do vocabulário tem pose" (D-544, D-603): todo ato do js/soc-atos.js tem a sua pose no desenho — um clipe que o mostra
+// (os acts ou os takes de um clipe, o CLIP_OF do anim-clips.js), uma postura da tabela velha (o ACT do anim-pessoas.js), ou no mínimo
+// a pose da família dele (o clipe fam-<família> do social-clips.js, que o leitor dá ao ato sem gesto próprio) —; e toda família tem a sua
+{ const voc = (src['soc-atos.js'] || []).join('\n'); const d0 = voc.indexOf('const DEF = {'), d1 = voc.indexOf('\n  };', d0);
+  const acts = d0 < 0 ? [] : [...voc.slice(d0, d1).matchAll(/\b([a-z]\w*):\s*\['(\w+)'/g)].map(m => [m[1], m[2]]);
+  const famL = ((voc.match(/const FAM = Object\.freeze\(\[([^\]]*)\]\)/) || [])[1] || '').match(/'(\w+)'/g) || []; const fams = famL.map(x => x.slice(1, -1));
+  const shown = new Set(); for (const f of files) if (/clips\.js$/.test(f)) { const t = src[f].join('\n'); for (const m of t.matchAll(/\b(?:acts|takes):\s*\[([^\]]*)\]/g)) for (const a of m[1].matchAll(/'(\w+)'/g)) shown.add(a[1]); }
+  { const co = (src['anim-clips.js'] || []).join('\n'), i = co.indexOf('const CLIP_OF = Anim.CLIP_OF = {'), j = co.indexOf('};', i); if (i >= 0) for (const m of co.slice(i, j).matchAll(/\b(\w+): '/g)) shown.add(m[1]); }
+  { const ap = (src['anim-pessoas.js'] || []).join('\n'), i = ap.indexOf('const ACT = Anim.ACT = {'), j = ap.indexOf('\n  };', i); if (i >= 0) for (const m of ap.slice(i, j).matchAll(/\b(\w+): '/g)) shown.add(m[1]); }
+  const famClip = new Set([...(src['social-clips.js'] || []).join('\n').matchAll(/\bc\('fam-(\w+)'/g)].map(m => m[1]));
+  if (!acts.length) fails.push('todo ato do vocabulário tem pose: nenhum ato lido do js/soc-atos.js (D-603)');
+  for (const f of fams) if (!famClip.has(f)) fails.push(`todo ato do vocabulário tem pose: a família «${f}» sem o seu clipe fam-${f} no social-clips.js (D-603)`);
+  for (const [a, f] of acts) if (!shown.has(a) && !famClip.has(f)) fails.push(`todo ato do vocabulário tem pose: o ato «${a}» (família ${f}) sem clipe, sem postura e sem a pose da família (D-603)`);
+  if (!(src['vida3d.js'] || []).some(l => /'fam-' \+ sa\.fam/.test(l))) fails.push('todo ato do vocabulário tem pose: o leitor não dá a pose da família ao ato sem gesto próprio (D-603)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

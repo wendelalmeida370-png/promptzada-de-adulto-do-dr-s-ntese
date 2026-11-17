@@ -25,8 +25,8 @@
   const LINEAR = new Set(['bob', 'crouch', 'shift', 'breath', 'grip', 'gripL', 'talk', 'holdW', 'lie', 'prone', 'tool', 'cloth', 'clothS', 'offW', 'reachW']);
   // the masks: which joints a clip moves (the others are the base's)
   const ARM_L = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL'], ARM_R = ['shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist'];
-  const HEAD = ['neck', 'lookY', 'talk', 'gazeX', 'gazeY'];
-  const TRUNK = ['lean', 'twist', 'sway', 'breath'];
+  const HEAD = ['neck', 'lookY', 'talk', 'gazeX', 'gazeY', 'headR'];
+  const TRUNK = ['lean', 'twist', 'sway', 'breath', 'tilt'];
   const LEGS = ['bob', 'crouch', 'shift', 'pelY', 'pelR', 'pelP', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'adL', 'adR', 'hyL', 'hyR', 'lie', 'prone'];
   const MASK = Anim.MASK = {
     armR: new Set(ARM_R), armL: new Set(ARM_L), arms: new Set([...ARM_L, ...ARM_R]), head: new Set(HEAD),
@@ -235,10 +235,11 @@
       shRp: [[0, -40], [0.12, -150], [0.85, -150], [1, -40]], shRr: [[0, -20], [0.12, -38], [0.3, -20], [0.45, -40], [0.6, -20], [0.75, -40], [0.85, -30], [1, -20]],
       elR: [[0, 30], [0.12, 40], [0.3, 25], [0.45, 50], [0.6, 25], [0.75, 50], [0.85, 35], [1, 30]], grip: [[0, 0.1], [1, 0.1]], neck: [[0, 0], [0.2, -6], [0.8, -6], [1, 0]],
     } });
-  // (the prayer: down on both knees, the hands raised before the face, the head bowed and lifted)
+  // (the prayer: down on both knees, the feet stretched back on their insteps — they dug the toes into the ground before, T-1615 —,
+  // the hands raised before the face, the head bowed and lifted)
   K('pray', { dur: 6, base: 'idle', feet: 'free', in: 0.5, out: 0.5, events: { contact: 0.5 },
     keys: {
-      crouch: [[0, 0.45], [1, 0.45]], hipL: [[0, -6], [1, -6]], hipR: [[0, -6], [1, -6]], knL: [[0, 95], [1, 95]], knR: [[0, 95], [1, 95]], anL: [[0, -55], [1, -55]], anR: [[0, -55], [1, -55]],
+      crouch: [[0, 0.45], [1, 0.45]], hipL: [[0, -6], [1, -6]], hipR: [[0, -6], [1, -6]], knL: [[0, 95], [1, 95]], knR: [[0, 95], [1, 95]], anL: [[0, 70], [1, 70]], anR: [[0, 70], [1, 70]],
       shLp: [[0, -100], [0.4, -125], [0.6, -125], [1, -100]], shRp: [[0, -100], [0.4, -125], [0.6, -125], [1, -100]], shLr: [[0, -10], [1, -10]], shRr: [[0, 10], [1, 10]],
       elL: [[0, 100], [0.4, 70], [0.6, 70], [1, 100]], elR: [[0, 100], [0.4, 70], [0.6, 70], [1, 100]], lean: [[0, 12], [0.4, -4], [0.6, -4], [1, 12]], neck: [[0, 30], [0.4, -12], [0.6, -12], [1, 30]],
       grip: [[0, 0.1], [1, 0.1]], gripL: [[0, 0.1], [1, 0.1]],
@@ -277,8 +278,7 @@
   const STATES = Anim.STATES || (Anim.STATES = []);
   Anim.addStates = () => { for (const id in CLIPS) if (!STATES.includes(id)) STATES.push(id); };
   Anim.addStates();
-  const basePose = Anim.pose;
-  if (basePose) Anim.pose = (st, t, sp) => { const c = CLIPS[st]; if (!c) return basePose(st, t, sp); const out = Object.assign(Anim.POSE0(), basePose(c.base, t, sp)); Anim.playClip(out, c, (t || 0) / c.dur, 1); out.stL = out.stR = 1; return out; };
+  // (a clip's pose by its name — its base with the clip at the time t — is the postures' Anim.pose: js/anim-pessoas.js)
   // (the clips of other files — the next wave's — queued where they load before this one: G.ANIM_CLIPS.push([id, def]))
   const Q = G.ANIM_CLIPS || []; G.ANIM_CLIPS = { push: e => { const c = Anim.clip(e[0], e[1]); Anim.addStates(); return c; } }; for (const e of Q) Anim.clip(e[0], e[1]); Anim.addStates();
 })(window.G);

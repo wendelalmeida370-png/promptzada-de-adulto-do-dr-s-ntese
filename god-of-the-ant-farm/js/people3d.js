@@ -17,7 +17,7 @@
 (function (G) {
   const W = G.W;
   const P3 = G.People3D = { count: 0, beasts: 0 };
-  const Anim = G.Anim3D = {};
+  const Anim = G.Anim3D = G.Anim3D || {};
   let THREE = null, R3 = null, scene = null;
   const TAU = Math.PI * 2;
   const MAX = 96, MAXA = 64, MAXC = 320; // (full bodies, beasts, and the simple figures of the crowd further off)
@@ -528,7 +528,7 @@
       // brows' inner ends raised and the lids drooping; fear and awe open the eyes wide and the mouth; anger draws the brows
       // down and in and glares; a question lifts the brows; sickness and sleep half close the eyes; a calm face a little warm;
       // and the drink shows on a face with no other feeling on it: flushed, the lids heavy, a loose smile)
-      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = MOOD[grief ? 'sad' : e] || (L.drunk > 0 ? MOOD.drunk : MOOD.calm);
+      const e = v.emo && v.emo.k; const grief = v.mourn > 0 || e === 'sad'; L.mood = Anim.MOOD[grief ? 'sad' : e] || (L.drunk > 0 ? Anim.MOOD.drunk : Anim.MOOD.calm);
     }
     return L;
   }
@@ -551,18 +551,6 @@
     e = inf && bind ? bind[1] + Math.max(inf.lo[1], -0.06) : 0; CUIR.set(key, e); return e;
   }
   P3.cuirOf = cuirOf;
-
-  // (the faces of the feelings: smile (−1 frown .. 1), brows up, anger, grief, eyes wide, eyes smiling, the jaw open, blush)
-  const MOOD = {
-    calm: { smile: 0.12 }, chat: { smile: 0.3 }, food: { smile: 0.3 }, fish: { smile: 0.35 }, wood: { smile: 0.2 }, star: { smile: 0.7, wide: 0.35, up: 0.3 },
-    happy: { smile: 0.9, squint: 0.55, jaw: 0.25 }, joy: { smile: 1, squint: 0.6, jaw: 0.4 }, heart: { smile: 0.65, squint: 0.35, blush: 0.4 },
-    sad: { smile: -0.6, up: 0.15, sad: 1 }, angry: { smile: -0.45, angry: 1, squint: 0.3, jaw: 0.08 }, fear: { smile: -0.3, up: 1, wide: 1, jaw: 0.45 }, fire: { smile: -0.3, up: 1, wide: 1, jaw: 0.4 },
-    awe: { smile: 0.1, up: 0.9, wide: 0.6, jaw: 0.35 }, question: { up: 0.65, smile: -0.05 }, sick: { smile: -0.35, sad: 0.6, squint: 0.45 }, zzz: { squint: 0.75 }, pray: { squint: 0.8, smile: 0.1 },
-    drunk: { smile: 0.45, squint: 0.55, blush: 0.7, jaw: 0.1 },
-  };
-  const FACE = ['smile', 'up', 'angry', 'sad', 'wide', 'squint', 'jaw', 'blush'];
-  // (a face moves from one feeling to the next in a third of a second or so, never at once — the view's own memory)
-  function easeMood(s, md, dt) { const m = s.mood || (s.mood = {}); const k = 1 - Math.exp(-6 * (dt || 0)); for (const f of FACE) { const w = md[f] || 0; m[f] = m[f] === undefined ? w : m[f] + (w - m[f]) * k; } return m; }
 
   // ------------------------------ clothes ------------------------------
   // What a person wears, from who they are: their people (the north's tunic and wrapped legs, the apron-dress with its
@@ -774,7 +762,9 @@
   const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0,
     // (20a: the hips' yaw and adduction, each foot's share of its swing — −1 standing —, the left hand's grip and wrist, the other
     // hand on a thing of two hands, the shoulders' yaw)
-    adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0 });
+    adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0,
+    // (22c: the chest's own roll — the trunk over a limping leg —, the head's tilt)
+    tilt: 0, headR: 0 });
   Anim.POSE0 = POSE0;
   // (the dead lie as they fell: on the back or face down, the limbs thrown out)
   const DEAD = [
@@ -782,182 +772,13 @@
     Object.assign(POSE0(), { lie: 1, prone: 1, hipL: -0.2, hipR: 0.3, knL: 0.9, knR: 0.2, shLp: -2.6, shRp: -0.4, shLr: 0.3, shRr: -1.0, elL: 0.6, elR: 0.9, neck: -0.4 }),
     Object.assign(POSE0(), { lie: 1, hipL: -0.6, hipR: -0.1, knL: 1.2, knR: 0.1, shLp: 0.3, shRp: -1.2, shLr: 1.2, shRr: -0.3, elL: 1.4, elR: 0.3, neck: 0.5 }),
   ];
-  // every state: a function of its own clock and of the speed (m/s) → the pose it wants
-  const ST = {
-    // (standing: breathing, the weight shifting from one leg to the other now and then, a look round)
-    // (standing: breathing in the chest, the weight passed from one leg to the other now and then — the hip dropping on the
-    // free side, its knee easing — the arms hanging and swaying a little, a look round)
-    idle: (t) => { const ws = Math.sin(t * 0.21), w = G.smooth(0.15, 0.55, Math.abs(ws)) * Math.sign(ws), br = Math.sin(t * 1.7);
-      return { bob: br * 0.006 - Math.abs(w) * 0.012, breath: br, shLp: 0.04 + br * 0.015, shRp: 0.04 - br * 0.01, shLr: 0.09 + br * 0.01, shRr: -0.09 - br * 0.01, elL: 0.18, elR: 0.2, neck: Math.sin(t * 0.4) * 0.05, sway: w * 0.05, shift: w * 0.03, twist: Math.sin(t * 0.13) * 0.14, knL: 0.05 + Math.max(0, -w) * 0.22, knR: 0.05 + Math.max(0, w) * 0.22, hipL: Math.max(0, -w) * -0.08, hipR: Math.max(0, w) * -0.08, anL: Math.max(0, -w) * 0.1, anR: Math.max(0, w) * 0.1, pelR: -w * 0.04 }; },
-    // (a walk: the pelvis lowest when the legs are apart and highest over the standing leg, turning with the leg that
-    // swings and dropping a little on its side; the shoulders turning the other way, the head kept still; the knee bent
-    // in the swing and giving at the heel's strike; the heel striking with the toes up, the toes pushing off at the end;
-    // the arms swinging against the legs, a beat behind, the elbow bending as it comes forward)
-    walk: (t, sp) => gaitPose(t, sp, false),
-    // (a run: a flight between the steps — highest in the air, lowest over the bent standing leg — the heel kicked up
-    // behind, the trunk leaning in, the elbows bent and pumping)
-    run: (t, sp) => gaitPose(t, sp, true),
-    sneak: (t, sp) => { const ph = t, A = 0.35; return { crouch: 0.2, lean: 0.45, hipL: Math.sin(ph) * A - 0.3, hipR: -Math.sin(ph) * A - 0.3, knL: 0.7 + Math.max(0, -Math.cos(ph)) * 0.5, knR: 0.7 + Math.max(0, Math.cos(ph)) * 0.5, shLp: -0.5, shRp: -0.4, elL: 0.9, elR: 0.9 }; },
-    jump: () => ({ hipL: -0.9, hipR: -0.3, knL: 1.4, knR: 0.6, shLp: -2.4, shRp: -2.2, shLr: 0.3, shRr: -0.3, elL: 0.3, elR: 0.3, lean: -0.05 }),
-    fall: (t) => ({ hipL: -0.25, hipR: 0.15, knL: 0.5, knR: 0.35, shLp: -0.4, shRp: -0.4, shLr: 1.1 + Math.sin(t * 9) * 0.1, shRr: -1.1 - Math.sin(t * 9) * 0.1, elL: 0.4, elR: 0.4, neck: -0.15 }),
-    land: () => ({ crouch: 0.28, lean: 0.35, hipL: -0.8, hipR: -0.8, knL: 1.5, knR: 1.5, shLp: -0.6, shRp: -0.6, elL: 0.6, elR: 0.6 }),
-    // (a swing: the tool raised over the head, the wrist cocked back; brought down, the wrist turning it forward to strike)
-    swing: (t) => { const k = (Math.sin(t * 5.5) + 1) / 2; return { shRp: -2.7 + k * 2.2, shLp: -2.4 + k * 2, elR: 0.3, elL: 0.4, lean: k * 0.35, hipL: -0.15, hipR: 0.2, knL: 0.2, knR: 0.1, tool: 1, wrist: -0.5 + 2.0 * Math.pow(k, 1.5), grip: 1 }; },
-    low: (t) => ({ crouch: 0.32, lean: 0.95, hipL: -1.0, hipR: -0.8, knL: 1.3, knR: 1.1, shLp: -1.0 + Math.sin(t * 3) * 0.25, shRp: -1.1 - Math.sin(t * 3) * 0.25, elL: 0.3, elR: 0.3, neck: 0.3 }),
-    carry: (t) => ({ ...ST.idle(t), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
-    carryWalk: (t, sp) => ({ ...ST.walk(t, sp), shLp: -0.95, shRp: -0.95, shLr: 0.25, shRr: -0.25, elL: 0.95, elR: 0.95 }),
-    pray: (t) => ({ crouch: 0.45, hipL: -0.1, hipR: -0.1, knL: 1.65, knR: 1.65, shLp: -2.6 + Math.sin(t * 1.2) * 0.15, shRp: -2.6 + Math.sin(t * 1.2) * 0.15, shLr: 0.3, shRr: -0.3, elL: 0.2, elR: 0.2, neck: -0.3, lean: -0.05 }),
-    sit: (t) => ({ crouch: 0.46, hipL: -1.5, hipR: -1.5, knL: 1.5, knR: 1.5, shLp: -0.5, shRp: -0.5 + Math.sin(t * 2) * 0.1, elL: 0.8, elR: 0.9, lean: 0.1 }),
-    // (at the table: seated, the right hand from the bowl to the mouth and back, a pause between mouthfuls)
-    eat: (t) => { const k = Math.pow(Math.max(0, Math.sin(t * 1.6)), 2); return { ...ST.sit(t), shRp: -0.55 - k * 0.7, shRr: -0.15, elR: 1.0 + k * 1.1, shLp: -0.45, elL: 0.95, neck: 0.12 - k * 0.1, lean: 0.18 }; },
-    // (at the fire: down on the heels, leaning in, the right hand stirring the pot round, the left on the knee)
-    cook: (t) => ({ crouch: 0.5, lean: 0.55, hipL: -1.35, hipR: -1.25, knL: 1.85, knR: 1.75, shRp: -1.05 + Math.sin(t * 2.2) * 0.18, shRr: -0.2 + Math.cos(t * 2.2) * 0.15, elR: 0.7, shLp: -0.6, shLr: 0.2, elL: 1.1, neck: 0.35 }),
-    // (rocking a child: seated, the arms cradling it before the chest, the trunk swaying slowly from side to side)
-    rock: (t) => ({ ...ST.sit(t), shLp: -0.75, shRp: -0.75, shLr: -0.35, shRr: 0.35, elL: 1.5, elR: 1.5, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }),
-    // (sick in bed, awake: lying, a hand on the chest, the head turning a little now and then)
-    sick: (t) => ({ ...ST.sleep(t), shRp: -0.9, shRr: -0.2, elR: 1.9, neck: Math.sin(t * 0.4) * 0.12 }),
-    // (the same sitting on the ground, where there is no seat: eating with the bowl in the lap, rocking the child)
-    eatg: (t) => { const k = Math.pow(Math.max(0, Math.sin(t * 1.6)), 2); return { ...ST.rest(t), shRp: -0.45 - k * 0.75, shRr: -0.15, elR: 1.1 + k * 1.05, shLp: -0.5, elL: 1.2, neck: 0.18 - k * 0.12 }; },
-    rockg: (t) => ({ ...ST.rest(t), shLp: -1.25, shRp: -1.25, shLr: -0.25, shRr: 0.25, elL: 1.85, elR: 1.85, twist: Math.sin(t * 1.3) * 0.1, neck: 0.3 }), // (the child at the chest, over the knees)
-    talk: (t) => ({ ...ST.idle(t), shRp: -0.5 - Math.max(0, Math.sin(t * 2.6)) * 0.6, shRr: -0.25, elR: 0.9 + Math.sin(t * 3.3) * 0.3, twist: Math.sin(t * 1.1) * 0.08, neck: Math.sin(t * 2.2) * 0.08, talk: Math.max(0, Math.sin(t * 9.0) * Math.sin(t * 2.3 + 1)) * 0.8 }),
-    dance: (t) => ({ bob: Math.abs(Math.sin(t * 4)) * 0.09, twist: Math.sin(t * 2) * 0.35, shLp: -2.4 + Math.sin(t * 4) * 0.5, shRp: -2.4 - Math.sin(t * 4) * 0.5, shLr: 0.5, shRr: -0.5, elL: 0.6, elR: 0.6, hipL: Math.sin(t * 4) * 0.3, hipR: -Math.sin(t * 4) * 0.3, knL: 0.3, knR: 0.3 }),
-    mourn: (t) => ({ neck: 0.65, lean: 0.25, shLp: -0.6, shRp: -0.6, shLr: 0.35, shRr: -0.35, elL: 1.7, elR: 1.7, bob: Math.sin(t * 5) * 0.006 }),
-    hug: () => ({ shLp: -1.35, shRp: -1.35, shLr: -0.5, shRr: 0.5, elL: 1.0, elR: 1.0, lean: 0.12 }),
-    sleep: () => ({ lie: 1, hipL: 0.1, hipR: -0.05, knL: 0.25, knR: 0.1, shLp: 0.2, shRp: -0.1, elL: 0.6, elR: 0.3 }),
-    // (in the water: a stroke with the head out — the arms reaching and pulling in turn, the body rolling with them, the
-    // legs kicking twice to a stroke; treading water upright, the hands sculling and the legs pedalling; out of breath,
-    // the arms beating at the water and the head thrown back)
-    swim: (t) => { const a = Math.sin(t), c = Math.cos(t), kk = Math.sin(t * 2); return { lie: 0.8, prone: 1, neck: -0.6, twist: a * 0.2, shLp: -Math.PI + a * 1.45, shRp: -Math.PI - a * 1.45, shLr: 0.3 + Math.max(0, c) * 0.35, shRr: -0.3 - Math.max(0, -c) * 0.35, elL: 0.3 + Math.max(0, -a) * 0.9, elR: 0.3 + Math.max(0, a) * 0.9, hipL: kk * 0.3, hipR: -kk * 0.3, knL: 0.2 + Math.max(0, kk) * 0.35, knR: 0.2 + Math.max(0, -kk) * 0.35 }; },
-    tread: (t) => { const a = Math.sin(t * 2), p = Math.sin(t * 1.6), q = Math.cos(t * 1.6); return { bob: a * 0.025, neck: -0.12, shLp: -0.4, shRp: -0.4, shLr: 0.95 + a * 0.35, shRr: -0.95 - a * 0.35, elL: 0.6 + Math.sin(t * 2 + 1) * 0.3, elR: 0.6 + Math.sin(t * 2 + 1) * 0.3, hipL: -0.55 + p * 0.45, hipR: -0.55 - p * 0.45, knL: 0.9 + q * 0.5, knR: 0.9 - q * 0.5, lean: 0.1 }; },
-    drown: (t) => ({ lie: 0.12, neck: -0.7, lean: -0.15, shLp: -2.7 + Math.sin(t * 1.7) * 0.7, shRp: -2.5 - Math.sin(t * 2.1) * 0.8, shLr: 0.55 + Math.sin(t * 2.6) * 0.3, shRr: -0.55 - Math.sin(t * 2.3) * 0.3, elL: 0.5 + Math.abs(Math.sin(t * 1.3)) * 0.8, elR: 0.5 + Math.abs(Math.cos(t * 1.5)) * 0.8, hipL: -0.6 + Math.sin(t * 2.4) * 0.5, hipR: -0.6 - Math.sin(t * 2.4) * 0.5, knL: 1.0, knR: 0.8 }),
-    throw: (t) => { const k = (t * 1.6) % 1; return { shRp: -2.8 + k * 3, elR: 0.4, shLp: -0.6, lean: k * 0.3 - 0.1, twist: -0.4 + k * 0.6 }; },
-    bound: () => ({ shLp: 0.55, shRp: 0.55, shLr: -0.35, shRr: 0.35, elL: 1.2, elR: 1.2, neck: 0.25 }),
-    interact: (t) => ({ ...ST.idle(t), shRp: -1.35, shRr: -0.1, elR: 0.25, lean: 0.12 }),
-    // (playing the lute — the tavern's song, G.Act.ANIM.tocar, as the god's view draws it: the left hand up the neck, the right
-    // strumming at the belly, the head bent to the strings; it danced before — L-432)
-    strum: (t) => ({ ...ST.idle(t), shLp: -0.9, shLr: 0.1, elL: 1.3, shRp: -0.5, shRr: -0.15, elR: 1.35 + Math.sin(t * 9) * 0.15, neck: 0.15, lean: 0.04 }),
-    fight: (t) => ({ ...ST.swing(t), crouch: 0.08, hipL: -0.35, hipR: 0.35, knL: 0.45, knR: 0.25, tool: 1 }),
-    // (turning on the spot: small steps in place, the body leading)
-    turn: (t) => ({ hipL: Math.sin(t) * 0.2, hipR: -Math.sin(t) * 0.2, knL: Math.max(0, -Math.cos(t)) * 0.4 + 0.08, knR: Math.max(0, Math.cos(t)) * 0.4 + 0.08, shLp: 0.05, shRp: 0.05, shLr: 0.08, shRr: -0.08, elL: 0.22, elR: 0.22, twist: 0.14 }),
-    // (sitting on the ground, the knees up and the arms round them; climbing a ledge: the hands up to the edge, then
-    // pushing down on it as the knee comes over — its clock is how far up it is, 0 to 1; a wave of the hand)
-    rest: (t) => ({ crouch: 0.82, hipL: -1.45, hipR: -1.35, knL: 1.95, knR: 1.85, shLp: -0.75, shRp: -0.7, shLr: 0.15, shRr: -0.15, elL: 1.05, elR: 1.0, lean: 0.12 + Math.sin(t * 1.3) * 0.015, neck: Math.sin(t * 0.37) * 0.08 }),
-    climb: (u) => { const a = G.clamp(u * 1.8, 0, 1), k = G.clamp((u - 0.4) * 1.8, 0, 1); return { shLp: -2.85 + k * 2.3, shRp: -2.85 + k * 2.3, shLr: 0.22, shRr: -0.22, elL: 0.35 + a * 0.5 - k * 0.5, elR: 0.35 + a * 0.5 - k * 0.5, hipL: -1.3 * a + k * 1.0, hipR: -0.35 * a + k * 0.25, knL: 1.7 * a - k * 1.4, knR: 0.6 * a - k * 0.4, lean: 0.3 + a * 0.15 - k * 0.2, crouch: 0.12 * a * (1 - k) }; },
-    wave: (t) => ({ ...ST.idle(t), shRp: -2.55, shRr: -0.55 + Math.sin(t * 9) * 0.3, elR: 0.5 + Math.sin(t * 9) * 0.25, neck: -0.05 }),
-    // (wading through a ford: arms out for balance, the steps high)
-    wade: (t, sp) => ({ ...ST.walk(t, sp), shLr: 0.5, shRr: -0.5, elL: 0.55, elR: 0.55, lean: 0.12, knL: Math.max(0, -Math.cos(t)) * 0.9 + 0.15, knR: Math.max(0, Math.cos(t)) * 0.9 + 0.15 }),
-    // (thrown down by a blow, D-333: on the back, the head up off the ground, the arms before the face, the legs drawn up and
-    // kicking at what is over it; getting up: up on one knee, a hand pushing off the ground; and the last fall — the knees give)
-    knocked: (t) => { const k = Math.sin(t * 5.2), q = Math.sin(t * 3.1 + 1); return { lie: 1, neck: 0.5 + q * 0.06, hipL: -1.0 + k * 0.25, hipR: -0.55 - k * 0.2, knL: 1.35 - k * 0.3, knR: 0.95 + k * 0.25, shLp: -2.15 + q * 0.12, shRp: -1.95 - q * 0.1, shLr: 0.45, shRr: -0.45, elL: 1.6, elR: 1.5, twist: q * 0.08 }; },
-    rise: () => ({ crouch: 0.55, lean: 0.55, hipL: -1.45, hipR: 0.15, knL: 1.65, knR: 1.85, shLp: -0.7, shRp: 0.25, shLr: 0.15, shRr: -0.3, elL: 0.45, elR: 0.25, neck: 0.25 }),
-    crumple: () => ({ crouch: 0.62, lean: 0.55, hipL: -0.95, hipR: -0.7, knL: 1.85, knR: 1.6, shLp: -0.35, shRp: -0.15, shLr: 0.3, shRr: -0.25, elL: 0.7, elR: 0.5, neck: 0.55 }),
-  };
   Anim.DEAD = DEAD; // (the ways the dead lie: the body's own fall ends in one of them, as its corpse will lie — D-334)
   // The stride — the walk, the jog, the run — is G.Gait's (js/anim-gait.js, D-340): the cadence and the stride of real people at
   // each speed (no cap), the legs' curves scaled until the foot on the ground keeps still under the body, the hips as high as the
   // standing leg lets them be — computed from the phase every frame, never filtered (the body's animator, anim-body.js, plays it
   // phase-matched between the walk and the run). A state's clock t is the phase in radians (one stride: 2π)
   function gaitPose(t, sp, run) { const out = POSE0(); return G.Gait ? G.Gait.pose(out, t / TAU, sp || 0, 1, run ? 1 : 0) : out; }
-  Anim.STATES = Object.keys(ST);
-  // what someone of the world is doing, as an animation (their act, their move, their burden)
-  const ACT = {
-    chop: 'swing', mine: 'swing', hammer: 'swing', build: 'swing', forge: 'swing', dig: 'swing', stab: 'fight', beat: 'swing', fight: 'fight', brandish: 'fight', cut: 'swing', butcher: 'swing', skin: 'low', mend: 'low', craft: 'low', shear: 'low', drill: 'talk',
-    pick: 'low', gather: 'low', plant: 'low', harvest: 'low', rake: 'swing', fill: 'low', feed: 'low', milk: 'low', catch: 'low', salt: 'low', sweep: 'low', weave: 'sit', pottery: 'sit', fish: 'interact', reel: 'interact',
-    haul: 'carry', lift: 'carry', drag: 'carry', hold: 'carry', pray: 'pray', kneel: 'pray', swear: 'pray', beg: 'pray', weepk: 'pray',
-    sit: 'sit', sittalk: 'sit', story: 'sit', read: 'sit', write: 'sit', eat: 'eat', drink: 'talk', listen: 'talk', cook: 'cook', rock: 'rock',
-    talk: 'talk', chat: 'talk', call: 'talk', shout: 'talk', wave: 'talk', point: 'talk', question: 'talk', sell: 'talk', buy: 'talk', serve: 'talk',
-    dance: 'dance', joy: 'dance', play: 'strum', mourn: 'mourn', weep: 'mourn', sad: 'mourn', cower: 'mourn', sick: 'mourn',
-    hug: 'hug', embrace: 'hug', sleep: 'sleep', zzz: 'sleep', throw: 'throw', swim: 'swim', dive: 'swim', bound: 'bound', sneak: 'sneak', run: 'run', climb: 'interact', knock: 'interact', look: 'idle',
-    // (the gestures of the activities, G.Act.ANIM, as the body makes them — Interact.GEST —: paying and taking the coins, the
-    // hand out; haggling, talking; looking the goods over and counting the crates at the door, the hand to them; waiting,
-    // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210; the clothes off and on at the
-    // pegs of the baths, the hand to them — L-429)
-    pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry', undress: 'interact',
-  };
-  // (the acts that carry what the world has in someone else's hands: walking, a carrier's walk — the helper of a pair)
-  const CARRY_ACTS = new Set(['carry2']);
-  // the state an NPC is in: from the world, every frame
-  Anim.stateOf = function (v, sp) {
-    if (v.task && v.task.type === 'swim') return 'swim';
-    if (v.sleeping) return 'sleep';
-    if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' ? 'run' : 'walk'; }
-    if (v.downT && v.downT > G.S.clock) return 'sleep';
-    // (the act's own gesture, where there is a clip of it — the axe, the pick, the rod, the word, the prayer: anim-clips.js)
-    const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c;
-    const a = ACT[v.act]; if (a && a !== 'run') return a;
-    if (v.carry && v.carry.n > 0) return 'carry';
-    return 'idle';
-  };
-  // blending: every joint eases toward the wanted pose (a quick spring: no snapping, no lag you can see)
-  Anim.blend = function (pose, want, dt, rate) {
-    const k = 1 - Math.exp(-(rate || 12) * dt);
-    for (const j in want) { if (j === 'tool') { pose.tool = want.tool; continue; } pose[j] += (want[j] - pose[j]) * k; }
-    for (const j in pose) if (!(j in want) && j !== 'tool' && j !== 'lookY' && j !== 'blink') pose[j] += ((j === 'elL' || j === 'elR' ? 0.15 : j === 'knL' || j === 'knR' ? 0.05 : 0) - pose[j]) * k; // (the look and the blink have their own clocks)
-    if (!('tool' in want)) pose.tool = 0;
-  };
-  Anim.pose = (state, t, sp) => (ST[state] || ST.idle)(t, sp || 0);
-  // the drink in the body (k: how drunk, 0 to 1 — Atmos.drunk): standing or walking, the trunk leans from side to side and the
-  // hips go after it, the knee gives on the side one leans to, the head hangs and rolls, the arms come out for a balance that
-  // is always late, one bows forward and catches oneself. Only the pose: the feet stay where the world has them — the same
-  // weave the god's view gives its drunks (Court.sway). t: the view's own clock; id: each one on their own beat
-  const WEAVE = new Set(['idle', 'walk', 'carryWalk', 'carry', 'talk', 'turn', 'wave', 'interact']);
-  Anim.stagger = function (want, t, id, k, st) {
-    if (!(k > 0) || !WEAVE.has(st)) return want;
-    const a = Math.sin(t * 2.3 + id), b = Math.sin(t * 1.3 + id * 1.7), c = Math.sin(t * 0.7 + id * 0.3);
-    const add = (j, x) => { want[j] = (want[j] || 0) + x; };
-    add('sway', a * 0.2 * k); add('shift', a * 0.07 * k); add('pelR', -a * 0.06 * k);
-    add('lean', (0.07 + b * 0.09) * k); add('twist', c * 0.25 * k); add('neck', (0.18 + b * 0.12) * k);
-    add('shLr', (0.12 + a * 0.1) * k); add('shRr', (-0.12 + a * 0.1) * k); add('elL', 0.2 * k); add('elR', 0.2 * k);
-    add('knL', Math.max(0, a) * 0.18 * k); add('knR', Math.max(0, -a) * 0.18 * k);
-    return want;
-  };
-  // (the way a drunk faces as they walk: weaving a little to each side of the way they go — drawn, never walked)
-  Anim.weave = (t, id, k) => (k > 0 ? Math.sin(t * 0.9 + id * 0.7) * 0.24 * k : 0);
-  // the state of a place inside a building (Interiors.places: its st — a state of the 3D, or an act of the world's people, as
-  // the household's rule gives it): the state itself, else the act's, else standing
-  Anim.resolve = st => (st && (ST[st] || (Anim.CLIPS && Anim.CLIPS[st])) ? st : st && Anim.CLIP_OF && Anim.CLIPS && Anim.CLIPS[Anim.CLIP_OF[st]] ? Anim.CLIP_OF[st] : st && ACT[st] && ACT[st] !== 'run' ? ACT[st] : 'idle');
-  // the weight of what is held, in the body — by the load's weight against the body's strength, not by the good's name: under a
-  // load before the chest the trunk leans back over the hips and the knees give; carried low and heavy, more; under a load on
-  // the back the trunk bends forward and the strap pulls the head back; a bucket at the side tips the trunk away from it and
-  // stills that arm; a jar on the head keeps the head and the trunk upright; on the shoulder the trunk leans a little from it.
-  // The hand on the load reaches it in the rig (holdW: how much); the free hand goes on with the step. And to reach a point low
-  // before the feet — a crate on the ground, the shelf — the body bends at the knees and the hips as deep as the point is low
-  // (want: the pose the state wants, changed here before it is blended; t, sp: the state's clock and speed)
-  // (how deep a body goes for a point hy metres over its feet: the squat, the bow; a heavy thing is lifted with the legs, a light
-  // one with a bow — the same numbers for the pose and for the path of the thing held)
-  function reachDepth(H, L, hy, w) { const q = G.clamp((1.05 - hy) / 0.85, 0, 1) * G.smooth(0, 1, w); const hv = H ? G.clamp(H.kg / (28 * (L.str || 1)), 0, 1) : 0; return { q, sq: q * (0.75 + 0.25 * hv), bw: q * (1 - 0.35 * hv) }; }
-  Anim.reachDepth = reachDepth;
-  Anim.hold = function (want, L, st, t, sp) {
-    const walk = st === 'walk' || st === 'carryWalk' || st === 'run' || st === 'sneak' || st === 'wade';
-    // (a crate between two, at the hips: both hands of each on their end of it — the rig's — and the step a little heavier)
-    if (L.pair) { want.holdW = 1; if (walk) want.bob = (want.bob || 0) * 0.75; return want; }
-    const H = L.held, r = L.reach && L.reach.w > 0.001 ? L.reach : null; if (!H && !r) return want;
-    if (H && H.grip !== 'chao') {
-      const k = G.clamp(H.kg / (28 * (L.str || 1)), 0, 1.6), g = H.grip; want.holdW = 1;
-      // (the free arm: the step's own swing, not the 'carry' state's arms held out)
-      if (st === 'carry' || st === 'carryWalk') { const base = (st === 'carryWalk' ? ST.walk : ST.idle)(t, sp || 0); for (const q of H.hands.includes('L') ? [] : ['shLp', 'shLr', 'elL']) want[q] = base[q]; for (const q of H.hands.includes('R') ? [] : ['shRp', 'shRr', 'elR']) want[q] = base[q]; }
-      const add = (j, v) => { want[j] = (want[j] || 0) + v; };
-      if (g === 'peito' || g === 'abraco' || g === 'bracos') { add('lean', -0.06 - 0.11 * k); add('knL', 0.07 * k); add('knR', 0.07 * k); add('neck', -0.05); add('crouch', 0.015 * k); }
-      else if (g === 'baixo') { add('lean', -0.1 - 0.14 * k); add('knL', 0.14 * k); add('knR', 0.14 * k); add('crouch', 0.04 * k); }
-      else if (g === 'costas') { add('lean', 0.16 + 0.2 * k); add('neck', -0.12); add('knL', 0.1 * k); add('knR', 0.1 * k); }
-      else if (g === 'ombro') { add('sway', -0.05 * k); add('lean', 0.02 + 0.03 * k); add('knL', 0.04 * k); add('knR', 0.04 * k); }
-      else if (g === 'cabeca') { want.lean = (want.lean || 0) * 0.3; want.neck = 0; want.twist = (want.twist || 0) * 0.4; want.lookY = 0; }
-      else if (g === 'lado') { want.shRp = 0.04 + (walk ? Math.sin((t || 0)) * 0.03 : 0); want.shRr = -0.2 - 0.07 * k; want.elR = 0.1; add('sway', -0.1 * k); }
-      if (walk) want.bob = (want.bob || 0) * (1 - 0.32 * Math.min(1, k));
-    }
-    if (r) {
-      // (how low the point is under the hips of a standing body: a squat and a bow as deep as it needs)
-      const hy = r.Y - (L.ground !== undefined ? L.ground : r.Y - 1); const { q, sq, bw } = reachDepth(H, L, hy, r.w);
-      const add = (j, v) => { want[j] = (want[j] || 0) + v; };
-      add('crouch', 0.72 * sq); add('lean', 1.05 * bw + (want.lean < 0 ? -want.lean * q : 0)); add('hipL', -1.3 * sq); add('hipR', -1.2 * sq); add('knL', 1.85 * sq); add('knR', 1.7 * sq); add('neck', 0.3 * q);
-      want.bob = (want.bob || 0) * (1 - q);
-    }
-    return want;
-  };
-  // the gait's rate: radians of its phase per metre walked — the cadence of the speed (G.Gait) over the speed: the standing foot
-  // keeps still on the ground at any speed because the stride is what that speed and that cadence leave (sneak: its own)
-  const GAIT_OF = { walk: 0, carryWalk: 0, wade: 0, run: 1 };
-  Anim.rate = function (st, sp, s) { const w = GAIT_OF[st]; if (w === undefined || !G.Gait) return 2.6; const v = Math.max(0.3, sp || 0); return TAU * G.Gait.freq(v, s || 1, w) / v; };
+  Anim.gaitPose = gaitPose; // (the postures' walk and run — js/anim-pessoas.js —: the stride of the phase, rule 115)
 
   // ------------------------------ putting a body together ------------------------------
   // (the body's local frame: +Z forward, +Y up, +X its left. The signs: a negative pitch swings an arm or a leg
@@ -1335,7 +1156,7 @@
       if (w > 0) {
         // (where the point lies in the trunk of the body bent all the way down to it — the squat and the bow of reachDepth, from
         // the feet's own frame —, then, at the very end, the point itself in the trunk as it is)
-        const ground = L.ground !== undefined ? L.ground : r.Y; const D = reachDepth(H, L, r.Y - ground, 1); const hipF = 0.92 - 0.72 * D.sq * 0.92 + 0.06, ln = 1.05 * D.bw;
+        const ground = L.ground !== undefined ? L.ground : r.Y; const D = Anim.reachDepth(H, L, r.Y - ground, 1); const hipF = 0.92 - 0.72 * D.sq * 0.92 + 0.06, ln = 1.05 * D.bw;
         V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.k.copy(M.root).invert()); V3.b.y -= hipF; { const c = Math.cos(-ln), sn = Math.sin(-ln), y = V3.b.y, z = V3.b.z; V3.b.y = c * y - sn * z; V3.b.z = sn * y + c * z; }
         V3.a.set(HP.p[0], HP.p[1], HP.p[2]).lerp(V3.b, w);
         const e = G.smooth(0.88, 1, r.w); if (e > 0) { V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.ci); V3.a.lerp(V3.b, e); }
@@ -1396,10 +1217,10 @@
       // (as low as a foot on the ground needs them — a slope, a step, a long stride —, never by a fixed cap: L-1101)
       if (drop > 0) { hipY -= Math.min(0.4, drop); pelvis(); L.drop = drop; } else L.drop = 0;
     }
-    const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8;
+    const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8 + (pose.tilt || 0);
     fr(R[B.chest], R[B.pel], 0, 0.06, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06, 0, tx / 2, ty / 2, tz / 2);
     const nx = pose.neck, ny = (pose.lookY || 0) - (pose.twist - pel * 0.7) * 0.85;
-    fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, 0); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, 0);
+    const nz = pose.headR || 0; fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, nz); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, nz / 2);
     // (a child's head is big for the body; the grip of the hands: what they hold, the run's fists, the wave's open palm)
     if (L.headK && L.headK !== 1) { M.b.makeScale(L.headK, L.headK, L.headK); R[B.head].multiply(M.b); }
     const hold = (L.torch || L.lantern) && !lie && !L.bind;
@@ -1427,7 +1248,7 @@
       if (k && shaftR) { sp = 0.05; sr = -0.08; el = 1.05; }
       // (the other hand's thing: a shield before the body on the forearm, the bow at the side, a handle hanging)
       if (!k && kL && upright(pose)) { if (gL === 'escudo') { sp = -0.32; sr = 0.3; el = 1.5; } else if (gL === 'arco') { sp = 0.06; sr = 0.12; el = 0.3; } else if (gL === 'alca') { sp = 0.05; sr = 0.18; el = 0.1; } }
-      let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = 0; // (a wide skirt or a cape: the arms a little out)
+      let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = (k ? pose.shRy : pose.shLy) || 0; // (a wide skirt or a cape: the arms a little out; the yaw of the upper arm — across the body —, the pose's: 22c, D-597)
       // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight — or the left hand
       // on the thing of two hands the right holds, where the thing's art says the other hand goes)
       let T = hw > 0.001 ? HP.t[k] : null, w = hw, pole0 = HP.pole;
@@ -1614,7 +1435,7 @@
   let skin = false, fauna = false;
   function bodySkin(idx, X, Y, Z, yaw, pose, L, marker) {
     const R = P3.rig(X, Y, Z, yaw, pose, L);
-    L.face = faceOf(pose, L);
+    L.face = Anim.faceOf(pose, L);
     G.Body3D.put(idx, R, pose, L, X, Y, Z);
     const s = L.s, lie = pose.lie || 0;
     if ((L.torch || L.lantern) && !lie) {
@@ -1626,14 +1447,6 @@
     // (the load: the thing it is, where the rig put it — the old box only if its form could not be drawn)
     if (L.held && heldPut(R, L)) hide('carry', idx); else if (L.carry) put('carry', idx, R[B.chest], 0, 0.3, 0.26, 0, 0, 0, 0, 0, 0, 0.34, 0.26, 0.3, '#9a7a4a'); else hide('carry', idx);
     if (marker) put('marker', idx, M.root, 0, 2.15 + Math.sin(performance.now() / 300) * 0.04, 0, 0, performance.now() / 600, 0, 0, 0, 0, 0.16, 0.22, 0.16, marker); else hide('marker', idx); // (M.root: the rig's root)
-  }
-  // the face: the blink (0 open .. 1 shut), where the eyes look (they go ahead of the head), the mouth
-  function faceOf(pose, L) {
-    const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink; const md = L.mood || MOOD.calm;
-    f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3);
-    f.mouth = Math.max(pose.talk || 0, md.jaw || 0);
-    f.smile = md.smile || 0; f.up = md.up || 0; f.angry = md.angry || 0; f.sad = md.sad || 0; f.wide = md.wide || 0; f.squint = md.squint || 0; f.blush = md.blush || 0;
-    return f;
   }
   // the parts the skin replaces (the props stay: the torch, the tool, the load, the marker over a head)
   const PROPS = new Set(['torch', 'tool', 'carry', 'marker']);
@@ -1687,6 +1500,19 @@
   // a clip that names its stroke's period lands its contact where the world's stroke lands)
   function clipClock(v, st) { const C = Anim.CLIPS && Anim.CLIPS[st]; if (!C || !(C.period > 0)) return undefined; return Anim.loopTime(C, v.actT || 0, C.period); }
   P3.clipClock = clipClock;
+  // (the frame's own lists and clocks, kept: the nearest people a frame — reused entries, nothing made each frame —, the frames
+  // drawn and the view's seconds, for the beats of the far ones and the crowd's portraits)
+  const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
+  const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
+  const visAt = id => vis.get(id);
+  // (the crowd's portraits: each one's look kept and made again every ¾ to 1¼ s — each one on their own beat, by their id —, not
+  // every frame: the crowd's colours are the clothes of the one they are, and they change in seconds, not frames — D-591)
+  const CROWD = new Map(); G.worldHooks.push(() => { CROWD.clear(); NEARP.length = 0; NEAR.length = 0; INS.length = 0; });
+  function crowdLook(v) {
+    let e = CROWD.get(v.id); if (!e) { e = { L: {}, t: -1e9 }; CROWD.set(v.id, e); }
+    if (vt - e.t > 0.75 + (v.id % 17) * 0.03) { const L = P3.lookInto(e.L, v); e.t = vt; e.cF = color(P3.farCol(L)); e.cS = color(L.skin); e.cH = color(L.hair); e.cL = color(L.robe ? L.cloth : L.pants); }
+    return e;
+  }
   P3.update = function (dt, focus) {
     if (!mesh || !focus) return;
     const S = G.S; const q = R3.Q(); const TL = G.Space.TILE, HM = G.Space.HM;
@@ -1694,21 +1520,33 @@
     const cam = R3.camera ? R3.camera() : null; seenAt[0] = cam ? cam.position.x : focus.X; seenAt[1] = cam ? cam.position.z : focus.Z; field(cam, q);
     { const sk = R3.LT && R3.LT.sky; if (sk) RIM.value = 0.2 * G.clamp((0.3 * sk[0] + 0.6 * sk[1] + 0.1 * sk[2]) / 1.2, 0.15, 1); }
     const R = q.view * 0.22; const R2 = R * R; const RC = q.view * 0.55, RC2 = RC * RC; // (full bodies near; the crowd out to here)
-    const av = P3.avatar;
+    const av = P3.avatar; frameNo++; vt += dt;
     // the nearest people first, as many as the machine is told to carry
-    const near = [];
+    const near = NEAR; near.length = 0;
     // (who the world has inside a building is drawn only where its inside is drawn, where Interiors puts them: Build3D.openPlace;
-    // in one open to the sky — a fair —, always: where its plan puts them, or where the world has them before its plan is made)
+    // in one open to the sky — a fair —, always: where its plan puts them, or where the world has them before its plan is made.
+    // Someone inside is drawn only whole — the crowd draws nobody inside —: one whose building is farther than the whole bodies
+    // the people outdoors already fill is not asked where their place is, D-591)
     const placeOf = v => (v.inside && G.Build3D && G.Build3D.openPlace ? G.Build3D.openPlace(v) : null);
     const openSky = id => !!(G.Build3D && G.Build3D.openShell && G.Build3D.openShell(id));
+    const ins = INS; ins.length = 0; const RIN2 = (R + IN_REACH) * (R + IN_REACH);
     for (const v of S.villagers.values()) {
       if (av && v.id === av.id) continue;
       if (v.aboard || v.ug || v.held || (v.age < 2 && v.carried)) continue;
-      const pl = v.inside ? placeOf(v) : null; if (v.inside && !pl && !openSky(v.inside)) continue;
-      const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
-      near.push([d2, v]);
+      if (v.inside) { if ((v.x * TL - focus.X) ** 2 + (v.y * TL - focus.Z) ** 2 <= RIN2) ins.push(v); continue; }
+      const X = v.x * TL, Z = v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
+      const e = NEARP[near.length] || (NEARP[near.length] = [0, null]); e[0] = d2; e[1] = v; near.push(e);
     }
-    near.sort((a, b) => a[0] - b[0]);
+    near.sort(byD2);
+    { const cap = Math.min(q.npcs, MAX - 1), m = Math.min(near.length, cap); const cut = m === cap && m > 0 ? Math.min(R2, near[m - 1][0]) : R2; const cr = Math.sqrt(cut) + IN_REACH;
+      let put = 0;
+      for (const v of ins) {
+        if ((v.x * TL - focus.X) ** 2 + (v.y * TL - focus.Z) ** 2 > cr * cr) continue;
+        const pl = placeOf(v); if (!pl && !openSky(v.inside)) continue;
+        const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
+        const e = NEARP[near.length] || (NEARP[near.length] = [0, null]); e[0] = d2; e[1] = v; near.push(e); put++;
+      }
+      if (put) near.sort(byD2); }
     let n = Math.min(near.length, q.npcs, MAX - 1); while (n > 0 && near[n - 1][0] > R2) n--;
     let idx = 0, emoN = 0, culled = 0; P3.walkers.length = 0; P3.flames.length = 0;
     if (skin && G.Body3D.broken(R3.renderer && R3.renderer())) { skin = false; G.Body3D.clear(); PARTS.forEach((p, k) => { mesh[k].visible = true; }); }
@@ -1721,7 +1559,7 @@
       // frame's own time, interpolated: smooth at 60, 120 or 144 frames a second, 20a; a pose given whole — the fall of a death —
       // is drawn as it is)
       if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
-      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = easeMood(avFeet, av.look.mood, dt);
+      avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = Anim.blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = Anim.easeMood(avFeet, av.look.mood, dt);
       av.look.lod = 0;
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
@@ -1744,49 +1582,74 @@
       }
     }
     const seen = new Set();
+    // (who is drawn whole, where the view had them — for whom each one looks at: Vida3D.lookPick)
+    DRAWN.length = 0; for (let k = 0; k < n; k++) { const w = vis.get(near[k][1].id); if (w) { const e = DRAWNP[DRAWN.length] || (DRAWNP[DRAWN.length] = [0, 0, 0]); e[0] = w === undefined ? 0 : near[k][1].id; e[1] = w.X; e[2] = w.Z; DRAWN.push(e); } }
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
       let s = vis.get(v.id); const pl = placeOf(v);
       const Xw = pl ? pl.X : v.x * TL, Zw = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
-      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: 0, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; vis.set(v.id, s); }
+      // (each one's own clocks begun at their own place — the breath, the weight shifts, the gestures of no world's stroke —: two seen
+      // first in the same frame never move in step, D-599)
+      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); s.an.ph = G.hash(v.id * 7 + 3); vis.set(v.id, s); }
       // (where the view draws them: where the world has them — the corner of their way rounded ahead, the start and the stop
       // eased, a change of place inside walked: Anim.track, D-344)
       const pX = s.X, pZ = s.Z; Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
+      s.lod = lodAt(s.lod, (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2);
+      // (far off — the last level of detail —, or out of the eye's field the last frame: the pose made again every second frame, or
+      // every third farther than twice its edge or unseen, each one on their own beat by their id; between, the last pose goes along
+      // with them — where they are and their turn are every frame's, the ground under them the last pose's. The time of the frames
+      // between is the next pose's: the stride's phase never lags their way, D-591 — only while the frames are short: the animator takes
+      // a tenth of a second at most a pose, and three frames of a slow machine would lose time to it, L-1772)
+      const pr = pairOf.get(v.id) || null; s.dtA = (s.dtA || 0) + dt;
+      const beat = (s.lod < 2 && !s.cull) || pr || !s.made || dt > 0.045 ? 1 : s.cull || (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2 > 4 * LODD[1] * LODD[1] ? 3 : 2;
+      const fresh = beat === 1 || (frameNo + v.id) % beat === 0;
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
       // inside, on the floor, the bed, the bench the plan has there)
-      const Yf = pl ? pl.Y : swim ? W.waterH(X / TL, Z / TL) * HM - 0.32 : npcFloor(X, Z);
+      const Yf = pl ? pl.Y : swim ? W.waterH(X / TL, Z / TL) * HM - 0.32 : fresh || s.Yf === undefined ? (s.Yf = npcFloor(X, Z)) : s.Yf;
       if (s.Y === undefined || Math.abs(Yf - s.Y) > (pl ? 0.6 : 3)) { s.Y = Yf; if (pl) { s.snap = 1; Anim.track(s, v, Xw, Zw, true, dt, TL); } } else s.Y += (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);
       // (a jump of the world — a teleport, a load — is not a step: the feet stand where they land)
       if (Math.hypot(s.X - pX, s.Z - pZ) > 3) { s.plant[0].on = s.plant[1].on = 0; s.plant[0].step = s.plant[1].step = null; }
       Anim.face(s, v, pl && s.sp < 0.2 ? pl : null, dt);
-      s.t += dt;
-      let st = pl && s.sp < 0.2 ? pl.st : Anim.stateOf(v, s.sp);
-      // (waved at by the body: those standing or strolling near wave back, a moment later — only seen)
+      s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
+      const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;
+      let st = pl && s.sp < 0.2 ? pl.st : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st;
+      // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
+      // of whoever walks: the prisoner's bound hands, the word said walking — the reader's, Vida3D.overOf)
       let over = null;
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'talk') st = 'wave'; else if (st === 'walk') over = 'wave'; } }
-      const Lv = lookFill(s.L, v);
+      if (!over) over = G.Vida3D.overOf(v, st);
       // (one of two under one crate: the frame between them; the crate is the one ahead's, drawn once, by his rig — both hands
       // of each on it: no torch, no thing in the hands)
-      const pr = pairOf.get(v.id) || null; Lv.pair = pr;
+      Lv.pair = pr;
       if (pr) { Lv.torch = false; Lv.lantern = false; Lv.inv = NO_INV; if (pr.help === v.id) { Lv.held = null; Lv.carry = false; } }
       // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; reachOf(s, v, Lv, s.X, Y, s.Z, dt);
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; if (fresh) reachOf(s, v, Lv, s.X, Y, s.Z, dtA);
       // (and the drink, where the world has them drunk and on their feet: the additive stagger — inside, at their place, they sit)
       const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
-      s.lod = lodAt(s.lod, (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2); Lv.lod = s.lod;
-      // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
-      // (v.actT), the drink — the pose made from what they do, every frame (anim-body.js)
-      const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
-      // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
-      // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
-      I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = 0; I.id = v.id;
-      Anim.drive(s.an, I, s.pose, Lv, dt);
-      // (someone standing near the body turns their head to it — and back when it goes; a blink now and then)
-      const look = P3.lookFor(s.yaw, s.X, s.Z, av, st);
-      s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dt));
-      s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
-      s.pose.blink = blinkAt(s.t, v.id); cloth(s, s.X, s.Z, s.yaw, dt, s.pose); if (Lv.mood) Lv.mood = easeMood(s, Lv.mood, dt);
+      Lv.lod = s.lod;
+      if (fresh) {
+        // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
+        // (v.actT), the drink, the tiredness — the pose made from what they do (anim-body.js; the reader's numbers: vida3d.js)
+        const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
+        // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
+        // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
+        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
+        // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
+        // its breath; the hand one leads with)
+        I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
+        // (the idle's little things: the reader's context, near the eye — the middle level the big ones only, far off none)
+        I.ctx = s.lod >= 2 ? null : s.ctx; I.lod = s.lod; I.tempo = G.Vida3D.tempo(v); I.push = G.Vida3D.apart(s, v.id, st, DRAWN, visAt, vt);
+        Anim.drive(s.an, I, s.pose, Lv, dtA); s.made = 1; G.Vida3D.mark(s, st, vt);
+        // (the look: the body, where it stands before them — and back when it goes —; else the one they are with; a blink now and then)
+        const look = G.Vida3D.look(s, v, av, st, visAt);
+        s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dtA));
+        s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
+        s.pose.blink = Anim.blinkAt(s.t, v.id); cloth(s, s.X, s.Z, s.yaw, dtA, s.pose); if (Lv.mood) Lv.mood = Anim.easeMood(s, Lv.mood, dtA);
+        // (the living face: the channels of the face in the pose — the mood beneath, the feeling, the porte, the little thing, the
+        // blink, the look, the speech; anim-rosto.js — near the eye; farther the face is a few pixels, and the old numbers do)
+        if (s.lod < 2 && Anim.faceMix) { I.humor = G.Vida3D.humor(v); Anim.faceMix(s, I, s.pose, Lv.mood, s.an, dtA); } else s.pose.face = null;
+      }
       s.st = st;
       if (P3.walkers.length < 40) P3.walkers.push([s.X, Y, s.Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
       // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
@@ -1815,28 +1678,26 @@
     mats(); let c = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
       const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
-      const L = P3.look(v); const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
+      const e = crowdLook(v), L = e.L; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
       // (from afar, the colour of what they wear over all: the mantle of their standing, the apron-dress, the undyed fleece —
       // the same clothes the fine body has, so a street of nobles and a street of the plain people read apart from far off)
-      const far = P3.farCol(L);
-      M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, color(far));
-      M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, color(L.skin));
-      M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, color(L.hair));
-      for (const sd of [0, 1]) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, color(L.robe ? L.cloth : L.pants)); }
+      // (the colours kept with the portrait: crowdLook)
+      M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, e.cF);
+      M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, e.cS);
+      M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, e.cH);
+      for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, e.cL); }
       c++;
     }
     crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
-    P3.crowd = c;
+    P3.crowd = c; if (CROWD.size > 4 * MAXC) for (const [id, e] of CROWD) if (vt - e.t > 6) CROWD.delete(id); // (the portraits of those gone from the crowd: let go)
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx; P3.culled = culled;
     lyingDraw(focus, RC2);
     if (skin) G.Body3D.end(); toolsEnd(); heldEnd();
     beasts(focus, R2, dt);
   };
-  // (a blink: the lids down and up in a sixth of a second, every four seconds or so — each person on their own beat)
-  function blinkAt(t, id) { const q = (t + (id % 13) * 0.37) % (3.4 + (id % 5) * 0.3); return q < 0.16 ? 1 - Math.sin(q / 0.16 * Math.PI) * 0.92 : 1; }
   // (the cloth's swing: a cape and a skirt lag behind the body — lifted back by the speed, flung by a start or a stop,
   // swung out in a turn — a spring, only seen)
   function cloth(s, X, Z, yaw, dt, pose) {
@@ -1877,14 +1738,8 @@
   };
   P3.skin = () => skin; // (the bodies drawn as one skin — Body3D — or as the pieces of old)
   P3.greet = function (X, Z) { let n = 0; for (const [id, s] of vis) if ((s.X - X) ** 2 + (s.Z - Z) ** 2 < 81) { s.greetT = 1.3 + (id % 5) * 0.15; s.greetD = 0.25 + (id % 7) * 0.08; n++; } return n; };
-  // the turn of the head someone wants toward the body: facing yaw at (X, Z), the body av, their state — only when they
-  // stand, talk, carry or walk, the body within 6 m and somewhere in front of them (not behind their back)
-  P3.lookFor = function (yaw, X, Z, av, st) {
-    if (!av || !(st === 'idle' || st === 'talk' || st === 'carry' || st === 'interact' || st === 'walk')) return 0;
-    const ax = av.X - X, az = av.Z - Z, ad = Math.hypot(ax, az); if (ad >= 6 || ad <= 0.3) return 0;
-    let da = Math.atan2(az, ax) - yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
-    return Math.abs(da) < 1.9 ? -G.clamp(da, -1.05, 1.05) : 0;
-  };
+  // the turn of the head someone wants toward the body (the reader's: js/vida3d.js)
+  P3.lookFor = (yaw, X, Z, av, st) => G.Vida3D.lookFor(yaw, X, Z, av, st);
   // (for the verifier: every matrix of a body or a beast drawn this frame is made of numbers)
   P3.check = function () {
     const out = []; const scan = (list, n, what) => { for (const m of list || []) { const a = m.instanceMatrix.array; for (let k = 0; k < Math.min(n, m.count) * 16; k++) if (!Number.isFinite(a[k])) { out.push(`${what}: matriz inválida no desenho`); return; } } };
