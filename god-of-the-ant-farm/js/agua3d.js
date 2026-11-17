@@ -700,9 +700,9 @@ vec3 aguaWetGround(vec3 c, vec3 P, vec3 Nn, vec3 sky, float t, sampler2D det) {
   // (the trickles: on a steep face in the rain, threads of water running down it)
   float steep = 1.0 - smoothstep(0.45, 0.85, up); float tr = 0.0;
   if (steep > 0.01 && wet > 0.35) { vec2 tg = normalize(vec2(Nn.x, Nn.z) + vec2(1e-4)); float s = dot(P.xz, vec2(-tg.y, tg.x)); float n = texture2D(det, vec2(s * 0.9, P.y * 0.25 + t * 0.35)).r; tr = smoothstep(0.78, 0.86, n) * steep * smoothstep(0.35, 0.8, wet); }
-  c *= 1.0 - wet * 0.36 * (0.55 + 0.45 * up);
-  c = mix(c, c * 0.45, pz);
-  gAgSheen = sky * (wet * (0.05 + fres * 0.28) * (0.4 + 0.6 * up) + pz * (0.18 + fres * 0.6) + tr * 0.25);
+  c *= 1.0 - wet * 0.44 * (0.55 + 0.45 * up);
+  c = mix(c, c * 0.4, pz);
+  gAgSheen = sky * (wet * (0.07 + fres * 0.4) * (0.4 + 0.6 * up) + pz * (0.22 + fres * 0.7) + tr * 0.3);
   return c;
 }
 // (a building's face: roofs and paving wet as the land is, the walls less)
@@ -711,8 +711,8 @@ void aguaWetSolid(inout vec3 c, vec3 P, vec3 Nn, vec3 sky) {
   float wet = texture2D(uAgWet, P.xz * uAgN).r; if (wet < 0.02) return;
   float up = clamp(Nn.y, 0.0, 1.0); vec3 V = normalize(cameraPosition - P); float fres = pow(1.0 - clamp(dot(V, normalize(Nn)), 0.0, 1.0), 3.0);
   float k = wet * mix(0.35, 1.0, smoothstep(0.2, 0.6, up));
-  c *= 1.0 - k * 0.32;
-  gAgSheen = sky * k * (0.04 + fres * 0.3);
+  c *= 1.0 - k * 0.38;
+  gAgSheen = sky * k * (0.06 + fres * 0.38);
 }`;
   A3.groundGLSL = () => WETGLSL;
   A3.solidGLSL = () => WETGLSL;
