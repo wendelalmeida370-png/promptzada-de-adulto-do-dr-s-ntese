@@ -20,12 +20,15 @@ const ROOT = process.argv[2]; const OUT = process.argv[3]; fs.mkdirSync(OUT, { r
     G.Realm.setQuality(Q); G.Save.apply(JSON.parse(G.Ready.data[W])); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true;
     const f = n => { for (let k = 0; k < n; k++) G.Main.frameFor(33); }; const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; G.Main.frameFor(33); } return -1; };
     const S = G.S; S.time = 0.42;
-    const v = [...S.villagers.values()].filter(o => o.role === 'guerreiro' && o.age >= 18 && o.age < 50 && !o.inside && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[0];
-    if (!v) return { err: 'sem guerreiro' };
+    // (a warrior if the world has one to live; else a grown man, armed from his bag as one)
+    const can = o => o.age >= 18 && o.age < 50 && !o.inside && G.Possess.can(o).ok;
+    const v = [...S.villagers.values()].filter(o => o.role === 'guerreiro' && can(o)).sort((a, b) => a.id - b.id)[0] || [...S.villagers.values()].filter(o => o.g === 'm' && can(o)).sort((a, b) => a.id - b.id)[0];
+    if (!v) return { err: 'ninguém para viver' };
     G.Modes.enter(v); until(() => G.Modes.state === 'INC', 300); f(10); S.time = 0.42;
     // (a cuirass of the best the people know, put in his bag and on his trunk — by the world's own doors, in its step)
-    const arts = G.Inv.artsOf ? G.Inv.artsOf(v) : null; const ck = (arts && G.Itens.best ? G.Itens.best('couraca', arts) : null) || 'couraca.bronze';
-    let put = null; G.Possess.apply(w => { G.Depot.make('m:' + w.id, ck, 1, { code: 'kit', by: w.id }); put = G.Inv.equip(w, ck, 'corpo'); return { ok: true }; }); f(4);
+    const arts = G.Inv.artsOf ? G.Inv.artsOf(v) : null; const best = (k, d) => (arts && G.Itens.best ? G.Itens.best(k, arts) : null) || d;
+    const kit = [[best('elmo', 'elmo.couro'), 'cabeca'], [best('couraca', 'couraca.couro'), 'corpo'], [best('escudo', 'escudo.madeira'), 'outra'], [best('lanca', 'lanca.pedra'), 'mao']];
+    const put = []; G.Possess.apply(w => { for (const [k, sl] of kit) { const e = G.Inv.equipOf(w); if (e[sl] === k) { put.push(k + ' já'); continue; } G.Depot.make('m:' + w.id, k, 1, { code: 'kit', by: w.id }); const r = G.Inv.equip(w, k, sl); put.push(k + ' ' + (r && r.ok ? 'ok' : (r && r.why))); } return { ok: true }; }); f(4);
     document.querySelectorAll('#inc-hud, #hud, #inc-root, #inc-label').forEach(e => e.style.visibility = 'hidden');
     window.__st = G.Avatar.state(); G.Cam3D.OPT.follow = false;
     window.__shot = (view, D, H) => {
@@ -34,7 +37,7 @@ const ROOT = process.argv[2]; const OUT = process.argv[3]; fs.mkdirSync(OUT, { r
       cam.position.set(p.X + Math.cos(a) * D, p.Y + H, p.Z + Math.sin(a) * D); cam.lookAt(p.X, p.Y + H - 0.08, p.Z); cam.fov = 40; cam.updateProjectionMatrix();
       G.Realm.renderer().render(G.Realm.scene(), cam); return G.People3D.tools().map(x => x[0] + '×' + x[1]).join(' ');
     };
-    return { id: v.id, name: v.name, civ: v.civ, held: JSON.stringify(G.Inv.held(v)), put, ck };
+    return { id: v.id, name: v.name, role: v.role, civ: v.civ, held: JSON.stringify(G.Inv.held(v)), put };
   }, [WORLD, process.env.Q || 'media']);
   console.log(JSON.stringify(info)); if (info.err) { await browser.close(); return; }
   const shot = async (name, js) => { const t = await page.evaluate(js); await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 240000 }); return t; };
