@@ -698,13 +698,15 @@ vec3 aguaWetGround(vec3 c, vec3 P, vec3 Nn, vec3 sky, float t, sampler2D det) {
   float up = clamp(Nn.y, 0.0, 1.0); vec3 V = normalize(cameraPosition - P); float fres = pow(1.0 - clamp(dot(V, normalize(Nn)), 0.0, 1.0), 3.0);
   // (the puddles: where the rain pools, as much as it has rained — their edges wandering with the ground's own grain)
   float pz = 0.0;
-  if (wt.g > 0.01) { float n = texture2D(det, P.xz / 1.9 + 0.13).g * 0.55 + texture2D(det, P.xz / 0.8 + 0.37).r * 0.45; pz = smoothstep(0.5, 0.56, wt.g * 0.55 + n * 0.5 + (wt.r - 0.45) * 0.6) * smoothstep(0.35, 0.6, wt.r) * smoothstep(0.85, 0.97, up); }
+  // (patches of a metre or two, a quarter of the ground the place lets hold water at the most, in a heavy rain)
+  if (wt.g > 0.01) { float n = texture2D(det, P.xz / 2.3 + 0.13).g * 0.6 + texture2D(det, P.xz / 0.9 + 0.37).r * 0.4; float th = 1.0 - 0.38 * wt.g * smoothstep(0.35, 0.9, wt.r);
+    pz = smoothstep(th, th + 0.04, n) * smoothstep(0.85, 0.97, up); }
   // (the trickles: on a steep face in the rain, threads of water running down it)
   float steep = 1.0 - smoothstep(0.45, 0.85, up); float tr = 0.0;
   if (steep > 0.01 && wet > 0.35) { vec2 tg = normalize(vec2(Nn.x, Nn.z) + vec2(1e-4)); float s = dot(P.xz, vec2(-tg.y, tg.x)); float n = texture2D(det, vec2(s * 0.9, P.y * 0.25 + t * 0.35)).r; tr = smoothstep(0.78, 0.86, n) * steep * smoothstep(0.35, 0.8, wet); }
   c *= 1.0 - wet * 0.44 * (0.55 + 0.45 * up);
   c = mix(c, c * 0.4, pz);
-  gAgSheen = sky * (wet * (0.07 + fres * 0.4) * (0.4 + 0.6 * up) + pz * (0.22 + fres * 0.7) + tr * 0.3);
+  gAgSheen = sky * (wet * (0.05 + fres * 0.3) * (0.4 + 0.6 * up) + pz * (0.12 + fres * 0.45) + tr * 0.3);
   return c;
 }
 // (a building's face: roofs and paving wet as the land is, the walls less)
