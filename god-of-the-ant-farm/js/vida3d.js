@@ -30,20 +30,22 @@
     fight: (v, t, L) => { const h = L && L.inv ? L.inv : G.Inv && G.Inv.held ? G.Inv.held(v) : null; return h && h.mao ? 'cb-guarda-arma' : 'cb-guarda-punho'; },
     // (by the grave, between the steps of the rite: the head bowed, the hands to the face)
     funeral: 'mourn',
+    // (fase 3, D-602: the post of the guard and of the round, the riot, the watch over a nest, the child's play between two runs,
+    // the crowd that hears the one who speaks)
     // (the rest, given their own act by the world — sit, sittalk, cook, eat, pray, guard, wait, read, write, story… —; between two,
     // the stance or the walk)
-    abastecer: MOVE, adeus: MOVE, ajudar: MOVE, amor: MOVE, apanhar: MOVE, appr: MOVE, arrumar: MOVE, assembly: MOVE, atacado: MOVE, atender: MOVE,
+    abastecer: MOVE, adeus: MOVE, ajudar: MOVE, amor: MOVE, apanhar: MOVE, appr: MOVE, arrumar: MOVE, assembly: 'soc-ouvir', atacado: MOVE, atender: MOVE,
     atuar: MOVE, baleia: MOVE, banca: MOVE, band: MOVE, barco: MOVE, barraco: MOVE, boardBack: MOVE, build: MOVE, cais: MOVE, callwork: MOVE,
     carga: MOVE, cela: MOVE, celebrate: MOVE, chop: MOVE, citylife: MOVE, combat: MOVE, compra: MOVE, conclave: MOVE, condemned: MOVE, conferir: MOVE,
     contato: MOVE, copiar: MOVE, corpse: MOVE, court: MOVE, deliver: MOVE, descarga: MOVE, desk: MOVE, devolver: MOVE, dragao: MOVE, drill: MOVE,
     eat: MOVE, embark: MOVE, envoy: MOVE, escape: MOVE, escort: MOVE, escorted: MOVE, estaleiro: MOVE, estate: MOVE, expl: MOVE, explore: MOVE,
     family: MOVE, farm: MOVE, fest: MOVE, fetch: MOVE, fire: MOVE, fish: MOVE, flee: MOVE, fodder: MOVE, follow: MOVE, forage: MOVE,
-    fornalha: MOVE, fugir: MOVE, fundo: MOVE, furto: MOVE, gather: MOVE, goHome: MOVE, guard: MOVE, haul: MOVE, herd: MOVE, hide: MOVE,
+    fornalha: MOVE, fugir: MOVE, fundo: MOVE, furto: MOVE, gather: MOVE, goHome: MOVE, guard: 'posto', haul: MOVE, herd: MOVE, hide: MOVE,
     honey: MOVE, horta: MOVE, hunt: MOVE, idle: MOVE, inquire: MOVE, jail: MOVE, justice: MOVE, lar: MOVE, lenhaTermas: MOVE, ler: MOVE,
-    levado: MOVE, levar: MOVE, listen: MOVE, lured: MOVE, mariscar: MOVE, migrate: MOVE, mine: MOVE, minejob: MOVE, mint: MOVE, muster: MOVE,
-    nestwatch: MOVE, oficio: MOVE, olhar: MOVE, ouro: MOVE, patrol: MOVE, pave: MOVE, penwork: MOVE, petition: MOVE, pick: MOVE, play: MOVE,
+    levado: MOVE, levar: MOVE, listen: 'soc-ouvir', lured: MOVE, mariscar: MOVE, migrate: MOVE, mine: MOVE, minejob: MOVE, mint: MOVE, muster: MOVE,
+    nestwatch: 'ato-olhar-longe', oficio: MOVE, olhar: MOVE, ouro: MOVE, patrol: MOVE, pave: MOVE, penwork: MOVE, petition: MOVE, pick: MOVE, play: 'brincar',
     pocas: MOVE, praca: MOVE, praia: MOVE, pray: MOVE, prender: MOVE, quarry: MOVE, redes: MOVE, reembarque: MOVE, refugio: MOVE, rest: MOVE,
-    restock: MOVE, riot: MOVE, riotguard: MOVE, ronda: MOVE, sair: MOVE, sell: MOVE, shelter: MOVE, shop: MOVE, slaughter: MOVE, social: MOVE,
+    restock: MOVE, riot: 'ato-motim', riotguard: 'posto', ronda: 'posto', sair: MOVE, sell: MOVE, shelter: MOVE, shop: MOVE, slaughter: MOVE, social: MOVE,
     steal: MOVE, talk: MOVE, tavern: MOVE, taxes: MOVE, teatro: MOVE, tell: MOVE, tend: MOVE, termas: MOVE, trade: MOVE, tribute: MOVE,
     vinho: MOVE, visit: MOVE, wander: MOVE, water: MOVE,
   };
@@ -67,6 +69,8 @@
     // (the act's own gesture, where there is a clip of it — the axe, the pick, the rod, the word, the prayer: anim-clips.js)
     const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c;
     const a = Anim.ACT[v.act]; if (a && a !== 'run') return a;
+    // (an act of the society's vocabulary with no gesture of its own: its family's pose — social-clips.js, D-603)
+    if (v.act && G.SocAtos) { const sa = G.SocAtos.of(v.act); if (sa) { const f = 'fam-' + sa.fam; if (Anim.CLIPS && Anim.CLIPS[f]) return f; } }
     if (!v.act) { const ts = V3.taskState(v, L); if (ts) return ts; }
     if (v.carry && v.carry.n > 0) return 'carry';
     return 'idle';
@@ -125,10 +129,19 @@
   };
   // the porte kept in the view's memory of someone (s.porte), made again about twice a second — each one on their own beat by
   // their id — or at once when it was never made: what the animator reads (I.porte) between two readings is the last one
-  V3.read = function (s, v, now) {
-    if (!s.porte || !(now - s.pt < 0.45 + (v.id % 9) * 0.015)) { s.porte = V3.porteOf(v, s.porte || {}); s.pt = now; }
+  // — and with it the idle's context (s.ctx) and whom they look at (s.lookId: near, the drawn ones' [id, X, Z])
+  V3.read = function (s, v, now, near) {
+    if (!s.porte || !(now - s.pt < 0.45 + (v.id % 9) * 0.015)) { s.porte = V3.porteOf(v, s.porte || {}); s.pt = now; if (near) V3.lookPick(s, v, near, now); s.ctx = V3.ctxOf(v, s.porte, s, s.ctx || {}); }
     return s.porte;
   };
+  // the mood beneath a face (−1..1): the society's (G.Indole.humor — neutral until the 22b fills it); until then, read from the life:
+  // the hunger and the tiredness weigh it down, the grief too, the drink lifts it
+  V3.humor = function (v) {
+    const I = G.Indole; if (I && I.de && I.de(v)) return G.clamp(I.humor(v), -1, 1);
+    return G.clamp(-(v.hunger > 70 ? (v.hunger - 70) / 60 : 0) - 0.25 * V3.tired(v) - (v.mourn > 0 ? 0.4 : 0) + (G.Atmos && G.Atmos.drunk && G.Atmos.drunk(v) > 0 ? 0.3 : 0), -1, 1);
+  };
+  // (each one's own pace, ±8%: the breath, the weight shifts, the gestures of no world's stroke — by the id)
+  V3.tempo = v => 0.92 + 0.16 * G.hash(v.id * 19 + 7);
   // (the hand a person leads with: one in ten left-handed, by the id — the gestures of their hands on the other side)
   V3.lefty = v => G.hash(v.id * 31 + 7) < 0.1;
 
@@ -149,6 +162,53 @@
   V3.look = function (s, v, av, st, at) {
     const b = V3.lookFor(s.yaw, s.X, s.Z, av, st); if (b) return b;
     const o = V3.partnerOf(v); const p = o && at ? at(o.id) : null;
-    return p ? V3.lookFor(s.yaw, s.X, s.Z, p, st) : 0;
+    if (p) return V3.lookFor(s.yaw, s.X, s.Z, p, st);
+    // (22c fase 2, D-600: someone known or of renown passing — the reader's choice, s.lookId, a glance of a few seconds —; else
+    // the eyes and the head wander a little, each one on their own beat: G.hash of the id and of the moment, never a roll)
+    const q = s.lookId && at ? at(s.lookId) : null; if (q) { const w = V3.lookFor(s.yaw, s.X, s.Z, q, st); if (w) return w; }
+    if (!(st === 'idle' || st === 'talk' || st === 'sit' || st === 'carry' || st === 'rest')) return 0;
+    const t = G.S ? G.S.clock : 0, k = Math.floor((t + (v.id % 7) * 0.9) / 2.7); const h = G.hash(v.id * 61 + k * 977);
+    return h < 0.45 ? 0 : (h - 0.72) * 1.1;
   };
+  // who a person knows, for the look (D-600): the society's ties where it has them (G.Lacos.sente — neutral until the 22b fills it);
+  // until then the family and the house — the partner, the parents, the children, who lives under the same roof
+  V3.knows = function (v, o) {
+    const L = G.Lacos && G.Lacos.sente ? G.Lacos.sente(v, o) : null; if (L) return (L.afeto || 0) > 0.2 || (L.respeito || 0) > 0.4 || !!(L.rotulos && L.rotulos.length);
+    return v.partner === o.id || o.partner === v.id || v.mother === o.id || v.father === o.id || o.mother === v.id || o.father === v.id || (!!v.home && v.home === o.home);
+  };
+  // who is of renown near a place, for the look: the society's fame where it has it (G.Fama.notavel — neutral until the 22b fills
+  // it); until then the ruler of a people and the heroes
+  V3.notable = function (v, o) {
+    const N = G.Fama && G.Fama.notavel ? G.Fama.notavel(o.x, o.y, 0.5) : null; if (N && N.length) return N.some(e => e.id === o.id && (e.renome || 0) > 0.3);
+    if (o.hero) return true; const f = G.Fac && G.Fac.ofV ? G.Fac.ofV(o) : null; return !!(f && f.leader === o.id);
+  };
+  // the reader's choice of whom to look at (made again with the porte, about twice a second): among those drawn near (near: the
+  // view's list of [id, X, Z]), in front, within 8 m — the known first, then the one of renown —, a glance of two to four seconds,
+  // then a rest of as much, each one on their own beat
+  V3.lookPick = function (s, v, near, now) {
+    if (s.lookUntil > now) return; if (s.lookId) { s.lookId = 0; s.lookK = 0; s.lookUntil = now + 2 + 2 * G.hash(v.id * 7 + Math.floor(now)); return; }
+    let best = 0, kind = 0, bd = 64;
+    for (const [id, X, Z] of near) { if (id === v.id) continue; const d2 = (X - s.X) ** 2 + (Z - s.Z) ** 2; if (d2 > 64 || d2 < 0.25) continue;
+      let da = Math.atan2(Z - s.Z, X - s.X) - s.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; if (Math.abs(da) > 1.9) continue;
+      const o = G.S.villagers.get(id); if (!o) continue; const k = V3.knows(v, o) ? 1 : V3.notable(v, o) ? 2 : 0; if (!k) continue;
+      if (k > kind || (k === kind && d2 < bd)) { best = id; kind = k; bd = d2; } }
+    if (best) { s.lookId = best; s.lookK = kind; s.lookUntil = now + 2 + 2 * G.hash(v.id * 11 + best); }
+  };
+
+  // ------------------------------ the idle's context (22c fase 2, D-599) ------------------------------
+  // what makes a person's little things one rather than another (the weights the idle's scheduler reads, I.ctx): the porte's causes,
+  // the hour, the wait, the drink, someone known or of renown in view, the bold and the shy
+  const WAIT = new Set(['wait', 'lurk', 'look']), WAITT = new Set(['compra', 'descarga', 'atacado', 'cais', 'embark', 'banca', 'petition', 'inquire', 'escort']);
+  V3.ctxOf = function (v, p, s, out) {
+    const c = out || {}; const S = G.S; const h = S ? S.time : 0.3;
+    c.base = 1; c.frio = p.frio; c.calor = p.calor; c.cansado = p.cansado; c.doente = p.doente; c.luto = p.luto; c.gravida = p.gravida; c.medo = p.medo; c.chuva = p.chuva; c.nobre = p.nobre;
+    c.bebado = G.Atmos && G.Atmos.drunk && G.Atmos.drunk(v) > 0 ? 1 : 0;
+    c.manha = h < 0.12 ? 1 : 0; c.tarde = h > 0.6 && h < 0.74 ? 1 : 0;
+    c.espera = WAIT.has(v.act) || (v.task && WAITT.has(v.task.type)) ? 1 : 0;
+    c.confia = Math.max(0, p.confia); c.timido = Math.max(0, -p.confia);
+    c.conhecido = s && s.lookK === 1 ? 1 : 0; c.notavel = s && s.lookK === 2 ? 1 : 0;
+    return c;
+  };
+  // (for the proofs and the measure of the day: is a little thing under way for someone now — the scheduler's own answer)
+  V3.idleAt = function (v, t) { const p = V3.porteOf(v, {}); const o = G.Anim3D.ocioAt ? G.Anim3D.ocioAt(v.id, t, V3.ctxOf(v, p, null, {}), 0) : null; return !!o; };
 })(window.G);

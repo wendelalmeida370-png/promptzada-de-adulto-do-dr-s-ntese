@@ -96,6 +96,8 @@
     // standing; the second pair of hands under a heavy crate, a carrier's arms — L-205, L-210; the clothes off and on at the
     // pegs of the baths, the hand to them — L-429)
     pay: 'interact', haggle: 'talk', examine: 'interact', count: 'interact', wait: 'idle', carry2: 'carry', undress: 'interact',
+    // (22c: the smoke at the hives and the fish racks, tended down on the heels as the fire of the pot is — D-602)
+    smoke: 'cook',
   };
   // (the acts that carry what the world has in someone else's hands: walking, a carrier's walk — the helper of a pair)
   const CARRY_ACTS = Anim.CARRY_ACTS = new Set(['carry2']);
@@ -193,9 +195,10 @@
   };
   // the points of the body a hand reaches (22c, D-597): the right arm's angles — the shoulder's pitch, roll and yaw, the elbow —
   // that put its palm there, found on the rig itself (a search over the angles, the palm within 2 cm of the point; the left arm the
-  // mirror: the roll and the yaw the other way). Radians: [shRp, shRr, elR, shRy]
-  Anim.REACH = { peito: [0.40, 0.20, 2.30, 0.80], peitoAlto: [0.30, -0.40, 2.40, 0.80], abraco: [-0.10, -0.10, 1.90, 1.40], barriga: [0.40, -0.50, 1.40, 1.60], juntas: [-0.10, 0.40, 0.00, -0.40],
-    costas: [0.50, 0.40, 0.70, 0.40], ladoBarriga: [0.70, -0.60, 1.70, 1.40], rosto: [-0.80, 0.00, 2.30, 1.00], testa: [-1.10, 0.60, 2.10, 0.80], nuca: [-1.10, 0.80, 2.10, 1.60], cabeca: [-1.70, 0.20, 1.70, 1.40], cintura: [0.70, 0.10, 1.50, 0.40],
+  // mirror: the roll and the yaw the other way); the hands joined, on the waist and behind the back over the belt, where the skirts and the
+  // capes leave them. Radians: [shRp, shRr, elR, shRy]
+  Anim.REACH = { peito: [0.40, 0.20, 2.30, 0.80], peitoAlto: [0.30, -0.40, 2.40, 0.80], abraco: [-0.10, -0.10, 1.90, 1.40], barriga: [0.30, -0.20, 1.70, 1.00], juntas: [0.40, 0.50, 1.50, 0.20],
+    costas: [0.70, 0.80, 1.90, 1.60], ladoBarriga: [0.70, -0.60, 1.70, 1.40], rosto: [-0.80, 0.00, 2.30, 1.00], testa: [-1.10, 0.60, 2.10, 0.80], nuca: [-1.10, 0.80, 2.10, 1.60], cabeca: [-1.70, 0.20, 1.70, 1.40], cintura: [0.70, 0.00, 1.70, 0.20],
     boca: [-0.60, 0.80, 2.30, 0.80], olhos: [-0.90, 0.70, 2.20, 0.80], alto: [-2.90, 0.20, 0.40, -1.60], ombro: [0.10, 1.40, 2.00, 1.00] };
   // (an arm eased toward a point of the body by w, 0..1: side 1 the right, −1 the left)
   Anim.reachArm = function (out, side, key, w) {

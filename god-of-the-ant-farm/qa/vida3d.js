@@ -141,6 +141,55 @@ if (on('v5')) {
   ok('v5 o mesmo mundo com e sem o desenho dá o mesmo save', a.save === b.save && a.rng === b.rng, `30 s vividos: o save ${a.save === b.save ? 'igual byte a byte' : 'DIFERENTE'} (${a.save.length} caracteres), o acaso do mundo ${a.rng === b.rng ? 'o mesmo' : 'OUTRO'}`);
 }
 
+if (on('v6') || on('v7')) {
+  // the face: each cause on its channels (the living face, pose.face — G.Rosto's names), and the opposite
+  const RO = G.Rosto, X = RO.IDX; const P = k => Object.assign(Object.fromEntries(V3.PORTE.map(q => [q, 0])), k);
+  const faceOf = (pz, extra) => { const pose = A.POSE0(); pose.blink = 1; const I = Object.assign({ id: 9, clock: 3.1, drunk: 0, humor: 0 }, extra || {}); const m = {}, a = { pz, oc: null };
+    for (let i = 0; i < 40; i++) A.faceMix(m, I, pose, A.MOOD.calm, a, 1 / 30); return pose.face; };
+  const calm = faceOf(P({})); const CASES = [['frio', P({ frio: 1 }), ['press', 'pale']], ['calor', P({ calor: 1 }), ['sweat', 'squint']], ['luto', P({ luto: 1 }), ['browSad', 'cry']], ['medo', P({ medo: 1 }), ['wide', 'browUp', 'pale']],
+    ['furia', P({ furia: 1 }), ['browIn', 'press']], ['doente', P({ doente: 1 }), ['pale', 'browSad']], ['ferido', P({ ferido: 1 }), ['pain']], ['cansado', P({ cansado: 1 }), ['sweat', 'browSad']]];
+  const res = [], bad = [];
+  for (const [n, pz, chs] of CASES) { const f = faceOf(pz); const d = Math.min(...chs.map(c => f[X[c]] - calm[X[c]])); res.push(`${n}: ${chs.map(c => c + ' ' + r2(f[X[c]])).join(', ')}`); if (!(d > 0.15)) bad.push(n); }
+  // (the opposite: the cold does not sweat, the heat is not pale, the calm one has no tears; the speech moves the mouth through its shapes)
+  const cold = faceOf(P({ frio: 1 })), hot = faceOf(P({ calor: 1 }));
+  const talkShapes = new Set(); { const pose = A.POSE0(); pose.blink = 1; pose.talk = 0.7; const m = {}, a = { pz: null }; for (let i = 0; i < 90; i++) { const I = { id: 9, clock: i / 30, drunk: 0, humor: 0 }; A.faceMix(m, I, pose, A.MOOD.calm, a, 1 / 30); const f = pose.face; talkShapes.add([f[X.jaw] > 0.4 ? 'a' : '', f[X.pucker] > 0.3 ? 'o' : '', f[X.press] > 0.3 ? 'm' : '', f[X.stretch] > 0.3 ? 'e' : ''].join('')); } }
+  const neat = Array.from(calm).every((x, i) => Math.abs(x - RO.REST[i]) < 0.2 || i === X.smile);
+  if (on('v6')) ok('v6 o rosto vivo: cada causa nos seus canais, e o contrário; a fala pelos seus visemas', !bad.length && cold[X.sweat] < 0.05 && hot[X.pale] < 0.05 && calm[X.cry] < 0.01 && neat && talkShapes.size >= 3,
+    (bad.length ? 'SEM CANAL: ' + bad.join(', ') + ' · ' : '') + res.join(' · ') + ` · o frio sem suor (${r2(cold[X.sweat])}), o calor sem palidez (${r2(hot[X.pale])}), a calma sem lágrima (${r2(calm[X.cry])}) · a fala: ${talkShapes.size} formas da boca (${[...talkShapes].join(' ')})`);
+}
+
+if (on('v7')) {
+  // the variety, measured (the study's 3.13): a plaza of the metropole — the eye at its busiest one, the people drawn whole there at
+  // Alta (60) — for 120 s of the world: (a) no two people in the same gesture and the same phase (±0.1 s) for more than 2 s; (b) no
+  // little thing over 35% of a person's own, over ten minutes of their world clock, and never the same one twice in a row; (c) at
+  // least 25 gestures and stances seen
+  M.pronto('metropole'); S = G.S; let lived = 0; for (; lived < 240; lived += 20) { let sl = 0; for (const v of S.villagers.values()) if (v.sleeping) sl++; if (sl / S.villagers.size < 0.25) break; M.viver(20); }
+  let pz = null, best = 0; for (const b of S.buildings.values()) { if (b.type !== 'praca' || !b.built) continue; let k = 0; for (const v of S.villagers.values()) if (!v.inside && (v.x - b.x) ** 2 + (v.y - b.y) ** 2 < 100) k++; if (k > best) { best = k; pz = b; } }
+  let set = null; for (const s of S.settlements.values()) if (!set || G.Village.pop(s.id) > G.Village.pop(set.id)) set = s;
+  const fx = pz ? pz.x + 1 : set.cx, fy = pz ? pz.y + 1 : set.cy; const focus = { X: fx * TL, Z: fy * TL };
+  const rq = G.Realm.Q; G.Realm.Q = () => Object.assign({}, rq ? rq() : {}, { view: 640, npcs: 60, lod: 1 }); P3.clear();
+  const run = new Map(); let worst = 0, worstPair = ''; const seen = new Set(); const DT = 0.1; let drawnMax = 0;
+  const keyOf = (id, s) => { const a = s.an; if (a.over && a.ow > 0.5) return ['+' + a.over.id, a.oc ? (a.ocU || 0) * a.over.dur : (a.ck || 0) * a.over.dur];
+    const C = A.CLIPS[s.st]; if (C) { const v = S.villagers.get(id); const k = v ? P3.clipClock(v, s.st) : undefined; return [s.st, (k !== undefined ? k : a.ck || 0) * C.dur]; }
+    if (A.LOCO[s.st]) return [s.st, (a.ph || 0) / Math.max(0.1, G.Gait.freq(a.sp || 1, 1, a.rw || 0))]; return [s.st, s.t]; };
+  for (let i = 0; i < 120 / DT; i++) {
+    M.viver(DT); P3.update(DT, focus); const ids = P3.walkers.map(w => w[7]).slice(0, 60); drawnMax = Math.max(drawnMax, ids.length);
+    const K = ids.map(id => { const s = P3.visOf(id); return s ? keyOf(id, s) : null; }); for (const k of K) if (k) seen.add(k[0]);
+    const now = new Set();
+    for (let a = 0; a < ids.length; a++) for (let b = a + 1; b < ids.length; b++) { const p = K[a], q = K[b]; if (!p || !q || p[0] !== q[0] || Math.abs(p[1] - q[1]) > 0.1) continue;
+      const key = ids[a] + ':' + ids[b]; now.add(key); const r = (run.get(key) || 0) + DT; run.set(key, r); if (r > worst) { worst = r; worstPair = `#${ids[a]} e #${ids[b]} em «${p[0]}»`; } }
+    for (const key of run.keys()) if (!now.has(key)) run.delete(key);
+  }
+  G.Realm.Q = rq;
+  // (b) the little things over ten minutes of each one's clock, in their context of now
+  let topShare = 0, topWho = '', twice = 0, people = 0; const ocSeen = new Set();
+  for (const v of [...S.villagers.values()].filter(v => !v.inside && !v.aboard).slice(0, 60)) { const ctx = V3.ctxOf(v, V3.porteOf(v, {}), null, {}); const cnt = {}; let tot = 0, last = null, lastN = -9;
+    for (let t = 0; t < 600; t += 0.25) { const o = A.ocioAt(v.id, S.clock + t, ctx, 0); if (!o) continue; if (o.n === lastN) continue; lastN = o.n; cnt[o.k] = (cnt[o.k] || 0) + 1; tot++; ocSeen.add(o.k); if (o.k === last) twice++; last = o.k; }
+    if (tot >= 10) { people++; for (const k in cnt) { const sh = cnt[k] / tot; if (sh > topShare) { topShare = sh; topWho = `#${v.id}: «${k}» ${cnt[k]} de ${tot}`; } } } }
+  ok('v7 a variedade: uma praça da metrópole por 120 s', worst <= 2 && topShare <= 0.35 && !twice && seen.size >= 25,
+    `${drawnMax} desenhadas; o par mais tempo no mesmo gesto e na mesma fase: ${r2(worst)} s${worstPair ? ' (' + worstPair + ')' : ''} · a micro-ação mais repetida de uma pessoa em 10 min: ${Math.round(topShare * 100)}% (${topWho}), ${people} pessoas, ${ocSeen.size} micro-ações diferentes; repetidas em seguida: ${twice} · ${seen.size} gestos e estados vistos: ${[...seen].slice(0, 40).join(', ')}`);
+}
+
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `VIDA3D: ${fails.length} falha(s): ${fails.join(', ')}` : 'VIDA3D: ok');
 process.exit(fails.length ? 1 : 0);

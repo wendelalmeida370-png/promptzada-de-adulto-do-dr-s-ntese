@@ -1502,7 +1502,7 @@
   P3.clipClock = clipClock;
   // (the frame's own lists and clocks, kept: the nearest people a frame — reused entries, nothing made each frame —, the frames
   // drawn and the view's seconds, for the beats of the far ones and the crowd's portraits)
-  const NEAR = [], NEARP = [], INS = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
+  const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
   const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
   const visAt = id => vis.get(id);
   // (the crowd's portraits: each one's look kept and made again every ¾ to 1¼ s — each one on their own beat, by their id —, not
@@ -1582,11 +1582,15 @@
       }
     }
     const seen = new Set();
+    // (who is drawn whole, where the view had them — for whom each one looks at: Vida3D.lookPick)
+    DRAWN.length = 0; for (let k = 0; k < n; k++) { const w = vis.get(near[k][1].id); if (w) { const e = DRAWNP[DRAWN.length] || (DRAWNP[DRAWN.length] = [0, 0, 0]); e[0] = w === undefined ? 0 : near[k][1].id; e[1] = w.X; e[2] = w.Z; DRAWN.push(e); } }
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
       let s = vis.get(v.id); const pl = placeOf(v);
       const Xw = pl ? pl.X : v.x * TL, Zw = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
-      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: 0, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; vis.set(v.id, s); }
+      // (each one's own clocks begun at their own place — the breath, the weight shifts, the gestures of no world's stroke —: two seen
+      // first in the same frame never move in step, D-599)
+      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); vis.set(v.id, s); }
       // (where the view draws them: where the world has them — the corner of their way rounded ahead, the start and the stop
       // eased, a change of place inside walked: Anim.track, D-344)
       const pX = s.X, pZ = s.Z; Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
@@ -1606,7 +1610,7 @@
       // (a jump of the world — a teleport, a load — is not a step: the feet stand where they land)
       if (Math.hypot(s.X - pX, s.Z - pZ) > 3) { s.plant[0].on = s.plant[1].on = 0; s.plant[0].step = s.plant[1].step = null; }
       Anim.face(s, v, pl && s.sp < 0.2 ? pl : null, dt);
-      s.t += dt;
+      s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
       const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;
       let st = pl && s.sp < 0.2 ? pl.st : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st;
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
@@ -1632,13 +1636,18 @@
         I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
         // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
         // its breath; the hand one leads with)
-        I.porte = G.Vida3D.read(s, v, vt); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
+        I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
+        // (the idle's little things: the reader's context, near the eye — the middle level the big ones only, far off none)
+        I.ctx = s.lod >= 2 ? null : s.ctx; I.lod = s.lod; I.tempo = G.Vida3D.tempo(v);
         Anim.drive(s.an, I, s.pose, Lv, dtA); s.made = 1;
         // (the look: the body, where it stands before them — and back when it goes —; else the one they are with; a blink now and then)
         const look = G.Vida3D.look(s, v, av, st, visAt);
         s.pose.lookY = (s.pose.lookY || 0) + (look - (s.pose.lookY || 0)) * (1 - Math.exp(-4 * dtA));
         s.pose.gazeX = G.clamp((look - s.pose.lookY) * 0.9, -0.42, 0.42); // (the eyes go first, the head follows)
         s.pose.blink = Anim.blinkAt(s.t, v.id); cloth(s, s.X, s.Z, s.yaw, dtA, s.pose); if (Lv.mood) Lv.mood = Anim.easeMood(s, Lv.mood, dtA);
+        // (the living face: the channels of the face in the pose — the mood beneath, the feeling, the porte, the little thing, the
+        // blink, the look, the speech; anim-rosto.js — near the eye; farther the face is a few pixels, and the old numbers do)
+        if (s.lod < 2 && Anim.faceMix) { I.humor = G.Vida3D.humor(v); Anim.faceMix(s, I, s.pose, Lv.mood, s.an, dtA); } else s.pose.face = null;
       }
       s.st = st;
       if (P3.walkers.length < 40) P3.walkers.push([s.X, Y, s.Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)

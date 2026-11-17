@@ -15,7 +15,7 @@ const CASES = [
   ['215', 'o porte somado nas pernas', 'js/anim-porte.js', s => s.replace("both('elL', 'elR', 0.25 * p.velho);", "both('elL', 'elR', 0.25 * p.velho); add('knL', 0.1 * p.velho);")],
   ['215', 'o porte lido da pessoa', 'js/anim-porte.js', s => s.replace("const p = a.pz; if (!p) return out;", "const p = a.pz || (v => v.porte)({}); if (!p) return out;")],
   ['216', 'o rosto escrito fora do anim-rosto', 'js/people3d.js', s => s.replace("  P3.clipClock = clipClock;", "  P3.clipClock = clipClock; const zz = p => { p.face[0] = 1; };")],
-  ['216', 'um canal do rosto que não existe', 'js/anim-rosto.js', s => s.replace("F.blink = ", "F.olheira = 1; F.blink = ")],
+  ['216', 'um canal do rosto que não existe', 'js/anim-rosto.js', s => s.replace("T[X.cry] += 0.6 * p.luto;", "T[X.cry] += 0.6 * p.luto; T[X.olheira] = 1;")],
   ['217', 'uma coisa na mão de um gesto da vida', 'js/vida-clips.js', s => s.replace("K('bound-andar', { dur: 2,", "K('bound-andar', { dur: 2, item: { hand: 'mao', key: 'caneca' },")],
   ['217', 'o leitor pondo uma coisa na mão', 'js/vida3d.js', s => s.replace("V3.lefty = v =>", "V3.dar = L => { L.held = { form: 'caneca' }; }; V3.lefty = v =>")],
   ['218', 'a micro-ação sorteada', 'js/anim-ocio.js', s => s.replace("const Anim = G.Anim3D = G.Anim3D || {};", "const Anim = G.Anim3D = G.Anim3D || {}; const sorte = () => G.vrr(0, 1);")],

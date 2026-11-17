@@ -34,6 +34,8 @@
   const wrapA = a => { while (a > Math.PI) a -= TAU; while (a < -Math.PI) a += TAU; return a; };
   // the states of the stride, and the postures whose feet are free (seated, kneeling, lying, in the water, in the air, dancing)
   const LOCO = Anim.LOCO = { walk: 1, run: 1, carryWalk: 1, sneak: 1, wade: 1 };
+  // (the stances under which the idle's little things come: standing, seated, resting — the hands free)
+  const IDLE = Anim.IDLE = new Set(['idle', 'sit', 'rest']);
   const FREE = Anim.FREE = new Set(['sit', 'eat', 'rock', 'pray', 'rest', 'eatg', 'rockg', 'sleep', 'sick', 'swim', 'tread', 'drown', 'jump', 'fall', 'climb', 'knocked', 'rise', 'crumple', 'dance', 'bound', 'cook']);
   // the channels a change of state eases (the stride's own clocks — the stance, the swing, the foot's pitch on the ground — are
   // the stride's: never eased)
@@ -151,11 +153,15 @@
     }
     // the hands: the loads by their grip and the reach for a point (Anim.hold — the rig takes the hands there)
     if (Anim.hold) Anim.hold(out, L, base === 'move' ? (st === 'run' ? 'run' : st === 'carryWalk' ? 'carryWalk' : 'walk') : st, base === 'move' ? a.ph * TAU : I.t !== undefined ? I.t : a.t, a.sp || sp);
-    // a clip over the top (a wave, a word while walking; the next wave's blows): faded in and out by its own times
-    const O = I.over && Anim.CLIPS ? (I.lefty && Anim.CLIPS[I.over + '~m']) || Anim.CLIPS[I.over] : null;
+    // a clip over the top (a wave, a word while walking; the next wave's blows): faded in and out by its own times — or, standing,
+    // seated or resting with the hands free and nothing else over it, the little thing of this moment (the idle: anim-ocio.js, its
+    // time on the world's clock, I.ctx the reader's weights; D-599)
+    let ovk = I.over, ovu = I.overK; a.oc = null;
+    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = o.k; ovu = o.u; a.oc = o.k; a.ocU = o.u; } }
+    const O = ovk && Anim.CLIPS ? (I.lefty && Anim.CLIPS[ovk + '~m']) || Anim.CLIPS[ovk] : null;
     if (O && O !== a.over) { a.over = O; a.ck = 0; }
     a.ow = clamp(a.ow + (O ? dt / Math.max(0.01, O.bin) : -dt / Math.max(0.01, a.over ? a.over.bout : 0.2)), 0, 1);
-    if (a.over && a.ow > 0) { const u = I.overK !== undefined && O ? I.overK : (a.ck += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
+    if (a.over && a.ow > 0) { const u = ovu !== undefined && O ? ovu : (a.ck += dt / a.over.dur); Anim.playClip(out, a.over, u, sstep(0, 1, a.ow)); }
     if (!O && a.ow <= 0) a.over = null;
     // the additive: the porte (the years, the cold, the grief… — anim-porte.js), the drink in the body (Anim.stagger), the tiredness
     if (Anim.porte && a.pz) Anim.porte(a, I, out, base, C);
@@ -179,8 +185,11 @@
   // (how much of a change of state is left t of the way through it: 1 → 0, a quintic — eased in and out)
   const fall = t => (t >= 1 ? 0 : t <= 0 ? 1 : 1 - t * t * t * (t * (t * 6 - 15) + 10));
   // a clip on the base: its time from the world (I.clipK) or its own clock
+  // (a gesture of no world's stroke goes at each one's own pace — I.tempo, the reader's — and never quite even: a little quicker,
+  // a little slower, in a swell of three to six seconds of the world's clock that is each one's own by the id; two people never
+  // move in step for long, D-599; the world's strokes keep the world's clock)
   function playClip(out, a, C, I, dt, w) {
-    let u; if (I.clipK !== undefined) u = I.clipK; else { a.ck = (a.ck || 0) + dt / C.dur; u = a.ck; }
+    let u; if (I.clipK !== undefined) u = I.clipK; else { const id = I.id || 0; const j = I.tempo ? I.tempo * (1 + 0.15 * Math.sin(TAU * (I.clock || 0) / (3 + 3 * G.hash(id * 41 + 1)) + TAU * G.hash(id * 43 + 2))) : 1; a.ck = (a.ck || 0) + dt / C.dur * j; u = a.ck; }
     Anim.playClip(out, C, u, w); out.tool = C.item ? 1 : out.tool;
   }
 
