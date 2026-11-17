@@ -1093,9 +1093,10 @@
         }
       }
     }
-    // spray rising from the waterfalls
-    for (const fl of S.relief.falls || []) {
-      if (!inView(fl.tx + 0.5, fl.ty + 0.5) || G.VR() > dt * (1 + fl.drop * 0.4)) continue;
+    // spray rising from the waterfalls (21c: every fall the water has in view — G.Agua.steps —, as much as it drops and pours)
+    for (const fl of stepsIn.length ? stepsIn : S.relief.falls || []) {
+      if (fl.kind === 'corredeira' || fl.frozen) continue; const dr = fl.top !== undefined ? (fl.top - fl.low) / 1.5 : fl.drop; const qk = fl.q ? Math.min(1.6, 0.5 + Math.log2(1 + fl.q) * 0.12) : 1;
+      if (!inView(fl.tx + 0.5, fl.ty + 0.5) || G.VR() > dt * (1 + dr * 0.4) * qk) continue;
       G.FX.spawn({ x: fl.tx + 0.5 + G.vrr(-0.3, 0.3), y: fl.ty + 0.5 + G.vrr(-0.3, 0.3), h: S.wl[fl.ty * N + fl.tx], z: 2, vz: G.vrr(6, 14), vx: G.vrr(-0.2, 0.2), vy: G.vrr(-0.2, 0.2), life: G.vrr(1.5, 2.6), s0: 3, s1: 10, c: 'rgba(240,248,255,0.42)', k: 2 });
     }
     // fish jumping near the shore
@@ -1461,45 +1462,70 @@
   }
 
   // ------------------------------ running water ------------------------------
-  // rivers glide downhill (little bright streaks moving with the current); waterfalls pour
+  // rivers glide down their current (little bright streaks moving with it — G.Agua.field: the way to the mouth, so the rivers of the
+  // plain run too, and the speed: the torrent quick and long, the slow river slow, the middle of a lake still); falls and rapids pour —
+  // every step of the water the world has (G.Agua.steps), the great ones with a sheet and a boiling pool, the small ones a white lip;
+  // the river turbid after the rain (21c)
   const FLOW = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  let stepsKey = '', stepsIn = [];
   function drawCurrents(t, inV) {
-    const S = G.S; const tv = R.tileView; if (!tv || R.cam.zoom < 0.7) return;
+    const S = G.S; const tv = R.tileView; if (!tv || R.cam.zoom < 0.7) return; const Ag = G.Agua; const f = Ag ? Ag.field() : null;
+    // (the river turbid with the earth the rain washed down: a brown veil over it)
+    if (Ag) { ctx.fillStyle = 'rgba(150,112,62,1)';
+      for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) { const i = y * N + x; if (S.type[i] !== T.RIVER || (S.ice && S.ice[i])) continue; const tu = Ag.turbid(i); if (tu < 0.15) continue;
+        const lv = S.wl[i]; const a = proj(x, y, lv), b = proj(x + 1, y, lv), c = proj(x + 1, y + 1, lv), d = proj(x, y + 1, lv); if (!inV(a)) continue;
+        ctx.globalAlpha = Math.min(0.3, tu * 0.32); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.lineTo(d[0], d[1]); ctx.closePath(); ctx.fill(); }
+      ctx.globalAlpha = 1; }
     ctx.strokeStyle = 'rgba(235,250,255,0.55)'; ctx.lineWidth = 0.8; ctx.beginPath();
     for (let y = tv[1]; y <= tv[3]; y++) for (let x = tv[0]; x <= tv[2]; x++) {
-      const i = y * N + x; if (S.type[i] !== T.RIVER) continue;
-      const lv = S.wl[i]; let bd = -1, bl = lv - 0.004;
-      for (let k = 0; k < 4; k++) { const nx = x + FLOW[k][0], ny = y + FLOW[k][1]; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; const tj = S.type[j]; if (tj > T.RIVER) continue; const l = tj === T.RIVER ? S.wl[j] : G.SEA; if (l < bl) { bl = l; bd = k; } }
-      if (bd < 0) continue;
-      const [dx, dy] = FLOW[bd]; const ph = (t * 0.45 + G.hash(i * 3)) % 1;
-      for (let q = 0; q < 2; q++) {
-        const f = (ph + q * 0.5) % 1; const side = 0.25 + G.hash(i * 7 + q) * 0.5;
-        const u = dx ? (dx > 0 ? f : 1 - f) : side, v = dy ? (dy > 0 ? f : 1 - f) : side;
-        const a = proj(x + u, y + v, lv), b = proj(x + u + dx * 0.16, y + v + dy * 0.16, lv);
+      const i = y * N + x; if (S.type[i] !== T.RIVER || (S.ice && S.ice[i])) continue;
+      const lv = S.wl[i]; let dx, dy, sp;
+      if (f) { sp = f.sp[i]; if (sp < 0.08) continue; dx = f.dx[i]; dy = f.dz[i]; }
+      else { let bd = -1, bl = lv - 0.004; for (let k = 0; k < 4; k++) { const nx = x + FLOW[k][0], ny = y + FLOW[k][1]; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; const tj = S.type[j]; if (tj > T.RIVER) continue; const l = tj === T.RIVER ? S.wl[j] : G.SEA; if (l < bl) { bl = l; bd = k; } } if (bd < 0) continue; [dx, dy] = FLOW[bd]; sp = 0.6; }
+      const ph = (t * (0.18 + sp * 0.45) + G.hash(i * 3)) % 1; const len = 0.1 + Math.min(0.22, sp * 0.1);
+      for (let q = 0; q < (sp > 1 ? 3 : 2); q++) {
+        const fq = (ph + q / (sp > 1 ? 3 : 2)) % 1; const side = 0.25 + G.hash(i * 7 + q) * 0.5;
+        // (along the way it runs, across the tile from its upstream side to its downstream one)
+        const u = 0.5 + dx * (fq - 0.5) - dy * (side - 0.5), v = 0.5 + dy * (fq - 0.5) + dx * (side - 0.5);
+        const a = proj(x + u, y + v, lv), b = proj(x + u + dx * len, y + v + dy * len, lv);
         if (!inV(a)) continue;
         ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
       }
     }
     ctx.stroke();
-    // waterfalls facing the camera
-    for (const fl of S.relief.falls || []) {
-      const x = fl.x, y = fl.y, tx = fl.tx, ty = fl.ty;
-      if (depth(x + 0.5, y + 0.5) >= depth(tx + 0.5, ty + 0.5)) continue;
-      const top = S.wl[y * N + x], low = S.wl[ty * N + tx];
+    // (the steps of the water in view: asked again when the land changes or the view moves on)
+    const key = tv.join(',') + ':' + (S.typeVer || 0) + ':' + (S.walkVer || 0);
+    if (key !== stepsKey) { stepsKey = key; stepsIn = Ag ? Ag.steps(tv[0], tv[1], tv[2] - tv[0] + 1, tv[3] - tv[1] + 1) : (S.relief.falls || []).map(fl => ({ x: fl.x, y: fl.y, tx: fl.tx, ty: fl.ty, top: S.wl[fl.y * N + fl.x] * 1.5, low: S.wl[fl.ty * N + fl.tx] * 1.5, drop: fl.drop * 1.5, q: 4, kind: 'queda' })); }
+    for (const st of stepsIn) {
+      const x = st.x, y = st.y, tx = st.tx, ty = st.ty;
+      if (depth(x + 0.5, y + 0.5) >= depth(tx + 0.5, ty + 0.5)) continue; // (only the steps that face the camera)
+      const top = st.top / 1.5, low = st.low / 1.5;
       let ax, ay, bx, by;
       if (tx > x) { ax = x + 1; ay = y; bx = x + 1; by = y + 1; } else if (tx < x) { ax = x; ay = y; bx = x; by = y + 1; } else if (ty > y) { ax = x; ay = y + 1; bx = x + 1; by = y + 1; } else { ax = x; ay = y; bx = x + 1; by = y; }
       const mid = proj((ax + bx) / 2, (ay + by) / 2, low); if (!inV(mid)) continue;
+      // (a fall held in the ice of a sudden winter: its sheet still, white-blue, the icicles at its lip)
+      if (st.frozen) { if (st.drop < 0.3) continue; ctx.save(); const a0 = proj(ax, ay, top), b0 = proj(bx, by, top), a1 = proj(ax, ay, low), b1 = proj(bx, by, low);
+        ctx.fillStyle = 'rgba(214,234,246,0.85)'; ctx.beginPath(); ctx.moveTo(a0[0], a0[1]); ctx.lineTo(b0[0], b0[1]); ctx.lineTo(b1[0], b1[1]); ctx.lineTo(a1[0], a1[1]); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 0.8; ctx.beginPath(); for (let k = 0; k < 7; k++) { const u = (k + 0.5) / 7; const p0 = proj(ax + (bx - ax) * u, ay + (by - ay) * u, top); ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p0[0], p0[1] + 2 + G.hash(k * 7 + x + y * 3) * 5); } ctx.stroke(); ctx.restore(); continue; }
+      const big = st.kind === 'queda'; const qk = Math.min(1, 0.45 + Math.log2(1 + (st.q || 1)) * 0.08);
       ctx.save(); ctx.lineCap = 'round';
-      for (let k = 0; k < 6; k++) {
-        const u = (k + 0.5) / 6; const px = ax + (bx - ax) * u, py = ay + (by - ay) * u;
-        const p0 = proj(px, py, top), p1 = proj(px, py, low);
-        ctx.strokeStyle = `rgba(255,255,255,${0.45 + 0.25 * G.hash(k * 13 + x)})`; ctx.lineWidth = 1.1;
-        ctx.setLineDash([3 + G.hash(k + y) * 3, 4]); ctx.lineDashOffset = -t * (26 + k * 3);
-        ctx.beginPath(); ctx.moveTo(p0[0] + Math.sin(t * 3 + k) * 0.3, p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+      if (big) {
+        for (let k = 0; k < 6; k++) {
+          const u = (k + 0.5) / 6; const px = ax + (bx - ax) * u, py = ay + (by - ay) * u;
+          const p0 = proj(px, py, top), p1 = proj(px, py, low);
+          ctx.strokeStyle = `rgba(255,255,255,${(0.45 + 0.25 * G.hash(k * 13 + x)) * qk})`; ctx.lineWidth = 1.1;
+          ctx.setLineDash([3 + G.hash(k + y) * 3, 4]); ctx.lineDashOffset = -t * (26 + k * 3);
+          ctx.beginPath(); ctx.moveTo(p0[0] + Math.sin(t * 3 + k) * 0.3, p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        // the pool boils white where it lands, the more the more water comes over
+        for (let k = 0; k < 3; k++) { const a = (t * 1.3 + k * 2.1) % TAU; ctx.fillStyle = `rgba(255,255,255,${(0.35 + 0.2 * Math.sin(t * 4 + k)) * qk})`; ctx.beginPath(); ctx.ellipse(mid[0] + Math.cos(a) * 5, mid[1] + 1 + Math.sin(a) * 1.2, (5 + k) * (0.7 + qk * 0.5), 1.8, 0, 0, TAU); ctx.fill(); }
+      } else {
+        // (a rapid: a white lip running along the step, a little foam under it)
+        const a = proj(ax, ay, low + 0.02), b = proj(bx, by, low + 0.02); const w = 0.5 + 0.5 * Math.sin(t * 5 + x * 1.7 + y);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.35 + 0.3 * w) * Math.min(1, 0.4 + st.drop)})`; ctx.lineWidth = 1 + Math.min(1.2, st.drop * 1.5);
+        ctx.setLineDash([2, 2.5]); ctx.lineDashOffset = -t * 9; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]);
       }
-      ctx.setLineDash([]);
-      // the pool boils white where it lands
-      for (let k = 0; k < 3; k++) { const a = (t * 1.3 + k * 2.1) % TAU; ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.2 * Math.sin(t * 4 + k)})`; ctx.beginPath(); ctx.ellipse(mid[0] + Math.cos(a) * 5, mid[1] + 1 + Math.sin(a) * 1.2, 5 + k, 1.8, 0, 0, TAU); ctx.fill(); }
       ctx.restore();
     }
   }
@@ -1514,6 +1540,11 @@
     ctx.beginPath(); ctx.ellipse(p[0], p[1], r * 22.63, r * 11.31, 0, 0, TAU);
   }
   R.groundEllipse = groundEllipse;
+  // (the puddles' places, kept until the land changes: the same few points of each tile every rain — G.Agua.puddle)
+  let pzC = null, pzKey = '';
+  function puddleAt(k, px, py) { const S = G.S; const key = (S.typeVer || 0) + ':' + (S.walkVer || 0) + ':' + N; if (key !== pzKey || !pzC || pzC.length !== N * N * 2) { pzKey = key; pzC = new Float32Array(N * N * 2).fill(-1); }
+    if (pzC[k] < 0) pzC[k] = G.Agua.puddle(px, py); return pzC[k]; }
+  G.worldHooks.push(() => { pzC = null; pzKey = ''; stepsKey = ''; stepsIn = []; });
   function drawGround(t, view, nightF) {
     const S = G.S;
     // wet ground
@@ -1525,6 +1556,13 @@
     for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
       const i = y * N + x; const w = S.wet[i];
       if (w > 0.08 && S.type[i] >= T.SAND) { ctx.fillStyle = `rgba(30,40,55,${Math.min(0.2, w * 0.2)})`; diamond(x, y, x + 1, y + 1); ctx.fill(); }
+      // (21c: the puddles — where the ground holds the rain, G.Agua.puddle: the same places every rain — bright with the sky)
+      if (w > 0.35 && G.Agua && S.type[i] >= T.SAND && !S.occ[i]) for (let k = 0; k < 2; k++) {
+        const px = x + 0.25 + 0.5 * G.hash(i * 5 + k), py = y + 0.25 + 0.5 * G.hash(i * 9 + k); const pz = puddleAt(i * 2 + k, px, py); if (pz < 0.2) continue;
+        const p = proj(px, py, W.hAt(px, py)); const r = (2.5 + pz * 4) * Math.min(1, (w - 0.3) * 2.5);
+        ctx.fillStyle = `rgba(190,214,232,${0.32 + pz * 0.2})`; ctx.beginPath(); ctx.ellipse(p[0], p[1], r, r * 0.5, 0, 0, TAU); ctx.fill();
+        const rain = G.Agua.rainNow(px, py); if (rain > 0.15) { const ph = (t * 1.6 + G.hash(i * 3 + k)) % 1; ctx.strokeStyle = `rgba(240,248,255,${(1 - ph) * 0.5})`; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.ellipse(p[0], p[1], r * ph, r * ph * 0.5, 0, 0, TAU); ctx.stroke(); }
+      }
     }
     // cloud shadows (sky clouds & rain clouds)
     const zoomFade = G.clamp((2.2 - R.cam.zoom) / 1.2, 0, 1);

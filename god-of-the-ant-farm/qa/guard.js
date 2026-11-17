@@ -1415,6 +1415,37 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   if (rd && (!/G\.Geo\.rock\(i\)/.test(rd) || !/Ge\.bandOf\(r, /.test(rd) || !/G\.Geo\.fold\(/.test(rd))) fails.push('a mesma rocha: a vista do deus (render.js) não tira a rocha e as camadas do G.Geo (D-495)');
   if (gr && (!/G\.Geo\.table\(\)/.test(gr) || !/Ge\.rockAt\(i\)/.test(gr) || !/Ge\.foldAt\(i\)/.test(gr))) fails.push('a mesma rocha: o chão do 3D (ground3d.js) não tira a rocha, a dobra e as camadas do G.Geo (D-495)'); }
 // === 21c: a água ===
+// 182. "a água da fase A só se vê" (D-465, D-505): na fase A nenhum módulo do mundo lê o G.Agua — só o que só se vê (a lista LOOK) e o
+// próprio agua.js; na fase B, a corrente que empurra quem nada perguntará a ele, e esta regra muda com o protocolo inteiro
+{ const AGUA_OK = new Set(LOOK.concat(['agua.js']));
+  for (const f of files) { if (AGUA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Agua\b(?!3D)/.test(c)) fails.push(`a água só se vê: ${f}:${k + 1} lê o G.Agua num módulo do mundo (a fase A não muda o mundo; D-505): ${l.trim().slice(0, 110)}`); }); } }
+// 183. "a onda desenhada é uma conta só" (D-506): o sombreador da água move a sua face pela função que o G.Agua escreve com os mesmos
+// números da sua conta em JS (G.Agua.waveGLSL / G.Agua.waveY); o navio do fx3d.js monta na mesma onda (G.Agua.waveY, no shipRide); e a
+// onda nunca passa de 15 cm — quem nada e o navio ficam no nível plano do mundo (W.waterH)
+{ const a3 = (src['agua3d.js'] || []).join('\n'), ag = (src['agua.js'] || []).join('\n'), fx = (src['fx3d.js'] || []).join('\n');
+  if (a3 && !/G\.Agua\.waveGLSL\(\)/.test(a3)) fails.push('a onda numa conta só: o agua3d.js não move a água pela G.Agua.waveGLSL (D-506)');
+  (src['agua3d.js'] || []).forEach((l, k) => { if (/transformed\.y\s*\+=\s*\(?\s*(sin|cos)\(/.test(l)) fails.push(`a onda numa conta só: agua3d.js:${k + 1} move a face da água por uma conta sua (D-506): ${l.trim().slice(0, 110)}`); });
+  if (fx && !/Ag\.waveY\(x, z, t, w, 1, dep\)/.test(fx)) fails.push('a onda numa conta só: o navio do fx3d.js não monta na G.Agua.waveY (D-506)');
+  const cap = /\bcap:\s*([0-9.]+)\s*\}/.exec(ag); if (ag && (!cap || +cap[1] > 0.15)) fails.push(`a onda numa conta só: a onda desenhada passa de 15 cm (cap ${cap ? cap[1] : '?'}; D-506)`); }
+// 184. "a água do 3D mora no agua3d.js" (D-507): o material, a geometria, o leito e o mar além do mapa da água estão no agua3d.js; o
+// realm3d.js só os chama (uma linha cada) — nenhum sombreador de água (aShore), nenhuma geometria de água própria
+{ (src['realm3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\baShore\b|function (waterGeo|bedTick|flowTick|bankLevel|seaReaches)\b|MAT\.water\s*=(?!=)/.test(c)) fails.push(`a água no seu arquivo: realm3d.js:${k + 1} desenha a água por conta própria (o agua3d.js; D-507): ${l.trim().slice(0, 110)}`); }); }
+// 185. "a queda pelos degraus da água" (D-508): a lâmina de cada queda e corredeira e o borrifo saem dos degraus do G.Agua (G.Agua.steps,
+// o perfil G.Agua3D.sheetOf) — os mesmos que a vista do deus pinta —; nenhum arquivo do 3D lê as quedas do relevo por conta própria
+{ const a3 = (src['agua3d.js'] || []).join('\n'), fx = (src['fx3d.js'] || []).join('\n');
+  if (a3 && !/G\.Agua\.steps\(x0, y0, w, h\)/.test(a3)) fails.push('a queda pelos degraus: o agua3d.js não faz as lâminas pelo G.Agua.steps (D-508)');
+  if (fx && !/G\.Agua\.steps\(/.test(fx)) fails.push('a queda pelos degraus: o borrifo do fx3d.js não vem do G.Agua.steps (D-508)');
+  for (const f of files) { if (!/3d\.js$/.test(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/relief\.falls/.test(c)) fails.push(`a queda pelos degraus: ${f}:${k + 1} lê as quedas do relevo por conta própria (G.Agua.steps; D-508): ${l.trim().slice(0, 110)}`); }); } }
+// 186. "o molhado pela porta da água" (D-509): o chão (ground3d.js) e os telhados (build3d.js) molham só pela porta do agua3d.js (o
+// retrato do molhado: G.Agua3D.wetU, groundGLSL, solidGLSL), que lê o G.Agua.wet / spray / puddle — nenhum dos dois lê o S.wet; e as poças
+// da vista do deus vêm do G.Agua.puddle (as mesmas casas)
+{ for (const f of ['ground3d.js', 'build3d.js']) { const t = (src[f] || []).join('\n'); if (!t) continue;
+    if (!/G\.Agua3D\.wetU\(\)/.test(t)) fails.push(`o molhado pela porta: o ${f} não lê o molhado pela G.Agua3D.wetU (D-509)`);
+    src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bS\.wet\b|\.wet\[/.test(c)) fails.push(`o molhado pela porta: ${f}:${k + 1} lê o S.wet por conta própria (D-509): ${l.trim().slice(0, 110)}`); }); }
+  const rd = (src['render.js'] || []).join('\n'); if (rd && !/G\.Agua\.puddle\(px, py\)/.test(rd)) fails.push('o molhado pela porta: as poças da vista do deus não vêm do G.Agua.puddle (D-509)'); }
+// 187. "a água pelas qualidades sem mexer na tabela" (D-466, D-510): os campos da água (aguaRefl, aguaFall, aguaSpray, aguaWet) entram nas
+// qualidades pelo G.Realm.qualAdd do agua3d.js
+{ const a3 = (src['agua3d.js'] || []).join('\n'); for (const k of ['aguaRefl', 'aguaFall', 'aguaSpray', 'aguaWet']) if (a3 && !new RegExp("qa\\('" + k + "'").test(a3)) fails.push(`as qualidades da água: o agua3d.js não acrescenta o campo ${k} pelo qualAdd (D-510)`); }
 // === 21d: o céu ===
 // 188. "a luz é do céu" (D-466, D-520): os uniformes do ar e da luz (GX) e a luz da hora (a força e a cor do sol e do céu, a
 // exposição) só o js/ceu3d.js escreve — a luz pintada das chamas (gxLM*) é do fx3d.js, e o realm3d.js só dá a exposição de

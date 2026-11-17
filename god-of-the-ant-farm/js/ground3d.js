@@ -27,7 +27,7 @@
   const K = G3.K = { grass: 0, meadow: 1, sand: 2, dune: 3, rocky: 4, snow: 5, swamp: 6, savanna: 7, jungle: 8, path: 9, gravel: 10, paved: 11, highway: 12, burnt: 13, field: 14, bed: 15, rock: 16, taiga: 17, wet: 18, river: 19 };
   let THREE = null, map = null, data = null, det = null, mat = null, size = 0, dirtyAll = true, row = 0, gmap = null, gdata = null, fmap = null, fdata = null;
   let emap = null, edata = null, stmap = null, stFor = NaN; // (21b: the rock of each tile, its fold, its moss and wet; the table of the layers)
-  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; fallsFor = ''; });
+  G.worldHooks.push(() => { dirtyAll = true; row = 0; sweep = 0; wBox = []; });
   // (the god's road colours: the same streets from both heights)
   const ROADC = [null, [184, 164, 128], [190, 182, 164], [146, 142, 134]];
   const FARM = { farm: 1, horta: 1, plantacao: 1, vinhedo: 1 };
@@ -157,15 +157,10 @@
   // (metres + 256) × 128), A the moss on the rock (its high four bits: the wet and shaded rock of the wet lands, from the forest's
   // moisture — G.Mata —, none in the cold, on the ash or a road) and how wet the rock is (its low four bits: the rain's wet of the world,
   // S.wet, and the spray at the foot of a fall of water). Read smoothly between the tiles by the shader, the fold the same as G.Geo.fold
-  let fallsFor = '', fallsAt = null, mataR = null, mataK = -1; // (the forest's region last read: within one band of rows, the world does not change)
+  let mataR = null, mataK = -1; // (the forest's region last read: within one band of rows, the world does not change)
   // (the whole picture at once — the view opening — without the moss: the forest's regions of the whole map are not made in one frame; the
   // rows made again each frame bring it, round the body first, in a moment)
   let geoQuick = false;
-  function sprayOf(i) {
-    const S = G.S; const fl = (S.relief && S.relief.falls) || []; const key = (S.seed | 0) + ':' + N + ':' + fl.length + ':' + (S.typeVer | 0);
-    if (key !== fallsFor) { fallsAt = new Map(); for (const f of fl) { const k = 0.5 + Math.min(1, (f.drop || 1) / 4) * 0.5; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = f.x + dx, y = f.y + dy; if (!W.inb(x, y)) continue; const j = y * N + x; const v = k * (1 - Math.hypot(dx, dy) / 3.2); if (v > (fallsAt.get(j) || 0)) fallsAt.set(j, v); } } fallsFor = key; }
-    return fallsAt.get(i) || 0;
-  }
   function geoOf(i, x, y, out) {
     const S = G.S; const Ge = G.Geo; if (!Ge) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
     const r = Ge.rockAt(i); const v = G.clamp(Math.round((Ge.foldAt(i) + 256) * 128), 0, 65535);
@@ -178,7 +173,8 @@
       const Ma = G.Mata, rx = Math.floor(x / Ma.R), ry = Math.floor(y / Ma.R); if (mataK !== ry * 4096 + rx) { mataR = Ma.regionNow(rx, ry); mataK = ry * 4096 + rx; }
       if (mataR) { const k = (y - mataR.y0) * Ma.R + (x - mataR.x0); const um = mataR.umid[k] / 255, dl = mataR.dossel[k] / 255; moss = G.clamp((um - 0.42) * 1.7, 0, 1) * 0.85 + G.clamp(dl * um * 1.3 - 0.15, 0, 1) * 0.4; }
       moss *= 1 - G.clamp(snowOf(i, x, y) * 1.6, 0, 1); }
-    const wet = G.clamp(Math.max(S.wet ? S.wet[i] : 0, sprayOf(i)), 0, 1);
+    // (the wet of the rock asked of the water's door — the rain that fell and falls, the spray round the foot of a fall: D-509, D-508)
+    const wet = G.Agua ? G.clamp(Math.max(G.Agua.wet(i), G.Agua.spray(i)), 0, 1) : 0;
     // (the scree at the foot of a face: a tile one walks under a cliff of its own rock — the stones the face sheds lie there, more the taller
     // the face over it; in the high four bits of R)
     let tal = 0; if (t >= T.SAND && !S.cliff[i] && !S.road[i] && !S.occ[i]) { const h0 = W.tileH(i); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.cliff[j]) tal = Math.max(tal, (W.tileH(j) - h0) * G.Space.HM / ((dx && dy) ? 12 : 8)); } }
@@ -721,6 +717,9 @@ vec3 groundCol() {
     }
   }
 #endif
+#ifdef AGUA_WET
+  c = aguaWetGround(c, vGP, vGN, uAgSky, uTime, uDet); // (21c: the rain that wets — the water's picture of the wet, G.Agua3D)
+#endif
   return c;
 }
 `;
@@ -735,8 +734,9 @@ vec3 groundCol() {
       // (the sky's colour at the horizon, for what shines with it: the wet sand)
       if (G.Realm.skyU) U.uSkyH = G.Realm.skyU.hor;
       Object.assign(sh.uniforms, U, G3.U3());
+      if (G.Agua3D) Object.assign(sh.uniforms, G.Agua3D.wetU()); // (21c: the wet of the land and its puddles)
       sh.vertexShader = 'varying vec3 vGP; varying vec3 vGN;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vGP = (modelMatrix * vec4(transformed, 1.0)).xyz; vGN = normalize(mat3(modelMatrix) * objectNormal);');
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + FRAG()).replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G3.texGLSL() + gMeans() + (G.Agua3D ? G.Agua3D.groundGLSL() : '') + FRAG()).replace('#include <opaque_fragment>', '#ifdef AGUA_WET\n outgoingLight += gAgSheen;\n#endif\n#include <opaque_fragment>').replace('vec4 diffuseColor = vec4( diffuse, opacity );', 'vec4 diffuseColor = vec4( groundCol(), opacity );')
         // (the relief: from the stuff's heights once the pictures are in — the slopes of a pebble, a cobble, a tuft — and
         // from the drawn grain before)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>

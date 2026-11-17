@@ -195,7 +195,7 @@
     const sg = new THREE.CylinderGeometry(1.6, 1.6, 1, 10, 1, true, -0.32, 0.64); sg.translate(0, 0.5, -1.6); sg.rotateY(Math.PI / 2); sg.scale(1, 1, 1);
     hull = new THREE.InstancedMesh(hg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS); deck = new THREE.InstancedMesh(box, mat, MAXS); mast = new THREE.InstancedMesh(cyl, mat, MAXS); sail = new THREE.InstancedMesh(sg, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide }), MAXS);
     for (const m of [hull, deck, mast, sail]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
-    makePools(); makeBlobs(); makeHalos(); makeFlames();
+    makePools(); makeBlobs(); makeHalos(); makeFlames(); makeWater(); // (makeWater: the water's own batches — 21c)
   };
   // ------------------------------ the flames ------------------------------
   // (a flame: tongues of fire on three crossed cards — torn at the edge by a noise rising through them, white-gold at the
@@ -463,11 +463,15 @@
       let v = svis.get(s.id); if (!v) { v = { X, Z, yaw: s.face > 0 ? 0 : Math.PI }; svis.set(s.id, v); }
       const dx = X - v.X, dz = Z - v.Z; if (Math.hypot(dx, dz) > 0.01 && Math.hypot(dx, dz) < 8) { const want = Math.atan2(dz, dx); let da = want - v.yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU; v.yaw += da * (1 - Math.exp(-2 * rdt)); }
       v.X = X; v.Z = Z;
-      const wy = (s.st === 'build' ? W.hAt(s.x, s.y) : G.SEA) * H; const rock = Math.sin(t * 1.3 + s.id) * 0.05, bob = Math.sin(t * 0.9 + s.id) * 0.12;
+      // (21c: on the sea, the ship rides the wave the water draws — G.Agua.waveY, the shader's own sum —: its height, its pitch and its
+      // roll from the wave under its bow, its stern and its sides; in the yard, on the land)
+      const ride = s.st !== 'build' ? shipRide(X, Z, v.yaw, D) : null;
+      const wy = ride ? G.SEA * H + ride[0] : W.hAt(s.x, s.y) * H; const rock = Math.sin(t * 1.3 + s.id) * 0.025 + (ride ? ride[2] : 0), bob = Math.sin(t * 0.9 + s.id) * 0.03, pitch = ride ? ride[1] : 0;
+      v.wy = wy; v.D = D; v.moving = Math.hypot(dx, dz) / Math.max(rdt, 1e-3);
       const sink = s.sink ? -2.5 : 0; const hp = s.maxHp ? G.clamp(s.hp / s.maxHp, 0, 1) : 1;
       const col = G.Fac.hex(s.fac); const wood = s.kind === 'guerra' ? '#5a3a24' : '#7a5232';
       // (the ship's frame: at its place, turned to its heading — the length along its own X — rolling on the swell)
-      const put = (im, ox, oy, oz, sx, sy, sz, c) => { M.a.makeTranslation(X, wy - 0.4 + bob + sink, Z); M.b.makeRotationY(-v.yaw); M.a.multiply(M.b); M.b.makeRotationX(rock); M.a.multiply(M.b); M.b.makeTranslation(ox, oy, oz); M.a.multiply(M.b); M.b.makeScale(sx, sy, sz); M.a.multiply(M.b); im.setMatrixAt(m, M.a); im.setColorAt(m, M.c.set(c)); };
+      const put = (im, ox, oy, oz, sx, sy, sz, c) => { M.a.makeTranslation(X, wy - 0.4 + bob + sink, Z); M.b.makeRotationY(-v.yaw); M.a.multiply(M.b); M.b.makeRotationZ(pitch); M.a.multiply(M.b); M.b.makeRotationX(rock); M.a.multiply(M.b); M.b.makeTranslation(ox, oy, oz); M.a.multiply(M.b); M.b.makeScale(sx, sy, sz); M.a.multiply(M.b); im.setMatrixAt(m, M.a); im.setColorAt(m, M.c.set(c)); };
       put(hull, 0, -0.1, 0, D[0], 1.25, D[1], wood);
       put(deck, -D[0] * 0.25, 1.1, 0, D[0] * 0.25, D[0] > 6 ? 1.3 : 0.01, D[1] * 0.7, '#8a6a44');
       if (D[2] && s.mast !== 0) { put(mast, 0, 1.1, 0, 0.25, D[2], 0.25, '#4a3424'); put(sail, 0.1, 1.1 + D[2] * 0.3, 0, 3, D[2] * 0.6 * G.clamp((s.sail || 100) / 100, 0.2, 1), D[1] * 1.3, hp < 0.4 ? '#8a8478' : col); }
@@ -490,13 +494,14 @@
     }
     // ---- the small life of the air: smoke, sparks, dust, splashes, chips, leaves, fireflies
     emitters(rdt, focus, t);
+    waterFX(rdt, focus); // (21c: the spray of the falls, the wakes)
     { const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); const wx = Math.cos(w.windA || 0) * (0.4 + ws * 1.4), wz = Math.sin(w.windA || 0) * (0.4 + ws * 1.4);
       stepPool(PA, rdt, wx, wz, t); stepPool(PG, rdt, wx, wz, t); stepRings(rdt); stepFeet(rdt); }
     const cam2 = R3.camera(); const ren = R3.renderer(); PU.uScale.value = ren.domElement.height / (2 * Math.tan(cam2.fov * Math.PI / 360));
     // (the points fade into the same haze as everything: where the air's haze is light and where it is thick)
     const fog = R3.scene().fog; PU.uFogC.value.copy(fog.color); const A = R3.GX.gxAir.value, A2 = R3.GX.gxAir2.value; PU.uFogN.value = A2.x + 0.3 / A.x; PU.uFogF.value = A2.x + 1.7 / A.x;
     { const am = G.Render.ambient(); PU.uLit.value = G.clamp((am[0] + am[1] + am[2]) / 765, 0.3, 1); }
-    F3.particles = PA.n + PG.n; F3.rings = ripN;
+    F3.particles = PA.n + PG.n + (PW ? PW.n : 0); F3.rings = ripN;
   };
   // ------------------------------ what raises the particles ------------------------------
   let leaves = [];
@@ -576,4 +581,102 @@
       if (S.type[i] <= G.T.RIVER) ripple(X, (S.type[i] === G.T.RIVER ? S.wl[i] : G.SEA) * H + 0.06, Z, 0.8);
       else spawn(PA, { x: X, y: W.hAt(X / L, Z / L) * H + 0.05, z: Z, vy: 0.8, life: 0.25, s0: 0.12, s1: 0.03, c: [0.85, 0.9, 0.95], a: 0.7, sh: 1, grav: 6 }); }
   }
+
+  // ------------------------------ 21c: the water's part ------------------------------
+  // The spray of the falls in a batch of its own (the shared pools carry the smoke, the leaves and the dust: a great fall would take
+  // them): a fall throws it up where its sheet strikes the pool (G.Agua3D.sheetOf), as much as it drops and as wide as it is, and the
+  // wind takes it; in it, with the sun behind the eye, the rainbow at its 42 degrees (the sky's, G.Ceu.rainbow, where it says so).
+  // The wake of the ships: foam spreading behind each one that moves, and the spray at its bow. Only seen (G.VR)
+  let PW = null, PWU = null, wake = null, wakeN = 0, wkT = 0; const NWK = 96; let fallsNear = [], fallsKey = '', fallsT = -1e9;
+  const _wv = [0, 0, 0];
+  // (the wind of the 3D, as the water's shader reads it)
+  function windV() { const w = G.Realm.U.wind.value; _wv[0] = w ? w.x : 0; _wv[1] = w ? w.y : 0; _wv[2] = w ? w.z : 0; return _wv; }
+  // (the drawn wave under a ship: [its height, its pitch, its roll] — what is on the water is drawn on it, D-506)
+  function shipRide(X, Z, yaw, D) {
+    const Ag = G.Agua; if (!Ag || !Ag.waveY) return [0, 0, 0]; const t = G.Realm.time(), w = windV(); const H = G.Space.HM, L = G.Space.TILE, sea = G.SEA * H;
+    const at = (x, z) => { const dep = sea - (W.hAt(x / L, z / L) * H - G.Space.bedDrop(x / L, z / L)); return Ag.waveY(x, z, t, w, 1, dep); };
+    const c = Math.cos(yaw), sn = Math.sin(yaw); const hl = D[0] * 0.45, hb = D[1] * 0.5;
+    const y0 = at(X, Z), yb = at(X + c * hl, Z + sn * hl), ys = at(X - c * hl, Z - sn * hl), yr = at(X - sn * hb, Z + c * hb), yp = at(X + sn * hb, Z - c * hb);
+    return [y0, Math.atan2(yb - ys, hl * 2), -Math.atan2(yr - yp, hb * 2)];
+  }
+  F3.shipRide = shipRide;
+  const PVERTW = PVERT.replace('varying float vFog;', 'varying float vFog; uniform vec3 uSun; varying float vRb;').replace('void main() {', 'void main() { vRb = dot(normalize(position - cameraPosition), -uSun);');
+  // (the rainbow: the light of the sun turned back by each drop at 40,5 to 42,5 degrees from the point opposite the sun — violet inside,
+  // red outside — in the drops that are there)
+  const PFRAGW = PFRAG.replace('uniform float uAdd;', 'uniform float uAdd; uniform float uRb; varying float vRb;').replace('col *= col;', `col *= col;
+      if (uRb > 0.001) { float ang = degrees(acos(clamp(vRb, -1.0, 1.0))); float b = (ang - 40.5) / 2.0;
+        if (b > 0.0 && b < 1.0) { vec3 rb = max(vec3(smoothstep(0.4, 0.95, b), 1.0 - abs(b - 0.48) * 2.3, 1.0 - smoothstep(0.08, 0.55, b)), 0.0); col += rb * uRb * (1.0 - abs(b * 2.0 - 1.0)) * 1.4; } }`);
+  function makeWater() {
+    PWU = Object.assign({}, PU, { uAdd: { value: 0 }, uSun: { value: new THREE.Vector3(0, 1, 0) }, uRb: { value: 0 } });
+    const P = pool(false); const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P.pos, 3).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aCol', new THREE.BufferAttribute(P.col, 4).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aSize', new THREE.BufferAttribute(P.size, 1).setUsage(THREE.DynamicDrawUsage)); g.setAttribute('aShape', new THREE.BufferAttribute(P.shape, 1).setUsage(THREE.DynamicDrawUsage)); g.setDrawRange(0, 0);
+    const m = new THREE.ShaderMaterial({ uniforms: PWU, vertexShader: PVERTW, fragmentShader: PFRAGW, transparent: true, depthWrite: false });
+    const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 4; scene.add(pts); P.geo = g; PW = P;
+    // (the wake: flat patches of foam on the water, each spreading and thinning as it is left behind)
+    const cg = new THREE.CircleGeometry(1, 18); cg.rotateX(-Math.PI / 2);
+    const aT = new THREE.InstancedBufferAttribute(new Float32Array(NWK), 1), aS = new THREE.InstancedBufferAttribute(new Float32Array(NWK), 1); aT.setUsage(THREE.DynamicDrawUsage); cg.setAttribute('aT', aT); cg.setAttribute('aS', aS);
+    wake = new THREE.InstancedMesh(cg, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uLit: PU.uLit, gxGr: PU.gxGr, gxTn: PU.gxTn, uDet: { value: G.Ground3D.detail() } },
+      vertexShader: 'attribute float aT; attribute float aS; varying float vT; varying vec2 vP; varying float vS; void main(){ vT = aT; vS = aS; vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying float vT; varying vec2 vP; varying float vS; uniform float uLit; uniform sampler2D uDet; void main(){ float r = length(vP); float n = texture2D(uDet, vP * 0.55 + vS * 7.3).b * 0.6 + texture2D(uDet, vP * 1.3 + vS * 3.1).r * 0.4; float a = smoothstep(1.0, 0.55, r) * smoothstep(0.3, 0.62, n + (1.0 - vT) * 0.3) * (1.0 - vT) * 0.75; if (a < 0.01) discard; vec3 c = vec3(0.92, 0.95, 0.97) * uLit; gl_FragColor = vec4(c * c, a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' }), NWK);
+    wake.count = 0; wake.frustumCulled = false; wake.renderOrder = 3; wake.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(wake);
+    wake.userData = { age: new Float32Array(NWK), max: new Float32Array(NWK), x: new Float32Array(NWK), z: new Float32Array(NWK), vx: new Float32Array(NWK), vz: new Float32Array(NWK), r0: new Float32Array(NWK), r1: new Float32Array(NWK), aT, aS };
+  }
+  function wakeAt(X, Z, vx, vz, r0, r1, life) { if (!wake) return; const u = wake.userData; let k = wakeN; if (k < NWK) wakeN++; else { k = 0; for (let q = 1; q < NWK; q++) if (u.age[q] / u.max[q] > u.age[k] / u.max[k]) k = q; }
+    u.age[k] = 0; u.max[k] = life; u.x[k] = X; u.z[k] = Z; u.vx[k] = vx; u.vz[k] = vz; u.r0[k] = r0; u.r1[k] = r1; u.aS.array[k] = G.VR(); }
+  function stepWake(dt) {
+    if (!wake) return; mats(); const u = wake.userData; let k = 0; const t = R3.time(), w = windV(); const sea = G.SEA * G.Space.HM;
+    while (k < wakeN) {
+      u.age[k] += dt; if (u.age[k] >= u.max[k]) { const j = --wakeN; for (const f of ['age', 'max', 'x', 'z', 'vx', 'vz', 'r0', 'r1']) u[f][k] = u[f][j]; u.aS.array[k] = u.aS.array[j]; continue; }
+      const f = u.age[k] / u.max[k]; u.x[k] += u.vx[k] * dt; u.z[k] += u.vz[k] * dt; u.vx[k] *= Math.exp(-0.6 * dt); u.vz[k] *= Math.exp(-0.6 * dt);
+      const r = u.r0[k] + (u.r1[k] - u.r0[k]) * Math.sqrt(f); const y = sea + (G.Agua ? G.Agua.waveY(u.x[k], u.z[k], t, w, 1, 9) : 0) + 0.05;
+      M.a.makeScale(r, 1, r); M.a.setPosition(u.x[k], y, u.z[k]); wake.setMatrixAt(k, M.a); u.aT.array[k] = f; k++;
+    }
+    wake.count = wakeN; wake.visible = wakeN > 0; wake.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aS.needsUpdate = true;
+  }
+  const FALL = () => (G.Agua ? G.Agua.FALL : 1.2);
+  function waterFX(dt, focus) {
+    if (!PW || !G.Agua || !G.Agua3D) return; const S = G.S, L = G.Space.TILE, q = R3.Q(); const share = q.aguaSpray || 0;
+    // (the falls round the eye: asked of the water again when the land changes or the body moves on)
+    const fx = Math.floor(focus.X / L / 8), fz = Math.floor(focus.Z / L / 8); const key = fx + ':' + fz + ':' + (S.typeVer || 0) + ':' + (S.walkVer || 0);
+    if (key !== fallsKey || R3.time() - fallsT > 4 || R3.time() < fallsT) { fallsKey = key; fallsT = R3.time(); fallsNear = G.Agua.steps(fx * 8 - 14, fz * 8 - 14, 36, 36).filter(s => s.drop >= 0.25 && !s.frozen).map(s => ({ s, sh: G.Agua3D.sheetOf(s) })); }
+    let nearF = 0;
+    if (share > 0) for (const o of fallsNear) {
+      const s = o.s; const mx = (s.ax + s.bx) / 2 * L, mz = (s.ay + s.by) / 2 * L; const d2 = (mx - focus.X) ** 2 + (mz - focus.Z) ** 2; if (d2 > 75 * 75) continue; nearF++;
+      const wid = Math.hypot(s.bx - s.ax, s.by - s.ay) * L; const far = d2 > 35 * 35 ? 0.5 : 1; const big = s.drop >= FALL();
+      // (the droplets thrown up where it strikes, drifting as spray; the splash of a rapid)
+      for (let k = every('wf' + s.i + ':' + s.j, (big ? 10 + s.drop * 7 : 3 + s.drop * 10) * wid / 4 * share * far, dt); k > 0; k--) {
+        const u = G.vrr(0.15, 0.85), X = (s.ax + (s.bx - s.ax) * u) * L + s.nx * o.sh.sL, Z = (s.ay + (s.by - s.ay) * u) * L + s.ny * o.sh.sL; const up = Math.sqrt(Math.min(s.drop, 12) / 3);
+        if (big) spawn(PW, { x: X, y: s.low + 0.15, z: Z, vx: s.nx * G.vrr(0.4, 1.8) + G.vrr(-0.6, 0.6), vy: G.vrr(1, 3.4) * up, vz: s.ny * G.vrr(0.4, 1.8) + G.vrr(-0.6, 0.6), life: G.vrr(1.4, 2.8), s0: 0.3, s1: G.vrr(1.4, 2.4), c: [0.9, 0.94, 0.97], a: G.vrr(0.18, 0.3), drag: 1.1, grav: 0.5, fade: 1 });
+        else spawn(PW, { x: X, y: s.low + 0.06, z: Z, vx: s.nx * G.vrr(0.3, 1.2), vy: G.vrr(0.8, 2.2), vz: s.ny * G.vrr(0.3, 1.2), life: G.vrr(0.4, 0.8), s0: 0.08, s1: 0.05, c: [0.88, 0.94, 0.98], a: 0.7, sh: 1, grav: 9.8 });
+      }
+      // (and the clouds of spray of a great fall, rolling out over its pool)
+      if (s.drop >= 3) for (let k = every('wm' + s.i + ':' + s.j, (0.8 + s.drop * 0.35) * wid / 4 * share * far, dt); k > 0; k--) {
+        const u = G.vrr(0.2, 0.8), X = (s.ax + (s.bx - s.ax) * u) * L + s.nx * (o.sh.sL + G.vrr(0, 1.5)), Z = (s.ay + (s.by - s.ay) * u) * L + s.ny * (o.sh.sL + G.vrr(0, 1.5));
+        spawn(PW, { x: X, y: s.low + G.vrr(0.3, 1.2), z: Z, vx: s.nx * G.vrr(0.3, 1.2), vy: G.vrr(0.3, 1.1), vz: s.ny * G.vrr(0.3, 1.2), life: G.vrr(3, 5.5), s0: 1.2, s1: G.vrr(3.5, 5.5), c: [0.92, 0.95, 0.97], a: G.vrr(0.08, 0.14), drag: 0.8, fade: 1 });
+      }
+    }
+    A3S.falls = nearF;
+    // (the wakes: each ship that moves leaves its foam, and throws spray at its bow)
+    wkT += dt; const shipT = wkT >= 0.3; if (shipT) wkT = 0;
+    for (const s of S.ships) { const v = svis.get(s.id); if (!v || !v.D || s.st === 'build') continue; v.sp = (v.sp || 0) * 0.92 + (v.moving || 0) * 0.08; if (!(v.sp > 0.3)) continue;
+      const X = s.x * L, Z = s.y * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 140 * 140) continue;
+      const c = Math.cos(v.yaw), sn = Math.sin(v.yaw), D = v.D, sp = Math.min(v.sp, 6);
+      if (shipT) { wakeAt(X - c * D[0] * 0.5, Z - sn * D[0] * 0.5, -c * sp * 0.15, -sn * sp * 0.15, D[1] * 0.5, D[1] * 1.6 + sp * 0.4, 7);
+        for (const sd of [-1, 1]) wakeAt(X - c * D[0] * 0.2 - sn * sd * D[1] * 0.55, Z - sn * D[0] * 0.2 + c * sd * D[1] * 0.55, -sn * sd * sp * 0.25, c * sd * sp * 0.25, 0.4, 1.4 + sp * 0.2, 4.5); }
+      if (share > 0) for (let k = every('wb' + s.id, sp * 3 * share, dt); k > 0; k--) { const bx = X + c * D[0] * 0.5, bz = Z + sn * D[0] * 0.5; const sd = G.VR() < 0.5 ? -1 : 1;
+        spawn(PW, { x: bx, y: (v.wy || G.SEA * G.Space.HM) + 0.1, z: bz, vx: c * sp * 0.4 - sn * sd * G.vrr(0.6, 1.4), vy: G.vrr(0.8, 1.8), vz: sn * sp * 0.4 + c * sd * G.vrr(0.6, 1.4), life: G.vrr(0.5, 0.9), s0: 0.1, s1: 0.06, c: [0.9, 0.95, 1], a: 0.75, sh: 1, grav: 9.8 }); }
+    }
+    stepWake(dt);
+    // (the rainbow in the spray: the sky's sun (G.Ceu.sun, through the dome's own uniform) up and lower than 42° — the bow's own angle —,
+    // no rain to dim it; the cause is the spray itself, not the wet ground the sky's bow asks for (G.Ceu.rainbow: the bow in the sky
+    // after a shower), so the drops ask only the sun)
+    const sk = R3.skyU; if (sk) { const sd = G.Ceu.sun(S.time); PWU.uSun.value.set(sd.x, sd.y, sd.z); const alt = Math.asin(G.clamp(sd.y, -1, 1)) * 180 / Math.PI; const wr = S.weather ? S.weather.rain || 0 : 0;
+      PWU.uRb.value = G.smooth(0.02, 0.08, sd.y) * (1 - G.smooth(36, 42, alt)) * (1 - G.clamp(wr * 1.5, 0, 1)) * 0.6; }
+    // (the spray goes with the one wind of the world — the sky's, G.Ceu.wind)
+    { const wd = G.Ceu.wind(); const ws = G.clamp(wd.s || 0, 0, 2); stepPool(PW, dt, wd.x * (0.4 + ws * 1.4), wd.y * (0.4 + ws * 1.4), R3.time()); }
+    A3S.spray = PW.n; A3S.wake = wakeN;
+  }
+  const A3S = F3.water = { falls: 0, spray: 0, wake: 0 }; // (for the proofs and the measures: the falls throwing spray round the eye, the drops, the wake's patches)
+  G.worldHooks.push(() => { if (PW) PW.n = 0; wakeN = 0; fallsNear = []; fallsKey = ''; if (wake) wake.count = 0; });
 })(window.G);

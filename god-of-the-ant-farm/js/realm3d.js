@@ -227,138 +227,8 @@
     MAT.inner = new THREE.MeshLambertMaterial({ vertexColors: true });
     // the trees, the bushes and the grass: their materials are the forest's (Arvore3D, js/arvore3d.js — 21a)
     G.Arvore3D.materials(THREE, MAT, U);
-    // water: the waves the god's view draws, in light — trains of waves running with the wind (long swells on the open sea,
-    // a chop on the rivers, calm against the shore, still in a basin), and what water is to the eye: how deep it is, read at
-    // every point from the bed the 3D draws under it (bedTick) — clear over the sand at the shore, where it thins to nothing on
-    // the land wherever the two meet, blue and then dark as it deepens; the sky in its face as the angle asks (the lower one
-    // looks along it, the more sky: Fresnel); the key light glittering on the slopes of the waves (the sun by day, the moon's
-    // road at night); the crests lit through; foam where it runs up the land, and on the crests when the wind blows hard
-    // (aShore, a corner's mark: 0 open water, 1 against the land, 2 the still water of a basin, -1 the sea beyond the map; the
-    // alpha of its colour: the least it hides of what is under it — a paddy's water stays water)
-    WU.bedN.value = new THREE.Vector2(2 / G.Space.TILE, 1); WU.key.value = new THREE.Color(); WU.irr.value = new THREE.Color(); WU.deep.value = new THREE.Color(0.008, 0.04, 0.075);
-    MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 60, specular: 0x1c2228, depthWrite: false });
-    MAT.water.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uKeyDir: skyU.keyDir, uKeyCol: WU.key, uIrr: WU.irr, uDeep: WU.deep, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM }, uBed: WU.bed, uBedN: WU.bedN, uK: WU.k, uFlow: WU.flow, uFlowN: WU.flowN });
-      sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; attribute float aShore; varying float vShore; varying float vSea; varying vec3 vWW;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
-        vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY * uK)); float still = step(1.5, aShore); float shore = clamp(aShore, 0.0, 1.0);
-        // (the swell dies where the water is shallow: a paddy, a ford, the last of the beach hardly move)
-        float dep = aShore < -0.5 ? 9.0 : wp.y - (texture2D(uBed, (wp.xz * uBedN.x + 0.5) * uBedN.y).r + uSeaY) * uK;
-        float sw = (0.35 + uWind.z * 0.5) * (1.0 - shore * 0.75) * mix(0.3, 1.0, sea);
-        transformed.y += ((sin(wp.x * 0.33 + uTime * 1.3) * 0.06 + cos(wp.z * 0.29 + uTime * 1.05) * 0.05) + sin(dot(wp.xz, normalize(uWind.xy + vec2(0.001))) * 0.21 - uTime * 1.4) * 0.12 * sw) * (1.0 - still) * smoothstep(0.05, 0.9, dep); // (none in the last centimetres: the water's edge stays where the land meets it)
-        vShore = aShore; vSea = sea; vWW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
-      sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform vec3 uIrr; uniform vec3 uDeep; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; uniform sampler2D uFlow; uniform float uFlowN; varying float vShore; varying float vSea; varying vec3 vWW;\n' + sh.fragmentShader
-        .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-        // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land, none in a basin)
-        vec2 wq = vWW.xz; float isSea = vSea; float still = step(1.5, vShore); float shore = clamp(vShore, 0.0, 1.0);
-        vec2 wd = normalize(uWind.xy + vec2(0.001)); float ws = clamp(uWind.z, 0.0, 2.0);
-        // (a river runs its own way: its waves and its ripples go down it, whatever the wind)
-        vec2 fv = (texture2D(uFlow, vWW.xz * uFlowN).rg - 0.5) * 2.0 * (1.0 - isSea) * (1.0 - still); float fs = length(fv);
-        if (fs > 0.05) wd = normalize(mix(wd, fv / fs, smoothstep(0.05, 0.45, fs)));
-        float calm = mix(0.4, 1.0, isSea) * (1.0 - shore * 0.55) * (0.65 + ws * 0.35) * (1.0 - still * 0.9);
-        vec2 gw = vec2(0.0); float hw = 0.0;
-        for (int i = 0; i < 4; i++) {
-          float fi = float(i); float an = (fi - 1.5) * 0.55 + fi * 0.37; vec2 d = vec2(wd.x * cos(an) - wd.y * sin(an), wd.x * sin(an) + wd.y * cos(an));
-          float L = 11.0 / (1.0 + fi * 1.15); float k = 6.2832 / L; float A = 0.05 * L / 6.0;
-          float ph = dot(d, wq) * k - uTime * sqrt(9.8 * k) * 0.85 + fi * 1.7; float c = cos(ph);
-          hw += A * sin(ph); gw += d * (A * k * c);
-        }
-        vec2 dr = wd * 0.07 + vec2(0.012, 0.008) + fv * 0.09;
-        #ifdef WCHEAP
-        float r1 = 0.0, r2 = 0.0, r3 = 0.0, r4 = 0.0; // (the lightest quality: the long waves only, no ripples read from the picture)
-        #else
-        float r1 = texture2D(uDet, wq / 11.0 + dr * uTime).r, r2 = texture2D(uDet, wq / 6.5 - dr.yx * uTime * 1.3).r;
-        float r3 = texture2D(uDet, (wq + 0.2) / 11.0 + dr * uTime).r, r4 = texture2D(uDet, (wq + vec2(0.0, 0.2)) / 6.5 - dr.yx * uTime * 1.3).r;
-        #endif
-        // (far off the small ripples blur into one sheen: only the long waves are seen, no glitter of noise)
-        float wnear = 1.0 - smoothstep(22.0, 130.0, length(cameraPosition - vWW));
-        gw = gw * calm * mix(0.45, 1.0, wnear) + vec2(r3 - r1, r4 - r2) * 0.7 * wnear * (1.0 - still * 0.75);
-        vec3 nW = normalize(vec3(-gw.x, 1.0, -gw.y));
-        normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);`)
-        .replace('#include <opaque_fragment>', `
-        // (how deep it is here: its face over the bed under it)
-        vec2 bu = (vWW.xz * uBedN.x + 0.5) * uBedN.y; float b0 = texture2D(uBed, bu).r;
-        float wD = vShore < -0.5 ? 40.0 : max(vWW.y - (b0 + uSeaY) * uK, 0.0) / max(uK, 0.3);
-        // (how steeply the bed rises here: the surf breaks on a slope, not over a flat that is barely wet)
-        float bSl = length(vec2(texture2D(uBed, bu + vec2(uBedN.y, 0.0)).r - b0, texture2D(uBed, bu + vec2(0.0, uBedN.y)).r - b0)) * uBedN.x;
-        // (its body: the colour it is given — clear and green — going blue, then dark, as it deepens; lit softly by the sky and
-        // the key light, as water takes little light on itself; the torches by it a little)
-        vec3 body = mix(diffuseColor.rgb, uDeep, 1.0 - exp(-wD * 0.32));
-        vec3 lit = mix(body * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.55 + uIrr) * 0.3183, outgoingLight * (body / max(diffuseColor.rgb, vec3(0.02))), 0.2);
-        // (how much of the bed it hides: nothing where it thins on the sand, all of it in the deep — and never less than its colour asks)
-        float a = max(1.0 - exp(-wD * 0.9), diffuseColor.a);
-        // (the sky in its face: the reflected ray's height picks the colour, as the sky's own dome has it)
-        vec3 Vw = normalize(cameraPosition - vWW); vec3 Rw = reflect(-Vw, nW); float rel = max(Rw.y, 0.0);
-        #ifdef USE_FOG
-        vec3 skyR = mix(gxHaze(normalize(vec3(Rw.x, rel, Rw.z))), uSkyTop, pow(rel, 0.42));
-        #else
-        vec3 skyR = mix(uSky, uSkyTop, pow(rel, 0.42));
-        #endif
-        // (the shallows show the sand and the clear water more than the sky: broken by the swash, their face mirrors less)
-        float fr = (0.02 + 0.98 * pow(1.0 - clamp(dot(nW, Vw), 0.0, 1.0), 5.0)) * mix(0.62, 1.0, smoothstep(0.15, 1.6, wD));
-        // (the key light on the slopes of the waves: a hard glitter and a soft sheen round it — the sun's, or the moon's road)
-        float rs = max(dot(Rw, uKeyDir), 0.0);
-        vec3 col = lit * a * (1.0 - fr) + skyR * fr + uKeyCol * (pow(rs, 900.0) * 1.7 + pow(rs, 90.0) * 0.075) * step(0.0, uKeyDir.y);
-        float al = 1.0 - (1.0 - a) * (1.0 - fr);
-        // (the crests lit from within where the sun shines through them)
-        col += vec3(0.02, 0.09, 0.08) * smoothstep(-0.02, 0.05, hw) * isSea * clamp(uKeyCol.g * 0.33, 0.0, 1.0) * (1.0 - shore * 0.5) * a;
-        // (the flames of the shore in the water at night: the reflected ray, where it rises to the height of the lights, finds
-        // them in the painted light of the flames — a road of glitter under each lit door and each torch on the quay, drawn out
-        // by the waves as the moon's road is)
-        #ifndef WCHEAP
-        if (gxLMB.w > 0.0 && Rw.y > 0.015) {
-          float yl = vWW.y + 1.8;
-          for (int i = 0; i < 2; i++) {
-            vec2 qx = vWW.xz + Rw.xz * ((yl - vWW.y) / Rw.y); vec2 lu = (qx - gxLMB.xy) * gxLMB.z;
-            if (lu.x <= 0.0 || lu.y <= 0.0 || lu.x >= 1.0 || lu.y >= 1.0) break;
-            vec4 m2 = texture2D(gxLM2, lu);
-            if (i == 0) { yl = max((gxLMY.x + (m2.b - 0.5) * gxLMY.z) * gxLMB.w, vWW.y + 0.3); continue; }
-            vec4 m1 = texture2D(gxLM, lu); vec2 off = (m2.rg - 0.5) * gxLMY.z;
-            col += m1.rgb * m1.rgb * gxLMY.y * exp(-dot(off, off) * 0.8) * (0.05 + fr * 0.7) * 0.35;
-          }
-        }
-        #endif
-        // (foam: a lace of bubbles — the cells of the detail picture, drifting with the wash — in a thin band at the water's
-        // edge where the sea runs up the land, coming and going with the waves, and in the lines of the breakers rolling in
-        // over the slope of the beach, fading as they come; a little at the banks of the rivers; whitecaps on the open sea when
-        // the wind blows hard. Only where the bed slopes: over a flat that is barely wet, no surf)
-        float fn = texture2D(uDet, vWW.xz / 5.0 + uTime * 0.01).g;
-        float run = sin(uTime * 0.9 + fn * 4.0 + (vWW.x + vWW.z) * 0.07) * 0.07;
-        #ifdef WCHEAP
-        float lace = 0.6;
-        #else
-        float lace = smoothstep(0.38, 0.6, texture2D(uDet, vWW.xz / 1.7 + vec2(uTime * 0.018, -uTime * 0.013) + run * 0.6).b * 0.65 + texture2D(uDet, vWW.xz / 0.9 - uTime * 0.025).r * 0.35);
-        #endif
-        float surf = (isSea + (1.0 - isSea) * shore * 0.45) * (1.0 - still) * step(-0.5, vShore) * smoothstep(0.012, 0.05, bSl);
-        float edge = (1.0 - smoothstep(0.02, 0.11, wD + (fn - 0.5) * 0.06 + run * 0.5)) * smoothstep(0.0, 0.02, wD);
-        float bp = fract(uTime * 0.11 + fn * 0.25 + dot(vWW.xz, wd) * 0.013); float bdep = mix(0.42, 0.06, bp);
-        float brk = (1.0 - smoothstep(0.0, 0.06 + bp * 0.05, abs(wD - bdep))) * (1.0 - bp * 0.8) * smoothstep(0.03, 0.08, bSl) * isSea;
-        float foam = (edge * (0.55 + 0.45 * lace) + brk * lace * 0.75) * surf;
-        foam = max(foam, smoothstep(0.06, 0.1, hw + (fn - 0.5) * 0.05) * smoothstep(0.9, 1.6, ws) * isSea * 0.7 * (0.5 + 0.5 * lace));
-        col = mix(col, vec3(0.9, 0.94, 0.96) * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.6 + uIrr) * 0.3183, clamp(foam, 0.0, 0.85)); al = max(al, foam * 0.9);
-        // (and where it thins to nothing it is gone — no sheen of a film of water over the sand, no flicker where the two meet;
-        // the line wandering half a metre over the ground, as a wet edge does, not ruled along the slope of a bank)
-        #ifdef WCHEAP
-        float wE = wD;
-        #else
-        float wE = wD + (texture2D(uDet, vWW.xz / 2.7).g - 0.5) * min(0.14, bSl) * (1.0 - smoothstep(0.05, 0.2, wD));
-        #endif
-        al *= smoothstep(0.0, 0.04, wE) * step(-0.5, vShore) + step(vShore, -0.5);
-        outgoingLight = col / max(al, 0.001); diffuseColor.a = al;
-        #include <opaque_fragment>`);
-    };
-    MAT.ice = new THREE.MeshPhongMaterial({ color: 0xdcecf6, shininess: 70, specular: 0x5a6672, transparent: true, opacity: 0.92 });
-    // (the ice shows the sky in its face, more as one looks along it — as the water does, duller)
-    MAT.ice.onBeforeCompile = sh => {
-      Object.assign(sh.uniforms, { uSkyTop: skyU.top });
-      sh.vertexShader = 'varying vec3 vIW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vIW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      sh.fragmentShader = 'uniform vec3 uSkyTop; varying vec3 vIW;\n' + sh.fragmentShader.replace('#include <opaque_fragment>', `
-        #ifdef USE_FOG
-        { vec3 Vw = normalize(cameraPosition - vIW); vec3 Rw = reflect(-Vw, vec3(0.0, 1.0, 0.0)); float fr = 0.04 + 0.55 * pow(1.0 - clamp(Vw.y, 0.0, 1.0), 5.0);
-          outgoingLight = mix(outgoingLight, mix(gxHaze(normalize(vec3(Rw.x, max(Rw.y, 0.0), Rw.z))), uSkyTop, pow(max(Rw.y, 0.0), 0.42)), fr); }
-        #endif
-        #include <opaque_fragment>`);
-    };
-    MAT.wallWater = new THREE.MeshPhongMaterial({ color: 0x3f9cbc, transparent: true, opacity: 0.6, shininess: 100, side: THREE.DoubleSide, depthWrite: false });
+    // the water's materials: the water, the ice, the parted sea's walls, the sheets of the falls (Agua3D, js/agua3d.js — 21c)
+    G.Agua3D.materials(THREE, MAT, U, skyU);
     applyQuality();
     window.addEventListener('resize', resize);
     resize();
@@ -382,10 +252,9 @@
     // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
     for (const m of [MAT.solid, MAT.flora, MAT.inner]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
     if (MAT.solid) MAT.solid.defines.M3CUT = 1; // (the town's solid gives way where an inside is drawn: Build3D.cuts)
-    // (the water and the sky in their cheap ways where the quality draws no grain: the lightest is for the weak machines)
-    { const ch = q.detail === 0; MAT.water.defines = ch ? { WCHEAP: 1 } : {}; MAT.water.needsUpdate = true; }
     for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner]) if (m) m.needsUpdate = true;
     G.Ground3D.quality();
+    G.Agua3D.quality(q); // (the water's ways by the quality: its cheap one, the clouds and the scene in its face — 21c)
     G.FX3D && G.FX3D.quality && G.FX3D.quality(q);
     G.Post3D && G.Post3D.quality && G.Post3D.quality(q);
     // (what is near the body was made at the last quality: each near picture is asked to be made again — the stream does it,
@@ -430,171 +299,12 @@
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(colr, 3)); g.setIndex(idx); g.computeBoundingSphere();
     return g;
   }
-  // water: the sea at its level, every river and lake at its own; the ice of a sudden winter; the walls of a parted sea
-  const WATER = [[96, 200, 204], [60, 166, 192], [36, 124, 172], [24, 90, 146], [18, 66, 120]]; // (clear and green over the sand, deep blue far out)
-  const waterCol = d => { const k = G.clamp(d / 1.6, 0, 3.999); const a = WATER[Math.floor(k)], b = WATER[Math.min(4, Math.floor(k) + 1)]; return G.lerpColor(a, b, k - Math.floor(k)); };
-  // (the colour of the sea's and the rivers' water where it is shallow: the shader takes it to blue and dark by the depth it
-  // reads at each point — one colour for all their corners, so no tile shows its edges in the water)
-  const SHALLOW = [64, 162, 172];
-  // the water's uniforms, shared by its materials: the bed under it (its height every half tile), the key light on it, the
-  // sky's light on it, the colour of the deep
-  const WU = { bed: { value: null }, bedN: { value: null }, key: { value: null }, irr: { value: null }, deep: { value: null }, k: { value: 1 }, flow: { value: null }, flowN: { value: 0 } }; // (k: the world's height on the screen — flatter in the descent; flow: the way the rivers run)
-  // the bed under the water as the 3D draws it — the land's own height, and the beds the Space carves into the rivers — one
-  // value every half tile (the near land's own points): the water's shader reads how deep it is at each point from it. Made
-  // whole for a new world or a changed land (S.typeVer), and a few rows a frame after that (a river's level changing)
-  let bedTex = null, bedData = null, bedFor = null, bedVer = -1, bedRow = 0;
-  function bedRows(j0, j1) {
-    const n = 2 * N + 1, HM = G.Space.HM, sea = G.SEA * HM, half = THREE.DataUtils.toHalfFloat; let ch = false;
-    for (let j = j0; j < j1; j++) for (let i = 0; i < n; i++) { const x = i / 2, y = j / 2; const o = j * n + i; const v = half(W.hAt(x, y) * HM - G.Space.bedDrop(x, y) - sea); if (bedData[o] !== v) { bedData[o] = v; ch = true; } }
-    return ch;
-  }
-  function bedTick() {
-    const S = G.S; const n = 2 * N + 1;
-    if (!bedTex || bedTex.image.width !== n) {
-      if (bedTex) bedTex.dispose(); bedData = new Uint16Array(n * n);
-      bedTex = new THREE.DataTexture(bedData, n, n, THREE.RedFormat, THREE.HalfFloatType); bedTex.magFilter = bedTex.minFilter = THREE.LinearFilter; bedTex.generateMipmaps = false; bedTex.flipY = false;
-      WU.bed.value = bedTex; WU.bedN.value.set(2 / G.Space.TILE, 1 / n); bedFor = null;
-    }
-    if (bedFor !== S || bedVer !== S.typeVer) { bedFor = S; bedVer = S.typeVer; bedRows(0, n); bedTex.needsUpdate = true; bedRow = 0; return; }
-    const k = Math.min(n, bedRow + 8); if (bedRows(bedRow, k)) bedTex.needsUpdate = true; bedRow = k >= n ? 0 : k;
-  }
-  // the way each river runs, a texel a tile: from each tile of river toward its neighbour of water that lies lowest (the
-  // rivers' levels fall to the sea), smoothed along the flat stretches so a river never stops in the middle — the water's
-  // shader carries its ripples and its waves down it. Made again with the land (S.typeVer) and every few seconds after (a
-  // flood, a drought: the levels move)
-  let flowTex = null, flowFor = null, flowVer = -1, flowT = 0;
-  function flowTick() {
-    const S = G.S;
-    if (!flowTex || flowTex.image.width !== N) { if (flowTex) flowTex.dispose(); flowTex = new THREE.DataTexture(new Uint8Array(N * N * 4), N, N, THREE.RGBAFormat, THREE.UnsignedByteType); flowTex.magFilter = flowTex.minFilter = THREE.LinearFilter; flowTex.generateMipmaps = false; flowTex.flipY = false; WU.flow.value = flowTex; WU.flowN.value = 1 / (N * G.Space.TILE); flowFor = null; }
-    const now = U.time.value; if (flowFor === S && flowVer === S.typeVer && now - flowT < 6 && now >= flowT) return;
-    flowFor = S; flowVer = S.typeVer; flowT = now;
-    const F = new Float32Array(N * N * 2), R = new Uint8Array(N * N); const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-      const i = y * N + x; if (S.type[i] !== T.RIVER) continue; R[i] = 1; const h0 = S.wl[i]; let best = 0, fx = 0, fz = 0;
-      for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; const t = S.type[j];
-        const h = t === T.RIVER ? S.wl[j] : t <= T.SEA ? G.SEA : NaN; if (!(h === h)) continue; const l = Math.hypot(dx, dy); const drop = (h0 - h) / l; if (drop > best) { best = drop; fx = dx / l; fz = dy / l; } }
-      F[i * 2] = fx; F[i * 2 + 1] = fz;
-    }
-    // (the flat stretches take the way of their neighbours: a few rounds of averaging over the river)
-    for (let r = 0; r < 4; r++) { const P = F.slice();
-      for (let i = 0; i < N * N; i++) { if (!R[i]) continue; const x = i % N, y = (i / N) | 0; let sx = P[i * 2] * 2, sz = P[i * 2 + 1] * 2;
-        for (let k = 0; k < 4; k++) { const nx = x + NB[k][0], ny = y + NB[k][1]; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (R[j]) { sx += P[j * 2]; sz += P[j * 2 + 1]; } }
-        const l = Math.hypot(sx, sz); if (l > 1e-3) { F[i * 2] = sx / l; F[i * 2 + 1] = sz / l; } } }
-    const D = flowTex.image.data;
-    for (let i = 0; i < N * N; i++) { const o = i * 4; D[o] = Math.round((F[i * 2] * 0.5 + 0.5) * 255); D[o + 1] = Math.round((F[i * 2 + 1] * 0.5 + 0.5) * 255); D[o + 2] = 128; D[o + 3] = 255; }
-    flowTex.needsUpdate = true;
-  }
-  // (for the verifier: the bed the water reads, against the land's own height at a few points of the map)
-  R3.bedCheck = function (n) {
-    if (!bedData || bedFor !== G.S) return { n: 0, bad: 0 }; const m = 2 * N + 1, HM = G.Space.HM; let bad = 0, k = 0;
-    for (let q = 0; q < (n || 64); q++) { const i = Math.floor(G.hash(q * 7 + 3) * m), j = Math.floor(G.hash(q * 11 + 5) * m); k++; const want = W.hAt(i / 2, j / 2) * HM - G.Space.bedDrop(i / 2, j / 2) - G.SEA * HM; if (Math.abs(THREE.DataUtils.fromHalfFloat(bedData[j * m + i]) - want) > 0.05 + Math.abs(want) * 0.002) bad++; }
-    return { n: k, bad };
-  };
-  // (a water surface: its colour and the least it hides at each corner, and the corner's mark — near the land, still, beyond)
-  class WGeo {
-    constructor() { this.p = []; this.c = []; this.s = []; }
-    quad(P, cols, al, sh) { for (const k of [0, 1, 2, 0, 2, 3]) { this.p.push(P[k][0], P[k][1], P[k][2]); const c = lin(cols[k]); this.c.push(c[0], c[1], c[2], al[k]); this.s.push(sh[k]); } }
-    // a disc of still water (a basin, a fountain's bowl): its centre in the world (m), radius, colour and the least it hides
-    disc(X, Y, Z, r, col, al, n) {
-      const m = n || 18, c = lin(col), a = al === undefined ? 0.6 : al;
-      for (let k = 0; k < m; k++) { const a0 = k / m * TAU, a1 = (k + 1) / m * TAU; this.p.push(X, Y, Z, X + Math.cos(a1) * r, Y, Z + Math.sin(a1) * r, X + Math.cos(a0) * r, Y, Z + Math.sin(a0) * r); for (let q = 0; q < 3; q++) { this.c.push(c[0], c[1], c[2], a); this.s.push(2); } }
-    }
-    get empty() { return !this.p.length; }
-    build() {
-      const g = new THREE.BufferGeometry(); const n = this.p.length / 3; const nr = new Float32Array(n * 3); for (let k = 0; k < n; k++) nr[k * 3 + 1] = 1;
-      g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nr, 3));
-      g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 4)); g.setAttribute('aShore', new THREE.Float32BufferAttribute(this.s, 1));
-      g.computeBoundingSphere(); return g;
-    }
-  }
-  R3.WGeo = () => new WGeo();
-  // (how far below the water a corner's bed is, and whether land touches it)
-  function wetCorner(x, y, lvl, river) {
-    const S = G.S; let d = 0, n = 0, land = 0;
-    for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) {
-      const tx = x + dx, ty = y + dy; if (!W.inb(tx, ty)) continue; const i = ty * N + tx; const t = S.type[i];
-      const wet = river ? t === T.RIVER || t <= T.SEA : t <= T.SEA && !(S.dry && S.dry[i]);
-      if (!wet) { land = 1; continue; } d += lvl - W.tileH(i); n++;
-    }
-    return [n ? d / n : 0, land];
-  }
-  // (whether the open sea touches a tile, at a side or a corner)
-  function seaBeside(x, y) {
-    const S = G.S;
-    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if ((dx || dy) && W.inb(nx, ny)) { const j = ny * N + nx; if (S.type[j] <= T.SEA && !(S.dry && S.dry[j])) return true; } }
-    return false;
-  }
-  const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-  // (a tile of land whose lowest corner dips under the sea's face)
-  const lowShore = (x, y) => Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) < G.SEA + 0.12;
-  // (whether the sea runs over a tile of land that dips under it: beside it, or across two more such tiles — a wide flat
-  // beach is wet as far as the sea goes over it, not to the side of its first tile)
-  function seaReaches(x, y) {
-    if (!lowShore(x, y)) return false; const S = G.S; let ring = [[x, y]]; const seen = new Set([y * N + x]);
-    for (let step = 0; step < 3 && ring.length; step++) {
-      const next = [];
-      for (const [cx, cy] of ring) {
-        if (seaBeside(cx, cy)) return true;
-        for (const [dx, dy] of D4) { const nx = cx + dx, ny = cy + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (seen.has(j)) continue; seen.add(j); if (S.type[j] > T.RIVER && lowShore(nx, ny)) next.push([nx, ny]); }
-      }
-      ring = next;
-    }
-    return false;
-  }
-  // (a corner one of whose four tiles is a river with its face at the height L, give or take 10 cm)
-  const riverCorner = (cx, cy, L) => { const S = G.S; for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]]) { const tx = cx + dx, ty = cy + dy; if (!W.inb(tx, ty)) continue; const j = ty * N + tx; if (S.type[j] === T.RIVER && Math.abs(S.wl[j] * G.Space.HM + 0.05 - L) <= 0.1) return true; } return false; };
-  // (a bank: a tile of land beside a river whose ground the river's face runs over before the land rises out of it — the
-  // water's edge is where the two meet inside the tile, not the tile's side, ruled straight. Only beside water lying level
-  // (a river falling past the tile would leave a step in its face) and where every corner off the river stands out of the
-  // water: no sheet of it left standing over a slope going down. The face's height, or null)
-  function bankLevel(x, y) {
-    const S = G.S, HM = G.Space.HM; let L = -Infinity, lo = Infinity;
-    for (const [dx, dy] of D4) { const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.type[j] === T.RIVER && !(S.ice && S.ice[j])) { const f = S.wl[j] * HM + 0.05; L = Math.max(L, f); lo = Math.min(lo, f); } }
-    if (L === -Infinity || L - lo > 0.1) return null; let under = false;
-    for (const [cx, cy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { if (W.vh(cx, cy) * HM >= L) continue; if (!riverCorner(cx, cy, L)) return null; under = true; }
-    return under ? L : null;
-  }
-  function waterGeo(x0, y0, w, h, far) {
-    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const g = new WGeo(), ice = new Geo(), walls = new Geo();
-    const sea = G.SEA * HM;
-    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
-      if (!W.inb(x, y)) continue; const i = y * N + x; const t = S.type[i];
-      if (t <= T.SEA) {
-        if (S.dry && S.dry[i]) {
-          // (the bed of the parted sea: around it the water stands up in walls)
-          if (far) continue;
-          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-            const nx = x + dx, ny = y + dy; if (!W.inb(nx, ny)) continue; const j = ny * N + nx; if (S.type[j] > T.SEA || (S.dry && S.dry[j])) continue;
-            // (the side the two tiles share: along Z for a neighbour east or west, along X for one north or south)
-            const ex = dx > 0 ? x + 1 : x, ez = dy > 0 ? y + 1 : y;
-            const ax = dx !== 0 ? ex : x, az = dx !== 0 ? y : ez, bx = dx !== 0 ? ex : x + 1, bz = dx !== 0 ? y + 1 : ez;
-            const fa = W.hAt(ax, az) * HM, fb = W.hAt(bx, bz) * HM, top = sea + 6.6;
-            walls.quad([ax * TL, fa, az * TL], [bx * TL, fb, bz * TL], [bx * TL, top, bz * TL], [ax * TL, top, az * TL], '#2f7fa0', '#2f7fa0', '#8fd4e6', '#8fd4e6');
-          }
-          continue;
-        }
-        // (its colour and clearness come from the depth the shader reads at each point; the corners only say where the land is)
-        const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, G.SEA, false));
-        g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]],
-          [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], C4.map(c => c[1]));
-      } else if (t === T.RIVER) {
-        const wl = S.wl[i] * HM + 0.05;
-        if (S.ice && S.ice[i]) { ice.quad([x * TL, wl + 0.05, y * TL], [x * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, (y + 1) * TL], [(x + 1) * TL, wl + 0.05, y * TL], '#dcecf6'); continue; }
-        const C4 = [[x, y], [x, y + 1], [x + 1, y + 1], [x + 1, y]].map(([cx, cy]) => wetCorner(cx, cy, S.wl[i], true)[1] * 0.85);
-        g.quad([[x * TL, wl, y * TL], [x * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, (y + 1) * TL], [(x + 1) * TL, wl, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], C4);
-      } else if (!far && seaReaches(x, y)) {
-        // (the shore: over a tile of land that dips toward the sea, the sea goes on until the land rises out of it — the water's
-        // edge is where the two meet, wherever that is in the tile, not the tile's own edge; the land hides the rest)
-        g.quad([[x * TL, sea, y * TL], [x * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, (y + 1) * TL], [(x + 1) * TL, sea, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], [1, 1, 1, 1]);
-      } else if (!far && !S.occ[i] && !S.road[i]) {
-        // (a river's bank, the same way: its face goes on over the low edge of the land beside it — not under a building,
-        // which has its own water if any, nor over the end of a road to a bridge)
-        const L = bankLevel(x, y);
-        if (L !== null) g.quad([[x * TL, L, y * TL], [x * TL, L, (y + 1) * TL], [(x + 1) * TL, L, (y + 1) * TL], [(x + 1) * TL, L, y * TL]], [SHALLOW, SHALLOW, SHALLOW, SHALLOW], [0, 0, 0, 0], [0.85, 0.85, 0.85, 0.85]);
-      }
-    }
-    return { water: g.empty ? null : g.build(), ice: ice.empty ? null : ice.build(), walls: walls.empty ? null : walls.build() };
-  }
+  // water: the sea at its level, every river and lake at its own; the ice of a sudden winter; the walls of a parted sea; the sheets of
+  // the falls — the water's drawing (Agua3D, js/agua3d.js — 21c)
+  const waterGeo = (x0, y0, w, h, far) => G.Agua3D.geo(x0, y0, w, h, far);
+  R3.WGeo = () => G.Agua3D.WGeo();
+  R3.bedCheck = n => G.Agua3D.bedCheck(n);
+
   // ------------------------------ the bridges ------------------------------
   // where a road crosses the water (a road on a river's tile). The world gives a bridge little height: its deck is the feet's
   // own (Space.deckAt, 12 cm over the water's face; the land's own height where that stands higher), so a bridge here is a low
@@ -869,7 +579,7 @@
     disposeGroup(ch.far); const grp = new THREE.Group(); ch.far = grp; grp.matrixAutoUpdate = false;
     const x0 = ch.cx * C, y0 = ch.cy * C;
     addMesh(grp, terrainGeo(x0, y0, C, C, G.Geo3D ? G.Geo3D.farStep(x0, y0, C) : 2, { far: true }), MAT.land, { recv: false }); // (21b: finer where the relief is rough)
-    const wg = waterGeo(x0, y0, C, C, true); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice);
+    const wg = waterGeo(x0, y0, C, C, true); G.Agua3D.hook(addMesh(grp, wg.water, MAT.water, { order: 2 })); addMesh(grp, wg.ice, MAT.ice); addMesh(grp, wg.falls, MAT.fall, { order: 2.5 });
     addMesh(grp, G.Arvore3D.geo(x0, y0, C, C, true).flora, MAT.flora);
     if (G.Build3D) addMesh(grp, G.Build3D.farGeo(x0, y0, C), MAT.solid);
     addMesh(grp, roadGeo(x0, y0, C, C, true), MAT.solid);
@@ -885,7 +595,7 @@
       const G3 = G.Geo3D; const skip = G3 ? G3.skipOf(x0, y0, C) : null;
       const tg = terrainGeo(x0, y0, C, C, 0.5, { skip });
       addMesh(grp, skip ? G3.merge(tg, G3.carveGeo(x0, y0, C, G3.mouthsIn(x0 - 2, y0 - 2, C + 4).filter(m => m.carve))) : tg, MAT.land, { recv: true });
-      const wg = waterGeo(x0, y0, C, C, false); addMesh(grp, wg.water, MAT.water, { order: 2 }); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 });
+      const wg = waterGeo(x0, y0, C, C, false); G.Agua3D.hook(addMesh(grp, wg.water, MAT.water, { order: 2 })); addMesh(grp, wg.ice, MAT.ice, { recv: true }); addMesh(grp, wg.walls, MAT.wallWater, { order: 3 }); addMesh(grp, wg.falls, MAT.fall, { order: 2.5, recv: true });
       addMesh(grp, roadGeo(x0, y0, C, C, false), MAT.solid, { cast: true, recv: true });
     } else if (part === 'flora') {
       const fg = G.Arvore3D.geo(x0, y0, C, C, false); addMesh(grp, fg.flora, MAT.flora, { cast: true, recv: true }); addMesh(grp, fg.plants, MAT.plant, { cast: true, recv: true }); addMesh(grp, fg.leaves, MAT.leaf, { cast: true, recv: true });
@@ -911,20 +621,8 @@
     for (let cy = 0; cy < NC; cy++) for (let cx = 0; cx < NC; cx++) { const ch = { cx, cy, far: null, near: null, sig: null, sigT: -1e9, farSig: null }; chunks.set(ckey(cx, cy), ch); clist.push(ch); buildFar(ch); ch.farSig = sigOf(cx, cy); }
     R3.built = G.S;
   }
-  // the beyond: the sea to the horizon, past the edge of the map — a frame round it, at the sea's own level (inside the map
-  // the sea is its chunks' own: one water over another would hide the shallows under a second, darker sea)
-  let ocean = null;
-  function makeOcean() {
-    if (ocean) { ocean.geometry.dispose(); scene.remove(ocean); }
-    const L = G.Space.size(), E = 1400, y = G.SEA * G.Space.HM; const P = [];
-    const quad = (x0, z0, x1, z1) => P.push(x0, y, z0, x0, y, z1, x1, y, z1, x0, y, z0, x1, y, z1, x1, y, z0);
-    quad(-E, -E, L + E, 0); quad(-E, L, L + E, L + E); quad(-E, 0, 0, L); quad(L, 0, L + E, L);
-    const nv = P.length / 3; const c = lin(WATER[4]); const cl = new Float32Array(nv * 4), nr = new Float32Array(nv * 3);
-    for (let k = 0; k < nv; k++) { cl[k * 4] = c[0]; cl[k * 4 + 1] = c[1]; cl[k * 4 + 2] = c[2]; cl[k * 4 + 3] = 0.94; nr[k * 3 + 1] = 1; }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nr, 3));
-    g.setAttribute('color', new THREE.BufferAttribute(cl, 4)); g.setAttribute('aShore', new THREE.BufferAttribute(new Float32Array(nv).fill(-1), 1)); g.computeBoundingSphere();
-    ocean = new THREE.Mesh(g, MAT.water); ocean.renderOrder = 1; ocean.frustumCulled = false; scene.add(ocean);
-  }
+  // the beyond: the sea to the horizon, past the edge of the map (Agua3D — 21c)
+  function makeOcean() { G.Agua3D.ocean(scene); }
   // (the water's material, for the water other drawings hold — a paddy, a fountain's bowl: WGeo quads or discs drawn with it)
   R3.waterMat = () => MAT.water;
   // (the chunks a building runs into past the chunk of its corner, which draws it whole: chunk → the chunks whose buildings reach
@@ -1004,26 +702,8 @@
     const wc = R3.waterCheck(); if (wc.bad) out.push(`água desenhada sobre a terra fora do lugar: ${wc.bad} de ${wc.n} (${wc.ex})`);
     return out;
   };
-  // (for the verifier: in the near pictures, the water laid over a tile of land — the shore, a river's bank — only where the
-  // land dips under its face, and a river's never over a building or the end of a road; how many quads, how many break it)
-  R3.waterCheck = function () {
-    const S = G.S, TL = G.Space.TILE, HM = G.Space.HM; let n = 0, bad = 0, ex = '';
-    for (const ch of chunks.values()) {
-      const g = ch.parts && ch.parts.ground; if (!g) continue;
-      for (const m of g.children) {
-        if (m.material !== MAT.water) continue; const P = m.geometry.attributes.position.array;
-        for (let k = 0; k + 17 < P.length; k += 18) { // (a quad: two triangles, six points, square on its tile)
-          let x0 = Infinity, z0 = Infinity; for (let q = 0; q < 6; q++) { x0 = Math.min(x0, P[k + q * 3]); z0 = Math.min(z0, P[k + q * 3 + 2]); }
-          const x = Math.round(x0 / TL), y = Math.round(z0 / TL); if (!W.inb(x, y)) continue; const i = y * N + x; if (S.type[i] <= T.RIVER) continue;
-          n++; const face = P[k + 1], sea = Math.abs(face - G.SEA * HM) < 1e-3;
-          const lo = Math.min(W.vh(x, y), W.vh(x + 1, y), W.vh(x, y + 1), W.vh(x + 1, y + 1)) * HM;
-          const why = lo > face + 0.12 * HM + 1e-3 ? 'sobre terra seca' : !sea && (S.occ[i] || S.road[i]) ? 'de rio sob prédio ou estrada' : '';
-          if (why) { bad++; if (!ex) ex = `casa ${x},${y} ${why}`; }
-        }
-      }
-    }
-    return { n, bad, ex };
-  };
+  // (for the verifier: the water laid over the land only where it dips under its face — Agua3D, 21c)
+  R3.waterCheck = () => G.Agua3D.waterCheck();
 
   // ------------------------------ the frame ------------------------------
   R3.ready = () => !!renderer;
@@ -1051,7 +731,7 @@
     G.Build3D && G.Build3D.insideClear && G.Build3D.insideClear();
   };
   // a new world, or a save loaded: every picture of the old one goes
-  G.worldHooks.push(() => { if (!renderer) return; for (const ch of chunks.values()) { disposeGroup(ch.far); disposeGroup(ch.near); } chunks.clear(); clist = []; R3.built = null; if (ocean) { ocean.geometry.dispose(); scene.remove(ocean); ocean = null; } G.People3D && G.People3D.clear && G.People3D.clear(); });
+  G.worldHooks.push(() => { if (!renderer) return; for (const ch of chunks.values()) { disposeGroup(ch.far); disposeGroup(ch.near); } chunks.clear(); clist = []; R3.built = null; G.Agua3D.dropOcean(scene); G.People3D && G.People3D.clear && G.People3D.clear(); });
   R3.time = () => U.time.value; // (the view's own clock: what waves, beats and flickers)
   R3.setOpacity = o => { if (canvas) canvas.style.opacity = o; };
   // the depth of the world on the screen: the god's picture flattens heights (4 px a unit against 16 a tile); during
@@ -1063,7 +743,7 @@
     // (the hour's light, the sky, the air; the sun's picture of the shadows round the focus: the sky's — ceu3d.js, 21d)
     const LK = G.Ceu3D.light(focus);
     // (the water: the key light on it, the sky's light on it, the bed under it)
-    WU.key.value.setRGB(LK.key[0] * LK.keyI, LK.key[1] * LK.keyI, LK.key[2] * LK.keyI); WU.irr.value.setRGB(LK.sky[0], LK.sky[1], LK.sky[2]); WU.k.value = scene.scale.y; bedTick(); flowTick();
+    G.Agua3D.light(LK.key, LK.keyI, LK.sky, scene.scale.y); // (21c: the water's light and its pictures — js/agua3d.js)
     // (the wind of the world — the one wind, the sky's G.Ceu.wind — bends the plants; the body walking parts them)
     { const wd = G.Ceu.wind(); const ws = G.clamp(wd.s || 0, 0, 2); U.wind.value.set(wd.x * (0.35 + ws), wd.y * (0.35 + ws), ws); }
     if (focus) U.body.value.set(focus.X, focus.Y || 0, focus.Z, 1); else U.body.value.w = 0;
@@ -1077,6 +757,7 @@
     G.FX3D && G.FX3D.update && G.FX3D.update(rdt, focus);
     G.Dragon3D && G.Dragon3D.update && G.Dragon3D.update(rdt, focus);
     G.Grass3D && G.Grass3D.update && G.Grass3D.update(rdt, focus, camera);
+    G.Agua3D.frame(); // (21c: a new frame — the picture behind the water copied again, where the quality has it)
     if (!(G.Post3D && G.Post3D.render(scene, camera))) renderer.render(scene, camera); // (the post-processing, where the quality has it)
     R3.info = renderer.info;
     if (rdt > 0) R3.fps = R3.fps ? R3.fps * 0.95 + (1 / rdt) * 0.05 : 1 / rdt;
@@ -1089,6 +770,7 @@
   R3.refreshAt = function (x, y) { const ch = chunks.get(ckey(Math.floor(x / C), Math.floor(y / C))); if (ch) ch.sigT = -1e9; };
   // (for the tests: a chunk's signature, read only)
   R3.sigOf = (cx, cy) => sigOf(cx, cy);
+  R3.eachNear = fn => { for (const ch of chunks.values()) if (ch.parts) fn(ch.parts, ch); }; // (for the checks of what the near pictures hold: the water's, 21c)
   R3.chunkCount = () => ({ all: chunks.size, near: [...chunks.values()].filter(c => c.near).length });
   R3.nearAt = (cx, cy) => { const ch = chunks.get(ckey(cx, cy)); return !!(ch && ch.near); }; // (for the proofs: has the chunk its near picture)
   // (for the tests: the near picture of the chunk at a point — its terrain is the first mesh)
