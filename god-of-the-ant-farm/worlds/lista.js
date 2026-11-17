@@ -20,40 +20,40 @@ G.Ready.list({
   "bytes": 1168241
  },
  "metropole": {
-  "day": 54,
-  "pop": 621,
-  "peoples": 5,
-  "towns": 19,
+  "day": 68,
+  "pop": 944,
+  "peoples": 6,
+  "towns": 20,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
    "name": "Argos",
    "tier": 4,
-   "pop": 96
+   "pop": 116
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 3001959
+  "bytes": 4065229
  },
  "mega": {
-  "day": 77,
-  "pop": 1247,
-  "peoples": 4,
+  "day": 69,
+  "pop": 720,
+  "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Hedeby",
    "tier": 5,
-   "pop": 240
+   "pop": 148
   },
   "wars": 0,
   "ww": null,
-  "world": "Orion",
-  "bytes": 4773601
+  "world": "Corante",
+  "bytes": 3709164
  },
  "mundial": {
   "day": 56,
