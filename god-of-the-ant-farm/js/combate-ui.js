@@ -67,8 +67,7 @@
     if (!ok) return false;
     if (guardOn) setGuard(false);
     cur = { kind: 'golpe', i, cls: w.cls, mv, act: Av.actNow(), t0: 0 }; mode = heavy ? 'pesado' : 'golpe'; chainT = 0;
-    play('swish', heavy ? 0.9 : 0.55);
-    return true;
+    return true; // (the blow is heard at its contact, by the world's hand: the swish of a miss, the hit, the metal of a guard)
   }
   // the heavy one charging: the windup held while the key is
   function charge() {
@@ -220,7 +219,7 @@
       else if (e.kind === 'aparo') { Av.hitstop(0.12); C3.shake && C3.shake(0.25); play('clang', 1); toast('Aparou!', 1.2); G.Combate3D && G.Combate3D.flash(e, 'aparo'); Av.spend(3); }
       else if (e.kind === 'bloqueio') { play('clang', 0.7); C3.shake && C3.shake(0.18); G.Combate3D && G.Combate3D.flash(e, 'bloqueio');
         const b = Av.state(); const left = b ? b.stamina : 0; Av.spend(e.cost || 6);
-        if (left < (e.cost || 6) || e.giant) { lower(); play('gasp', 0.7); toast('A guarda cedeu!', 1.4); Av.act({ anim: 'cb-tranco', dur: 0.6, lock: true, vact: 'golpe', force: true }); } }
+        if (left < (e.cost || 6) || e.giant) { lower(); play('gasp', 0.7); toast('A guarda cedeu!', 1.4); Av.act({ anim: 'cb-tranco', dur: 0.6, lock: true, force: true }); } }
       else if (e.kind === 'esquiva') { play('swish', 0.8); toast('Escapou!', 1); }
       else if (e.kind === 'recusa' && e.id) toast('Recusou o desafio.', 1.6);
       else if (e.kind === 'duelo') toast('Duelo! Até um dos dois se render.', 2.4);

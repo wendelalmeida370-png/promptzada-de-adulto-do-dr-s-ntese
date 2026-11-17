@@ -216,7 +216,11 @@
       if (down) o.downT = Math.max(o.downT || 0, S.clock + 1.4 * T);
       if (o.task && o.task.cd !== undefined) o.task.cd = Math.max(o.task.cd, (mv ? mv.stag : 0.3) * T); // (a jolted one strikes back later)
       answer(o, v, duel);
-    } else { v.kills = (v.kills || 0) + 1; G.Audio && G.Audio.at(o.x, o.y, 'hit'); }
+    } else {
+      v.kills = (v.kills || 0) + 1; G.Audio && G.Audio.at(o.x, o.y, 'hit');
+      // (a death at peace is told — the world's own words for it say nothing of a violent death, and a murder is no battle)
+      if (cause === 'coup') { const set = S.settlements.get(o.set); G.Village.log(`${o.name}${set ? ' de ' + set.name : ''} foi ${o.g === 'f' ? 'morta' : 'morto'} por ${v.name}${how === 'arrow' ? ', com uma flecha' : ''}.`, 'skull', o.x, o.y); }
+    }
     // (a blow at one's own people, outside a duel: a crime, seen by whoever is near)
     if (!duel && fid(v) === fid(o) && G.Crime && G.Crime.assault) { G.Crime.assault(v, o, killed); stats.crimes++; }
     note('acerto', { by: v.id, id: o.id, amt, killed: killed ? 1 : 0, blocked: blocked ? r2(blocked) : 0, arrow: how === 'arrow' ? 1 : 0, x: r3(o.x), y: r3(o.y) });

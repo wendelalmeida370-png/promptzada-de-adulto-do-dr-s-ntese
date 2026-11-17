@@ -140,7 +140,7 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   if (want('t6')) {
     const r = await E(() => {
       const X = __X; X.reset(); X.arm([['espada.bronze', 'mao']]);
-      const a = G.S.villagers.get(X.t1) || X.other([]); const b = X.other([a.id]); X.stand(a, 4, -1.2); X.stand(b, 4, 1.2); X.f(10);
+      const a = G.S.villagers.get(X.t1) || X.other([]); const b = X.other([a.id]); X.stand(a, 4, -1.2); X.stand(b, 4, 1.2); X.f(60); // (the people's grid is a quarter of a second of the world old: T-1350)
       X.mouse(1, true); X.mouse(1, false); X.f(4); const l0 = G.Cam3D.locked(); const first = l0 && l0.id;
       const side = first === a.id ? 1 : -1; for (let k = 0; k < 8; k++) { G.Cam3D.look(side * 40, 0); G.Main.frameFor(16.7, true); }
       X.f(4); const l1 = G.Cam3D.locked(); const second = l1 && l1.id; G.Cam3D.unlock(); X.f(2);
@@ -165,7 +165,8 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
   }
 
   // ================================ t8: sem erros ================================
-  { const q = await E(() => ({ err: JSON.stringify(G.modErr || {}), qa: __X.qa() }));
+  // (the things the proof's hand gave go back: nothing of a metal the people never had is left in the bag — the origin's verifier)
+  { const q = await E(() => { __X.arm([]); return { err: JSON.stringify(G.modErr || {}), qa: __X.qa() }; });
     ok('t8 sem-erros', !errs.length && q.err === '{}' && !q.qa.length, `${errs.slice(0, 3).join(' | ') || 'sem erros de página'} · módulos ${q.err} · ${q.qa.slice(0, 2).join(' · ') || 'verificador limpo'}`); }
   await browser.close();
   console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'PASSOU');

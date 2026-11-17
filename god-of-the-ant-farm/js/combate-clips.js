@@ -45,14 +45,16 @@
   function charge(id, cls, g, w) { add(id, { dur: 0.9, mask: 'full', in: 0.16, out: 0.1, stance: cls === 'lanca' || cls === 'duas' ? ST2 : ST1, item: cls === 'punho' ? null : { hand: 'mao', two: cls === 'lanca' || cls === 'duas' }, events: { contact: 0.5 },
     keys: keysOf([[0, mix(g, w)], [0.5, mix(mix(g, w), { elR: (w.elR !== undefined ? w.elR : g.elR) + 4, lean: (w.lean !== undefined ? w.lean : g.lean) - 2, crouch: (w.crouch !== undefined ? w.crouch : g.crouch) + 0.02 })], [1, mix(g, w)]]) }); }
   // the people of the world in their fights: the same blow as a loop on the world's own clock of it — its contact where the world
-  // strikes (v.actT reset at each blow, G.Anim3D.loopTime), the guard held between, the windup before the next. period: the
-  // world's seconds between two blows (the longest of war.js's draw, 0.8 to 1.1 s: the cut always comes in time); and the one
-  // fighting the body on the body's clock (G.Combate: × the body's time)
+  // strikes (v.actT reset at each blow, G.Anim3D.loopTime), the guard held between, the windup before the next. The wait between two
+  // blows is war.js's draw, 0.8 to 1.1 s of the world (in the body's time for one fighting the body, G.Combate): a clip for each
+  // twentieth of it (WAITS), and the drawing picks the one of this blow's own wait — the world's clock of it, v.actT and the wait
+  // still to come (t.cd) —, so the next cut lands where the world strikes and its windup is seen before it
   const TIME = (G.Space && G.Space.TIME) || 0.35;
+  const WAITS = [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1];
   function world(id, cls, g, w, hit, f, period, acts) {
     const two = cls === 'lanca' || cls === 'duas';
     add(id, { dur: period, period, loop: true, mask: 'full', in: 0.12, out: 0.25, stance: two ? ST2 : ST1, item: cls === 'punho' ? null : { hand: 'mao', two }, events: { contact: 0.6 }, acts,
-      keys: keysOf([[0, g], [0.34, g], [0.5, mix(g, w)], [0.6, mix(g, hit)], [0.72, mix(g, f)], [0.86, g], [1, g]]) });
+      keys: keysOf([[0, g], [0.24, g], [0.5, mix(g, w)], [0.6, mix(g, hit)], [0.72, mix(g, f)], [0.86, g], [1, g]]) });
   }
   // ------------------------------ the blows ------------------------------
   const B = {
@@ -90,8 +92,7 @@
     blow(`cb-${cls}-p`, cls, -1, T.g, T.p[0], T.p[1], T.p[2], { in: 0.04 });
     charge(`cb-${cls}-carga`, cls, T.g, T.p[0]);
     // (the world's people: the first light blow, on the world's clock — and on the body's, for one fighting it)
-    world(`cb-mundo-${cls}`, cls, T.g, T.l[0][0], T.l[0][1], T.l[0][2], 1.1, null);
-    world(`cb-corpo-${cls}`, cls, T.g, T.l[0][0], T.l[0][1], T.l[0][2], 1.1 * TIME, null);
+    WAITS.forEach((p, k) => { world(`cb-mundo-${cls}-${k}`, cls, T.g, T.l[0][0], T.l[0][1], T.l[0][2], p, null); world(`cb-corpo-${cls}-${k}`, cls, T.g, T.l[0][0], T.l[0][1], T.l[0][2], p * TIME, null); });
   }
   // ------------------------------ the guard ------------------------------
   // (held while the key is: the top of the body only — the feet walk under it, slowly; the shield up before the face, the blade
@@ -131,7 +132,11 @@
     const s = stateOf0(v, sp); const S = G.S;
     if (v.downT > S.clock && !v.sleeping && s === 'sleep') return 'knocked'; // (thrown down by a blow — not lying down to sleep)
     if (v.stagT > S.clock && sp < 0.6 && s !== 'sleep' && s !== 'swim') return 'cb-tranco';
-    if (s === 'fight' && v.act === 'fight' && !(v.task && v.task.type === 'drill')) return (vsBody(v) ? 'cb-corpo-' : 'cb-mundo-') + clsOf(v);
+    if (s === 'fight' && v.act === 'fight' && !(v.task && v.task.type === 'drill')) {
+      const b = vsBody(v); const k = b ? TIME : 1; const t = v.task; const cyc = ((v.actT || 0) + (t && Number.isFinite(t.cd) ? Math.max(0, t.cd) : 0.95 * k)) / k;
+      const i = Math.max(0, Math.min(WAITS.length - 1, Math.round((cyc - WAITS[0]) / 0.05)));
+      return (b ? 'cb-corpo-' : 'cb-mundo-') + clsOf(v) + '-' + i;
+    }
     return s;
   };
   A.stateOf.combate = true; // (for the proofs: the drawing asks the fight's gestures)

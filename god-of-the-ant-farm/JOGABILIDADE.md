@@ -585,6 +585,41 @@ erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa 
   navegador, que desligam o `requestAnimationFrame` e dirigem os quadros à mão, a veem). Quem abre outro painel por cima (o diário, a
   ficha) a fecha: a mochila só fica aberta com a marca dela.
 
+### 4.9 O combate — `G.Combate` (20f, D-410 a D-424)
+**O mundo** (`js/combate.js`, carregado com os arquivos do mundo; as portas que mudam o mundo só no passo — `G.inSim`; de fora,
+`{ ok: false }` e contadas em `Cb.stats().outside`):
+- `G.Combate.weapon(v)` → `{ key, cls, dano, alcance, ritmo, mat, two, bow, shield, cabeca, corpo }` (do `G.Inv.held`, puro);
+  `classOf(chave)` → `'punho' | 'faca' | 'espada' | 'machado' | 'clava' | 'lanca' | 'duas'`; `MOVES[cls]` → `{ l: [golpes leves], p:
+  o pesado }`, cada golpe `{ dur, hit, arc, r, dmg, fol, zone, stag, down, push, drive, cut, combo, clip }` (segundos do corpo);
+  `move(cls, i)` (i −1: o pesado), `chain(cls)`, `reachOf(w, mv)` (metros), `dealt(v, w, mv, k)`, `armour(held, zona)`,
+  `guardOf(w)`, `capsule(o)`, `targets(v, rumo, alcance, arco)` (as pessoas pelas cápsulas, os bichos pelo `G.Corpo`, o mais perto
+  primeiro), `reach(v, o, d0)` (a que distância v golpeia o: o corpo pela arma e pela pele, os outros `d0`), `bodyTime()` (os
+  segundos do mundo de um segundo do corpo: `G.Possess.time()`), `HOLD`, `CHARGE`, `PARRY`, `SPAM`, `IFRAME`, `YIELD`, `SPEED`.
+- *Mudam o mundo, no passo*: `strike(v, { i, k, yaw })` → `{ ok, hits: [{ id, beast, amt, killed, blocked, down }], miss, cls }`;
+  `guard(v, on)`; `shoot(v, { from: [X, Y, Z], dir: [x, y, z], k })` → `{ ok, id, key }`; `challenge(v, o)` → `{ ok, why }`;
+  `wound(v, o, amt, mv, how)`; `endDuel(perdedor, como)`. *Perguntadas pelo mundo*: `shield(v, amt, causa, by)` (o `possess.js`, antes de
+  dar um golpe no corpo: o que passa), `step(v, dt)` (o `Possess.update`), `onRelease()` (o corpo devolvido).
+- *Só leem*: `events()` (o que o mundo respondeu: `golpe`, `acerto`, `aparo`, `bloqueio`, `esquiva`, `tiro`, `flecha`, `duelo`,
+  `recusa`, `fim` — `{ n, t, kind, … }`, só o momento), `guarding()`, `duel()`, `dueling(a, b)`, `wouldDuel(v, o)`, `flights()`,
+  `arrowOf(v)`, `arrows(v)`, `state()`, `stats()`.
+- O registro: `S.combate = { duel, fl (as flechas no ar), br (as brigas) }`, no save (as tarefas voltam no load); o lugar `'a:'` do
+  `G.Depot` (as flechas no ar, códigos `flecha`, `flecha-cravada`, `flecha-caiu`, `flecha-perdida`).
+
+**As mãos e a tela** (`js/combate-ui.js`, `G.CombateUI`): ouvem `atacar` (o leve; segurado, o pesado; com o arco, puxar e soltar),
+`defender` (a guarda; com o arco, a mira), `guardar` (`G.Inv.toggle`); registram os botões do toque `atacar` e `defender` (`hold`);
+põem o verbo «Desafiar» (F) no provedor `pessoa` do `G.Interact` (encadeado aos `verbs` dele); a tela `.cb-hud` pelo `G.IncUI.frames`.
+`G.CombateUI.state()` (para as provas), `aimPoint()`, `shot(k)`, `DRAW`, `FLICK`; `proof` (só das provas em Node: as mãos sem os modos).
+**O que se vê** (`js/combate3d.js`, `G.Combate3D`): `flash(e, kind)`, `arrows`, `trail` (para as provas). **Os gestos**
+(`js/combate-clips.js`): `cb-<jeito>-<1..3|p>`, `cb-<jeito>-carga`, `cb-guarda-*`, `cb-arco-*`, `cb-tranco`, e os das lutas do mundo
+`cb-mundo-<jeito>-<0..6>` / `cb-corpo-<jeito>-<0..6>` (a espera de 0,8 a 1,1 s do golpe do mundo); o `G.Anim3D.stateOf` embrulhado
+(`stateOf.combate`): o ato `fight` pelo gesto da arma, `v.stagT` o tranco, `v.downT` acordado a queda (`knocked`).
+
+**As portas mínimas noutros arquivos** (ditas no AUDIT): `G.Avatar.spend(n)` e `G.Avatar.hitstop(s)` (`avatar.js`, D-417);
+`G.Cam3D.flick()` (`cam3d.js`, D-424); `G.Possess.time()`, `G.Possess.hm()` e as chamadas ao `G.Combate` no `Vg.damage`, no
+`Possess.update` e no fim do corpo (`possess.js`); `G.Crime.assault(v, o, morto)` e as palavras da prisão por tipo (`crime.js`, D-418);
+o `G.Combate.reach` no `fightStep` (`war.js`, D-420); as linhas `golpe`, `guarda`, `mirar` no `G.Audio.ATO` (`audio-src.js`, D-422); o
+furto só no fantasma (`beyond.js`); o `qa/combate-inv.js` na lista do `qa/junta-inv.js`.
+
 ## 5. Os donos de cada arquivo e as marcas
 
 | Arquivo | Dono | Os outros |

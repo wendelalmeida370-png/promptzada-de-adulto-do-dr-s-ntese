@@ -359,14 +359,14 @@ if (want('c10')) {
   const f = pickAdult(o => G.Possess.can(o).ok); const e = pickAdult(o => o.id !== f.id); used.add(f.id); used.add(e.id);
   if (G.Possess.body()) G.Possess.release('deus'); Av.detach();
   stand(f, 2, 0); f.x = X0; f.y = Y0; G.Vg.setTask(f, { type: 'combat', id: e.id, pri: 4.2, any: true, kind: 'combat' }); f.act = 'fight'; f.actT = 0;
-  const k = Cb.classOf(G.Inv.held(f).mao); const st = A.stateOf(f, 0); const C = A.CLIPS[st];
-  const u = C && C.period > 0 ? A.loopTime(C, 0, C.period) : -1;
-  res.push(`quem luta: «${st}» (${k}), o contato no golpe do mundo: ${r2(u)} = ${C ? C.events.contact : '?'}, a cada ${C ? C.period : '?'} s do mundo`);
-  if (st !== 'cb-mundo-' + k || !C || Math.abs(u - C.events.contact) > 1e-6) bad.push('o gesto de quem luta');
+  const k = Cb.classOf(G.Inv.held(f).mao); f.task.cd = 0.9; f.actT = 0.1; const st = A.stateOf(f, 0); const C = A.CLIPS[st];
+  const u = C && C.period > 0 ? A.loopTime(C, 0, C.period) : -1; const u2 = C && C.period > 0 ? A.loopTime(C, 1.0, C.period) : -1;
+  res.push(`quem luta: «${st}» (${k}), o contato no golpe do mundo: ${r2(u)} = ${C ? C.events.contact : '?'}; o golpe seguinte (a 1,0 s: 0,1 passados e 0,9 de espera) também: ${r2(u2)}; a cada ${C ? C.period : '?'} s do mundo`);
+  if (st !== 'cb-mundo-' + k + '-4' || !C || Math.abs(u - C.events.contact) > 1e-6 || Math.abs(u2 - C.events.contact) > 1e-6) bad.push('o gesto de quem luta');
   // the one fighting the body: on the body's clock
   const vb = pickAdult(o => G.Possess.can(o).ok && o.id !== e.id); used.add(vb.id); live(vb); G.Vg.setTask(e, { type: 'combat', id: vb.id, pri: 4.2, any: true, kind: 'combat' }); e.act = 'fight'; e.actT = 0; e.downT = 0; e.stagT = 0;
-  const st2 = A.stateOf(e, 0); const C2 = A.CLIPS[st2]; res.push(`quem luta com o corpo: «${st2}», a cada ${C2 ? r2(C2.period) : '?'} s do mundo`);
-  if (!/^cb-corpo-/.test(st2) || !C2 || Math.abs(C2.period - 1.1 * Cb.bodyTime()) > 1e-6) bad.push('o gesto de quem luta com o corpo');
+  e.task.cd = 0.8 * Cb.bodyTime(); const st2 = A.stateOf(e, 0); const C2 = A.CLIPS[st2]; res.push(`quem luta com o corpo: «${st2}», a cada ${C2 ? r2(C2.period) : '?'} s do mundo (a espera de 0,8 s no tempo do corpo)`);
+  if (!/^cb-corpo-\w+-0$/.test(st2) || !C2 || Math.abs(C2.period - 0.8 * Cb.bodyTime()) > 1e-6) bad.push('o gesto de quem luta com o corpo');
   e.stagT = S.clock + 0.2; const st3 = A.stateOf(e, 0); e.stagT = 0; e.downT = S.clock + 1; const st4 = A.stateOf(e, 0); e.downT = 0;
   res.push(`o tranco: «${st3}»; a queda: «${st4}»`); if (st3 !== 'cb-tranco' || st4 !== 'knocked') bad.push('o tranco ou a queda');
   G.Vg.endTask(e);
@@ -379,6 +379,9 @@ if (want('c10')) {
 }
 
 // ================================ c11: o verificador ================================
+// (the things the proof's hand gave go back where they came from — nothing of a metal a people never had is left in a bag: the
+// origin's verifier, 20h, would rightly see it)
+for (const o of S.villagers.values()) if (used.has(o.id) && Object.keys(G.Inv.bag(o)).length) arm(o, []);
 {
   const e = M.erros(); const bad = vbad();
   ok('c11a verificador-limpo', !bad.length && !Object.keys(e.mod).length && !e.console.length, `${bad.length ? bad.slice(0, 4).map(q => `[S${q.sev}] ${q.sys}: ${q.msg}`).join(' · ') : 'limpo (S0–S2)'}; módulos ${JSON.stringify(e.mod)}; console ${e.console.length ? e.console.slice(0, 2).join(' | ') : 'limpo'}`);
