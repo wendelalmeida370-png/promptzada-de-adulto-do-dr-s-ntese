@@ -2293,7 +2293,7 @@
       const Yf = sp.cls === 'water' || air || a.swim ? W.groundH(a.x, a.y) * HM : Math.max(groundY(a.x, a.y), G.Space.stoneTop(X, Z));
       // (a beast first seen stands where the ground is — not rising to it from the height 0, out of the ground, as before)
       s.Y = s.Y === null || Math.abs(Yf - s.Y) > 3 ? Yf : s.Y + (Yf - s.Y) * (1 - Math.exp(-14 * dt));
-      const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : !air && (a.z || 0) > 3 ? Math.min(4, a.z * 0.22) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
+      const Y = s.Y + (air ? Math.max(0.5, (a.z || 0) * 0.22) : !air && (a.z || 0) > 3 ? (G.Arvore3D ? G.Arvore3D.perchY(a) : Math.min(4, a.z * 0.22)) : 0) + (sp.cls === 'amph' && W.waterH && S.type[W.idx(Math.floor(a.x), Math.floor(a.y))] <= G.T.RIVER ? -0.3 : 0);
       const fsc = fz ? G.Fauna3D.scaleOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1) : 1;
       const fsize = fz ? G.Fauna3D.sizeOf(a.kind) * fsc / G.Fauna3D.scaleOf(a.kind) : 0;
       if (!inField(X, Y, Z, Math.max(0.6, fz ? fsize * 0.6 : F.len * u))) { P3.bculled++; continue; } // (outside the eye's field: not drawn)

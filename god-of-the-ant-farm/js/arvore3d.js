@@ -605,7 +605,9 @@
       if (!W.inb(x, y)) continue; const i = y * N + x;
       const tid = S.treeAt[i]; const t = tid && S.trees.get(tid);
       if (t) {
-        if (far) { if (t.stage !== 'grow' || t.size < 0.3) continue; const k = KIND[t.kind] || KIND.oak; const H = 5 + 7 * t.size; const pal = tpal(t); g.put(k[0] === 'cone' ? SH.cone : SH.ico0, R3.mat(t.x * TL, W.groundH(t.x, t.y) * HM + (k[0] === 'cone' ? 0 : H * 0.6), t.y * TL, 0, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5, k[0] === 'cone' ? H : 4.5, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5), (X, Y, Z, nx, ny) => G.lerpColor(pal[1], pal[2], G.clamp(ny * 0.5 + 0.5, 0, 1) * 0.8)); }
+        if (far && (KIND[t.kind] || KIND.oak)[0] === 'tall') { if (t.stage !== 'grow' || t.size < 0.3) continue; const D = G.Mata.tree(t); const pal = tpal(t); // (the great tree of the south: its umbrella where it hangs, over the roof)
+          g.put(SH.ico0, R3.mat(t.x * TL, W.groundH(t.x, t.y) * HM + D.cy, t.y * TL, D.h * TAU, D.r * 2.1, D.r * D.fl * 1.4 + 1.2, D.r * 2.1), (X, Y, Z, nx, ny) => G.lerpColor(pal[1], pal[2], G.clamp(ny * 0.5 + 0.5, 0, 1) * 0.8)); }
+        else if (far) { if (t.stage !== 'grow' || t.size < 0.3) continue; const k = KIND[t.kind] || KIND.oak; const H = 5 + 7 * t.size; const pal = tpal(t); g.put(k[0] === 'cone' ? SH.cone : SH.ico0, R3.mat(t.x * TL, W.groundH(t.x, t.y) * HM + (k[0] === 'cone' ? 0 : H * 0.6), t.y * TL, 0, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5, k[0] === 'cone' ? H : 4.5, k[0] === 'cone' ? 4 : 5.5 * t.size + 1.5), (X, Y, Z, nx, ny) => G.lerpColor(pal[1], pal[2], G.clamp(ny * 0.5 + 0.5, 0, 1) * 0.8)); }
         else treeInto(g, t, gp, gl);
       }
       if (far) continue;
@@ -666,7 +668,44 @@
         }
       }
     }
+    if (far) roofInto(g, x0, y0, w, h);
+    else if (gl && R3.Q().cipo > 0) lianasInto(g, x0, y0, w, h);
     return { flora: g.empty ? null : g.build(false, true), plants: gp.empty ? null : gp.build(), leaves: gl && !gl.empty ? gl.build(false, true) : null };
+  }
+  // the roof of the forest seen from far (D-474): where the crowns close (Mata's canopy), a sheet a little under the tops of the
+  // crowns — tile by tile, at the height of the canopy there —, so the forest from a hill is one roof in waves with the great
+  // crowns standing out of it, never the ground showing between balls
+  const ROOF = [[44, 86, 46], [38, 72, 46], [34, 64, 50], [52, 82, 52], [36, 78, 40], [86, 100, 52], [96, 104, 64]];
+  function roofInto(g, x0, y0, w, h) {
+    if (!G.Mata) return; const TL = G.Space.TILE, HM = G.Space.HM; const S = G.S;
+    // (only a chunk with a wood in it: a plain, the sea, a town, the desert ask nothing of the forest's map — the far pictures of the
+    // whole map are made when the view opens)
+    let nt = 0; for (let y = y0; y < y0 + h && nt < 24; y++) for (let x = x0; x < x0 + w; x++) { if (!W.inb(x, y)) continue; const t = S.trees.get(S.treeAt[y * G.N + x]); if (t && t.stage === 'grow' && t.size >= 0.5) nt++; }
+    if (nt < 24) return;
+    const cd = G.Mata.canopy(x0 - 1, y0 - 1, w + 2, h + 2), ca = G.Mata.canopy(x0 - 1, y0 - 1, w + 2, h + 2, 'alto'); const W2 = w + 2;
+    const at = (x, y) => (y - y0 + 1) * W2 + (x - x0 + 1);
+    // (a corner's height: the mean of the roof of the tiles round it that are under the canopy)
+    const corner = (x, y) => { let s = 0, n = 0; for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) { const k = at(x + dx, y + dy); if (k < 0 || k >= cd.data.length || cd.data[k] < 100) continue; s += ca.data[k] / 4; n++; } return n ? s / n : -1; };
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
+      if (!W.inb(x, y)) continue; const k = at(x, y); if (cd.data[k] < 140 || ca.data[k] < 24) continue;
+      const P = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([cx, cy]) => { const hh = corner(cx, cy); const gy = W.hAt(Math.min(G.N - 0.001, cx), Math.min(G.N - 0.001, cy)) * HM; return [cx * TL, gy + Math.max(2, (hh < 0 ? ca.data[k] / 4 : hh) - 1.6), cy * TL]; });
+      const b = S.biome ? S.biome[y * G.N + x] : 0; const base = ROOF[b] || ROOF[0]; const f = 0.86 + G.hash(y * 7919 + x * 31) * 0.26;
+      const c = [base[0] * f, base[1] * f, base[2] * f], c2 = [c[0] * 0.86, c[1] * 0.9, c[2] * 0.86];
+      g.tri(P[0], P[2], P[1], c, c2, c); g.tri(P[0], P[3], P[2], c, c, c2);
+    }
+  }
+  // the lianas between the great trees of a chunk (D-475): from the boughs of one to the boughs of a neighbour three to nine metres
+  // off, sagging between them — only two trees of the same chunk (a felled one takes its liana with it when the chunk is made again)
+  function lianasInto(g, x0, y0, w, h) {
+    const S = G.S; const TL = G.Space.TILE, HM = G.Space.HM; const list = [];
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { if (!W.inb(x, y)) continue; const t = S.trees.get(S.treeAt[y * G.N + x]); if (!t || t.stage !== 'grow' || t.size < 0.5) continue; const k = KIND[t.kind] || KIND.oak; if (k[0] !== 'tall' && !(k[0] === 'round' && S.biome && (S.biome[y * G.N + x] === 4 || S.biome[y * G.N + x] === 3))) continue; list.push(t); }
+    const lv = [60, 70, 44]; const many = R3.Q().cipo > 1 ? 0.55 : 0.32;
+    for (const a of list) for (const b of list) {
+      if (b.id <= a.id) continue; const d = Math.hypot(a.x - b.x, a.y - b.y) * TL; if (d < 3 || d > 9 || G.hash(a.id * 977 + b.id * 131) > many) continue;
+      const Da = G.Mata.tree(a), Db = G.Mata.tree(b); const ya = W.groundH(a.x, a.y) * HM + Da.cy - Da.r * Da.fl * 0.4, yb = W.groundH(b.x, b.y) * HM + Db.cy - Db.r * Db.fl * 0.4;
+      const ax = a.x * TL, az = a.y * TL, bx = b.x * TL, bz = b.y * TL; const sag = 1.5 + d * (0.2 + G.hash(a.id + b.id * 3) * 0.25); const n = 6; let px = ax, py = ya, pz = az;
+      for (let j = 1; j <= n; j++) { const u = j / n; const nx = ax + (bx - ax) * u, nz = az + (bz - az) * u, ny = ya + (yb - ya) * u - sag * 4 * u * (1 - u); limb(g, FS.limb, px, py, pz, nx, ny, nz, 0.035, lv, BARK - 0.1 - 0.1 * Math.sin(u * Math.PI)); px = nx; py = ny; pz = nz; }
+    }
   }
   // (for the tests: the plants and stones of a stretch of land as the near picture draws them — its three geometries)
   R3.floraOf = (x0, y0, w, h) => (window.THREE ? (ready(), floraGeo(x0, y0, w, h, false)) : null);
@@ -720,6 +759,26 @@
   };
 
   // ------------------------------ the doors ------------------------------
+  // where what perches on a tree of the world is (D-476), in metres, [X, Y, Z]: 'colmeia' a hive hanging under a bough, 'ninho' a nest in
+  // a fork of the crown, 'copa' the crown's heart (and its radius, the fourth), 'tronco' the top of the trunk where the boughs open.
+  // A tree of the temperate lands keeps the places it had (the hive at 2,6 m + 2,2 × its size, the nest at 3 + 3,2 × its size); a great
+  // tree of the south has them up in its own crown, twenty metres up — never a hive on the bare trunk
+  A3.anchor = function (t, what) {
+    if (!t) return null; const TL = G.Space.TILE, HM = G.Space.HM; const X = t.x * TL, Z = t.y * TL, Yg = W.groundH(t.x, t.y) * HM; const D = G.Mata.tree(t); const tall = (KIND[t.kind] || KIND.oak)[0] === 'tall';
+    if (what === 'copa') return [X, Yg + D.cy, Z, D.r];
+    if (!tall) { if (what === 'colmeia') return [X + 0.6, Yg + 2.6 + t.size * 2.2, Z + 0.3]; if (what === 'ninho') return [X, Yg + 3 + t.size * 3.2, Z]; return [X, Yg + D.cy - D.r * 0.5, Z]; }
+    const base = Yg + D.cy - D.r * D.fl * 0.5; const a = D.h * TAU + 1.1;
+    if (what === 'colmeia') return [X + Math.cos(a) * D.r * 0.35, base - 0.25, Z + Math.sin(a) * D.r * 0.35];
+    if (what === 'ninho') return [X + Math.cos(a + 2) * D.r * 0.28, base + D.r * D.fl * 0.25, Z + Math.sin(a + 2) * D.r * 0.28];
+    return [X, base, Z];
+  };
+  // (how high a beast up a tree is drawn, in metres over the ground: the world's climb — its height against the crown it climbs to,
+  // A.canopyZ — laid on the tree as it is drawn; a temperate tree the old way, four metres at most)
+  A3.perchY = function (a) {
+    const t = a && G.S.trees.get(a.tree || a.perch); const z = a.z || 0;
+    if (!t || (KIND[t.kind] || KIND.oak)[0] !== 'tall' || !(G.Animals && G.Animals.canopyZ)) return Math.min(4, z * 0.22);
+    const D = G.Mata.tree(t); return G.clamp(z / Math.max(1, G.Animals.canopyZ(t)), 0, 1) * (D.cy - D.r * D.fl * 0.5);
+  };
   // the plants of a stretch of land, for a chunk: the near picture (far false: the three geometries — what sways, what bends, the
   // cards of leaves) or the far one (far true: one form for each tree)
   A3.geo = (x0, y0, w, h, far) => { ready(); return floraGeo(x0, y0, w, h, far); };
