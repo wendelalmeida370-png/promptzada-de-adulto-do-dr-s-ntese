@@ -66,7 +66,11 @@ M.load = function (o) {
   }
   if (o.qa) M.run('qa/qa.js');
   // (an extra the page already runs before three.js runs once: js/space.js, which the world asks since L-195)
-  for (const f of o.extra || []) if (!ran.has(f)) M.run(f);
+  // (22c, SOCIEDADE.md §3.9: the acting cut from js/people3d.js — the postures, the face, the reader of the life that is seen — lives
+  // in the files the page runs at the 22c mark of index.html: a proof that runs people3d.js runs them right after it, as the page does)
+  const with22c = (() => { const i = html.indexOf('<!-- 22c: a vida que se vê — os arquivos do 3D aqui'); if (i < 0) return []; const j = html.indexOf('js/fx3d.js', i);
+    return [...html.slice(i, j < 0 ? undefined : j).matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map(m => m[1]); })();
+  for (const f of o.extra || []) if (!ran.has(f)) { M.run(f); ran.add(f); if (f === 'js/people3d.js') for (const g of with22c) if (!ran.has(g) && !(o.extra || []).includes(g)) { M.run(g); ran.add(g); } }
   // (the body's work of the hands — the tree, the rock, the bush, the fish, 20g D-430 — lives in js/trabalho.js, which the page
   // runs with the interactions: a proof that runs these runs it too, after its own extras, or the body there has none of them)
   if ((o.extra || []).includes('js/interact.js') && !(o.extra || []).includes('js/trabalho.js') && fs.existsSync(path.join(root, 'js/trabalho.js'))) M.run('js/trabalho.js');

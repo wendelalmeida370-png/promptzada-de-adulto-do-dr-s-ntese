@@ -277,8 +277,7 @@
   const STATES = Anim.STATES || (Anim.STATES = []);
   Anim.addStates = () => { for (const id in CLIPS) if (!STATES.includes(id)) STATES.push(id); };
   Anim.addStates();
-  const basePose = Anim.pose;
-  if (basePose) Anim.pose = (st, t, sp) => { const c = CLIPS[st]; if (!c) return basePose(st, t, sp); const out = Object.assign(Anim.POSE0(), basePose(c.base, t, sp)); Anim.playClip(out, c, (t || 0) / c.dur, 1); out.stL = out.stR = 1; return out; };
+  // (a clip's pose by its name — its base with the clip at the time t — is the postures' Anim.pose: js/anim-pessoas.js)
   // (the clips of other files — the next wave's — queued where they load before this one: G.ANIM_CLIPS.push([id, def]))
   const Q = G.ANIM_CLIPS || []; G.ANIM_CLIPS = { push: e => { const c = Anim.clip(e[0], e[1]); Anim.addStates(); return c; } }; for (const e of Q) Anim.clip(e[0], e[1]); Anim.addStates();
 })(window.G);

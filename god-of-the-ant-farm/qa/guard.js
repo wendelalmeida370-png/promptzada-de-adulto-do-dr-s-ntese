@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1509,5 +1509,25 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // === 22a: os personagens ===
 // === 22b: a sociedade ===
 // === 22c: a vida que se vê ===
+// 213. "o leitor da vida só lê" (D-590): o js/vida3d.js lê o mundo para o animador e não escreve nada nele — nem numa pessoa, nem
+// na tarefa dela, nem no G.S —, não dá tarefa nem ato, não tira de acaso nenhum (nem o do mundo, nem o do que só se vê: a variedade
+// é do G.hash do id) e não lê o relógio da máquina; só escreve na memória da vista (s, r) e nos números do quadro (I, L, out)
+{ const vr = src['vida3d.js'] || []; if (!vr.length) fails.push('o leitor da vida só lê: falta o js/vida3d.js (D-590)');
+  vr.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(\)|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now|\bsetTask\(|\.give\(|\bG\.(Depot|Act)\.\w+\(/.test(c)) fails.push(`o leitor da vida só lê: vida3d.js:${k + 1} tira de um acaso, dá uma tarefa ou mexe no livro (D-590): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o|t|w|m|S|vill|person|task)\.[\w.]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bG\.S\.[\w.]+(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+(v|o|t|S)\./.test(c)) fails.push(`o leitor da vida só lê: vida3d.js:${k + 1} escreve no mundo (D-590): ${l.trim().slice(0, 110)}`); }); }
+// 214. "toda tarefa tem pose, ou diz que a pose é a do movimento" (D-592): toda tarefa que o mundo dá (setTask / give com o tipo
+// escrito) está no TASK_OF do js/vida3d.js — com o estado do desenho que ela mostra quando o ato não diz nada, uma função que o dá,
+// ou MOVE, dito de propósito (como o silêncio do som, still('…')): a pose é a do movimento e a do ato que o afazer dá; e todo estado
+// que o TASK_OF nomeia existe (uma postura do anim-pessoas.js ou um clipe registrado)
+{ const vr = (src['vida3d.js'] || []).join('\n'); const i0 = vr.indexOf('const TASK_OF = V3.TASK_OF = {'), i1 = vr.indexOf('\n  };', i0);
+  if (i0 < 0) fails.push('toda tarefa tem pose: o vida3d.js sem o TASK_OF (D-592)');
+  else { const body = vr.slice(i0, i1); const keys = new Set([...body.matchAll(/\b(\w+):\s*(MOVE|'[\w-]*'|\()/g)].map(m => m[1]));
+    const states = new Set(); for (const m of (src['anim-pessoas.js'] || []).join('\n').matchAll(/^    (\w+): \(/gm)) states.add(m[1]);
+    for (const f of files) if (/clips\.js$/.test(f)) for (const m of src[f].join('\n').matchAll(/(?:K|add|guard|blow|world|charge)\(\s*[`'](cb-[\w-]+|[\w-]+)[`']/g)) states.add(m[1]);
+    for (const f of files) if (/clips\.js$/.test(f)) for (const m of src[f].join('\n').matchAll(/push\(\[\s*'([\w-]+)'/g)) states.add(m[1]);
+    for (const m of body.matchAll(/'([\w-]+)'/g)) if (!states.has(m[1])) fails.push(`toda tarefa tem pose: o TASK_OF nomeia o estado «${m[1]}», que não é postura nem clipe (D-592)`);
+    const given = new Set(); for (const f of files) src[f].forEach(l => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/(?:setTask|\.give)\([^,()]+,\s*\{\s*type:\s*'(\w+)'/g)) given.add(m[1]); });
+    for (const t of given) if (!keys.has(t)) fails.push(`toda tarefa tem pose: a tarefa «${t}» que o mundo dá não está no TASK_OF do vida3d.js — dê o estado que ela mostra, ou MOVE (D-592)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
