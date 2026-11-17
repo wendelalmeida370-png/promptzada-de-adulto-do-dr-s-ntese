@@ -92,10 +92,16 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   if (want('custo')) {
     for (const n of [30, 60, 90]) {
       const r = await page.evaluate(n => {
-        G.Realm.setOver('npcs', n); G.S.time = 0.42; window.__f(10); const R = G.Realm.renderer(), sc = G.Realm.scene(), cam = G.Realm.camera(); const P3 = G.People3D;
+        G.Realm.setOver('npcs', n); G.S.time = 0.42; window.__f(10);
+        const R = G.Realm.renderer(), sc = G.Realm.scene(), cam = G.Realm.camera(), P3 = G.People3D, av = P3.avatar, gl = R.getContext(), px = new Uint8Array(4);
+        // (the eye over the crowd: up and behind the body, down the street — the ones the quality draws are in view; the frame
+        // timed to the end of the drawing, the picture read back)
+        const look = () => { cam.position.set(av.X - 16, av.Y + 10, av.Z - 16); cam.lookAt(av.X + 8, av.Y, av.Z + 8); cam.fov = 60; cam.updateProjectionMatrix(); };
+        look(); for (let k = 0; k < 4; k++) P3.update(0.05, { X: av.X, Z: av.Z }); look();
         const info = () => ({ calls: R.info.render.calls, tris: R.info.render.triangles });
-        const t = performance.now(); for (let k = 0; k < 5; k++) R.render(sc, cam); const ms = (performance.now() - t) / 5; const a = info(); const drawn = P3.count;
-        const keep = P3.update; P3.clear(); P3.update = () => { }; const t2 = performance.now(); for (let k = 0; k < 5; k++) R.render(sc, cam); const ms0 = (performance.now() - t2) / 5; const b = info(); P3.update = keep; window.__f(2);
+        const time = () => { R.render(sc, cam); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t = performance.now(); for (let k = 0; k < 5; k++) R.render(sc, cam); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return (performance.now() - t) / 5; };
+        const ms = time(); const a = info(); const drawn = P3.count;
+        const keep = P3.update; P3.clear(); P3.update = () => { }; const ms0 = time(); const b = info(); P3.update = keep; window.__f(2);
         return { n, drawn, b3calls: G.Body3D.calls, b3tris: G.Body3D.tris, people: { calls: a.calls - b.calls, tris: a.tris - b.tris, ms: +(ms - ms0).toFixed(1) }, frameMs: +ms.toFixed(1) };
       }, n);
       log('custo ' + JSON.stringify(r));

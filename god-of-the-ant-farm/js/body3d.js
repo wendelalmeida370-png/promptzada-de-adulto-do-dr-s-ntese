@@ -265,20 +265,35 @@ vec3 b3face(vec3 p, vec3 skin) {
     float u = clamp((bx - 0.016) / 0.054, 0.0, 1.0);
     float yc = 1.734 + 0.005 * sin(u * 3.1416) + u * 0.0015 + m.y * (0.008 + 0.004 * (1.0 - u)) - m.z * 0.009 * (1.0 - u) + x.x * (0.008 * (1.0 - u) - 0.004 * u);
     vec4 pp = b3T(B3_WT + 11); // (22a: the paint of the genes — the freckles, the brows' weight — at the shape's spare slots)
-    float th = mix(0.0062, 0.0042, u * u) * (0.75 + 0.5 * pp.y);
-    float br = b3aa(abs(p.y - yc) - th) * smoothstep(0.012, 0.0165, bx) * smoothstep(0.075, 0.068, bx);
+    // (22a: a shape, not stripes — full at the head, thinning to a point at the tail; up close, hairs: each strand of its own
+    // slant, length and shade, slanting out and up as brows grow — a hash on the strand, the same every frame; far off, the shape)
+    float th = mix(0.0062, 0.0016, smoothstep(0.35, 1.0, u)) * (0.75 + 0.5 * pp.y) * (0.8 + 0.2 * smoothstep(0.0, 0.12, u));
+    float sy = (p.y - yc) / max(th, 1e-4), sx = bx + (p.y - yc) * mix(-0.4, 1.1, u); float sid = floor(sx / 0.0011);
+    float h1 = fract(sin(sid * 12.9898) * 43758.5453), h2 = fract(sin(sid * 78.233) * 12543.123);
+    float nr0 = 1.0 - smoothstep(0.0003, 0.0012, fwidth(p.x)), sf = abs(fract(sx / 0.0011) - 0.5) * 2.0;
+    float edge = th * (1.0 + nr0 * (0.35 * h1 - 0.15)); // (the outline broken by the hairs that stick out)
+    float br = b3aa(abs(p.y - yc) - edge) * smoothstep(0.012, 0.0165, bx) * smoothstep(0.075, 0.068 - 0.004 * h2 * nr0, bx);
     vec3 bc = min(hair * 0.5, skin * 0.3);
-    c = mix(c, bc, br * 0.95 * (0.85 + 0.15 * sin(p.x * 900.0 + p.y * 300.0) * (1.0 - smoothstep(0.0, 0.002, fwidth(p.x)))));
+    c = mix(c, bc, br * 0.95 * mix(1.0, (0.62 + 0.38 * h2) * (1.0 - 0.35 * sf * sf) * (1.0 - 0.25 * smoothstep(0.4, 1.0, abs(sy))), nr0));
     // (the lips and the mouth: the corners up in a smile, down in grief and anger; open as it talks, laughs, gasps — the
     // teeth showing in a laugh)
     float mx = ax / (0.0262 + 0.003 * max(m.x, 0.0));
-    if (mx < 1.25 && p.y > 1.585 && p.y < 1.64) {
+    if (mx < 1.3 && p.y > 1.58 && p.y < 1.645) {
       float cy = 1.6145 + m.x * 0.006 * mx * mx; float open = b3T(0).w * 0.011 * max(0.0, 1.0 - mx * mx);
-      float up = 0.0078 * (1.0 - mx * mx * 0.75), dn = 0.0092 * (1.0 - mx * mx * 0.85);
+      // (22a: the lips with their volume and their colour — the upper one with its bow, the «M»: two peaks and the dip under the
+      // nose; the lower one fuller, lit along its middle; a fine pale edge over the upper one, the shadow under the lower one, the
+      // corners that read: a mouth's expression has to be seen from a few steps, the first sheet of five faces)
+      float b1 = (mx - 0.3) / 0.16, b2 = mx / 0.12; float bow = 0.0017 * exp(-b1 * b1) - 0.0013 * exp(-b2 * b2);
+      float up = 0.0072 * (1.0 - mx * mx * 0.8) + bow, dn = 0.0105 * (1.0 - mx * mx * 0.9);
       vec3 lips = b3T(12).rgb;
-      float lu = b3aa(p.y - (cy + up + open * 0.3)) * b3aa(cy + open * 0.5 - p.y), ld = b3aa((cy - open * 0.5) - p.y) * b3aa(p.y - (cy - dn - open * 0.5));
-      float lip = max(lu * 0.9, ld) * b3aa(mx - 1.0);
-      c = mix(c, lips, lip * 0.85);
+      float top = cy + up + open * 0.3, bot = cy - dn - open * 0.5, inl = b3aa(mx - 1.0);
+      float lu = b3aa(p.y - top) * b3aa(cy + open * 0.5 - p.y), ld = b3aa((cy - open * 0.5) - p.y) * b3aa(p.y - bot);
+      float hy = (p.y - (cy - dn * 0.45 - open * 0.5)) / (dn * 0.3); float hiL = exp(-hy * hy) * max(0.0, 1.0 - mx * mx);
+      vec3 lc = mix(lips * 0.84, lips * (1.0 + 0.24 * hiL), step(p.y, cy));
+      c = mix(c, lc, max(lu, ld) * inl * 0.93);
+      c *= 1.0 + 0.07 * b3aa(abs(p.y - top - 0.0008) - 0.0006) * inl * (1.0 - mx * 0.5);
+      float under = (1.0 - smoothstep(0.0, 0.0055, bot - p.y)) * step(p.y, bot) * max(0.0, 1.0 - mx * mx * 0.8); c *= 1.0 - 0.22 * under;
+      float k1 = (mx - 1.0) / 0.09, k2 = (p.y - cy) / 0.0022; c *= 1.0 - 0.35 * exp(-k1 * k1 - k2 * k2);
       float line = b3aa(abs(p.y - cy) - (0.0007 + open * 0.5)) * b3aa(mx - 1.04);
       vec3 inside = mix(vec3(0.1, 0.03, 0.03), vec3(0.86, 0.82, 0.74), b3aa(cy + open * 0.5 - 0.0028 - p.y) * step(0.004, open) * b3aa(mx - 0.75) * step(0.2, m.x));
       c = mix(c, mix(lips * 0.35, inside, step(0.001, open)), line * 0.9);
@@ -479,22 +494,26 @@ vec3 b3paint() {
           #endif
           vBind = position; vBindN = normal; vAO = aAO; vRowI = int(aRow + 0.5); vZoneI = int(aZone + 0.5);`)
         .replace('#include <begin_vertex>', 'vec3 transformed = b3cloth(b3P, position);');
+      // (22a, D-553: the skin's warm edge of the shade — narrow and faint: wider and at 0.2 it read as rouge on a pale cheek a few
+      // steps off, the first photos)
       const LC = THREE.ShaderChunk.lights_lambert_pars_fragment, LA = 'vec3 irradiance = dotNL * directLight.color;';
-      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.5, 0.36 ) * ( b3sk * 0.2 * smoothstep( -0.45, 0.05, b3nl ) * ( 1.0 - smoothstep( 0.05, 0.5, b3nl ) ) );') : LC;
+      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.5, 0.36 ) * ( b3sk * 0.08 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );') : LC;
       sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader.replace('#include <lights_lambert_pars_fragment>', LIGHT)
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
     };
-    mat.customProgramCacheKey = () => 'body3d-v5';
+    mat.customProgramCacheKey = () => 'body3d-v6';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind;
       sh.uniforms.uMorph = B3.U2;
-      sh.vertexShader = pb + SKIN + CLOTH + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 b3P, b3N; b3skin(b3morph(position, B3_K0, B3_K1), vec3(0.0, 1.0, 0.0), b3P, b3N); vec3 transformed = b3cloth(b3P, position);');
+      // (22a: in the shadow's pass the face's relief is pressed flat — the nose, the brows, the lips and the eyes cast no shadow on
+      // the face, whose blocks of the shadow map read as dark stains on the cheeks and the chin; the head still shades the world)
+      sh.vertexShader = pb + SKIN + CLOTH + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 b3q = b3morph(position, B3_K0, B3_K1); if (position.y > 1.55 && position.z > 0.035 && (aZone < 2.5 || (aZone > 21.5 && aZone < 28.5))) b3q.z = 0.035 + (b3q.z - 0.035) * 0.25;\n  vec3 b3P, b3N; b3skin(b3q, vec3(0.0, 1.0, 0.0), b3P, b3N); vec3 transformed = b3cloth(b3P, position);');
     };
-    depth.customProgramCacheKey = () => 'body3d-depth-v3';
+    depth.customProgramCacheKey = () => 'body3d-depth-v4';
   }
 
   // ------------------------------ starting ------------------------------
@@ -678,8 +697,10 @@ vec3 b3paint() {
     if (!RI) { FV.upA = 0; FV.loA = 0; FV.jawA = 0; return FV; }
     const cl = (x, a, b) => (x < a ? a : x > b ? b : x);
     const bl = cl(ch[RI.blink], 0, 1), sq = cl(ch[RI.squint], 0, 1), wd = cl(ch[RI.wide], 0, 1), sd = cl(ch[RI.browSad], 0, 1), sm = cl(ch[RI.smile], -1, 1), pn = cl(ch[RI.pain], 0, 1);
-    FV.loA = -cl(bl * 8 + sq * 12 + Math.max(0, sm) * 4 + pn * 8, 0, 20) * RAD;
-    FV.upA = cl(bl * 70 + sq * 13 + sd * 6 + pn * 14 - wd * 14, -15, 70) * RAD;
+    // (at rest the eye is calm — the upper lid over the top of the iris, a tenth or so of it, the lower one at its rim: the mesh's
+    // own rest, rosto.py LID_REST_*; the white above and below it is the wide channel's, fear and awe, never the rest's: D-557)
+    FV.loA = -cl(bl * 14 + sq * 12 + Math.max(0, sm) * 4 + pn * 8 - wd * 4, -10, 26) * RAD;
+    FV.upA = cl(bl * 56 + sq * 13 + sd * 6 + pn * 14 - wd * 24, -30, 56) * RAD;
     FV.jawA = cl(ch[RI.jaw], 0, 1) * 24 * RAD;
     return FV;
   }

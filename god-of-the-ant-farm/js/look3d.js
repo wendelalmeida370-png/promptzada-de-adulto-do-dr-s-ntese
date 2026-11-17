@@ -144,7 +144,7 @@
     o.iris = IRIS[(Math.floor(hh(8) * 7) + (G.hex2rgb(L.skin)[0] < 170 ? 0 : 0)) % IRIS.length];
     if (G.hex2rgb(L.skin)[0] < 175) o.iris = IRIS[Math.floor(hh(8) * 3)]; // (dark skin, dark eyes)
     if (L.fe) o.iris = L.fe.iris; // (the eyes of the genome, 22a: the person's own)
-    o.lips = mixHex(L.skin, '#a8524a', fem ? 0.42 : 0.28);
+    o.lips = mixHex(L.skin, '#a8524a', fem ? 0.5 : 0.4); // (22a: a lip's own colour, the women's a little more — the first sheet of five faces)
     // (the cut: sleeves to the wrist, the round neckline, shoes to the ankle, trousers, the belt at the waist)
     o.sleeve = 0.585; o.neck = 0; o.bootTop = 0.11; o.legs = 1; o.beltY = 1.01; o.beltH = 0.017; o.overK = 0; o.strap = L.strap ? 1 : 0;
     o.torso = 0; o.motif = wealth >= 2 && hh(9) < 0.7 ? 1 : 0; o.feetK = 0; o.hem = 1; o.cloakTrim = wealth >= 2 ? 1 : 0;

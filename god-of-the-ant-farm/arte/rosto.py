@@ -20,6 +20,9 @@ JAW = g([0, 1.652, -0.004])                # the jaw's hinge, in front of the ea
 # the lids' edges at rest, as elevations about the eye's centre — stylised (D-553): the opening ≈ 1.36× the old painted one, the
 # eye a wide almond; the corners where the two edges meet
 LID_UP, LID_LO, LID_CORNER, LID_PHI = np.radians(35.0), np.radians(38.0), np.radians(64.0), np.radians(115.0)
+# the calm rest (D-557): each lid turned on its bone's axis, kept in the mesh — the upper one down over the top of the iris (a tenth
+# or so of it), the lower one a little open, to the iris's rim; the white above and below is the wide channel's, never the rest's
+LID_REST_UP, LID_REST_LO = np.radians(14.0), np.radians(6.0)
 
 
 def smooth(a, b, x):
@@ -30,7 +33,7 @@ def landmarks(fem=0.0):
     """What js/body3d.js needs to turn the face's bones: the jaw's hinge, the eyes' centres, the lids' edges at rest."""
     E = CF.eyes(fem)
     return {'jaw': [round(float(x), 6) for x in JAW], 'eyes': [[round(float(x), 6) for x in c] for c, r in E], 'eyeR': round(float(E[0][1]), 6),
-            'mouth': round(MOUTH_Y, 6), 'lid': [round(float(LID_UP), 5), round(float(LID_LO), 5), round(float(LID_CORNER), 5)]}
+            'mouth': round(MOUTH_Y, 6), 'lid': [round(float(LID_UP - LID_REST_UP), 5), round(float(LID_LO + LID_REST_LO), 5), round(float(LID_CORNER), 5)]}
 
 
 # ------------------------------ the jaw's share of the skin ------------------------------
@@ -133,6 +136,12 @@ def lid(c, rg, top, nu=18, rim=3, shell=4, prims=None):
     # (wound so that the outside faces out: away from the globe — the shell's rows, not the flap's)
     sh = slice((rim + 2) * nu, nr * nu)
     if ((V[sh] - c) * N[sh]).sum(1).mean() < 0: T = T[:, [0, 2, 1]]; N = -N
+    # (the calm rest: turned about the eye's centre on the bone's own axis — x —, as Body3D turns it: positive closes the upper
+    # one and opens the lower one)
+    a = LID_REST_UP if top else LID_REST_LO; ca, sa = np.cos(a), np.sin(a)
+    def turn(P, o):
+        q = P - o; return np.stack([q[:, 0], q[:, 1] * ca - q[:, 2] * sa, q[:, 1] * sa + q[:, 2] * ca], 1) + o
+    V = turn(V, np.asarray(c, float)); N = turn(N, np.zeros(3))
     return V, T, N, Z
 
 

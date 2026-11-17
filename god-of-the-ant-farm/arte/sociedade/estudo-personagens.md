@@ -625,3 +625,17 @@ levar o `gen`.
 - `exp/rostos-fotos.js` — as fotos do jogo (navegador, pela fila): rostos de perto e a meia distância (nórdicos, asteca de 18
   anos, egípcia, grego e romana velhos, criança, bebê, sem braço, grávida), cinco humores num rosto, a vista «como a foto do
   celular» e o custo com 30, 60 e 90 corpos. A pasta é `personagens/fotos/` (ver a nota no fim, se houver).
+
+## Nota da 22a — as folhas de cinco rostos (`personagens/`)
+As mesmas cinco pessoas da metrópole pronta (um nórdico jovem, uma egípcia adulta, um asteca jovem, uma grega idosa, um romano
+idoso), de perto (0,85 m), pelo desenho do jogo (`qa/visual/rostos-fotos.js`, `Q=media`, parte `cinco`).
+- `cinco-rostos-0-antes.jpg` — antes da 22a (7555851): o olho pintado sem pálpebra, a boca uma linha, os cinco com a mesma
+  estrutura.
+- `cinco-rostos-1-primeira.jpg` — a primeira folha da cabeça nova (fase 3, 77366a8): as pálpebras, os cílios, o brilho e a
+  sobrancelha já se leem. As notas do arquiteto sobre ela: o olhar de boneca assustada (o branco em cima e embaixo da íris), a boca
+  ainda uma linha, as manchas escuras nas bochechas e no queixo, a sobrancelha listrada, os cinco ainda com a mesma estrutura — e,
+  das nossas, o vermelho na beira da sombra forte demais (lido como ruge a alguns passos).
+- O que mudou por elas (D-557): o olho calmo no repouso (a pálpebra de cima sobre 13% da íris, a de baixo na borda; o branco só no
+  canal `wide`), a boca com o arco, o volume, a cor, a sombra e os cantos, o rosto que não se sombreia a si mesmo no mapa de sombra
+  (as manchas eram isso, não a oclusão nem as normais), a sobrancelha com forma e fios, os alvos de identidade com alcance de ver a
+  alguns passos, a luz quente da pele estreita e fraca.

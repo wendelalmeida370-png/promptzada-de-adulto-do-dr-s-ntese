@@ -78,27 +78,29 @@
   // field at the eye's centre: they move whole), 'scale' (the field itself: they grow), none (the eyes stay as they are)]
   const FACEBOX = [[-0.13, 1.48, -0.06], [0.13, 1.84, 0.16]], HEADBOX = [[-0.16, 1.5, -0.16], [0.16, 1.9, 0.17]], BODYBOX = [[-0.75, -0.05, -0.3], [0.75, 1.62, 0.36]];
   const A = [
-    // the face of the genes (each a gene — or two, for the finer turns — about the middle of every people)
-    ['cranio', 'id', (o, x, y, z) => { const k = headK(y) * sm(1.6, 1.7, y); o[0] += x * 0.07 * k; o[2] -= z * 0.015 * k; }, HEADBOX],
-    ['rostoLongo', 'id', (o, x, y, z) => { o[1] -= Math.max(0, 1.70 - y) * 0.1 * sm(-0.03, 0.02, z) * sm(1.47, 1.53, y); }, FACEBOX],
-    ['mandibula', 'id', (o, x, y, z) => blob(o, x, y, z, JAWA, 0.03, [0.01, -0.002, 0]), FACEBOX],
-    ['queixo', 'id', (o, x, y, z) => blob(o, x, y, z, CHIN, 0.022, [0, -0.003, 0.008]), FACEBOX],
-    ['macas', 'id', (o, x, y, z) => blob(o, x, y, z, CHEEK, 0.022, [0.005, 0.002, 0.005]), FACEBOX],
-    ['arcada', 'id', (o, x, y, z) => blob(o, x, y, z, BROW, 0.022, [0, 0.001, 0.006]), FACEBOX],
-    ['narizLongo', 'id', (o, x, y, z) => blob(o, x, y, z, TIP, 0.017, [0, -0.005, 0.008]), FACEBOX],
-    ['narizLargo', 'id', (o, x, y, z) => blob(o, x, y, z, NOSTRIL, 0.012, [0.0045, 0, 0]), FACEBOX],
-    ['narizPonte', 'id', (o, x, y, z) => blob(o, x, y, z, BRIDGE, 0.016, [0, 0, 0.006]), FACEBOX],
+    // the face of the genes (each a gene — or two, for the finer turns — about the middle of every people); the main lines of the
+    // face (the skull, the length, the jaw, the chin, the cheekbones, the brow ridge, the nose, the forehead) reach far enough to be
+    // told apart at a few steps, not only up close (the first sheet of five faces)
+    ['cranio', 'id', (o, x, y, z) => { const k = headK(y) * sm(1.6, 1.7, y) * (1 - 0.85 * sm(0.03, 0.075, z)); o[0] += x * 0.1 * k; o[2] -= z * 0.022 * k; }, HEADBOX], // (the skull wider at the temples and behind, not the face round the eyes: the lids stay over them)
+    ['rostoLongo', 'id', (o, x, y, z) => { o[1] -= Math.max(0, 1.70 - y) * 0.16 * sm(-0.03, 0.02, z) * sm(1.47, 1.53, y); }, FACEBOX],
+    ['mandibula', 'id', (o, x, y, z) => blob(o, x, y, z, JAWA, 0.03, [0.017, -0.003, 0]), FACEBOX],
+    ['queixo', 'id', (o, x, y, z) => blob(o, x, y, z, CHIN, 0.022, [0, -0.005, 0.013]), FACEBOX],
+    ['macas', 'id', (o, x, y, z) => blob(o, x, y, z, CHEEK, 0.022, [0.0085, 0.0035, 0.0085]), FACEBOX],
+    ['arcada', 'id', (o, x, y, z) => blob(o, x, y, z, BROW, 0.022, [0, 0.0015, 0.009]), FACEBOX],
+    ['narizLongo', 'id', (o, x, y, z) => blob(o, x, y, z, TIP, 0.017, [0, -0.0085, 0.0135]), FACEBOX],
+    ['narizLargo', 'id', (o, x, y, z) => blob(o, x, y, z, NOSTRIL, 0.012, [0.0075, 0, 0]), FACEBOX],
+    ['narizPonte', 'id', (o, x, y, z) => blob(o, x, y, z, BRIDGE, 0.016, [0, 0, 0.01]), FACEBOX],
     ['labios', 'id', (o, x, y, z) => { const w = g2(x * 0.7, y - MY, z - 0.11, 0.016); o[1] += (y - MY) * 0.5 * w; o[2] += 0.004 * w; }, FACEBOX],
     ['olhosAfast', 'id', (o, x, y, z) => blob(o, x, y, z, EYE, 0.024, [0.0035, 0, 0]), FACEBOX, 'move'],
     ['olhoTam', 'id', (o, x, y, z) => swell(o, x, y, z, EYE, 0.026, 0.1), FACEBOX, 'scale'],
     ['palpebra', 'id', (o, x, y, z) => { for (const sd of [1, -1]) { const w = g2(x - EYE[0] * sd, y - EYE[1], z - EYE[2], 0.022); o[1] += (x * sd - EYE[0]) * 0.12 * w; } }, FACEBOX],
     ['orelhas', 'id', (o, x, y, z) => swell(o, x, y, z, EAR, 0.028, 0.2), HEADBOX],
     ['bocaLarga', 'id', (o, x, y, z) => blob(o, x, y, z, CORNER, 0.011, [0.004, 0, 0]), FACEBOX],
-    ['testa', 'id', (o, x, y, z) => { const k = sm(1.72, 1.77, y) * sm(0.02, 0.07, z) * headK(y); o[2] += 0.005 * k; o[1] += 0.003 * k; }, HEADBOX],
+    ['testa', 'id', (o, x, y, z) => { const k = sm(1.72, 1.77, y) * sm(0.02, 0.07, z) * headK(y); o[2] += 0.008 * k; o[1] += 0.005 * k; }, HEADBOX],
     ['narizPonta', 'id', (o, x, y, z) => blob(o, x, y, z, TIP, 0.012, [0, 0.004, -0.001]), FACEBOX],
     ['olhosFundos', 'id', (o, x, y, z) => blob(o, x, y, z, EYE, 0.02, [0, 0, -0.0035]), FACEBOX, 'move'],
-    ['queixoLargo', 'id', (o, x, y, z) => { const w = g2(x * 0.6, y - CHIN[1], z - CHIN[2], 0.022); o[0] += x * 0.25 * w; }, FACEBOX],
-    ['bochechas', 'id', (o, x, y, z) => blob(o, x, y, z, [0.055, 1.62, 0.05], 0.03, [0.006, 0, 0.003]), FACEBOX],
+    ['queixoLargo', 'id', (o, x, y, z) => { const w = g2(x * 0.6, y - CHIN[1], z - CHIN[2], 0.022); o[0] += x * 0.4 * w; }, FACEBOX],
+    ['bochechas', 'id', (o, x, y, z) => blob(o, x, y, z, [0.055, 1.62, 0.05], 0.03, [0.01, 0, 0.005]), FACEBOX],
     // the face of the years (the identity stays under them: the same person at five and at seventy)
     ['infancia', 'idade', (o, x, y, z) => {
       const f = faceK(x, y, z) * sm(1.75, 1.7, y); o[0] -= x * 0.12 * f; o[1] -= (y - 1.66) * 0.18 * f + 0.006 * f; o[2] -= (z - 0.04) * 0.1 * f;
