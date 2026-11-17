@@ -2,22 +2,22 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 17,
-  "pop": 138,
+  "day": 14,
+  "pop": 132,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Roma",
+   "name": "Hedeby",
    "tier": 3,
-   "pop": 35
+   "pop": 40
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1168241
+  "bytes": 1141895
  },
  "metropole": {
   "day": 68,
