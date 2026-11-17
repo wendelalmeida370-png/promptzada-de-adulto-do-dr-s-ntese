@@ -111,8 +111,8 @@ if (on('g5') || on('g6')) {
     const after = G.Ground3D.geoOf(wetC, x, y)[3] >> 4; const snowy = G.Ground3D.snowAt(wetC);
     // (the stones and the formations read the snow and the moss of the ground where they stand — the floor's picture and the rock's, as
     // the ground under them: under the winter's circle, the snow lies on the floor of every piece there, and the moss is gone)
-    G.Ground3D.full(); let inW = 0, snowed = 0, mossy = 0; const fl = G.Ground3D.floorMap().image.data, ge = G.Ground3D.geoMap().image.data;
-    for (let cy = 0; cy < N / 16; cy++) for (let cx = 0; cx < N / 16; cx++) for (const p of G3.piecesOf(cx * 16, cy * 16, 16)) { const X = p.m[12] / TL, Z = p.m[14] / TL; if (Math.hypot(X - x - 0.5, Z - y - 0.5) > 4 || !W.inb(X, Z)) continue; const i = W.idx(X, Z); inW++; if (fl[i * 4 + 3] > 120) snowed++; if ((ge[i * 4 + 3] >> 4) > 2) mossy++; }
+    G.Ground3D.full(); for (let k = 0; k <= N; k++) G.Ground3D.tick(null); let inW = 0, snowed = 0, mossy = 0; const fl = G.Ground3D.floorMap().image.data, ge = G.Ground3D.geoMap().image.data;
+    for (let cy = 0; cy < N / 16; cy++) for (let cx = 0; cx < N / 16; cx++) for (const p of G3.piecesOf(cx * 16, cy * 16, 16)) { const X = p.m[12] / TL, Z = p.m[14] / TL; if (Math.hypot(X - x - 0.5, Z - y - 0.5) > 4 || !W.inb(X, Z)) continue; const i = W.idx(X, Z); inW++; if (fl[i * 4 + 3] > 120) snowed++; if ((ge[i * 4 + 3] >> 4) > 2 || (G.Ground3D.geoOf(i, i % N, (i / N) | 0)[3] >> 4) > 2) mossy++; }
     const snowW = G.Ground3D.snowOf(wetC, x, y); S.winters.length = 0;
     ok('g5', before > 3 && after < before && snowW > 0.5 && inW > 0 && snowed === inW && !mossy, `a rocha mais musgosa (${x},${y}): o musgo ${before}/15; no inverno do deus (a neve ${snowW.toFixed(2)}; a do clima ${snowy.toFixed(2)}) ${after}/15; as ${inW} pedras e formações no círculo do inverno: ${snowed} com a neve do chão debaixo delas, ${mossy} com musgo`);
   }

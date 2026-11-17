@@ -112,6 +112,8 @@ if (on('v5')) {
 
 if (on('v6')) {
   S = alpino(); N = G.N; R3.setQuality('alta'); G.Ground3D.init(THREE); G.Ground3D.full();
+  // (the view opening makes the picture of the rock without the moss, and the rows made again each frame bring it: a sweep of the map)
+  for (let k = 0; k <= N; k++) G.Ground3D.tick(null);
   const fl = []; for (const r of S.rocks.values()) { fl.push(...R3.floraCheck(r.x, r.y, 6)); if (fl.length > 5) break; }
   let gb = { n: 0, bad: 0, fbad: 0, snowBad: 0, paleBad: 0 }; for (let k = 0; k < 6; k++) { const c = G.Ground3D.check(16 + k * 18, 20 + k * 15, 14, 120); for (const f in gb) gb[f] += c[f]; }
   let ge = 0; const em = G.Ground3D.geoMap().image.data; for (let q = 0; q < 400; q++) { const i = Math.floor(G.hash(q * 17 + 3) * N * N); const w = G.Ground3D.geoOf(i, i % N, (i / N) | 0); if (w.some((v, k) => v !== em[i * 4 + k])) ge++; }

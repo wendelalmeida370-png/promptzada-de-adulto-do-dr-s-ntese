@@ -157,7 +157,10 @@
   // (metres + 256) × 128), A the moss on the rock (its high four bits: the wet and shaded rock of the wet lands, from the forest's
   // moisture — G.Mata —, none in the cold, on the ash or a road) and how wet the rock is (its low four bits: the rain's wet of the world,
   // S.wet, and the spray at the foot of a fall of water). Read smoothly between the tiles by the shader, the fold the same as G.Geo.fold
-  let fallsFor = '', fallsAt = null;
+  let fallsFor = '', fallsAt = null, mataR = null, mataK = -1; // (the forest's region last read: within one band of rows, the world does not change)
+  // (the whole picture at once — the view opening — without the moss: the forest's regions of the whole map are not made in one frame; the
+  // rows made again each frame bring it, round the body first, in a moment)
+  let geoQuick = false;
   function sprayOf(i) {
     const S = G.S; const fl = (S.relief && S.relief.falls) || []; const key = (S.seed | 0) + ':' + N + ':' + fl.length + ':' + (S.typeVer | 0);
     if (key !== fallsFor) { fallsAt = new Map(); for (const f of fl) { const k = 0.5 + Math.min(1, (f.drop || 1) / 4) * 0.5; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const x = f.x + dx, y = f.y + dy; if (!W.inb(x, y)) continue; const j = y * N + x; const v = k * (1 - Math.hypot(dx, dy) / 3.2); if (v > (fallsAt.get(j) || 0)) fallsAt.set(j, v); } } fallsFor = key; }
@@ -167,12 +170,19 @@
     const S = G.S; const Ge = G.Geo; if (!Ge) { out[0] = out[1] = out[2] = out[3] = 0; return out; }
     const r = Ge.rockAt(i); const v = G.clamp(Math.round((Ge.foldAt(i) + 256) * 128), 0, 65535);
     let moss = 0; const t = S.type[i];
-    if (t >= T.SAND && !S.road[i] && !(S.burnt[i] > 0) && !(S.scar[i] > 0) && G.Mata && G.Mata.floor) { const f = G.Mata.floor(i); moss = G.clamp((f.umid - 0.42) * 1.7, 0, 1) * 0.85 + f.musgo * 0.4; moss *= 1 - G.clamp(snowOf(i, x, y) * 1.6, 0, 1); } // (under the snow lying there — the cold's, the god's winter — no moss shows)
+    // (the forest's moisture and canopy where the rock is, from its region as the world is now — one region a band of tiles: the rows of
+    // this picture read them in a row; under the snow lying there — the cold's, the god's winter — no moss shows)
+    // (only where there is rock to grow on — a cliff, a steep face, the stony ground, a stone of the world: the rest never shows it)
+    const rocky = S.cliff[i] || S.slope[i] > 2 || t === T.ROCKY || (S.objAt[i] && S.rocks.has(S.objAt[i]));
+    if (rocky && !geoQuick && t >= T.SAND && !S.road[i] && !(S.burnt[i] > 0) && !(S.scar[i] > 0) && G.Mata && G.Mata.regionNow) {
+      const Ma = G.Mata, rx = Math.floor(x / Ma.R), ry = Math.floor(y / Ma.R); if (mataK !== ry * 4096 + rx) { mataR = Ma.regionNow(rx, ry); mataK = ry * 4096 + rx; }
+      if (mataR) { const k = (y - mataR.y0) * Ma.R + (x - mataR.x0); const um = mataR.umid[k] / 255, dl = mataR.dossel[k] / 255; moss = G.clamp((um - 0.42) * 1.7, 0, 1) * 0.85 + G.clamp(dl * um * 1.3 - 0.15, 0, 1) * 0.4; }
+      moss *= 1 - G.clamp(snowOf(i, x, y) * 1.6, 0, 1); }
     const wet = G.clamp(Math.max(S.wet ? S.wet[i] : 0, sprayOf(i)), 0, 1);
     out[0] = r; out[1] = v >> 8; out[2] = v & 255; out[3] = (Math.round(G.clamp(moss, 0, 1) * 15) << 4) | Math.round(wet * 15);
     return out;
   }
-  G3.geoOf = (i, x, y) => geoOf(i, x, y, [0, 0, 0, 0]);
+  G3.geoOf = (i, x, y) => { mataK = -1; return geoOf(i, x, y, [0, 0, 0, 0]); };
   G3.snowOf = (i, x, y) => snowOf(i, x, y);
   // (the pictures of the rock and of the floor, for what lies on the ground and must match it — the relief's stones: their moss, their wet,
   // the snow on them read where they stand, as the ground under them has it; the same objects, by reference)
@@ -184,7 +194,7 @@
   // a band of rows of the picture made again from the world; true when something changed
   const px = [0, 0, 0, 0], gx = [0, 0, 0, 0], fx4 = [0, 0, 0, 0], ex4 = [0, 0, 0, 0];
   function rows(y0, y1, x0, x1) {
-    if (!data) return false; let ch = false, gch = false, fch = false, ech = false;
+    if (!data) return false; let ch = false, gch = false, fch = false, ech = false; mataK = -1;
     for (let y = Math.max(0, y0); y < Math.min(N, y1); y++) for (let x = Math.max(0, x0); x < Math.min(N, x1); x++) {
       const i = y * N + x; paint(i, x, y, px); const o = i * 4;
       if (data[o] !== px[0] || data[o + 1] !== px[1] || data[o + 2] !== px[2] || data[o + 3] !== px[3]) { data[o] = px[0]; data[o + 1] = px[1]; data[o + 2] = px[2]; data[o + 3] = px[3]; ch = true; }
@@ -215,7 +225,7 @@
       if (emap) emap.dispose(); edata = new Uint8Array(N * N * 4);
       emap = new THREE.DataTexture(edata, N, N, THREE.RGBAFormat, THREE.UnsignedByteType); emap.magFilter = emap.minFilter = THREE.NearestFilter; emap.generateMipmaps = false; emap.flipY = false;
     }
-    rows(0, N, 0, N); map.needsUpdate = true; fmap.needsUpdate = true; emap.needsUpdate = true; dirtyAll = false; row = 0;
+    geoQuick = true; rows(0, N, 0, N); geoQuick = false; map.needsUpdate = true; fmap.needsUpdate = true; emap.needsUpdate = true; dirtyAll = false; row = 0;
     U.uMap.value = map; U.uFMap.value = fmap; U.uN.value = N; U.uGeo.value = emap; strataTex();
   };
   // every frame: a few rows of the land round the body made again (the paths worn, the fields growing, the fire, the snow),
