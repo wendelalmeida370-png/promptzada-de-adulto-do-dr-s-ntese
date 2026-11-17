@@ -128,7 +128,7 @@ void main() { float r = length(vQ); float a = smoothstep(0.72, 0.86, r) * (1.0 -
     return { kind: 'ponto', X, Y, Z, h: 1, parts: [], ring: [X, Y, Z, 0.55] };
   }
   // (a candidate's middle, for a finger's tap on the picture: the middle of its shape)
-  M.pointOf = function (c) { const s = shapeOf(c, {}); return s ? { X: s.X, Y: s.Y + s.h / 2, Z: s.Z } : { X: c.t.X, Y: gy(c.t.X, c.t.Z) + 0.8, Z: c.t.Z }; };
+  M.pointOf = function (c) { if (!c || !c.t) return null; const s = shapeOf(c, {}); return s ? { X: s.X, Y: s.Y + s.h / 2, Z: s.Z } : { X: c.t.X, Y: gy(c.t.X, c.t.Z) + 0.8, Z: c.t.Z }; };
 
   // ------------------------------ the slots: the one coming, the ones going ------------------------------
   function build(sel) {

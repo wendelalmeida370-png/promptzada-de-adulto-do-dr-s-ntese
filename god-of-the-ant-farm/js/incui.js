@@ -418,6 +418,7 @@
   G.worldHooks.push(() => { aim = { key: '', cands: [], pin: '', pinBest: '', want: '', wantN: 0, hv: false, verbs: null, pt: null, sx: NaN, sy: NaN, at: false }; hold = null; });
   IU.aim = () => ({ key: aim.key, pin: aim.pin, cands: aim.cands.map(c => ({ id: c.id, key: c.key, label: c.label, ok: c.ok, ang: +c.ang.toFixed(3), d: +c.d.toFixed(2) })), verbs: aim.verbs, at: aim.at, x: aim.sx, y: aim.sy, hold: hold ? hold.t : 0 }); // (for the proofs)
   IU.holding = () => (hold ? Math.min(1, hold.t / IU.HOLD_T) : 0);
+  IU.cands = () => aim.cands.slice(); // (for the proofs: the targets in reach as the screen has them, with their targets of the world)
   // (the choice of a candidate, as I.run takes it: I.best's own answer for the first — its rules' words —, the provider's for another)
   const choiceOf = (c, b0) => (!c ? null : c.first && b0 ? b0 : G.Interact.asChoice(c));
   function look(v) {
@@ -433,7 +434,7 @@
       else if (!has(aim.key) || aim.key === firstKey) { key = firstKey; aim.want = ''; aim.wantN = 0; }
       else { if (aim.want === firstKey) aim.wantN++; else { aim.want = firstKey; aim.wantN = 1; } key = aim.wantN >= 2 ? firstKey : aim.key; if (key === firstKey) { aim.want = ''; aim.wantN = 0; } }
     }
-    if (key !== aim.key) { aim.key = key; aim.sx = NaN; aim.sy = NaN; if (hold && hold.key !== key) hold = null; }
+    if (key !== aim.key) { aim.key = key; aim.sx = NaN; aim.sy = NaN; aim.side = 0; if (hold && hold.key !== key) hold = null; }
     const c = cands.find(q => q.key === key) || null; best = choiceOf(c, b0);
     if (!best && key) aim.key = '';
     return c;
@@ -480,7 +481,10 @@
       const q = IU._pq || (IU._pq = new window.THREE.Vector3()); q.set(A.X, A.Y, A.Z); q.project(cam);
       const Wd = window.innerWidth, Ht = window.innerHeight; x = (q.x * 0.5 + 0.5) * Wd; y = (-q.y * 0.5 + 0.5) * Ht;
       at = q.z < 1 && x > 24 && x < Wd - 24 && y > 70 && y < Ht - 60;
-      if (at) { const w = pr.offsetWidth || 260, h = pr.offsetHeight || 60; x = G.clamp(x + 34, 12, Wd - w - 12); y = G.clamp(y - h / 2, 64, Ht - h - (G.Input3D.touch ? 240 : 96)); }
+      // (on the side of the target away from the middle of the picture, where the body is: never over the body itself; the side
+      // kept while the target stays near the middle, so the box does not jump across it)
+      if (at) { const w = pr.offsetWidth || 260, h = pr.offsetHeight || 60; const c = Wd / 2; aim.side = Math.abs(x - c) < 40 && aim.side ? aim.side : x < c ? -1 : 1;
+        x = G.clamp(aim.side < 0 ? x - 34 - w : x + 34, 12, Wd - w - 12); y = G.clamp(y - h / 2, 64, Ht - h - (G.Input3D.touch ? 240 : 96)); }
     }
     if (at !== aim.at) { aim.at = at; pr.classList.toggle('at', at); if (!at) { pr.style.transform = ''; aim.sx = NaN; } }
     if (!at) return;
@@ -504,7 +508,7 @@
   IU.tapAt = function (x, y) {
     const cam = G.Realm.camera && G.Realm.camera(); if (!cam || !window.THREE || !aim.cands.length) return false;
     const q = IU._tq || (IU._tq = new window.THREE.Vector3()); let bk = '', bd = 64;
-    for (const c of aim.cands) { const p = G.Mira3D && G.Mira3D.pointOf ? G.Mira3D.pointOf(c) : { X: c.t.X, Y: (G.Avatar.pos() || { Y: 0 }).Y + 0.9, Z: c.t.Z }; q.set(p.X, p.Y, p.Z); q.project(cam); if (q.z > 1) continue;
+    for (const c of aim.cands) { const p = (G.Mira3D && G.Mira3D.pointOf ? G.Mira3D.pointOf(c) : null) || { X: c.t.X, Y: (G.Avatar.pos() || { Y: 0 }).Y + 0.9, Z: c.t.Z }; q.set(p.X, p.Y, p.Z); q.project(cam); if (q.z > 1) continue;
       const d = Math.hypot((q.x * 0.5 + 0.5) * window.innerWidth - x, (-q.y * 0.5 + 0.5) * window.innerHeight - y); if (d < bd) { bd = d; bk = c.key; } }
     if (!bk) return false; if (bk === aim.key) { IU.press(); IU.release(); return true; } return IU.pick(bk);
   };
@@ -565,7 +569,9 @@
   G.Input3D.button('interagir', { label: () => G.Input3D.keyLabel('interagir') || 'E', hold: true, order: 12 });
   // (the cross of the controller, ← and →, switches while there are several in reach and the controller is in the hands: the quick
   // things of 2 and 4 wait for them to go — modes.js asks here before the quick things hear it)
-  IU.padCycle = function (a) { if (G.Input3D.device !== 'pad' || aim.cands.length < 2 || !best) return false; if (a === 'rapido2') return IU.cycle(1); if (a === 'rapido4') return IU.cycle(-1); return false; };
+  // (the press of a controller's button reaches here before the poll says the controller is the one in the hands — its first press
+  // after the keyboard —: a controller connected is asked, not the device of the last input — L-1243)
+  IU.padCycle = function (a) { if (!(G.Input3D.pad && G.Input3D.pad()) || aim.cands.length < 2 || !best) return false; if (a === 'rapido2') return IU.cycle(1); if (a === 'rapido4') return IU.cycle(-1); return false; };
 
   // ------------------------------ cards ------------------------------
   IU.card = function (c, said) {
@@ -593,7 +599,11 @@
       const can = o ? G.Possess.can(o) : { ok: false };
       // (one's own, or anyone in mourning: a hug)
       const hug = o ? G.Interact.canHug(G.Possess.body(), o) : { ok: false };
-      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
+      // (20e, D-395: the verbs of this person that lost their key — another part's took it — are buttons here)
+      const chosen = best && best.id === 'pessoa' && best.t.o.id === c.id ? best : null; const of = chosen && G.Interact.offer ? G.Interact.offer(chosen) : null;
+      const more = of ? of.more.filter(x => x.id !== 'abraco') : []; // (the hug has its own button above)
+      const vb = more.map(x => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${esc(x.label)}</button>`).join('');
+      h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${vb}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;
       if (c.desc) h += `<div class="ic-desc">${esc(c.desc)}</div>`;
@@ -642,6 +652,7 @@
   function onCardClick(e) {
     const b = e.target.closest('[data-c]'); if (!b) return; const c = b.dataset.c;
     if (c === 'close') { IU.closeAll(); G.Modes.setPanel(null); }
+    else if (c === 'verb') { const k = b.dataset.vk, id = b.dataset.v; IU.closeAll(); G.Modes.setPanel(null); IU.useVerb(k, null, id); }
     else if (c === 'hug') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); const r = o ? G.Interact.hug(o) : null; if (r && r.ok) IU.when(r.ask, () => IU.toast(r.msg, 2.4)); else if (r) IU.toast(r.msg || 'Agora não dá.', 2.4); }
     else if (c === 'swap') { const o = G.S.villagers.get(+b.dataset.id); IU.closeAll(); G.Modes.setPanel(null); if (o) G.Modes.switchTo(o); }
     else if (c === 'diary') IU.diary();

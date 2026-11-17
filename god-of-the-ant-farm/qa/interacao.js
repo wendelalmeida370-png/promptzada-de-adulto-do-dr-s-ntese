@@ -21,6 +21,9 @@
 //     trancada; sem ninguém, ninguém abre; dormindo, ninguém responde; a própria porta, a chave;
 //  n7 os casos ruins: o save no meio de uma troca (o pedido não acontece e nada se perde), quem ia receber morre no meio, a
 //     casa queima com coisas guardadas, a mão do deus segura quem ia receber, outro pega antes a coisa do chão;
+//  n9 os usos dos móveis: os gestos das mãos são clipes (o contato dentro do tempo deles); as regras de aquecer, ler, deitar e rezar
+//     com a pose; a cama da casa que não é a sua se oferece para descansar, a sua é o sono, a de outra família nunca; a reza num
+//     templo dá ao deus o que a dos fiéis dá;
 //  n8 o verificador limpo (e as regras novas da interação) e nenhum erro de módulo nem do console.
 const path = require('path');
 const M = require('./nodemundo.js');
@@ -89,14 +92,15 @@ if (on('n1')) {
     const b = I.best(); const of = I.offer(b); const F = of && of.verbs.find(x => x.k === 'outra');
     const empty = !Inv.list(v).length;
     out.push(`E «${b ? b.label : '-'}», F «${F ? F.label + (F.ok ? '' : ' — ' + F.why) : '-'}»`);
-    const r1 = b && b.id === 'pessoa' && b.t.o.id === o.id && !!F && /^Dar algo a /.test(F.label) && F.ok === !empty;
+    // (with nothing in the bag, no giving on the F: the verb is not said)
+    const r1 = b && b.id === 'pessoa' && b.t.o.id === o.id && (empty ? !F : !!F && /^Dar algo a /.test(F.label) && F.ok);
     // (another part's verb for F on a person — the fight's challenge —: it takes the key; the giving goes to the card)
     I.verb('pessoa', { id: 'prova-desafio', k: 'outra', label: 'Desafiar (prova)', run: () => ({ ok: true, msg: 'desafiado' }) });
     const of2 = I.offer(I.best()); const F2 = of2.verbs.find(x => x.k === 'outra'); const dar = of2.more.find(x => x.id === 'dar');
     const rr = I.runVerb('outra'); const rd = I.runVerb('outra', I.best(), 'dar');
     I.unverb('pessoa', 'prova-desafio'); const of3 = I.offer(I.best());
     out.push(`com a 20f: F «${F2 ? F2.label : '-'}», no cartão «${dar ? dar.label : '-'}»; F → ${rr && rr.msg}; o «Dar» pelo cartão → ${rd && rd.panel ? rd.panel.kind + ' #' + rd.panel.id : JSON.stringify(rd)}`);
-    const r2 = !!F2 && F2.label === 'Desafiar (prova)' && !!dar && rr && rr.msg === 'desafiado' && (empty ? rd && !rd.ok : rd && rd.panel && rd.panel.kind === 'dar' && rd.panel.id === o.id) && of3.verbs.find(x => x.k === 'outra').id === 'dar';
+    const r2 = !!F2 && F2.label === 'Desafiar (prova)' && rr && rr.msg === 'desafiado' && (empty ? !dar : !!dar && rd && rd.panel && rd.panel.kind === 'dar' && rd.panel.id === o.id && of3.verbs.find(x => x.k === 'outra').id === 'dar');
     // (one's own: E held is the hug)
     const k = people(x => x.id !== v.id && Po.kin(v, x) && x.age >= 2 && !x.aboard && !x.held && !x.jail && !x.captive && !x.ug)[0]; let r3 = true;
     if (k) { const p2 = openNear(SPOT[0] + 3, SPOT[1] + 3, 0); clearAround(p2[0], p2[1], 3, [v.id, k.id]); god(() => { G.Vg.endTask(k); k.inside = 0; k.sleeping = false; k.energy = 100; G.Vg.setTask(k, { type: 'idle', wait: 30, pri: 0.3 }); k.x = p2[0] + 0.25; k.y = p2[1]; k.path = null; k.fear = 0; }); at(p2[0], p2[1], k.x, k.y);
@@ -274,6 +278,37 @@ if (on('n7')) {
     out.push(`outro pega antes: ${c ? 'o corpo foi pegar' : 'NÃO ACHOU A COISA'}; o corpo ${m0} → ${Inv.count(V0, k)}, ${o.name} ${o0} → ${Inv.count(o, k)}, no mundo ${tot0} → ${D.total(k)}; disse «${said.join(' / ')}»`);
     if (!c || Inv.count(V0, k) !== m0 || Inv.count(o, k) !== o0 + 1 || Math.abs(D.total(k) - tot0) > 1e-9 || !said.some(t => /Alguém pegou primeiro/.test(t))) bad.push('outro pega antes'); }
   ok('n7 os casos ruins: o save no meio, quem ia receber morre, a casa queima, a mão do deus, outro pega antes', !bad.length, out.join(' · ') + (bad.length ? ' — FALHOU: ' + bad.join(', ') : ''));
+}
+
+// ================================================================ n9 the uses of the furniture
+// (the rules of the uses — aquecer, ler, deitar, rezar —: where each is offered, what stops it, what the world does at the take,
+// the body's pose there a clip of the interaction's; the prayer at a temple's place gives the god what the faithful's does)
+if (on('n9')) {
+  const out = []; const bad = []; const V0 = G.S.villagers.get(v.id); const H = G.S.buildings.get(V0.home);
+  // (the gestures of the hands are clips, registered with their contact inside their time)
+  const Q = Array.isArray(G.ANIM_CLIPS) ? G.ANIM_CLIPS : []; const ids = Q.map(e => e[0]);
+  for (const id of ['apanhar', 'bater', 'abrir', 'dar', 'aquecer', 'ler']) { const e = Q.find(q => q[0] === id); if (!e || !(e[1].events.contact > 0 && e[1].events.contact < 1) || !(e[1].acts || []).includes(id)) bad.push('o clipe ' + id); }
+  out.push(`clipes: ${ids.filter(i => ['apanhar', 'bater', 'abrir', 'dar', 'aquecer', 'ler'].includes(i)).join(', ')}`);
+  for (const u of ['aquecer', 'ler', 'deitar', 'rezar']) { const r = I.useRuleOf(u); if (!r || !r.label || !r.st) bad.push('a regra ' + u); else if (r.st !== 'sleep' && r.st !== 'pray' && !ids.includes(r.st)) bad.push(`a pose ${r.st} de ${u} não é clipe`); }
+  // (a bed: in one's own house, a bed not one's own is offered to rest; one's own is the sleep's; another family's, never)
+  if (H && In.has(H)) {
+    const bd = In.bedOf(V0); const beds = In.slots(H, 'deitar'); const dr = I.useRuleOf('deitar'); const ctx = { v: V0 };
+    const own = beds.find(s => bd && s.item === bd.item); const other = beds.find(s => !bd || s.item !== bd.item);
+    if (own && dr.show(ctx, H, { it: own.item, b: H })) bad.push('a própria cama oferecida para descansar');
+    if (other && !dr.show(ctx, H, { it: other.item, b: H })) bad.push('a outra cama da casa não oferecida');
+    out.push(`camas da casa: ${beds.length} (a própria ${own ? 'é o sono' : '-'}, outra ${other ? 'para descansar' : '-'})`);
+    const H2 = [...G.S.buildings.values()].find(b => b.id !== H.id && In.has(b) && In.slots(b, 'deitar').length); if (H2) { const c = dr.can(ctx, { b: H2 }); const op = god(() => dr.op(V0, H2, {})); out.push(`cama de outra família: ${c.why}`); if (c.ok || op.ok) bad.push('a cama de outra família'); }
+    const opH = god(() => dr.op(V0, H, {})); if (!opH.ok) bad.push('descansar na própria casa');
+  }
+  // (the fire: the words of the cold where it is cold; reading: the library's words in a library)
+  { const r = I.useRuleOf('aquecer').op(V0, H || {}, {}); out.push(`junto ao fogo: «${r.msg}»`); if (!r.ok || !r.msg) bad.push('aquecer'); }
+  // (the prayer at a temple's place — the rule's act —: the five seconds of the world and the faith given, as at the temple's door)
+  const T = [...G.S.buildings.values()].filter(b => b.built && b.type === 'temple' && b.set === V0.set).sort(byId)[0] || [...G.S.buildings.values()].filter(b => b.built && b.type === 'temple').sort(byId)[0];
+  if (T) { const td = G.Vg.door(T); at(td[0], td[1], T.x + T.w / 2, T.y + T.h / 2); god(() => { if (G.S.faith > 900) G.S.faith = 500; }); const f0 = G.S.faith, r0 = S().avatar.deeds.reza || 0; // (the faith under its cap, by the proof's hand)
+    I.useRuleOf('rezar').act(I.ctx(), T); busyDone(900); out.push(`a reza no templo: a fé ${f0.toFixed(2)} → ${G.S.faith.toFixed(2)}, rezas ${r0} → ${S().avatar.deeds.reza || 0}`);
+    if (!(G.S.faith > f0) || (S().avatar.deeds.reza || 0) !== r0 + 1) bad.push('a reza'); }
+  else out.push('(sem templo: a reza fica para outro mundo)');
+  ok('n9 os usos dos móveis: os clipes das mãos, as regras com a pose, a cama da casa e a de outra família, o fogo, a reza no templo', !bad.length, out.join(' · ') + (bad.length ? ' — FALHOU: ' + bad.join(', ') : ''));
 }
 
 // ================================================================ n8 the checker

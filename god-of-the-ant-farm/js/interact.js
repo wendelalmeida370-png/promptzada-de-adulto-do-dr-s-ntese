@@ -368,7 +368,8 @@
     // one's own and for anyone in mourning. ord 5: a verb another part brings for F — the fight's challenge — has the key first,
     // and the giving goes to the card)
     verbs(ctx, t) {
-      const o = t.o, me = ctx.v; const out = [{ id: 'dar', k: 'outra', ord: 5, label: `Dar algo a ${who(me, o)}`, can: () => I.canGive(me, o), run: () => ({ ok: true, panel: { kind: 'dar', id: o.id } }) }];
+      // (the giving only with something in the bag to give: an empty bag puts no verb on the F)
+      const o = t.o, me = ctx.v; const out = [{ id: 'dar', k: 'outra', ord: 5, label: G.Inv && G.Inv.list(me).length ? `Dar algo a ${who(me, o)}` : '', can: () => I.canGive(me, o), run: () => ({ ok: true, panel: { kind: 'dar', id: o.id } }) }];
       const h = I.canHug(me, o); if (h.label) out.push({ id: 'abraco', k: 'segurar', label: h.label, can: () => { const c = I.canHug(me, o); return { ok: c.ok, why: c.why }; }, run: () => I.hug(o) });
       return out;
     },
@@ -507,7 +508,9 @@
     verbs(ctx, t) {
       const st = (G.Interiors.doorState(t.b, t.d.id) || {}).state; if (!st || st === 'bloqueada') return [];
       if (own(ctx.v, t.b)) return [{ id: 'chave', k: 'outra', label: st === 'trancada' ? 'Destrancar a porta' : 'Trancar a porta', run: (c2, t2) => keyDoor(c2, t2, st === 'trancada' ? 'destrancar' : 'trancar') }];
-      return st === 'fechada' ? [{ id: 'bater', k: 'outra', label: 'Bater à porta', run: knock }] : [];
+      // (the door of one's own people's store: its things, by the screen of what is kept; one knocks only at a home's)
+      const fid = G.Fac.idOfV(ctx.v); if (t.b.built && isStore(t.b) && G.Village.facOfSet(t.b.set) === fid) return [{ id: 'armazem', k: 'outra', label: `Abrir o ${t.b.type === 'celeiro' ? 'celeiro' : 'armazém'}`, run: () => ({ ok: true, panel: { kind: 'guardados', ref: 'f:' + fid, b: t.b.id } }) }];
+      return st === 'fechada' && (G.BDEF[t.b.type] || {}).housing ? [{ id: 'bater', k: 'outra', label: 'Bater à porta', run: knock }] : [];
     },
   });
   // (one's key in one's own door, in the world's step — Interiors.useDoor: only who lives or works there has it; an open door
@@ -595,6 +598,7 @@
   // the world's offers, the eating at the table (Avatar.act)
   const USE_RULES = new Map();
   I.useRule = function (use, r) { if (r && typeof r === 'object') USE_RULES.set(use, r); else USE_RULES.delete(use); };
+  I.useRuleOf = use => USE_RULES.get(use) || null; // (for the proofs: the rule of a use, read)
   I.PURE = new Set(['sentar', 'comer', 'aquecer', 'assistir', 'falar', 'ouvir', 'conversar', 'ler']);
   const pieceNm = pl => ((G.Interiors.ITEMS[pl.it.kind] || {}).name || 'lugar').toLowerCase();
   const em = pl => { const n = pieceNm(pl); return (G.gen(n) === 'a' ? 'na ' : 'no ') + n; };
@@ -685,13 +689,17 @@
   // reach, the ledger's «apanhou»), in the hands' own stoop; E held picks it and takes it in its hand; F looks at it. Where the 3D
   // draws it, the hands go (People3D.lying: the same thing, by its name)
   I.add({
-    id: 'chao', prio: 3.6, reach: 2.2,
+    id: 'chao', prio: 2.9, reach: 2.2, // (just under the things of work — the tree, the rock, the bush: where both are in reach, the one faced and nearer is meant; a dead neighbour's hoe at the foot of the tree never took the stroke from it)
     find(ctx) {
       if (!G.Inv || !G.Inv.near) return [];
       const out = []; const S = G.S; const P3 = G.People3D; const lying = P3 && P3.lying ? P3.lying : [];
       for (const q of G.Inv.near(ctx.v, 2.8 / L())) {
         const o = (S.loose || []).find(x => x.id === q.g); if (!o) continue; const e = lying.find(x => x[4] === o.id && x[5] === 0);
-        out.push({ g: o.id, k: o.k, n: o.n, X: e ? e[0] : o.x * L(), Z: e ? e[2] : o.y * L(), Y: e ? e[1] : undefined });
+        const X = e ? e[0] : o.x * L(), Z = e ? e[2] : o.y * L(); const a = aim(ctx, X, Z);
+        // (what lies on the ground is meant when it is before the body — never one beside or behind it; one under the very feet,
+        // whose bearing means nothing, only when nothing before the body is: L-1242)
+        if (a.d > 0.35 && a.ang > 1.2) continue;
+        out.push({ g: o.id, k: o.k, n: o.n, X, Z, Y: e ? e[1] : undefined, pref: a.d <= 0.35 ? -1.2 : 0 });
       }
       return out;
     },
