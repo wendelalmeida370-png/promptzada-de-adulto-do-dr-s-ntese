@@ -43,15 +43,26 @@
   // the best thing to do right now (what the prompt shows: "E — …")
   I.AHEAD = 0.05; // (radians: how much more before the body an animal must be than a door to be what one means there)
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
-  I.best = function () {
+  // every target in reach and how good it is ({ ctx, all: [{ p, t, sc }] }, in the providers' order — the order I.best breaks
+  // its ties by): one look round the body, read by I.best and by the list of the others one may switch to (I.candidates)
+  I.scan = function () {
     const ctx = I.ctx(); if (!ctx || G.Avatar.swimming()) return null; // (the hands are swimming)
-    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1, other = null, xs = -1, bed = null;
+    const all = [];
     for (const p of I.list) {
       for (const t of p.find(ctx)) {
         // (t.reach: a target reached from farther than its kind — the door of a house from its doorstep)
         const s = score(ctx, t.X, t.Z, t.reach || p.reach); if (s < 0) continue;
-        const sc = s + p.prio * 0.6 + (t.pref || 0); // (pref: a target meant more, or less, than the others in the same reach)
-        const c = { p, t };
+        all.push({ p, t, sc: s + p.prio * 0.6 + (t.pref || 0) }); // (pref: a target meant more, or less, than the others in the same reach)
+      }
+    }
+    return { ctx, all };
+  };
+  I.best = function (sn) {
+    sn = sn || I.scan(); if (!sn) return null; const ctx = sn.ctx;
+    let best = null, bs = -1, door = null, ds = -1, pass = null, ps = -1, open = null, os = -1, faced = null, fs = -1, seat = null, ss = -1, meal = null, ms = -1, other = null, xs = -1, bed = null;
+    {
+      for (const c of sn.all) {
+        const { p, t, sc } = c;
         if (sc > bs) { bs = sc; best = c; }
         if (p.id === 'lugar' && sc + (t.pl.use === 'comer' ? 10 : 0) > ss) { ss = sc + (t.pl.use === 'comer' ? 10 : 0); seat = c; } // (a place at a table first)
         if (p.id === 'atividade' && t.o && /^lar\.comer:/.test(t.o.id || '') && sc > ms) { ms = sc; meal = c; } // (the meal of the house)
@@ -133,25 +144,85 @@
   // run. Which target is meant stays I.best's, with all its rules; the verbs are that target's. label: text or (ctx, t) → text; can:
   // (ctx, t) → { ok, why } (none: always); run: (ctx, t) → { ok, msg, card } as a provider's run
   I.VERB_KEYS = ['usar', 'outra', 'segurar'];
-  const verbList = (ctx, b) => (b && b.p && typeof b.p.verbs === 'function' ? (b.p.verbs(ctx, b.t) || []).filter(x => x && (x.k === 'outra' || x.k === 'segurar') && typeof x.run === 'function') : []);
-  // what can be done with the target the body faces now: { id, t, p, verbs: [{ k, label, ok, why }] } (the E first), or null
+  // (20e, D-395: a verb another file brings to a provider it does not own — the fight's «Desafiar» on a person —, by the
+  // provider's id; and its order: of several verbs on one key, the first that can be done now has the key, the first of all
+  // when none can — by ord (0 when not said), then as they came; the verbs that lost their key are the card's: offer().more)
+  const EXTRA = new Map();
+  I.verb = function (id, x) {
+    if (!id || !x || (x.k !== 'outra' && x.k !== 'segurar') || typeof x.run !== 'function') return false;
+    const L = EXTRA.get(id) || []; const i = x.id ? L.findIndex(q => q.id === x.id) : -1; if (i >= 0) L[i] = x; else L.push(x); EXTRA.set(id, L); return true;
+  };
+  I.unverb = (id, vid) => { const L = EXTRA.get(id); if (!L) return false; const n = L.length; EXTRA.set(id, L.filter(q => q.id !== vid)); return EXTRA.get(id).length < n; };
+  const verbList = (ctx, b) => {
+    if (!b || !b.p) return []; const own = typeof b.p.verbs === 'function' ? b.p.verbs(ctx, b.t) || [] : [];
+    return own.concat(EXTRA.get(b.p.id) || []).filter(x => x && (x.k === 'outra' || x.k === 'segurar') && typeof x.run === 'function')
+      .map((x, i) => [x, i]).sort((a, c) => (a[0].ord || 0) - (c[0].ord || 0) || a[1] - c[1]).map(e => e[0]);
+  };
+  const vlabel = (x, ctx, t) => (typeof x.label === 'function' ? x.label(ctx, t) : String(x.label || ''));
+  // (the verbs of a target, one a key: { keys: Map(k → { x, k, id, label, ok, why }), more: [the others] }; a verb with no words is
+  // no verb now — a provider says one only where it means something)
+  function chooseVerbs(ctx, b) {
+    const keys = new Map(), more = [];
+    for (const x of verbList(ctx, b)) {
+      const label = vlabel(x, ctx, b.t); if (!label) continue;
+      const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true }; const e = { x, k: x.k, id: x.id || '', label, ok: !!c.ok, why: c.why || '' };
+      const cur = keys.get(x.k); if (!cur) keys.set(x.k, e); else if (!cur.ok && e.ok) { more.push(cur); keys.set(x.k, e); } else more.push(e);
+    }
+    return { keys, more };
+  }
+  // what can be done with the target the body faces now: { id, t, p, verbs: [{ k, label, ok, why }] (the E first, one a key), more:
+  // [{ k, id, label, ok, why }] (the verbs that lost their key: the card shows them) }, or null
   I.offer = function (b) {
     const ctx = I.ctx(); if (!ctx) return null; b = b || I.best(); if (!b) return null;
-    const verbs = [{ k: 'usar', label: b.label, ok: b.ok, why: b.why }];
-    for (const x of verbList(ctx, b)) { const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true }; verbs.push({ k: x.k, label: typeof x.label === 'function' ? x.label(ctx, b.t) : String(x.label || ''), ok: !!c.ok, why: c.why || '' }); }
-    return { id: b.id, t: b.t, p: b.p, verbs };
+    const verbs = [{ k: 'usar', label: b.label, ok: b.ok, why: b.why }]; const ch = chooseVerbs(ctx, b);
+    for (const k of ['outra', 'segurar']) { const e = ch.keys.get(k); if (e) verbs.push({ k, id: e.id, label: e.label, ok: e.ok, why: e.why }); }
+    return { id: b.id, t: b.t, p: b.p, verbs, more: ch.more.map(e => ({ k: e.k, id: e.id, label: e.label, ok: e.ok, why: e.why })) };
   };
-  // doing verb k of the target the body faces (or of the choice given) — checked again at the moment of doing, as I.run
-  I.runVerb = function (k, choice) {
+  // doing verb k of the target the body faces (or of the choice given) — checked again at the moment of doing, as I.run; vid: one
+  // verb by its id (a card's button: one that lost its key)
+  I.runVerb = function (k, choice, vid) {
     if (!k || k === 'usar') return I.run(choice || I.best());
     const ctx = I.ctx(); if (!ctx || G.Avatar.busy() || G.Avatar.swimming()) return null;
     const b = choice || I.best(); if (!b) return null;
-    const x = verbList(ctx, b).find(q => q.k === k); if (!x) return null;
+    const ch = chooseVerbs(ctx, b); const e = vid ? [...ch.keys.values(), ...ch.more].find(q => q.id === vid && q.k === k) : ch.keys.get(k); if (!e) return null;
     if (score(ctx, b.t.X, b.t.Z, (b.t.reach || b.p.reach) + 0.6) < 0) return { ok: false, msg: 'Longe demais.' };
-    const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true }; if (!c.ok) return { ok: false, msg: c.why };
-    const r = x.run(ctx, b.t) || { ok: true };
+    if (!e.ok) return { ok: false, msg: e.why };
+    const r = e.x.run(ctx, b.t) || { ok: true };
     { const sig = { id: ctx.v.id, what: b.p.id + ':' + k, x: ctx.x, y: ctx.y, set: ctx.v.set }; G.Possess.apply(() => { G.Stories && G.Stories.signal('avatarDeed', sig); return { ok: true }; }); }
     return r;
+  };
+  // ------------------------------ the others in reach (20e, D-396) ------------------------------
+  // A target's own name across looks (each look finds the targets anew): the provider and the thing of the world it is — for the
+  // screen to keep the one shown (firm, D-398) and the one the player switched to. And the thing itself, whoever offers it: a tame
+  // beast is one thing for «Observar» and «Fazer carinho», one person for every verb of a person
+  const ref = t => (t.a ? 'a' + t.a.id : t.o && t.o.id !== undefined && G.S.villagers.get(t.o.id) === t.o ? 'v' + t.o.id : t.o ? 'o' + (t.o.id || t.o.act + ':' + (t.o.cid || t.o.op || 0))
+    : t.tr ? 't' + t.tr.id : t.bu ? 'u' + t.bu.id : t.r ? 'r' + t.r.id : t.q ? 'q' + t.q.id : t.d && t.b ? 'd' + t.b.id + '/' + t.d.id : t.pl && t.b ? 'l' + t.b.id + '/' + t.pl.item + '/' + t.pl.q
+    : t.it && t.b ? 'c' + t.b.id + '/' + (t.it.id !== undefined ? t.it.id : t.it.kind) : t.s ? 's' + t.s.id + (t.up ? 'u' : 'd') : t.g ? 'g' + t.g : t.b ? 'b' + t.b.id : t.i !== undefined ? 'w' + t.i : 'h');
+  I.keyOf = c => (c && c.t ? (c.id || (c.p && c.p.id) || '') + ':' + ref(c.t) : '');
+  I.thingOf = c => (c && c.t ? ref(c.t) : '');
+  // the targets in reach one may switch to: I.best's first, then the others — one a thing, the most meant of its providers —, in the
+  // order of where they are before the body, from its left to its right (a wheel or a cross goes along it as the eye does). Each
+  // { id, t, p, label, ok, why, key, ang (radians: + to the right of where the body faces), d (metres) }. At most I.CANDS
+  I.CANDS = 6;
+  I.candidates = function (sn) {
+    sn = sn || I.scan(); if (!sn) return []; const b = I.best(sn); if (!b) return []; const ctx = sn.ctx;
+    const by = new Map(); by.set(ref(b.t), { p: b.p, t: b.t, sc: Infinity });
+    for (const c of sn.all) { const k = ref(c.t); const o = by.get(k); if (!o || c.sc > o.sc) by.set(k, c); }
+    const out = [];
+    for (const [k, c] of by) {
+      const first = c.sc === Infinity; const cc = first ? { ok: b.ok, why: b.why } : c.p.can(ctx, c.t);
+      const dx = c.t.X - ctx.X, dz = c.t.Z - ctx.Z; const ang = Math.atan2(Math.sin(Math.atan2(dz, dx) - ctx.yaw), Math.cos(Math.atan2(dz, dx) - ctx.yaw));
+      out.push({ id: c.p.id, t: c.t, p: c.p, label: first ? b.label : c.p.label(ctx, c.t), ok: !!cc.ok, why: cc.why || '', key: I.keyOf(c), thing: k, ang, d: Math.hypot(dx, dz), first, sc: c.sc });
+    }
+    // (the most meant ones, the first always among them; then laid out from left to right — what has no place of its own, the water
+    // underfoot, after them all)
+    const keep = out.sort((x, y) => (y.first ? 1 : 0) - (x.first ? 1 : 0) || y.sc - x.sc).slice(0, I.CANDS);
+    return keep.sort((x, y) => ((x.t.here || x.p.here) ? 1 : 0) - ((y.t.here || y.p.here) ? 1 : 0) || x.ang - y.ang || (x.key < y.key ? -1 : 1));
+  };
+  // a candidate as I.run and I.runVerb take it — the choice the screen made — checked again at the doing (its provider's can)
+  I.asChoice = function (c) {
+    const ctx = I.ctx(); if (!ctx || !c || !c.p) return null; const k = c.p.can(ctx, c.t);
+    return { id: c.p.id, t: c.t, label: c.p.label(ctx, c.t), ok: !!k.ok, why: k.why || '', p: c.p };
   };
   const face = (ctx, X, Z) => Math.atan2(Z - ctx.Z, X - ctx.X);
   // The hands of the body change the world as anyone's do: what an act does is asked at its contact and done by the world in
@@ -189,6 +260,12 @@
   const walkUp = (ctx, v, X, Z, near) => {
     const d = Math.hypot(X - ctx.X, Z - ctx.Z); if (d <= near + 0.25) return { to: null, go: 0 };
     const f = Math.atan2(Z - ctx.Z, X - ctx.X); return { to: [X - Math.cos(f) * near, Z - Math.sin(f) * near], go: G.clamp((d - near) / (G.Possess.caps(v).walk * 1.1), 0.25, 1.6) };
+  };
+  // (20e: the step or two up first, then the gesture in an act of its own — a gesture of one go, a clip that runs from its own start,
+  // never one begun half through by the walk: the walk's act ends, and its end begins the next; none when it is in reach)
+  const stepUp = (ctx, v, X, Z, near, next) => {
+    const { to, go } = walkUp(ctx, v, X, Z, near); if (!go) return next();
+    G.Avatar.act({ anim: 'interact', dur: go, to, toT: go, face: Math.atan2(Z - ctx.Z, X - ctx.X), done: () => next() }); return { ok: true };
   };
   // (the point where a load in the hands goes down: before the feet where they stand when the hands go, toward X, Z)
   const putAt = (v, X, Z) => a => { if (!a.P) { const H = G.People3D && G.People3D.look(v).held; a.P = toward(G.Avatar.pos(), X, Z, (H ? H.size[1] / 2 : 0.15) + 0.02); } return a.P; };
@@ -287,7 +364,37 @@
       // (spoken to, they say who they are: the card with their name — what else the body knows of them, by what it knew)
       return { ok: true, card: I.personCard(o, me, true), said: txt };
     },
+    // (20e: F gives them something of one's bag — the screen of what is kept, with them on the other side —; E held, a hug for
+    // one's own and for anyone in mourning. ord 5: a verb another part brings for F — the fight's challenge — has the key first,
+    // and the giving goes to the card)
+    verbs(ctx, t) {
+      const o = t.o, me = ctx.v; const out = [{ id: 'dar', k: 'outra', ord: 5, label: `Dar algo a ${who(me, o)}`, can: () => I.canGive(me, o), run: () => ({ ok: true, panel: { kind: 'dar', id: o.id } }) }];
+      const h = I.canHug(me, o); if (h.label) out.push({ id: 'abraco', k: 'segurar', label: h.label, can: () => { const c = I.canHug(me, o); return { ok: c.ok, why: c.why }; }, run: () => I.hug(o) });
+      return out;
+    },
   });
+  // (may the body give someone a thing now: there, awake, old enough to hold it, beside it — and something of its own to give)
+  I.canGive = function (me, o) {
+    if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
+    if (o.sleeping) return { ok: false, why: `${Who(me, o)} está dormindo.` };
+    if (o.age < 2) return { ok: false, why: `${Who(me, o)} ainda é um bebê.` };
+    if (o.inside || o.aboard || o.held || o.air || o.jail) return { ok: false, why: `Agora não dá para dar nada a ${who(me, o)}.` };
+    if (G.dist(me.x, me.y, o.x, o.y) * L() > 3.8) return { ok: false, why: 'Longe demais.' };
+    if (!G.Inv || !G.Inv.list(me).length) return { ok: false, why: 'Você não tem nada na mochila para dar.' };
+    return { ok: true };
+  };
+  // a thing of the bag given to someone, in the world's step (the screen asks it by the body's hands, Possess.apply): the giving
+  // is the inventory's (G.Inv.give: their room, the reach, the ledger's «dar»); the two have met face to face (Possess.meet), the
+  // other turns to the body and thanks it. → G.Inv.give's answer, with the thanks said
+  I.give = function (w, o, key, n) {
+    if (!w || !o || !G.Inv) return { ok: false, why: 'Não há a quem dar.' };
+    const r = G.Inv.give(w, o, key, n); if (!r.ok) return r;
+    G.Possess.gave(o); // (the two have met; the deed counted: possess.js)
+    G.faceTo(o, w.x - o.x, w.y - o.y); const k = G.Possess.kin(w, o); const nm = G.Itens.nome(G.Itens.canon(key) || key, r.n);
+    const said = o.age < 12 ? 'É pra mim? Obrigad' + oa(o) + '!' : k ? `Obrigad${oa(o)}, ${w.name}.` : G.Itens.isThing(G.Itens.canon(key)) ? `${G.cap(nm)}? Que generosidade!` : 'Obrigad' + oa(o) + '.';
+    G.Talk && G.Talk.say(o, said, { dur: 3 }); G.Vg.emote(o, 'heart', 1.5);
+    return Object.assign({}, r, { said, k: G.Itens.canon(key) });
+  };
 
   // a hug: for one's own (the family, the partner) and for anyone in mourning — offered on their card, after a word.
   // The other stops and holds the body too (their talk, with the arms); a grieving one is comforted: the mourning eases
@@ -384,8 +491,8 @@
     run(ctx, t) {
       const b = t.b, d = t.d, v = ctx.v; const f = face(ctx, t.X, t.Z); const st = G.Interiors.doorState(b, d.id).state;
       const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; // (a step up to it, from its doorstep)
-      // (someone else's locked door: a knock — the house hears it)
-      if (st === 'trancada' && !own(v, b)) { deed('porta'); G.Avatar.act({ anim: 'interact', dur: 0.9 + go, face: f, to, toT: go, at: [go + 0.3, () => say('Você bate à porta. Ninguém abre.')] }); return { ok: true }; }
+      // (someone else's locked door: a knock — the house hears it, and whoever is in answers: knock)
+      if (st === 'trancada' && !own(v, b)) return knock(ctx, t);
       const want = st === 'aberta' ? 'fechar' : 'abrir';
       G.Avatar.act({ world: true, anim: 'interact', dur: 0.5 + goW, contact: 0.25 + goW, face: f, to, toT: go,
         op: w => {
@@ -396,7 +503,52 @@
         then: () => G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, want === 'abrir' ? 'door' : 'doorShut'), fail: deny });
       return { ok: true };
     },
+    // (20e: F — one's own door locked or unlocked with one's key; someone else's shut door knocked at before going in)
+    verbs(ctx, t) {
+      const st = (G.Interiors.doorState(t.b, t.d.id) || {}).state; if (!st || st === 'bloqueada') return [];
+      if (own(ctx.v, t.b)) return [{ id: 'chave', k: 'outra', label: st === 'trancada' ? 'Destrancar a porta' : 'Trancar a porta', run: (c2, t2) => keyDoor(c2, t2, st === 'trancada' ? 'destrancar' : 'trancar') }];
+      return st === 'fechada' ? [{ id: 'bater', k: 'outra', label: 'Bater à porta', run: knock }] : [];
+    },
   });
+  // (one's key in one's own door, in the world's step — Interiors.useDoor: only who lives or works there has it; an open door
+  // locked is shut first, by the same hand)
+  function keyDoor(ctx, t, act) {
+    const b = t.b, d = t.d; const { to, go } = walkUp(ctx, ctx.v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME;
+    G.Avatar.act({ world: true, anim: 'interact', dur: 0.6 + goW, contact: 0.35 + goW, face: face(ctx, t.X, t.Z), to, toT: go,
+      op: w => { if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' }; const u = G.Interiors.useDoor(b, d.id, act, w); if (u.ok) G.Possess.deed('porta'); return u.ok ? { ok: true, act } : { ok: false, why: G.cap(u.why || 'Não dá.') + '.' }; },
+      then: r => { G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, 'doorShut'); say(r.act === 'trancar' ? 'Você tranca a porta.' : 'Você destranca a porta.'); }, fail: deny });
+    return { ok: true };
+  }
+  // a knock at a door of someone else's (20e, D-399): the hand knocks — a step up to the door first —, and at the knock the world
+  // answers in its step (I.knocked): whoever of the house is in and awake turns to the door and says so; a shut door is opened to
+  // whom they know — the knock's door, by their own hand (Interiors.useDoor) —, a locked one stays locked
+  function knock(ctx, t) {
+    const b = t.b, d = t.d; const f = face(ctx, t.X, t.Z);
+    return stepUp(ctx, ctx.v, t.X, t.Z, 0.7, () => {
+      G.Avatar.act({ anim: 'bater', dur: 1.15, contact: 0.55, face: f, at: [0.42, () => G.Audio && G.Audio.play && G.Audio.play('knock')],
+        op: w => I.knocked(w, b, d), then: r => say(r.msg, 3.4), fail: deny });
+      return { ok: true };
+    });
+  }
+  I.knocked = function (w, b, d) {
+    if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
+    const st = G.Interiors.doorState(b, d.id); if (!st || st.state === 'bloqueada') return { ok: false, why: 'A porta está bloqueada.' };
+    G.Possess.deed('porta');
+    const inside = [...G.S.villagers.values()].filter(o => o.id !== w.id && o.inside === b.id && (o.home === b.id || o.job === b.id) && o.age >= 6).sort((x, y) => x.id - y.id);
+    const up = inside.filter(o => !o.sleeping && !(o.fear > 60));
+    if (!inside.length) return { ok: true, msg: 'Você bate à porta. Ninguém abre.', none: 1 };
+    if (!up.length) return { ok: true, msg: 'Você bate à porta. Ninguém responde: devem estar dormindo.', asleep: 1 };
+    const o = up[0]; const knows = !!G.Possess.kin(o, w) || G.Possess.knows.person(o, w) > 0;
+    const X = b.x + b.w / 2, Y = b.y + b.h / 2; G.faceTo(o, X - o.x, Y - o.y);
+    if (st.state === 'trancada' || !knows) {
+      const line = st.state === 'trancada' ? (knows ? `Agora não, ${w.name}.` : 'Quem é? A casa está fechada.') : 'Quem é?';
+      G.Talk && G.Talk.say(o, line, { dur: 3 });
+      if (st.state !== 'trancada') { const u = G.Interiors.useDoor(b, d.id, 'abrir', o); if (u.ok) return { ok: true, msg: `Você bate à porta. ${Who(w, o)} abre: «${line}»`, opened: 1, by: o.id }; }
+      return { ok: true, msg: `Você bate à porta. De dentro, ${who(w, o)}: «${line}»`, by: o.id };
+    }
+    const u = G.Interiors.useDoor(b, d.id, 'abrir', o); const line = `Entre, ${w.name}!`; G.Talk && G.Talk.say(o, line, { dur: 3 }); G.Vg.emote(o, 'happy', 1.4);
+    return { ok: true, msg: u.ok ? `Você bate à porta. ${Who(w, o)} abre: «${line}»` : `Você bate à porta. ${Who(w, o)}: «${line}»`, opened: u.ok ? 1 : 0, by: o.id };
+  };
   // the stairs of the plan: up from the foot of a flight, down from its landing (the hatch opened over it, by hand) — moving in
   // the house, the body's own place: nothing of the world to ask
   I.add({
@@ -454,6 +606,7 @@
       const B = ind.b, L0 = L(); const out = []; const seen = new Set();
       for (const pl of G.Interiors.freeNear(B, ind.lv, ctx.X - B.x * L0, ctx.Z - B.y * L0, 2.4)) {
         if (seen.has(pl.item) || !(USE_RULES.has(pl.use) || I.PURE.has(pl.use))) continue; seen.add(pl.item);
+        { const r = USE_RULES.get(pl.use); if (r && r.show && !r.show(ctx, B, pl)) continue; } // (20e: a use offered only where it is the body's: a bed of its house)
         out.push({ b: B, pl, X: B.x * L0 + pl.x, Z: B.y * L0 + pl.z, pref: -0.3 });
       }
       return out;
@@ -478,10 +631,153 @@
           const r = rule && rule.op ? rule.op(w, b, p) : null; if (r && !r.ok) { G.Possess.unuse(w); return r; }
           return { ok: true, pl: p, msg: (r && r.msg) || '' };
         },
-        then: r => { G.Avatar.seatAt(B, Object.assign({}, r.pl, { at: pl.at })); say(r.msg); }, fail: deny });
+        // (20e: seated in the use's own pose where the rule has one — the hands to the fire, the scroll held — only drawn: the
+        // world's place is the plan's; and then what the hands do there, the rule's act)
+        then: r => { G.Avatar.seatAt(B, Object.assign({}, r.pl, { at: pl.at }, rule && rule.st ? { st: rule.st } : {})); say(r.msg); if (rule && rule.act) rule.act(ctx, B, r.pl); }, fail: deny });
       return { ok: true };
     },
   });
+  // ------------------------------ the uses of the furniture (20e, D-403) ------------------------------
+  // Sitting, lying down, eating at the table, warming oneself at the fire, reading, praying: each use of a place with its words,
+  // where it is offered (show), what may stop it (can), what the world does at the take (op, in its step), the pose the body is
+  // drawn in there (st: a clip of interacao-clips.js, only seen — the world's place keeps the plan's state) and what the hands do
+  // once there (act). Sitting and eating keep the plain place (PURE): the meal at the table is the house's own offer once seated
+  // (L-625). The body rests at every one of them by the place its hands hold (Vg.resting: D-243)
+  const inTemple = b => !!b && (b.type === 'temple' || /templo|santuario/.test(b.type));
+  I.useRule('aquecer', { label: () => 'Aquecer-se junto ao fogo', st: 'aquecer',
+    op: w => { const c = G.Atmos && G.Atmos.cold ? G.Atmos.cold(w.x, w.y) : 0; return { ok: true, msg: c > 0.25 ? 'O calor do fogo espanta o frio dos ossos.' : 'Você se senta junto ao fogo e estende as mãos.' }; } });
+  I.useRule('ler', { label: (ctx, pl) => (pl && pl.b && /biblioteca/.test(pl.b.type) ? 'Sentar para ler um rolo' : 'Sentar para ler'), st: 'ler',
+    op: (w, b) => ({ ok: true, msg: /biblioteca/.test(b.type) ? 'Você desenrola um rolo e lê.' : 'Você se senta para ler.' }) });
+  // (a bed of one's own house that is not one's own: lain on a while, to rest — one's own bed is the sleep's, 'cama'; another
+  // family's, never)
+  I.useRule('deitar', { label: () => 'Deitar e descansar', st: 'sleep',
+    show: (ctx, B, pl) => { const bd = G.Interiors.bedOf ? G.Interiors.bedOf(ctx.v) : null; return B.id === ctx.v.home && !(bd && bd.b === B && bd.item === pl.it); },
+    can: (ctx, pl) => (pl && pl.b && pl.b.id !== ctx.v.home ? { ok: false, why: 'Essa cama é de outra família.' } : { ok: true }),
+    op: (w, b) => (b.id !== w.home ? { ok: false, why: 'Essa cama é de outra família.' } : { ok: true, msg: 'Você se deita um pouco.' }) });
+  // (kneeling at a temple's place: the prayer of the faithful there — the five seconds of the world anyone prays them in, and
+  // what they give the god, as the prayer before the temple's door —; getting up leaves it unsaid)
+  I.useRule('rezar', { label: () => 'Ajoelhar e rezar', st: 'pray',
+    act: (ctx, B) => {
+      if (!inTemple(B)) return;
+      G.Avatar.act({ world: true, anim: 'pray', dur: (I.WT && I.WT.pray) || 5, free: true, vact: 'pray',
+        op: w => {
+          if (!G.S.buildings.has(B.id) || !B.built) return { ok: false, why: 'O templo não está mais aqui.' };
+          const gain = 0.8 * (0.5 + (w.devotion || 0) / 60); G.S.faith = Math.min(999, G.S.faith + gain); w.devotion = Math.min(100, (w.devotion || 0) + 1.2);
+          G.FX && G.FX.faithText && G.FX.faithText(w.x, w.y, gain); G.Vg.emote(w, 'pray', 2); G.Possess.deed('reza'); return { ok: true };
+        }, then: () => say('Você termina a sua reza.'), fail: deny });
+    } });
+  // ============================== the things kept and the things lying about (20e) ==============================
+  // (a thing in words: «o machado de ferro», «a faca de bronze», «20 flechas», «3 de madeira»)
+  const thingTxt = (k, n) => { const It = G.Itens; const d = It.def(k); if (!d) return String(k); const nm = It.nome(k, n);
+    if (!d.coisa) return `${Math.round((n || 1) * 100) / 100} de ${nm}`; return (n || 1) > 1.5 ? `${Math.round(n)} ${nm}` : `${G.gen(nm) === 'a' ? 'a' : 'o'} ${nm}`; };
+  I.thingTxt = thingTxt;
+  // a thing's card: what the catalog says of it — what it is, its weight, what it is good for, what it is made of (only read)
+  function thingCard(k, n) {
+    const It = G.Itens; const d = It.def(k); if (!d) return { kind: 'thing', name: String(k), sub: '', rows: [] };
+    const rows = [['Peso', `${String(Math.round(d.peso * (n > 1 ? n : 1) * 100) / 100).replace('.', ',')} kg`]];
+    const u = It.usos ? It.usos(k) : []; if (u.length && d.coisa) rows.push(['Serve para', u.join(', ')]);
+    const fb = It.feitoDe ? It.feitoDe(k) : null; if (d.coisa && fb && fb.length) rows.push(['Feito de', fb.map(x => `${Math.round(x.n * 100) / 100} de ${G.Eco.name(x.k)}`).join(' e ')]);
+    return { kind: 'thing', name: G.cap(It.nome(k, n)), sub: d.coisa ? (It.TIPO_NOME[d.tipo] || d.tipo) : 'bem', desc: d.desc || '', rows };
+  }
+  I.thingCard = thingCard;
+  // what lies on the ground in reach — a thing someone let fall or set down, the things of one who died away from home
+  // (G.Inv.near: never a crate of a work, which is the work's offer) —: picked up into the bag (G.Inv.pick, its room and its
+  // reach, the ledger's «apanhou»), in the hands' own stoop; E held picks it and takes it in its hand; F looks at it. Where the 3D
+  // draws it, the hands go (People3D.lying: the same thing, by its name)
+  I.add({
+    id: 'chao', prio: 3.6, reach: 2.2,
+    find(ctx) {
+      if (!G.Inv || !G.Inv.near) return [];
+      const out = []; const S = G.S; const P3 = G.People3D; const lying = P3 && P3.lying ? P3.lying : [];
+      for (const q of G.Inv.near(ctx.v, 2.8 / L())) {
+        const o = (S.loose || []).find(x => x.id === q.g); if (!o) continue; const e = lying.find(x => x[4] === o.id && x[5] === 0);
+        out.push({ g: o.id, k: o.k, n: o.n, X: e ? e[0] : o.x * L(), Z: e ? e[2] : o.y * L(), Y: e ? e[1] : undefined });
+      }
+      return out;
+    },
+    label(ctx, t) { return `Pegar ${thingTxt(t.k, t.n)}`; },
+    can(ctx, t) { return canPick(ctx.v, t); },
+    run(ctx, t) { return pickUp(ctx, t, false); },
+    verbs(ctx, t) {
+      const out = [{ id: 'exame', k: 'outra', label: `Examinar ${thingTxt(t.k, t.n)}`, run: () => { deed('exame'); return { ok: true, card: thingCard(t.k, t.n) }; } }];
+      if (G.Itens.isThing(t.k) && G.Itens.mao(t.k)) out.push({ id: 'segurar', k: 'segurar', label: `Pegar e segurar ${thingTxt(t.k, 1)}`, can: (c2, t2) => canPick(c2.v, t2), run: (c2, t2) => pickUp(c2, t2, true) });
+      return out;
+    },
+  });
+  // (may the hands take it: still there — another may have taken it first —, hands for it, a thing a bag holds, and room)
+  function canPick(v, t) {
+    const o = (G.S.loose || []).find(x => x.id === t.g); if (!o || !(o.n > 0)) return { ok: false, why: 'Alguém pegou primeiro.' };
+    if (!hands(v)) return { ok: false, why: 'Você não tem mãos para isso.' };
+    if (!G.Itens.def(o.k) || o.k === 'water' || o.k === 'moedas') return { ok: false, why: 'Isso não vai na mochila.' };
+    const room = G.Inv.room(v, o.k); return room >= (G.Itens.isThing(o.k) ? 1 : 1e-4) ? { ok: true } : { ok: false, why: 'A mochila está cheia.' };
+  }
+  // (the stoop: a step up to it, the hand down to where it lies, the world taking it in its step; and, held, into the hand)
+  function pickUp(ctx, t, hold) {
+    const v = ctx.v; const g = t.g; const f = face(ctx, t.X, t.Z);
+    const Y = Number.isFinite(t.Y) ? t.Y : gY(t.X, t.Z) + 0.1;
+    return stepUp(ctx, v, t.X, t.Z, 0.55, () => { G.Avatar.act({ anim: 'apanhar', dur: 1.0, contact: 0.5, face: f, reach: reachTo([t.X, Y, t.Z], 0.4, 0.4),
+      op: w => {
+        const r = G.Inv.pick(w, g); if (!r.ok) return r.why === 'Não está mais aí.' ? { ok: false, why: 'Alguém pegou primeiro.' } : r;
+        G.Possess.deed('apanhou', 1);
+        if (hold && G.Itens.isThing(r.k) && G.Itens.mao(r.k)) { const e = G.Inv.equip(w, r.k); r.held = !!e.ok; }
+        return r;
+      },
+      then: r => say(`Você pega ${thingTxt(r.k, r.n)}${r.held ? ' e segura na mão' : ''}.`), fail: deny });
+    return { ok: true }; });
+  }
+  // the furniture that keeps a house's, a building's, a stall's or the people's things (G.Depot.stores: the chest, the jars, the
+  // shelves, the counter of a stall, the bins of the store), indoors where the body is: opened — the screen of what is kept, the
+  // bag on one side and that holder on the other (guardados-ui.js) —, by who may take from it or put in it (G.Depot.may)
+  const ABRE = new Set(['arca', 'jarros', 'cesto', 'cesto-pendurado', 'pipas', 'tulha', 'cuba', 'tanque-barro', 'baia', 'armeiro']);
+  const theNm = n => { const w = String(n).toLowerCase(); const f = w.split(' ')[0]; return (/s$/.test(f) ? (/as$/.test(f) ? 'as ' : 'os ') : G.gen(f) === 'a' ? 'a ' : 'o ') + w; };
+  // (the holder a piece keeps the things of: the house's own, a building's shelf or a stall's sales furniture, the people's store)
+  I.holderOf = function (B, it) {
+    const D = G.Depot; if (!B || !it || !it.store || !D) return null; const dep = it.store.dep;
+    if (dep === 'casa') return D.exists('h:' + B.id) ? 'h:' + B.id : null;
+    if (dep === 'povo') { const fid = G.Village.facOfSet(B.set); return fid && D.exists('f:' + fid) ? 'f:' + fid : null; }
+    const st = ((D.stores && D.stores(B)) || []).find(m => m.id === it.id);
+    if (st && st.sale !== null && st.sale !== undefined) { const z = (G.S.biz || []).find(q => q.b === B.id && q.slot === st.sale && q.st !== 'fim'); return z && D.exists('z:' + z.id) ? 'z:' + z.id : null; }
+    return D.exists('b:' + B.id) ? 'b:' + B.id : null;
+  };
+  I.add({
+    id: 'guardados', prio: 3, reach: 1.9,
+    find(ctx) {
+      const ind = G.Avatar.indoors(); if (!ind || !ind.p || !ind.p.items) return [];
+      const B = ind.b, L0 = L(); const out = [];
+      for (const it of ind.p.items) {
+        if (!it.store || it.lv !== ind.lv) continue; const X = B.x * L0 + it.x, Z = B.y * L0 + it.z; if (Math.hypot(X - ctx.X, Z - ctx.Z) > 2.6) continue;
+        const ref = I.holderOf(B, it); if (ref) out.push({ b: B, it, ref, X, Z, pref: -0.3 });
+      }
+      return out;
+    },
+    label(ctx, t) { const n = (G.Interiors.ITEMS[t.it.kind] || {}).name || 'guardados'; return `${ABRE.has(t.it.kind) ? 'Abrir' : 'Ver'} ${theNm(n)}`; },
+    can(ctx, t) {
+      if (!G.S.buildings.has(t.b.id) || !G.Depot.exists(t.ref)) return { ok: false, why: 'Não existe mais.' };
+      const a = G.Depot.may(ctx.v, t.ref, 'take'), b = G.Depot.may(ctx.v, t.ref, 'put');
+      return a.ok || b.ok ? { ok: true } : { ok: false, why: a.why || b.why || 'Não é seu.' };
+    },
+    run(ctx, t) {
+      G.Avatar.act({ anim: ABRE.has(t.it.kind) ? 'abrir' : 'interact', dur: 0.8, face: face(ctx, t.X, t.Z) });
+      return { ok: true, panel: { kind: 'guardados', ref: t.ref, b: t.b.id, it: t.it.id } };
+    },
+  });
+  // the hands' doors between the bag and a holder, for the screen of what is kept (guardados-ui.js asks them by the body's hands,
+  // G.Possess.apply: done in the world's step): taking — from the people's store a thing is made of its goods (G.Inv.make, what the
+  // store has: 20h), from anywhere else as it is (G.Inv.take, by G.Depot.may) — and keeping — into the people's store a thing
+  // goes back as its goods (G.Inv.unmake), elsewhere as it is (G.Inv.put; a house keeps on its floor what its furniture cannot,
+  // D-059). → the inventory's answer
+  I.fetch = function (w, ref, key, n) {
+    if (!w || !G.Inv || typeof ref !== 'string') return { ok: false, why: 'Agora não dá.' };
+    const k = G.Itens.canon(key); if (!k) return { ok: false, why: 'Isso não se leva.' };
+    const d = G.Itens.def(k); const r = ref[0] === 'f' && d && d.coisa ? G.Inv.make(w, d.kind, d.mat, n) : G.Inv.take(w, ref, k, n);
+    if (r.ok) G.Possess.deed('guardou', 1); return Object.assign({ k: r.k || k }, r);
+  };
+  I.stash = function (w, ref, key, n) {
+    if (!w || !G.Inv || typeof ref !== 'string') return { ok: false, why: 'Agora não dá.' };
+    const k = G.Itens.canon(key); if (!k) return { ok: false, why: 'Isso não se guarda.' };
+    const r = ref[0] === 'f' && G.Itens.isThing(k) ? G.Inv.unmake(w, k, n) : G.Inv.put(w, ref, k, n);
+    if (r.ok) G.Possess.deed('guardou', 1); return Object.assign({ k }, r);
+  };
   // ============================== buildings: doors, the store, the temple ==============================
   // (the people's stores are where the world's people bring their loads and eat: every drop-off — storehouse, barn, dock,
   // harbour store, the first camp's fire — one rule for them and for the body)
@@ -575,9 +871,18 @@
         return { ok: true, msg: 'Você se ajoelha e reza.' };
       }
       if (b.type === 'cemetery') { deed('exame'); return { ok: true, card: graveCard(b) }; }
-      const def = G.BDEF[b.type]; if (def && def.housing && b.id !== v.home) { deed('porta'); G.Avatar.act({ anim: 'interact', dur: 0.9, face: f }); return { ok: true, card: buildingCard(b, v), knock: true }; }
+      const def = G.BDEF[b.type]; if (def && def.housing && b.id !== v.home) { deed('porta'); G.Avatar.act({ anim: 'bater', dur: 1.15, face: f }); return { ok: true, card: buildingCard(b, v), knock: true }; }
       deed('exame');
       return { ok: true, card: buildingCard(b, v) };
+    },
+    // (20e: F — the people's store opened: the tools and the weapons it can make, what one gives back, what it keeps, by the screen
+    // of what is kept (guardados-ui.js); one's own house without a plan, its things; anything else, a look at it)
+    verbs(ctx, t) {
+      const b = t.b, v = ctx.v; if (!b.built) return [];
+      if (isStore(b) && G.Village.facOfSet(b.set) === G.Fac.idOfV(v)) return [{ id: 'armazem', k: 'outra', label: `Abrir ${b.type === 'campfire' ? 'as provisões do povo' : 'o ' + (b.type === 'celeiro' ? 'celeiro' : 'armazém')}`, run: () => ({ ok: true, panel: { kind: 'guardados', ref: 'f:' + G.Fac.idOfV(v), b: b.id } }) }];
+      if (b.id === v.home && G.Depot && G.Depot.exists('h:' + b.id)) return [{ id: 'casa', k: 'outra', label: 'Ver os guardados da casa', run: () => ({ ok: true, panel: { kind: 'guardados', ref: 'h:' + b.id, b: b.id } }) }];
+      if (b.type === 'temple') return [{ id: 'exame', k: 'outra', label: `Examinar ${G.Village.buildName(b).toLowerCase()}`, run: () => { deed('exame'); return { ok: true, card: buildingCard(b, v) }; } }];
+      return [];
     },
   });
   // (where a load belongs, if anywhere — as activity.js resumeCarry reads it: an operation's crate goes to the operation's
@@ -816,6 +1121,8 @@
         }, then: () => say('Você entrega o material aos construtores.'), fail: deny });
       return { ok: true };
     },
+    // (20e: F — the works looked at: what they still need)
+    verbs(ctx, t) { return [{ id: 'exame', k: 'outra', label: 'Examinar a obra', run: () => { deed('exame'); return { ok: true, card: buildingCard(t.b, ctx.v) }; } }]; },
   });
   // what the world's activities offer the hands here (G.Act.offers — a crate on the quay, the stall, a hand to lend: C1's
   // operations): done through the door the world's people use (the same checks, the same transfer), at the contact of the same
@@ -929,12 +1236,14 @@
     find(ctx) { const out = []; const R = 4.5 / L(); for (const a of G.S.animals.values()) { if (a.dead || a.held || Math.abs(a.x - ctx.x) > R || Math.abs(a.y - ctx.y) > R) continue; const d = G.Animals.DEF[a.kind]; if (!d || d.cls === 'water') continue; out.push({ a, X: a.x * L(), Z: a.y * L() }); } return out; },
     label(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return `Observar ${d ? d.nameA || d.name : 'o bicho'}`; },
     can(ctx, t) { return G.S.animals.has(t.a.id) ? { ok: true } : { ok: false, why: 'Foi embora.' }; },
-    run(ctx, t) {
-      const a = t.a; const d = G.Animals.DEF[a.kind] || {}; deed('exame');
-      const rows = []; if (a.named) rows.push(['Nome', a.named + (a.epithet ? ', ' + a.epithet : '')]); if (a.tamed || a.dom) rows.push(['', 'Animal de criação']); if (a.legend) rows.push(['', 'Uma fera lendária']); if (a.kills) rows.push(['Matou', a.kills + (a.kills > 1 ? ' pessoas' : ' pessoa')]);
-      return { ok: true, card: { kind: 'thing', name: G.cap ? G.cap(d.name || a.kind) : (d.name || a.kind), sub: a.grown < 1 ? 'um filhote' : 'adulto', rows } };
-    },
+    run(ctx, t) { deed('exame'); return { ok: true, card: beastCard(t.a) }; },
   });
+  // (a beast's card: what the world knows of it — only read)
+  function beastCard(a) {
+    const d = G.Animals.DEF[a.kind] || {};
+    const rows = []; if (a.named) rows.push(['Nome', a.named + (a.epithet ? ', ' + a.epithet : '')]); if (a.tamed || a.dom) rows.push(['', 'Animal de criação']); if (a.legend) rows.push(['', 'Uma fera lendária']); if (a.kills) rows.push(['Matou', a.kills + (a.kills > 1 ? ' pessoas' : ' pessoa')]);
+    return { kind: 'thing', name: G.cap ? G.cap(d.name || a.kind) : (d.name || a.kind), sub: a.grown < 1 ? 'um filhote' : 'adulto', rows };
+  }
   // water at the feet: a river or a lake is drunk from, kneeling (the breath comes back); the sea is salt
   I.add({
     id: 'agua', prio: 1.5, reach: 2.4, here: true, // (here: where the body is — the water it stands in, the edge nearest it —, no place of its own)
@@ -1019,5 +1328,7 @@
       G.Avatar.act({ anim: 'low', dur: 1.6, face: f, at: [0.6, () => { if (G.FX3D) G.FX3D.spawn({ x: a.x * L(), y: (W.groundH(a.x, a.y) * G.Space.HM) + 1.2, z: a.y * L(), vx: 0, vy: 0.5, vz: 0, life: 1.2, s0: 0.25, s1: 0.4, c: [1, 0.45, 0.6], a: 0.9, fade: 1 }, true); }], contact: 0.9, op: () => { if (!G.S.animals.has(a.id)) return { ok: false, why: '' }; G.Possess.deed('carinho'); return { ok: true }; } });
       return { ok: true, msg: 'Ele se encosta na sua mão.' };
     },
+    // (20e: F — a look at it, the beast's card; the same beast is one target, whoever offers it: I.candidates)
+    verbs(ctx, t) { const d = G.Animals.DEF[t.a.kind]; return [{ id: 'exame', k: 'outra', label: `Observar ${d ? d.nameA || d.name : 'o bicho'}`, run: () => { deed('exame'); return { ok: true, card: beastCard(t.a) }; } }]; },
   });
 })(window.G);

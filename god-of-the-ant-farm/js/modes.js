@@ -341,10 +341,13 @@
     return true;
   };
   // what the actions do (the controller only hears the feet and the jump)
-  G.Input3D.onAction = function (a) {
+  G.Input3D.onAction = function (a, e) {
     if (M3.state !== 'INC') return;
     if (a === 'menu') { if (panel) { G.IncUI.closeAll(); panel = null; } else M3.menu(!menuOpen); return; }
     if (menuOpen) return;
+    // (20e, D-397: the controller's cross ← → switches between the targets in reach while there are several — before the quick
+    // things of 2 and 4 hear it; a key of the keyboard, never: e is the key's event)
+    if (!e && !panel && G.IncUI.padCycle && G.IncUI.padCycle(a)) return;
     // (the actions a module listens to — the bag, the quick things, the fight, the hands: D-339 — before the default handling)
     if (G.Input3D.fire(a)) return;
     if (a === 'deus') { M3.leave('deus'); return; }
@@ -366,9 +369,10 @@
     if (a === 'dancar') { if (G.Avatar.dance()) G.Possess.apply(() => { G.Possess.deed('danca'); G.Interact.danceJoin(); return { ok: true }; }); return; }
     if (a === 'acenar') { if (G.Avatar.wave()) { G.Possess.apply(() => { G.Possess.deed('aceno'); return { ok: true }; }); const p = G.Avatar.pos(); if (p && G.People3D.greet) G.People3D.greet(p.X, p.Z); } return; }
     if (a === 'interagir') {
-      if (panel) { G.IncUI.closeAll(); panel = null; return; }
+      if (panel) { G.IncUI.closeAll(); M3.setPanel(null); return; }
       const v = G.Possess.body(); if (v && v.sleeping) { G.Possess.apply(w => { G.Possess.wake(w); return { ok: true }; }); return; }
-      G.IncUI.use();
+      // (20e: the press — the E at once, or, over a target with a verb for E held, the ring until it is let go: IncUI.press)
+      G.IncUI.press();
     }
   };
   // the one the lock-on's key would hold (D-369 — until the second wave chooses its own: Input3D.on('travar')): the nearest person
