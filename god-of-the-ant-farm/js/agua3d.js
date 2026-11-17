@@ -711,12 +711,22 @@ void aguaWetSolid(inout vec3 c, vec3 P, vec3 Nn, vec3 sky) {
   A3.solidGLSL = () => WETGLSL;
 
   // ------------------------------ for the verifier ------------------------------
+  // (a near picture the world has changed under since the realm last looked at it — a house founded on a bank, a road laid over one, a
+  // bridge over a step — is made again at its next look, a quarter of a second to a second and a half of the world's clock later (the
+  // realm's stream; L-644): until then it is stale, not wrong, and is not judged; past that time it is judged as it stands — a picture
+  // that never followed the world is still caught (T-1550)
+  const RELOOK = 2;
+  function stale(ch) {
+    if (!ch || !ch.sig || !G.Realm.sigOf) return false; const s = G.Realm.sigOf(ch.cx, ch.cy);
+    return !(s.a === ch.sig.a && s.b === ch.sig.b && s.c === ch.sig.c && s.d === ch.sig.d) && G.S.clock - ch.sigT <= RELOOK;
+  }
+  A3.stale = stale;
   // (in the near pictures, the water laid over a tile of land — the shore, a river's bank — only where the land dips under its
   // face, and a river's never over a building or the end of a road; how many quads, how many break it)
   A3.waterCheck = function () {
-    const S = G.S, TL = G.Space.TILE, HM = G.Space.HM; let n = 0, bad = 0, ex = '';
-    G.Realm.eachNear((parts) => {
-      const g = parts.ground; if (!g) return;
+    const S = G.S, TL = G.Space.TILE, HM = G.Space.HM; let n = 0, bad = 0, ex = '', old = 0;
+    G.Realm.eachNear((parts, ch) => {
+      const g = parts.ground; if (!g) return; if (stale(ch)) { old++; return; }
       for (const m of g.children) {
         if (m.material !== MAT.water) continue; const P = m.geometry.attributes.position.array;
         for (let k = 0; k + 17 < P.length; k += 18) { // (a quad: two triangles, six points, square on its tile)
@@ -729,14 +739,14 @@ void aguaWetSolid(inout vec3 c, vec3 P, vec3 Nn, vec3 sky) {
         }
       }
     });
-    return { n, bad, ex };
+    return { n, bad, ex, stale: old };
   };
   // (every step of the water in the near pictures has its sheet, at the faces of its two tiles; no sheet over a bridge, a building or
   // the ice's own drawing out of place; none where the world has no step now; nothing past the lower tile)
   A3.fallCheck = function () {
-    const S = G.S, TL = G.Space.TILE; const out = []; let n = 0;
+    const S = G.S, TL = G.Space.TILE; const out = []; let n = 0, old = 0;
     G.Realm.eachNear((parts, ch) => {
-      const g = parts.ground; if (!g) return; const x0 = ch.cx * 16, y0 = ch.cy * 16;
+      const g = parts.ground; if (!g) return; if (stale(ch)) { old++; return; } const x0 = ch.cx * 16, y0 = ch.cy * 16;
       const want = G.Agua.steps(x0, y0, 16, 16); const got = [];
       for (const m of g.children) if (m.material === MAT.fall && m.geometry.userData.steps) got.push(...m.geometry.userData.steps);
       n += got.length;
@@ -747,7 +757,7 @@ void aguaWetSolid(inout vec3 c, vec3 P, vec3 Nn, vec3 sky) {
       for (const s of got) for (const t of [s.i, s.j]) if (S.road[t] || S.occ[t]) out.push(`lâmina sobre ponte ou prédio em ${t % N},${(t / N) | 0}`);
       for (const m of g.children) if (m.material === MAT.fall) { const P = m.geometry.attributes.position.array; for (let k = 0; k < P.length; k += 3) { const x = P[k] / TL, y = P[k + 2] / TL; if (!(P[k + 1] === P[k + 1]) || x < x0 - 1.1 || y < y0 - 1.1 || x > x0 + 17.1 || y > y0 + 17.1) { out.push(`lâmina fora do seu pedaço (${x.toFixed(1)},${y.toFixed(1)})`); break; } } }
     });
-    return { n, bad: out.length, out };
+    return { n, bad: out.length, out, stale: old };
   };
   A3.check = function () {
     const out = []; if (!MAT || !MAT.water) return out;

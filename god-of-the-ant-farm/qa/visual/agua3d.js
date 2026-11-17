@@ -116,6 +116,12 @@ if (on('g6')) {
   lines.push(`o mar aberto: ${walls} quadrados de parede de água, ${c4 || 'limpo'}`); good = good && walls > 0 && !c4;
   S = novo(); N = G.N; light(); const a = build(cx, cy).g; M.salvarCarregar(); light(); const b = build(cx, cy).g; const pa = Array.from(a.falls.attributes.position.array), pb = Array.from(b.falls.attributes.position.array);
   const same = pa.length === pb.length && pa.every((v, k) => Math.abs(v - pb[k]) < 0.02); lines.push(`o save e o load: a lâmina da maior queda ${same ? 'a mesma' : 'OUTRA'} (${pa.length / 3} pontos)`); good = good && same;
+  // (the e15 of the encarna, in the world «cidade»: the bank of 30,44 — water drawn over its edge — under a road the town lays while the body
+  // lives on; the near picture is made again at the realm's next look: until then stale, not judged; past its time, judged — T-1550)
+  M.pronto('cidade'); S = G.S; N = G.N; light(); const ci = 44 * N + 30; const mk = () => { const h = build(1, 2); h.ch.sig = R3.sigOf(1, 2); h.ch.sigT = S.clock; return h; };
+  held = [mk()]; const w0 = A3.waterCheck(); S.road[ci] = 1; const w1 = A3.waterCheck(); const k0 = S.clock; S.clock += 3; const w2 = A3.waterCheck(); S.clock = k0; held = [mk()]; const w3 = A3.waterCheck(); S.road[ci] = 0;
+  lines.push(`a margem de 30,44 na «cidade» sob uma estrada nova: antes ${w0.bad} fora de ${w0.n}; logo depois, a imagem por refazer ${w1.stale ? 'esperada' : 'JULGADA'} (${w1.bad} fora); 3 s do mundo sem refazer, ${w2.bad ? 'acusada (' + w2.ex + ')' : 'NÃO ACUSADA'}; refeita, ${w3.bad} fora de ${w3.n}`);
+  good = good && !w0.bad && w1.stale === 1 && !w1.bad && w2.bad === 1 && !w3.bad;
   ok('g6', good, lines.join(' · '));
 }
 
