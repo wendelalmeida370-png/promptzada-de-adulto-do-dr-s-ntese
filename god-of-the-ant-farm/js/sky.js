@@ -80,6 +80,26 @@
     ctx.restore();
   });
 
+  // ------------------------------ on the ground: the shade of the hills ------------------------------
+  // (while the sun is low, the land the ridges hide from it — G.Ceu.shadeFor, the very shade the body's view has: a soft cool
+  // veil over each tile in the shade, laid as one shape; made again as the sun moves, half a second of the world at a time)
+  let shadeMap = null, shadeK = -1, shadeV = -1, shadeN = -1;
+  G.worldHooks.push(() => { shadeK = -1; }); // (a new world: its own hills)
+  G.renderHooks.ground.push(function (ctx, proj, view, t, nightF) {
+    const S = G.S; if (!G.Ceu || !S.H || nightF > 0.6) return; const sd = G.Ceu.sun(S.time); if (sd.y < 0.012 || sd.y > 0.42) return;
+    const k = Math.floor(S.time / 0.0025); if (k !== shadeK || (S.typeVer || 0) !== shadeV || N !== shadeN) { shadeK = k; shadeV = S.typeVer || 0; shadeN = N; shadeMap = G.Ceu.shadeFor(sd, shadeMap); }
+    const a = 0.2 * (1 - G.smooth(0.2, 0.42, sd.y)) * (1 - nightF) * (1 - G.clamp(S.weather.rain || 0, 0, 1)); if (a < 0.01) return;
+    const R = G.Render; const [x0, y0] = R.screenToTile(0, 0), [x1, y1] = R.screenToTile(R.VW, R.VH), [x2, y2] = R.screenToTile(R.VW, 0), [x3, y3] = R.screenToTile(0, R.VH);
+    const tx0 = Math.max(0, Math.floor(Math.min(x0, x1, x2, x3)) - 1), tx1 = Math.min(N - 1, Math.ceil(Math.max(x0, x1, x2, x3)) + 1), ty0 = Math.max(0, Math.floor(Math.min(y0, y1, y2, y3)) - 1), ty1 = Math.min(N - 1, Math.ceil(Math.max(y0, y1, y2, y3)) + 1);
+    const n = N + 1; let m = 0; ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgba(70,84,130,${a.toFixed(3)})`; ctx.beginPath();
+    for (let y = ty0; y <= ty1 && m < 6000; y++) for (let x = tx0; x <= tx1 && m < 6000; x++) {
+      const c = y * n + x; if (shadeMap[c] + shadeMap[c + 1] + shadeMap[c + n] + shadeMap[c + n + 1] < 1.2) continue;
+      const p0 = proj(x, y, S.H[c]), p1 = proj(x + 1, y, S.H[c + 1]), p2 = proj(x + 1, y + 1, S.H[c + n + 1]), p3 = proj(x, y + 1, S.H[c + n]);
+      ctx.moveTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(p3[0], p3[1]); ctx.closePath(); m++;
+    }
+    if (m) ctx.fill(); ctx.restore();
+  });
+
   // ------------------------------ in the air: mist, fireflies ------------------------------
   G.renderHooks.air.push(function (ctx, proj, view, t, nightF, FXA) {
     const S = G.S; const R = G.Render; const tm = S.time;
