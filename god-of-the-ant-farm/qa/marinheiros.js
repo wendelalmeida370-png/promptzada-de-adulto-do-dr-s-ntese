@@ -80,11 +80,7 @@ function zarpa(r, max) {
 // Mênfis, aboard #24788 the whole case — «nenhum navio saiu na rota 8512 em 90 s (Mênfis: 1 marinheiros)»; a sailor at sea
 // is still the town's, his trade is the sea, L-683 —, and with one each the routes were tied and the first id won. T-1089)
 const ashore = sid => sailorsOf(sid).filter(v => !v.aboard && !Nv.away(v)).length;
-// (and a quay with no beast the people fear about it first: a sailor called to the quay who runs from a wolf on the way leaves the
-// ship with nobody, and the voyage is off by the rule — in the metrópole of the 20h a wolf roamed by the quay of Mênfis, and no
-// ship of the cases sailed, T-1497)
-const calm = r => { const d = sender(r).dock; const q = (Nv.dockInfo(d) || {}).quay || [d.x, d.y]; for (const a of S.animals.values()) if (G.Vg.dread(a) > 0 && G.dist(a.x, a.y, q[0], q[1]) < 20) return 0; return 1; };
-const rota = () => S.seaRoutes.filter(r => r.ok && sender(r) && sailorsOf(sender(r).set.id).length).sort((a, b) => calm(b) - calm(a) || ashore(sender(b).set.id) - ashore(sender(a).set.id) || sailorsOf(sender(b).set.id).length - sailorsOf(sender(a).set.id).length || a.id - b.id)[0] || null;
+const rota = () => S.seaRoutes.filter(r => r.ok && sender(r) && sailorsOf(sender(r).set.id).length).sort((a, b) => ashore(sender(b).set.id) - ashore(sender(a).set.id) || sailorsOf(sender(b).set.id).length - sailorsOf(sender(a).set.id).length || a.id - b.id)[0] || null;
 
 // ---------------------------------------------------------------- m1
 if (on('m1')) {
