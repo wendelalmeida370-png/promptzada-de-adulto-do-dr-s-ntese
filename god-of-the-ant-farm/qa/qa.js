@@ -3267,11 +3267,52 @@
     for (let i = L.length - 1; i >= 0 && L[i][1] >= day - 1; i--) {
       const e = L[i]; const code = e[8], de = e[3], para = e[4];
       if (code === 'dar' && (kind(de) !== 'm' || kind(para) !== 'm' || de === para)) add('interacao', 1, `o livro: «dar» de ${de} para ${para} — o que se dá vai de uma mochila para a de outra pessoa (G.Inv.give)`);
-      if (code === 'apanhou' && (kind(de) !== 'g' || kind(para) !== 'm')) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick)`);
+      // (from the ground always; into a bag — the body's G.Inv.pick — or into the hands of one of the world's people, who picks a
+      // plain load up to take it to the store — villagers.js 'apanhar', older than the bag: L-1245)
+      if (code === 'apanhou' && (kind(de) !== 'g' || (kind(para) !== 'm' && kind(para) !== 'v'))) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick) ou para as mãos de quem o leva ao armazém`);
       if ((code === 'guardou' || code === 'pegar') && kind(para) === 'f' && It.THINGS && It.THINGS.has(e[5])) add('interacao', 1, `o livro: uma coisa (${e[5]}) entrou no estoque do povo como coisa por «${code}» (D-371: conta como o seu bem)`);
     }
     // ---- the body's deeds of the hands: whole counts
     const a = s.avatar; if (a && a.deeds) for (const k of ['dadiva', 'apanhou', 'guardou', 'porta']) { const n = a.deeds[k]; if (n !== undefined && (!fin(n) || n < 0 || Math.abs(n - Math.round(n)) > 1e-9)) add('interacao', 2, `o feito «${k}» do corpo é ${n}`); }
+  });
+})();
+  // ---- qa/trabalho-inv.js ----
+// trabalho-inv: as regras do verificador para os ofícios do corpo (20g: D-425 a D-433) — carregado depois do qa/qa.js (QA.more),
+// juntado a ele pelo qa/junta-inv.js. Lê o mundo e o que o G.Inv e o G.Trabalho dizem (só leitura). O sistema «trabalho»:
+//   · o que se segura é de verdade (D-426): quem tem as coisas do ofício feitas verdade (equip.kit: o corpo do deus, e quem ele foi)
+//     segura na mão só uma coisa da própria mochila — nunca a ferramenta do ofício que não tem (S2);
+//   · nenhum trabalho sem a ferramenta que ele pede: o corpo no meio de um golpe de um trabalho que não se faz sem ferramenta
+//     (cortar, quebrar, minerar, esfolar) tem uma do tipo — na mochila; a resposta do mundo no contato confere de novo (S2);
+//   · o trabalho segurado (G.Trabalho.chain: golpe atrás de golpe) só existe com um corpo vivido (S3);
+//   · a carga que o trabalho do corpo pôs nas mãos veio pelo livro: a comida nas mãos do corpo não é de origem desconhecida — a
+//     fruta, o peixe, a carne, o grão daquele campo (G.Origem) (S3);
+//   · os gestos dos ofícios (onde o 3D está carregado): os atos do mundo que eles tomam — o machado de quem corta, a picareta de
+//     quem quebra pedra, a foice de quem colhe — mostram o gesto novo, para o corpo e para as pessoas do mundo (S4).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const TOOL_ONLY = { cortar: 1, quebrar: 1, minerar: 1, esfolar: 1 };
+  QA.more.push(function (add, s) {
+    const Inv = G.Inv, It = G.Itens, Tr = G.Trabalho; if (!Inv || !It) return;
+    // (what anyone with real things holds in the hand: a thing of their own bag — never the trade's unseen tool)
+    for (const v of s.villagers.values()) {
+      const e = v.equip; if (!e || typeof e !== 'object' || !e.kit) continue;
+      const h = Inv.held(v); const b = v.mochila && typeof v.mochila === 'object' ? v.mochila : {};
+      for (const sl of ['mao', 'outra']) { const k = h[sl]; if (k && It.THINGS.has(k) && !(b[k] >= 1)) add('trabalho', 2, `${v.name} #${v.id}: segura ${k} na ${sl === 'mao' ? 'mão' : 'outra mão'} sem tê-lo (o ato ${v.act || '—'}; D-426)`, v.id); }
+    }
+    if (!Tr) return;
+    const a = s.avatar && s.villagers.get(s.avatar.id);
+    const cur = Tr.now ? Tr.now() : null;
+    if (a && cur && TOOL_ONLY[cur.id] && G.Avatar && G.Avatar.busy && G.Avatar.busy()) {
+      const t = Tr.tool(a, cur.id); if (!t.key) add('trabalho', 2, `${a.name} #${a.id}: no meio de «${cur.id}» sem a ferramenta que ele pede (D-426)`, a.id);
+    }
+    if (Tr.chain && Tr.chain() && !a) add('trabalho', 3, 'o trabalho segurado continua sem um corpo vivido', 0);
+    if (a && a.carry && a.carry.k === 'food' && a.carry.n > 1e-6 && G.Origem && Tr.last) {
+      const l = Tr.last(); const p = G.Origem.parts('v:' + a.id, 'food');
+      if (l && l.ok && (p['?'] || 0) > 1e-4 && ['colher', 'pescar', 'esfolar', 'ceifar'].includes(l.id)) add('trabalho', 3, `${a.name} #${a.id}: ${p['?']} da comida nas mãos de origem desconhecida depois de «${l.id}» (o trabalho dá pelo livro, com a origem)`, a.id);
+    }
+    const A3 = G.Anim3D; if (A3 && A3.CLIP_OF && A3.CLIPS && A3.CLIPS.machado) {
+      for (const [act, c] of [['chop', 'machado'], ['cut', 'machado'], ['mine', 'picareta'], ['harvest', 'ceifar']]) if (A3.CLIP_OF[act] !== c) add('trabalho', 4, `o ato «${act}» mostra o clipe «${A3.CLIP_OF[act]}», não o gesto do ofício «${c}» (D-428)`, 0);
+    }
   });
 })();
   // ---- qa/mata-inv.js ----
@@ -3305,6 +3346,59 @@
         }
       }
     }
+  });
+})();
+  // ---- qa/ceu-inv.js ----
+// ceu-inv: as regras do verificador para o céu, a luz e o ar (21d — D-466, D-520 a D-534). O G.Ceu só lê o mundo; estas regras
+// conferem, a cada olhada do verificador, que o que ele responde tem a causa que diz ter — contada aqui de novo, direto dos campos
+// do mundo (a chuva, as nuvens do mundo, o relevo, os rios, os biomas, as quedas, o chão queimado), nunca pelo próprio G.Ceu:
+//   · com chuva sobre o corpo (a do tempo ou a de uma nuvem do mundo que passa), o céu sobre ele nunca é o de um dia limpo;
+//   · o mapa do ar só tem névoa onde a causa existe: o vale (a terra mais baixa que o anel em volta), o rio ou o lago, o pântano,
+//     a queda d'água do mundo, a mata úmida debaixo do dossel — num punhado de cantos escolhidos pelo hash, de novo;
+//   · nenhum raio desenhado pelo 3D sem um raio do mundo ali há pouco (o chão queimado que o raio deixa na terra);
+//   · o mapa do ar e a sombra dos montes que o 3D desenha são da versão do chão de agora (S.typeVer), passados uns segundos;
+//   · o vento do céu é o do mundo, o mesmo que os bichos farejam (G.Meio.wind).
+// Carregado depois do qa/qa.js (QA.more); o junta-inv.js o leva para dentro do qa.js.
+(function () {
+  if (!window.QA || !QA.more) return;
+  QA.more.push(function (add, s) {
+    const Ce = G.Ceu; if (!Ce || !s || !s.H || !s.type) return; const N = G.N, n = N + 1;
+    const T = G.T, HM = 1.5;
+    // the rain over the body: the sky over it never a fair day's
+    const av = s.avatar ? s.villagers.get(s.avatar) : null;
+    if (av) { const rainHere = Math.max(s.weather.rain || 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(av.x, av.y) : 0);
+      const c = Ce.cover(s.time, s.weather, s.clouds.length, s.day, av.x, av.y);
+      if (rainHere > 0.3 && c < 0.36 + rainHere * 0.5) add('céu', 3, `chove ${rainHere.toFixed(2)} sobre o corpo e o céu sobre ele é de dia limpo (cobertura ${c.toFixed(2)})`); }
+    // the map of the air: every corner with mist has its cause in the world — a handful of corners, by the hash, counted again
+    const A = Ce.airMap(); if (A.n !== n) add('céu', 2, `o mapa do ar tem ${A.n} cantos de lado num mapa de ${n}`);
+    else {
+      const h = (i, j) => s.H[Math.max(0, Math.min(N, j)) * n + Math.max(0, Math.min(N, i))] * HM;
+      const tileOf = (i, j, f) => { for (let dj = -1; dj <= 0; dj++) for (let di = -1; di <= 0; di++) { const x = i + di, y = j + dj; if (x >= 0 && y >= 0 && x < N && y < N && f(y * N + x)) return true; } return false; };
+      const falls = (s.relief && s.relief.falls) || [];
+      for (let k = 0; k < 64; k++) {
+        const c = Math.floor(G.hash(k * 131 + (s.day | 0) * 7 + 11) * n * n); if (!(A.dawn[c] + A.last[c] > 0.02)) continue;
+        const i = c % n, j = (c / n) | 0; const why = [];
+        let ring = 0; for (let a = 0; a < 16; a++) { const an = a / 16 * Math.PI * 2; ring += h(Math.round(i + Math.cos(an) * 8), Math.round(j + Math.sin(an) * 8)); }
+        if (ring / 16 - h(i, j) > 1.5) why.push('vale');
+        if (tileOf(i, j, t => s.type[t] === T.RIVER)) why.push('rio');
+        if (s.biome && tileOf(i, j, t => s.biome[t] === 3)) why.push('pântano');
+        if (falls.some(f => Math.hypot(i - f.x - 0.5, j - f.y - 0.5) < 6.5 || Math.hypot(i - f.tx - 0.5, j - f.ty - 0.5) < 6.5)) why.push('queda');
+        if (A.cano[c] > 0.3 && G.Mata) why.push('mata');
+        if (!why.length) add('céu', 3, `névoa sem causa no canto ${i},${j} do mapa do ar (${(A.dawn[c] + A.last[c]).toFixed(2)})`);
+      }
+      if (!G.Mata) { let k = 0; for (let c = 0; c < n * n; c += 97) if (A.cano[c] > 0) k++; if (k) add('céu', 3, `o dossel no mapa do ar sem o G.Mata, que é quem o diz (${k} cantos)`); }
+    }
+    // the 3D's drawn bolts: each where the world struck a moment ago (on the land, a stroke leaves the ground burnt)
+    const C3 = G.Ceu3D; if (C3 && C3.live) for (const b of C3.live()) {
+      if (s.clock - b.at > 8 || b.at > s.clock + 0.01) add('céu', 3, `um raio desenhado ${(s.clock - b.at).toFixed(1)} s depois do raio do mundo`);
+      const x = Math.floor(b.x), y = Math.floor(b.y); if (x < 0 || y < 0 || x >= N || y >= N) continue; const i = y * N + x;
+      if (s.type[i] > T.RIVER && s.burnt && !(s.burnt[i] > 0)) add('céu', 3, `um raio desenhado na casa ${x},${y}, onde o mundo não fez cair nenhum (o chão não queimou)`);
+    }
+    // the 3D's maps of the land: of the land as it is now, a few seconds on
+    // (only while the body's view is drawn: off, it keeps the last maps it drew)
+    if (C3 && C3.maps && G.Realm && G.Realm.on) { const m = C3.maps(); if (m && m.key && m.key !== Ce.airKey() && s.clock - m.at > 6) add('céu', 3, `o 3D desenha o ar de outra versão do chão (${m.key} ≠ ${Ce.airKey()})`); }
+    // one wind: the sky's is the world's, the one the beasts smell by
+    if (G.Meio && G.Meio.wind) { const a = Ce.wind(s.weather).a, b = G.Meio.wind().a; let d = Math.abs(a - b) % (Math.PI * 2); if (d > Math.PI) d = Math.PI * 2 - d; if (d > 0.2) add('céu', 4, `o vento do céu (${a.toFixed(2)}) não é o dos bichos (${b.toFixed(2)})`); }
   });
 })();
   // ---- qa/geo-inv.js ----

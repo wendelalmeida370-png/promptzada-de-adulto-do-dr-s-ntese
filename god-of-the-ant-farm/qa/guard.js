@@ -92,7 +92,7 @@ const PORT_OK = { 'interiors.js': () => true, 'activity.js': line => /\bD\.store
 // velhos de que ela depende, lidos do mundo (L-206, L-618, L-619); outra
 // pergunta faria o passo do mundo depender do que o 3D guarda (os memos do space.js), e o mundo seria outro com ou sem alguém
 // olhando
-const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js'];
+const SPACE_BODY = ['possess.js', 'avatar.js', 'interact.js', /* 20g: as mãos do trabalho, D-461 */ 'trabalho.js'];
 // 24. "o diário só pede" (D-061): deixar um objetivo de lado é do corpo — G.Casa.giveUp só dentro de um G.Possess.apply (o
 // pedido das mãos, que o mundo faz no seu passo), na mesma linha; a tela do diário, e todo o resto, nunca o chama direto
 const GIVEUP = /\bCasa\.giveUp\s*\(/;
@@ -1220,6 +1220,65 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   if (!acts.size) fails.push('o som do combate: não achei os atos do combate (vact, acts) no combate-ui.js e no combate-clips.js (D-422)');
   for (const a of acts) if (!new RegExp(`[\\s,{]${a}:`).test(ato)) fails.push(`o som do combate: o ato «${a}» do combate não tem linha na tabela A.ATO do audio-src.js (D-422)`); }
 // === 20g: os ofícios ===
+// 152. "o trabalho do corpo muda o mundo só pelas portas e no passo" (D-425): no js/trabalho.js, o que um trabalho muda no mundo
+// (o contador da árvore, a lenha do tronco, as frutas, a pedra da rocha, o veio da mina, a carne do bicho, o canteiro) é escrito só
+// dentro do op de um ato — a função que o mundo roda no seu passo, pelo Possess.apply do contato —, nunca no aperto nem no quadro;
+// e as mãos se enchem pelo livro (give / G.Depot.make / G.Pesca.cast), nunca escrevendo v.carry nem pelo Village.addStock ou o
+// Vg.fillHands de antes
+{ const tr = src['trabalho.js'] || []; if (!tr.length) fails.push('o trabalho do corpo: js/trabalho.js não existe (D-425)');
+  const WRITE = /\b(tr\.(chop|wood|stage|claim)|b\.berries|r\.stone|o\.amt|a\.(meat|skinned|flay)|c\.(s|g))\s*(=(?!=)|\+=|-=)/;
+  tr.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b\w+\.carry\s*=(?!=)|\bVillage\.addStock\(|\bfillHands\(/.test(c)) fails.push(`o trabalho do corpo: trabalho.js:${k + 1} enche as mãos ou o armazém à mão, fora do livro (D-425): ${l.trim().slice(0, 110)}`);
+    if (!WRITE.test(c)) return;
+    let inOp = /\bop:\s*(\(w|w\s*=>)/.test(c);
+    for (let j = k - 1; j >= Math.max(0, k - 30) && !inOp; j--) { if (/\bop:\s*(\(w|w\s*=>)/.test(tr[j])) { inOp = true; break; } if (/^\s{4}(run|can|label|find|info|verbs)\s*\(|^\s{2}(I\.add|function|const \w+ = )/.test(tr[j])) break; }
+    if (!inOp) fails.push(`o trabalho do corpo: trabalho.js:${k + 1} muda o mundo fora do op de um ato (no passo do mundo, pelo contato — D-425): ${l.trim().slice(0, 110)}`); }); }
+// 153. "nenhum trabalho sem a ferramenta que ele pede" (D-426): cada provedor do js/trabalho.js com o seu trabalho (work: '…') faz o
+// golpe pelo stroke({ id: '…' }) — que pergunta a ferramenta de novo no passo e a põe na mão — e pergunta ao Tr.tool no can; cada
+// trabalho da tabela que não se faz sem ferramenta (bare: 0) diz por quê (sem: '…')
+{ const t = (src['trabalho.js'] || []).join('\n');
+  const works = {}; const wt = t.slice(t.indexOf('const WORKS = Tr.WORKS = {'), t.indexOf('};', t.indexOf('const WORKS = Tr.WORKS = {')));
+  for (const l of wt.split('\n')) { const m = l.match(/^\s+(\w+): \{ nome: '[^']*', tools: .*?\], bare: ([^,}]+)[,}](.*)$/); if (m) works[m[1]] = { bare: m[2].trim(), rest: m[3] }; }
+  if (!Object.keys(works).length) fails.push('a ferramenta do trabalho: não achei a tabela dos trabalhos (Tr.WORKS) no js/trabalho.js (D-426)');
+  for (const w in works) if (works[w].bare === '0' && !/\bsem: '/.test(works[w].rest)) fails.push(`a ferramenta do trabalho: o trabalho «${w}» não se faz sem ferramenta e não diz por quê (sem: '…'; D-426)`);
+  const blocks = t.split(/\n  I\.add\(\{/).slice(1);
+  for (const b of blocks) { const id = (b.match(/^\s*\n\s*id: '(\w+)'/) || [])[1]; const w = (b.match(/\bwork: '(\w+)'/) || [])[1]; if (!w) continue;
+    if (!works[w]) { fails.push(`a ferramenta do trabalho: o provedor «${id}» diz o trabalho «${w}», que a tabela não tem (D-426)`); continue; }
+    if (!new RegExp(`stroke\\(\\{ id: '${w}'`).test(b)) fails.push(`a ferramenta do trabalho: o provedor «${id}» não faz o golpe de «${w}» pelo stroke (a ferramenta perguntada no passo — D-426)`);
+    if (works[w].bare === '0' && !new RegExp(`Tr\\.tool\\(v, '${w}'\\)`).test(b.slice(b.indexOf('can(ctx'), b.indexOf('run(ctx')))) fails.push(`a ferramenta do trabalho: o provedor «${id}» não pergunta ao Tr.tool no can (o E diz por quê antes — D-426)`); } }
+// 154. "os gestos dos ofícios pelo registro" (D-428): os clipes do js/trabalho-clips.js nascem pela fila G.ANIM_CLIPS (nunca no
+// Anim3D.CLIPS nem no CLIP_OF à mão: só o anim-clips.js escreve o CLIP_OF, também pelo «takes» de um clipe); e todo gesto que o
+// trabalho dá ao corpo (o anim de um ato do trabalho.js) é um clipe registrado ou um estado do 3D de antes
+{ const tc = src['trabalho-clips.js'] || []; if (!tc.length) fails.push('os gestos dos ofícios: js/trabalho-clips.js não existe (D-428)');
+  for (const f of files) if (f !== 'anim-clips.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bCLIP_OF\s*(\[[^\]]+\]|\.\w+)\s*=(?!=)/.test(c)) fails.push(`os gestos dos ofícios: ${f}:${k + 1} escreve o CLIP_OF à mão — um clipe diz os atos que toma (takes) pelo registro (D-428): ${l.trim().slice(0, 110)}`); });
+  const ids = new Set(); for (const f of ['anim-clips.js', 'trabalho-clips.js']) (src[f] || []).forEach(l => { const m = l.match(/^\s+K\('([\w-]+)'/); if (m) ids.add(m[1]); });
+  const OLD = new Set(['carry', 'low', 'swing', 'interact', 'hammer', 'hoe', 'harvest', 'dig', 'skin', 'fish', 'reel']);
+  const tr = (src['trabalho.js'] || []).join('\n');
+  const g = tr.slice(tr.indexOf('const GEST = Tr.GEST = {'), tr.indexOf('};', tr.indexOf('const GEST = Tr.GEST = {'))); for (const m of g.matchAll(/\['([\w-]+)', '(\w+)'\]/g)) if (!ids.has(m[1]) && !OLD.has(m[1])) fails.push(`os gestos dos ofícios: o trabalho dá ao corpo o gesto «${m[1]}», que nenhum clipe registra (D-428)`);
+  for (const m of tr.matchAll(/\banim: (?:[^,]*\? )?'([\w-]+)'(?: : '([\w-]+)')?(?: : '([\w-]+)')?/g)) for (const a of m.slice(1)) if (a && !ids.has(a) && !OLD.has(a)) fails.push(`os gestos dos ofícios: o trabalho dá ao corpo o gesto «${a}», que nenhum clipe registra (D-428)`); }
+// 155. "o que se segura é de verdade" (D-426): quem tem as coisas do ofício feitas verdade (equip.kit) segura na mão, no ato, só o que é
+// dele — a ferramenta do ofício que não tem não aparece (o made do kit fica para quem nunca teve coisas): o js/inventario.js guarda
+// o made do ato atrás do own, e o held passa a marca do kit
+{ const inv = (src['inventario.js'] || []).join('\n');
+  if (!/if \(!key && !own\) key = made\(t, /.test(inv) || !/act\(v, out, bag, !!\(e && e\.kit\)/.test(inv)) fails.push('o que se segura é de verdade: o act() do inventario.js põe na mão a ferramenta do ofício a quem tem as coisas de verdade (o made atrás do own; o held com a marca do kit — D-426)'); }
+// 156. "a tela do trabalho só lê, pelo gancho" (D-432, D-462): o js/trabalho-ui.js desenha pela lista G.IncUI.frames (nunca editando
+// o incui.js), não tira de acaso nenhum do mundo, não move bens nem pede ao mundo por conta própria (o próximo golpe de um trabalho
+// segurado é o E do provedor, pelo Tr.pump), e as moedas da banca vêm do G.Biz (o dia da banca), nunca de uma casa
+{ const ui = src['trabalho-ui.js'] || []; if (!ui.length) fails.push('a tela do trabalho: js/trabalho-ui.js não existe (D-432)');
+  if (ui.length && !ui.some(l => /G\.IncUI\.frames\.push\(/.test(l))) fails.push('a tela do trabalho: o trabalho-ui.js não se desenha pelo gancho G.IncUI.frames (D-462)');
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|shuffle\()|Math\.random|\bD(epot)?\.(move|make|use|drop|swap)\(|\.carry\s*=(?!=)|Possess\.apply\(|\.coin\b/.test(c)) fails.push(`a tela do trabalho: trabalho-ui.js:${k + 1} tira do acaso do mundo, move bens, pede ao mundo ou lê as moedas de uma casa (só lê: D-432): ${l.trim().slice(0, 110)}`); }); }
+// 157. "o golpe do trabalho dura o tempo do mundo" (D-035, D-429): no js/trabalho.js todo ato das mãos é do relógio do mundo (world:
+// true — o stroke os faz assim), a não ser o catar do ouro do chão, um gesto das próprias mãos, e o passo até o alvo antes do golpe
+// (o andar do corpo, sem op: o golpe vem depois, no seu ato do mundo); e os clipes do js/trabalho-clips.js
+// não leem o mundo nem tiram de acaso (só se veem, como os do anim-clips.js — regra 113)
+{ (src['trabalho.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Avatar\.act\(\{/.test(c) && !/world: true/.test(c) && !/anim: 'low', dur: 1\.1, face: f, contact: 0\.5/.test(c) && !(/anim: 'interact', dur: go, to: /.test(c) && !/\bop:/.test(c))) fails.push(`o tempo do trabalho: trabalho.js:${k + 1} faz um ato das mãos fora do relógio do mundo (world: true — D-035): ${l.trim().slice(0, 110)}`); });
+  (src['trabalho-clips.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.S\b|\bG\.(R\(\)|rr\(|ri\(|pick\(|chance\(|VR\(\)|vrr\(|vri\(|vpick\()|Math\.random|\bDate\b|performance\.now|\bG\.(Act|Depot|Possess|Inv|Vg)\b/.test(c)) fails.push(`os gestos dos ofícios: trabalho-clips.js:${k + 1} lê o mundo ou tira de um acaso (os clipes só se veem — regra 113): ${l.trim().slice(0, 110)}`); }); }
+// 158. "o verificador e a prova do trabalho" (D-433): o qa/trabalho-inv.js está no bloco do qa/qa.js (o junta-inv.js o lista) e o
+// qa/trabalho.js existe — a regra que se lê no código tem a sua prova que se vive
+{ let jv = '', te = false; try { jv = fs.readFileSync(path.join(dir, '..', 'qa', 'junta-inv.js'), 'utf8'); te = fs.existsSync(path.join(dir, '..', 'qa', 'trabalho.js')); } catch (e) { }
+  if (!/'qa\/trabalho-inv\.js'/.test(jv)) fails.push('o verificador do trabalho: o qa/junta-inv.js não lista o qa/trabalho-inv.js (D-433)');
+  if (!te) fails.push('a prova do trabalho: o qa/trabalho.js não existe (D-433)'); }
 // === 20h: a origem das coisas ===
 // 159. "a divisão é do origem.js" (D-441): as partes de cada bem (S.orig: a comida por origem, o metal das ferramentas e das armas) e o
 // que cada povo já teve de cada material (S.orig.had) só o js/origem.js escreve — os outros perguntam (G.Origem.parts, amount, free,
@@ -1292,7 +1351,7 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 // 169. "a mata da fase A só se vê" (D-465, D-470): na fase A nenhum módulo do mundo lê o G.Mata — só o que só se vê (a lista LOOK), o
 // próprio mata.js e as portas do corpo no space.js (Sp.stems); na fase B, quem decide a passagem e a cobertura pergunta a ele, e esta
 // regra muda com o protocolo inteiro
-{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js']));
+{ const MATA_OK = new Set(LOOK.concat(['mata.js', 'planta-formas.js', /* 21d: the sky's pure source reads the canopy's map (NATUREZA.md §8, §8b), and only what is seen reads it in phase A */ 'ceu.js']));
   for (const f of files) { if (MATA_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Mata\b/.test(c)) fails.push(`a mata só se vê: ${f}:${k + 1} lê o G.Mata num módulo do mundo (a fase A não muda o mundo; D-465): ${l.trim().slice(0, 110)}`); }); } }
 // 170. "as formas das plantas são puras" (D-472): o js/planta-formas.js faz as formas da mata como números, sempre as mesmas — sem acaso
 // nenhum (nem o do mundo nem o do que só se vê: a variação é da instância, pelo G.hash), sem o three.js, sem o mundo, sem relógio
@@ -1357,5 +1416,39 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
   if (gr && (!/G\.Geo\.table\(\)/.test(gr) || !/Ge\.rockAt\(i\)/.test(gr) || !/Ge\.foldAt\(i\)/.test(gr))) fails.push('a mesma rocha: o chão do 3D (ground3d.js) não tira a rocha, a dobra e as camadas do G.Geo (D-495)'); }
 // === 21c: a água ===
 // === 21d: o céu ===
+// 188. "a luz é do céu" (D-466, D-520): os uniformes do ar e da luz (GX) e a luz da hora (a força e a cor do sol e do céu, a
+// exposição) só o js/ceu3d.js escreve — a luz pintada das chamas (gxLM*) é do fx3d.js, e o realm3d.js só dá a exposição de
+// partida ao fazer o desenho; os outros leem
+{ const W = /\bGX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\bR3\.GX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\.toneMappingExposure\s*=(?!=)|\b(sun|hemi)\.(intensity|color\.setRGB|groundColor\.setRGB)\b(\s*=(?!=)|\()/;
+  for (const f of files) { if (f === 'ceu3d.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); const m = W.exec(c); if (!m) return;
+    if (f === 'fx3d.js' && /gxLM/.test(c)) return; if (f === 'realm3d.js' && /renderer\.toneMappingExposure = 1\.0;/.test(c)) return;
+    fails.push(`a luz é do céu: ${f}:${k + 1} escreve a luz ou o ar do 3D (só o ceu3d.js; D-520): ${l.trim().slice(0, 110)}`); }); } }
+// 189. "o caminho do sol é um só" (D-469, D-520): só o js/ceu.js diz onde estão o sol e a lua pela hora (o nascer e o pôr, a forma
+// da curva que demora) e o matiz da hora do deus (a tabela AMB) — o 3D, o deus e o pós perguntam ao G.Ceu, nenhum refaz a conta
+{ for (const f of files) { if (f === 'ceu.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bconst (RISE|SET)\s*=\s*-?0\.\d+|0\.96 \* Math\.(pow\(Math\.)?sin\(Math\.PI \* u|\[0\.05, \[255, 226, 206\]\]/.test(c)) fails.push(`o caminho do sol é um só: ${f}:${k + 1} refaz o sol, a lua ou o matiz da hora (pergunte ao G.Ceu; D-469): ${l.trim().slice(0, 110)}`);
+    if (f === 'sky.js' && /\btm > 0\.0\d && tm < 0\.1\d/.test(c)) fails.push(`o caminho do sol é um só: sky.js:${k + 1} acha a hora dourada por horas fixas (a altura do sol: G.Ceu.sun; D-469): ${l.trim().slice(0, 110)}`); }); } }
+// 190. "as nuvens andam pelo relógio do mundo" (D-521): o domo, as estrelas e a sombra das nuvens leem a deriva do G.Ceu.drift
+// pelo S.clock — nunca o relógio da vista (uT) com o vento —, e o chão não faz a sua própria sombra de nuvem
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), r3 = (src['realm3d.js'] || []).join('\n');
+  if (!/G\.Ceu\.drift\(S\.clock/.test(c3)) fails.push('as nuvens pelo relógio do mundo: o ceu3d.js não lê a deriva do G.Ceu.drift pelo S.clock (D-521)');
+  if (/uWind\.xy \* uT/.test(c3)) fails.push('as nuvens pelo relógio do mundo: o ceu3d.js arrasta as nuvens pelo relógio da vista (uWind.xy * uT; D-521)');
+  if (/G\.Ground3D\.clouds\((?!0, 0, )/.test(r3)) fails.push('as nuvens pelo relógio do mundo: o realm3d.js dá ao chão uma sombra de nuvem sua (a sombra é do céu, em todo material: D-521)'); }
+// 191. "o ar e a sombra dos montes vêm do G.Ceu" (D-522, D-524): o 3D sobe o mapa do ar só do G.Ceu.airMap e a sombra dos montes só
+// do G.Ceu.shadeFor; o ceu.js não refaz o dossel das árvores (é do G.Mata, lido pela porta dele) nem lê o acaso
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), ce = (src['ceu.js'] || []).join('\n');
+  if (!/G\.Ceu\.airMap\((true)?\)/.test(c3) || !/G\.Ceu\.shadeFor\(/.test(c3)) fails.push('o ar e a sombra do G.Ceu: o ceu3d.js não lê o mapa do ar (G.Ceu.airMap) ou a sombra dos montes (G.Ceu.shadeFor) (D-522)');
+  (src['ceu.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\btreeAt\b|\bS\.trees\b/.test(c)) fails.push(`o dossel é do G.Mata: ceu.js:${k + 1} refaz o dossel das árvores (D-522): ${l.trim().slice(0, 110)}`); });
+  if (!/const woods = \(\) => G(\['Mata'\]|\.Mata);/.test(ce) || !/\.canopy\(0, 0, N, N\)/.test(ce)) fails.push('o dossel é do G.Mata: o ceu.js não lê o dossel pela porta do G.Mata — o mapa do dossel, G.Mata.canopy (D-522)'); }
+// 192. "o raio desenhado é o do mundo" (D-526): o 3D desenha um raio só onde o mundo o fez cair — a lista dos raios do céu só a
+// G.Ceu3D.bolt escreve, e só o G.FX.lightning (a palavra do mundo ao que se vê de que um raio caiu, no fx.js) a chama
+{ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bCeu3D\.bolt\(/.test(c) && f !== 'fx.js') fails.push(`o raio é o do mundo: ${f}:${k + 1} pede um raio ao 3D sem ser o G.FX.lightning (D-526): ${l.trim().slice(0, 110)}`);
+    if (f === 'ceu3d.js' && /\bbolts\.(push|unshift|splice)\(/.test(c) && !/Ce3\.bolt = function|function prune\(\)/.test(c)) fails.push(`o raio é o do mundo: ceu3d.js:${k + 1} põe um raio na lista fora da G.Ceu3D.bolt (D-526): ${l.trim().slice(0, 110)}`); });
+  if (!/G\.Ceu3D && G\.Ceu3D\.bolt\(x, y\)/.test((src['fx.js'] || []).join('\n'))) fails.push('o raio é o do mundo: o G.FX.lightning não passa o raio ao 3D (D-526)'); }
+// 193. "as qualidades do céu pelo qualAdd" (D-468, D-466): os campos do céu nas qualidades (os cartões de luz, a luz no ar, as
+// nuvens com volume) entram pelo G.Realm.qualAdd do ceu3d.js — a tabela QUAL do realm3d.js não os tem
+{ const c3 = (src['ceu3d.js'] || []).join('\n'), r3 = (src['realm3d.js'] || []).join('\n'); const q0 = r3.indexOf('const QUAL = {'), q1 = r3.indexOf('};', q0);
+  for (const k of ['shafts', 'vlight', 'vclouds']) { if (!new RegExp(`qualAdd\\('${k}'`).test(c3)) fails.push(`as qualidades do céu: o ceu3d.js não registra '${k}' pelo G.Realm.qualAdd (D-468)`); if (q0 >= 0 && new RegExp(`\\b${k}:`).test(r3.slice(q0, q1))) fails.push(`as qualidades do céu: '${k}' na tabela QUAL do realm3d.js (pelo qualAdd: D-466)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

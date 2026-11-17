@@ -115,7 +115,8 @@
     if (G.War && G.War.threat && G.War.threat(v.set)) return false;
     t.type = 'hunt'; t.carc = false; t.age = 0; return true;
   };
-  // the tusks, the striped hide, the white one
+  // the tusks, the striped hide, the white one (R.noteKill: the body that skins its own kill tells it the same — trabalho.js, 20g)
+  R.noteKill = (v, a, sp, spoils) => noteKill(v, a, sp, spoils);
   function noteKill(v, a, sp, spoils) {
     const S = G.S; const set = S.settlements.get(v.set); const f = G.Fac.ofV(v);
     const near = G.Stories && G.Stories.where ? G.Stories.where(a.x, a.y).at : set ? ' perto de ' + set.name : '';

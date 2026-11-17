@@ -54,7 +54,11 @@
       c.ch.push(j); c.tab.push(sample(pts, loop));
     }
     for (const e in c.events) if (!(c.events[e] >= 0 && c.events[e] <= 1)) Anim.clipErr.push(`clipe ${id}: o evento ${e} fora de 0..1`);
-    CLIPS[id] = c; c.acts = Array.isArray(def.acts) ? def.acts.slice() : null; if (c.acts && Anim.CLIP_OF) bindActs(c); return c;
+    CLIPS[id] = c; c.acts = Array.isArray(def.acts) ? def.acts.slice() : null; if (c.acts && Anim.CLIP_OF) bindActs(c);
+    // (takes: the acts a newer gesture of the same work takes over from the clip that showed them — the felling stroke of the
+    // trades, 20g: the world's woodcutter and the body swing the same axe; said with the clip, never an error — D-428)
+    c.takes = Array.isArray(def.takes) ? def.takes.slice() : null; if (c.takes && Anim.CLIP_OF) for (const a of c.takes) Anim.CLIP_OF[a] = id;
+    return c;
   };
   // (the acts a clip shows, said with it — `acts: ['golpe']` —: a clip of another file shows its acts without a line here; an act
   // already shown by another clip is refused and counted)

@@ -137,7 +137,7 @@ for (const id of Object.keys(A.DEFS)) {
 function viaMods(code) { let all = code; for (const m of code.matchAll(/\b(G\.[A-Z]\w+)\.(\w+)\(/g)) { const file = Object.keys(FILE).find(f => FILE[f].mod === m[1]); if (!file) continue; const lt = /const (\w+) = G\.[A-Z]\w+ = \{/.exec(FILE[file].s); const k = lt ? lt[1] + '.' + m[2] : ''; const F = FILE[file].F; if (F.has(k)) all += '\n' + deep(F.get(k), F, new Set([k])); } return all; }
 // the body's verbs (G.Interact) whose code reaches the activities: through their offers, or a module of one of them
 const VERBS = [];
-{ const s = src('js/interact.js');
+{ const s = src('js/interact.js') + '\n' + src('js/trabalho.js'); // (the work of the hands lives in trabalho.js — 20g, D-461)
   for (const m of s.matchAll(/I\.add\(\{\s*id:\s*'(\w+)'/g)) { const body = bodyAt(s, m.index); const mods = Object.keys(MODOF).filter(mo => body.includes(mo + '.')); const acts = body.includes('G.Act.offers') || body.includes('G.Act.begin');
     if (!mods.length && !acts) continue; VERBS.push({ id: m[1], defs: acts ? ['(as ofertas)'] : mods.map(mo => MODOF[mo]), f: feats(viaMods(body)) }); } }
 
@@ -232,7 +232,7 @@ for (const a of ACTS) for (const o of a.offersInCode.concat(a.harvested)) if (o.
 for (const st of STEPS) for (const k of st.f.anims) use(k, `passo ${st.type}`);
 // (the ways of fishing: a cast lasts its way's gesture — G.Pesca.castDur reads GEAR's anim, L-212 —, so whoever casts through it
 // uses them: the people's step «fish», by its people's way — any of them —, and the body's verb «peixe», by the hands')
-{ const ps = src('js/act-pesca.js'), vs = src('js/villagers.js'), is = src('js/interact.js');
+{ const ps = src('js/act-pesca.js'), vs = src('js/villagers.js'), is = src('js/interact.js') + '\n' + src('js/trabalho.js');
   const gm = /const GEAR = P\.GEAR = \{([\s\S]*?)\n  \};/.exec(ps);
   if (gm && /P\.gesture = [^\n]*A\.ANIM\[/.test(ps) && /P\.castDur = [^\n]*P\.gesture\(/.test(ps)) {
     const ways = new Map([...gm[1].matchAll(/^\s*(\w+): \{[^\n]*?\banim: '(\w+)'/gm)].map(m => [m[1], m[2]]));

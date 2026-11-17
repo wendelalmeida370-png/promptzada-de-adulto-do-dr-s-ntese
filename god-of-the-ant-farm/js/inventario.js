@@ -42,7 +42,7 @@
 
   // ------------------------------ the trade's kit ------------------------------
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
-  const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara' };
+  const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice' };
   // (the acts of the fight: whoever already holds a weapon fights with it — the spearman with his spear, the militia with its club)
   const FIGHT = { stab: 1, fight: 1, brandish: 1 };
   // the trade's own thing and where it rides when the hands are free (the act puts it in the hand while it lasts)
@@ -119,15 +119,19 @@
     return out;
   };
   // (the act's tool into the view's hand: one of the person's own of that kind — from the belt, the back, the bag —, else the
-  // trade's; for the fish, the people's gear)
-  function act(v, out, bag) {
+  // trade's; for the fish, the people's gear. own: the person's trade's things became real (equip.kit, D-374) — the god's body,
+  // and whoever it was: the trade's unseen tool is no more theirs to hold, the hand keeps what it holds — a work done with
+  // another tool, or with the bare hands, is drawn as it is done (20g, D-426))
+  function act(v, out, bag, own) {
     let t = ACT_TOOL[v.act]; if (!t) return;
+    // (a hand holding a fishing gear of its own fishes with it — the rod, the net, the spear the hand chose: not the people's way)
+    if (t === 'vara' && out.mao && It.has(out.mao, 'pescar')) return;
     if (FIGHT[v.act] && out.mao && (It.has(out.mao, 'lutar') || It.has(out.mao, 'golpe'))) return;
     if (t === 'vara') { t = fishGear(v); if (!t || v.gear) return; }
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
-    if (!key) key = made(t, G.Fac.idOfV(v), artsOf(v));
+    if (!key && !own) key = made(t, G.Fac.idOfV(v), artsOf(v));
     if (!key) return; // (a tool of a material the people never had: the act's hands are empty, 20h)
     out.mao = key;
     // (a thing of two hands empties the other: what it held rides on the back if the back is free)
@@ -158,7 +162,7 @@
       const k = Inv.trade(v);
       for (const s of SLOTS) if (!out[s] && k[s] && !(HANDS.includes(s) && (twoIn(out) || It.def(k[s]).maos >= 2 && out[s === 'mao' ? 'outra' : 'mao']))) out[s] = k[s];
     }
-    act(v, out, bag);
+    act(v, out, bag, !!(e && e.kit) || !!(G.Possess && G.Possess.is && G.Possess.is(v))); // (the god's body: only its own, D-426)
     if (loaded(v) || v.gear) freeHands(out);
     return out;
   };
