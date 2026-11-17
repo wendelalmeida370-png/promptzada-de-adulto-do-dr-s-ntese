@@ -574,10 +574,7 @@
     const fi = W.idx(G.clamp(Math.floor(focus.X / L), 0, G.N - 1), G.clamp(Math.floor(focus.Z / L), 0, G.N - 1));
     if (night > 0.6 && !(w.rain > 0.1) && S.temp && S.temp[fi] / 255 > 0.36) for (let k = every('ff', 3.4, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y) || S.type[y * G.N + x] <= G.T.RIVER) continue;
       spawn(PG, { x: X, y: W.hAt(X / L, Z / L) * H + G.vrr(0.4, 1.8), z: Z, vx: G.vrr(-0.3, 0.3), vy: G.vrr(-0.08, 0.08), vz: G.vrr(-0.3, 0.3), life: G.vrr(6, 10), s0: 0.13, s1: 0.13, c: [0.78, 1, 0.38], a: 1, sh: 1, wob: 0.8, fade: 1 }); }
-    // the rain clouds of the world, where the god sees them: big soft puffs high over the land, grey with the rain they carry
-    for (let q = 0; q < S.clouds.length && q < 14; q++) { const c = S.clouds[q]; const X = c.x * L, Z = c.y * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 380 * 380) continue;
-      const it = G.Nature.cloudIntensity ? G.Nature.cloudIntensity(c) : 0.6; const R = c.r * L * 0.8; const gy = G.SEA * H + 70 + (c.ph % 3) * 6;
-      for (let k = every('cl' + q, 2.2 * Math.min(1, c.r / 3), dt); k > 0; k--) { const a = G.VR() * Math.PI * 2, d = Math.sqrt(G.VR()) * R; spawn(PA, { x: X + Math.cos(a) * d, y: gy + G.vrr(-4, 6), z: Z + Math.sin(a) * d, vx: c.vx * L * 0.35, vz: c.vy * L * 0.35, life: G.vrr(7, 10), s0: G.vrr(26, 34), s1: G.vrr(36, 46), c: c.kind === 'divine' ? [0.92, 0.9, 0.82] : [0.62 + (1 - it) * 0.25, 0.64 + (1 - it) * 0.25, 0.7 + (1 - it) * 0.2], a: 0.32 * Math.max(0.3, it), fade: 1 }); } }
+    // (the rain clouds of the world are the sky's: ceu3d.js draws each where the world has it, as a cloud with its curtain of rain — 21d)
     // rain: drops striking the ground, rings on the water (snow falls soft: nothing)
     const rain = Math.max(w.rain || 0, G.Nature && G.Nature.rainAt ? G.Nature.rainAt(focus.X / L, focus.Z / L) : 0);
     if (rain > 0.15 && snowAt(fi) < 0.3) for (let k = every('rn', rain * 60, dt); k > 0; k--) { const X = focus.X + G.vrr(-14, 14), Z = focus.Z + G.vrr(-14, 14); const x = Math.floor(X / L), y = Math.floor(Z / L); if (!W.inb(x, y)) continue; const i = y * G.N + x;
@@ -671,11 +668,13 @@
         spawn(PW, { x: bx, y: (v.wy || G.SEA * G.Space.HM) + 0.1, z: bz, vx: c * sp * 0.4 - sn * sd * G.vrr(0.6, 1.4), vy: G.vrr(0.8, 1.8), vz: sn * sp * 0.4 + c * sd * G.vrr(0.6, 1.4), life: G.vrr(0.5, 0.9), s0: 0.1, s1: 0.06, c: [0.9, 0.95, 1], a: 0.75, sh: 1, grav: 9.8 }); }
     }
     stepWake(dt);
-    // (the rainbow: the sun up and behind the drops, no rain to dim it — the sky's own, where it has one)
-    const sk = R3.skyU; if (sk) { PWU.uSun.value.copy(sk.sunDir.value); const sy = sk.sunDir.value.y; const wr = S.weather ? S.weather.rain || 0 : 0;
-      const Ce = G['Ceu']; // (the sky's own source, 21d — G.Ceu, joined later: its rainbow with its cause where it has one; until then the drops' own)
-      PWU.uRb.value = Ce && Ce.rainbow ? Ce.rainbow(S.time, focus.X / L, focus.Z / L, 'queda') || 0 : G.smooth(0.02, 0.12, sy) * (1 - G.smooth(0.8, 0.97, sy)) * (1 - G.clamp(wr * 1.5, 0, 1)) * 0.55; }
-    { const w = S.weather; const ws = G.clamp(w.windS || 0, 0, 2); stepPool(PW, dt, Math.cos(w.windA || 0) * (0.4 + ws * 1.4), Math.sin(w.windA || 0) * (0.4 + ws * 1.4), R3.time()); }
+    // (the rainbow in the spray: the sky's sun (G.Ceu.sun, through the dome's own uniform) up and lower than 42° — the bow's own angle —,
+    // no rain to dim it; the cause is the spray itself, not the wet ground the sky's bow asks for (G.Ceu.rainbow: the bow in the sky
+    // after a shower), so the drops ask only the sun)
+    const sk = R3.skyU; if (sk) { const sd = G.Ceu.sun(S.time); PWU.uSun.value.set(sd.x, sd.y, sd.z); const alt = Math.asin(G.clamp(sd.y, -1, 1)) * 180 / Math.PI; const wr = S.weather ? S.weather.rain || 0 : 0;
+      PWU.uRb.value = G.smooth(0.02, 0.08, sd.y) * (1 - G.smooth(36, 42, alt)) * (1 - G.clamp(wr * 1.5, 0, 1)) * 0.6; }
+    // (the spray goes with the one wind of the world — the sky's, G.Ceu.wind)
+    { const wd = G.Ceu.wind(); const ws = G.clamp(wd.s || 0, 0, 2); stepPool(PW, dt, wd.x * (0.4 + ws * 1.4), wd.y * (0.4 + ws * 1.4), R3.time()); }
     A3S.spray = PW.n; A3S.wake = wakeN;
   }
   const A3S = F3.water = { falls: 0, spray: 0, wake: 0 }; // (for the proofs and the measures: the falls throwing spray round the eye, the drops, the wake's patches)

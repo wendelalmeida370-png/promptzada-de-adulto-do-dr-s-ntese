@@ -1516,6 +1516,26 @@ canvas#game3d { touch-action: none; transition: none; }
 @media (max-width: 640px) { .cb-ring { width: 52px; height: 52px; margin: -26px 0 0 -26px; } .cb-duel { font-size: 11.5px; } }
 
 /* === 20g: os ofícios === */
+/* the work's card (js/trabalho-ui.js, D-432): by the right corner, over the buttons of the thumb's side; on a narrow screen,
+   under the panel of who one is, on the left — the stick and the buttons keep the bottom corners, the clock and the compass the right */
+#inc-hud .ih-work { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); width: 236px; padding: 9px 12px 10px; animation: ihIn .18s ease both; }
+.ih-work .iw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ih-work .iw-head b { font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 14px; color: var(--ih-gold-2); letter-spacing: .03em; text-shadow: var(--ih-ts); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ih-work .iw-head small { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ih-gold); }
+.ih-work .iw-tool { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-size: 12px; font-weight: 800; flex-wrap: wrap; }
+.ih-work .iw-tool .ic { display: block; width: 26px; height: 26px; flex: none; }
+.ih-work .iw-tool .ic svg, .ih-work .iw-tool .ic img { display: block; width: 100%; height: 100%; filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .55)); }
+.ih-work .iw-tool.bare { color: var(--ih-mute); }
+.ih-work .iw-tool em { font-style: normal; font-size: 10.5px; font-weight: 800; padding: 1px 6px; border-radius: 8px; background: rgba(255, 255, 255, .08); }
+.ih-work .iw-tool em.fast { color: #a8e2bf; } .ih-work .iw-tool em.slow { color: #ffb08a; }
+.ih-work .iw-bar { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .09); overflow: hidden; margin: 7px 0 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .28); }
+.ih-work .iw-bar b { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #c99538, #edc26a); transition: width .2s; }
+.ih-work .iw-row { font-size: 11.5px; line-height: 1.35; color: var(--ih-text); font-weight: 700; margin-top: 3px; }
+.ih-work .iw-yield { color: var(--ih-gold); }
+.ih-work .iw-warn { font-size: 11px; line-height: 1.35; color: #ff9a86; font-weight: 800; margin-top: 5px; }
+.ih-work .iw-warn.soft { color: #ffc89a; }
+#inc-root.hud-off .ih-work { display: none !important; }
+@media (max-width: 720px) { #inc-hud .ih-work { right: auto; left: calc(14px + env(safe-area-inset-left, 0px)); top: calc(118px + env(safe-area-inset-top, 0px)); bottom: auto; width: min(236px, 46vw); padding: 7px 10px 8px; } }
 /* === 20h: a origem das coisas === */
 /* === 21a: a vegetação === */
 /* === 21b: o relevo === */

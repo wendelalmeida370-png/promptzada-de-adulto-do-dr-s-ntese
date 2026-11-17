@@ -553,8 +553,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // a metre and a little from the thing — or on the spot, for a door)
       const near = (x, y, at) => { const p = G.W.findPath(v.x, v.y, x, y, true, 30000); if (!p) return false; const e = p.length ? p[p.length - 1] : [x, y]; let px = e[0], py = e[1]; // (an empty path: already there)
         if (!at) { const d = Math.hypot(e[0] - x, e[1] - y) || 1; for (const r of [0.3, 0.4, 0.22, 0.5]) { const qx = x + (e[0] - x) / d * r, qy = y + (e[1] - y) / d * r; if (G.W.walkableXY(qx, qy)) { px = qx; py = qy; break; } } } else { px = x; py = y; }
-        G.Avatar.place(px, py); __E.f(6); G.Avatar.state().yaw = Math.atan2(y - v.y, x - v.x); return true; };
+        // (and turned to it: the hands read the drawn heading, which turns and never snaps — D-357, regra 120 —, a few frames; T-1405)
+        G.Avatar.place(px, py); __E.f(6); G.Avatar.state().yaw = Math.atan2(y - v.y, x - v.x); __E.f(4); return true; };
       const R = {};
+      // (the body's tools — 20g, D-426: the body works with what is its own; the test's hand puts in its bag the axe and the pick its
+      // people would give the trades, as the player would take them at the store — T-1473)
+      G.inSim++; try { for (const kind of ['machado', 'picareta']) { const k = G.Inv.made(kind, v); if (k && G.Inv.count(v, k) < 1) G.Depot.make('m:' + v.id, k, 1, { code: 'teste', by: v.id }); } } finally { G.inSim--; }
       if (tr && near(tr.x, tr.y)) {
         v.carry = null; // (empty hands for the axe: a woodcutter taken with a full load is told "your hands are full")
         const chop0 = tr.chop; let swings = 0;
@@ -1028,8 +1032,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     const merry = [...S.villagers.values()].filter(q => q !== body() && free(q) && q.age >= 3 && q.hunger < 90 && !(q.sick > 0) && (!q.task || q.task.pri <= 0.6) && (q.age < 14 || (q.traits || []).includes('Sociável') || q.id % 3 === 0 || G.Possess.kin(body(), q)) && G.W.reaches(body(), q.x, q.y));
     merry.sort((p, q) => G.dist(p.x, p.y, body().x, body().y) - G.dist(q.x, q.y, body().x, body().y));
     out.dance = { near: merry.length }; out.wave = null;
-    // (a wave in the daylight, beside someone: they wave back — e13 waves in the night, with no one about: T-036)
-    if (merry[0] && beside(merry[0])) { G.Input3D.onAction('acenar'); let most = 0; for (let k = 0; k < 60; k++) { G.Main.frameFor(33); let n = 0; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && vs.st === 'wave') n++; } most = Math.max(most, n); } out.wave = { most, deed: A().aceno || 0 }; __E.f(10); }
+    const seenSt = () => { const p = G.Avatar.pos(), c = {}; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && (vs.X - p.X) ** 2 + (vs.Z - p.Z) ** 2 < 81) c[vs.st] = (c[vs.st] || 0) + 1; } return c; };
+    // (a wave in the daylight, beside someone: they wave back — e13 waves in the night, with no one about: T-036; one walking by
+    // waves back as he goes, the wave over the stride — people3d's greeting, «over»: T-1406)
+    if (merry[0] && beside(merry[0])) { G.Input3D.onAction('acenar'); let most = 0; for (let k = 0; k < 60; k++) { G.Main.frameFor(33); let n = 0; for (const q of S.villagers.values()) { const vs = G.People3D.visOf(q.id); if (q !== body() && vs && (vs.st === 'wave' || (vs.st === 'walk' && vs.greetT > 0 && vs.greetD <= 0))) n++; } most = Math.max(most, n); } out.wave = { most, deed: A().aceno || 0, near: seenSt() }; __E.f(10); }
     if (merry[0] && beside(merry[0])) {
       const d0 = A().danca || 0; G.Input3D.onAction('dancar'); __E.f(20);
       const joined = [...S.villagers.values()].filter(q => q.task && q.task.type === 'talk' && q.task.dance && q.task.id === id);
@@ -1111,6 +1117,9 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       for (const t of near.slice(0, 12)) { const p = G.W.findPath(b.x, b.y, t.x, t.y, true, 30000); const e = p && p.length ? p[p.length - 1] : [t.x, t.y]; const d = Math.hypot(e[0] - t.x, e[1] - t.y) || 1;
         if ([0.3, 0.4, 0.22, 0.5].some(k => G.Avatar.place(t.x + (e[0] - t.x) / d * k, t.y + (e[1] - t.y) / d * k))) { tr = t; break; } }
       if (tr) { __E.f(4); G.Avatar.state().yaw = Math.atan2(tr.y - b.y, tr.x - b.x); b.carry = null;
+        // (the body's own axe — 20g, D-426: without one no tree is felled; the test's hand puts its people's in the bag, T-1473)
+        G.inSim++; try { const k = G.Inv.made('machado', b); if (k && G.Inv.count(b, k) < 1) G.Depot.make('m:' + b.id, k, 1, { code: 'teste', by: b.id }); } finally { G.inSim--; }
+        __E.f(4); // (the drawn heading turns to it: T-1405)
         const c0 = tr.chop; const r = G.Interact.run({ id: 'arvore', t: { tr, X: tr.x * TL, Z: tr.y * TL } }); G.Modes.menu(true); __E.f(90); const during = tr.chop; G.Modes.menu(false); __E.until(() => !G.Avatar.busy(), 200); __E.f(2);
         out.stroke = { ran: !!(r && r.ok), during: +(during - c0).toFixed(3), after: +(tr.chop - c0).toFixed(3), tree: tr.id, nearer: near.indexOf(tr), msg: r && !r.ok ? r.msg : undefined }; } }
     // 3. a load carried to the store: drawn in the hands while the world has it in them, never after

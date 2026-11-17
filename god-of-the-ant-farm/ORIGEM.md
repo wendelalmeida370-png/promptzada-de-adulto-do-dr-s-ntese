@@ -135,6 +135,28 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   pedra e escudo de madeira; sem couro nem metal, sem elmo. O tido é para sempre: a lança de bronze do guerreiro não vira de pedra
   quando o armazém se esvazia (D-442).
 
+## 5b. O trabalho das mãos do corpo (20g, `js/trabalho.js`, `G.Trabalho`)
+
+O corpo que o jogador vive trabalha **pelas mesmas fontes** que as pessoas do mundo, no mesmo tempo do mundo (D-035), com **uma
+coisa dele na mão** (a mochila — nunca o kit do ofício que não tem, D-426); o material da ferramenta conta contra a que o povo daria
+ao ofício (D-427). Tudo entra nas mãos **pelo livro** (`G.Depot.make` em `v:`), com o código da causa — e a comida com a sua parte:
+
+| Trabalho | A fonte no mundo | O que pede | O código (a parte) |
+|---|---|---|---|
+| Cortar a árvore, pegar a lenha do tronco | a árvore de `S.trees` (o mesmo contador do lenhador: `tr.chop`; cai pelo `G.Nature.fellTree`), a lenha do tronco (`tr.wood`) | **um machado** (sem ele, não) | `lenha` |
+| Quebrar pedra | a rocha de `S.rocks` (a pedra sai dela; a última leva a rocha) | **a picareta**; o martelo, mais devagar; sem nada, não | `pedra` |
+| Minerar | o veio da mina do povo (`S.ores`: `o.amt`), o turno do mineiro (`economy.js` `runMine`), a cidade conta (`G.Eco.mined`) | **a picareta** (sem ela, não) | `mina` (o bem do veio: `G.Eco.oreGood`) |
+| Cavar argila | a margem de um rio (o chão seco ao lado da água que corre, sem casa nem árvore: o barreiro do oleiro, `economy.js` `clayPit`) | a pá; a enxada, mais devagar; as mãos, três vezes mais | `barreiro` |
+| Colher frutas | as frutas do arbusto (`b.berries`) | as mãos | `fruta` (parte `fruta`) |
+| Colher o campo | o canteiro maduro de uma fazenda do povo (`b.crops[k].s === 3`), a conta e o sorteio do lavrador (`villagers.js` `farm`) | a foice; as mãos, o dobro | `colheita` (a parte: o grão daquele campo, `Estates.grainOf`) |
+| Pescar | o peixe contado daquela água (`G.Pesca.cast`: o pesqueiro, o acaso do mundo) | a coisa na mão diz o jeito: **a rede**, **a vara** (a linha), **a lança** (o arpão), ou as mãos (só com os pés na água) | `pesca` (parte `peixe`) |
+| Esfolar | o bicho morto (`a.dead`, `a.meat`), as contas do caçador (`riches.js` `carcass`: até 8 de carne pela mão do povo na caça; o couro, as presas, as plumas do bicho) | **a faca** (sem ela, não) | `caca` (parte `carne`); o couro vai junto na carga e entra no armazém como o do caçador (`Riches.unload`, `caca` — o buraco M, igual) |
+| Vender | a banca do mercador (`G.Biz`): o que está no balcão foi comprado no atacado ou posto pelas mãos | a banca aberta, na hora do mercado | a venda é da banca (`G.Biz`: as moedas pelo livro) |
+
+**O que não muda no mundo**: as pessoas do mundo trabalham como antes (o mesmo tempo, as mesmas contas, as mesmas mãos à mão —
+`Vg.fillHands`); só o desenho delas mostra a ferramenta e o gesto do ofício. Uma ferramenta que se gaste com o uso não foi feita nesta
+parte (o desgaste do mundo continua o dos ofícios, `economy.js`).
+
 ## 6. Os buracos
 
 ### Fechados nesta parte (20h)

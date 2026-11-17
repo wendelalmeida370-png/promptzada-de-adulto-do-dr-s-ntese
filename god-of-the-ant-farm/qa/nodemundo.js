@@ -67,6 +67,9 @@ M.load = function (o) {
   if (o.qa) M.run('qa/qa.js');
   // (an extra the page already runs before three.js runs once: js/space.js, which the world asks since L-195)
   for (const f of o.extra || []) if (!ran.has(f)) M.run(f);
+  // (the body's work of the hands — the tree, the rock, the bush, the fish, 20g D-430 — lives in js/trabalho.js, which the page
+  // runs with the interactions: a proof that runs these runs it too, after its own extras, or the body there has none of them)
+  if ((o.extra || []).includes('js/interact.js') && !(o.extra || []).includes('js/trabalho.js') && fs.existsSync(path.join(root, 'js/trabalho.js'))) M.run('js/trabalho.js');
   // (SALT=n: the plans on other dice — In.SALT, for the proofs only, T-436 —, and so the catalogue's table, made on the game's,
   // set aside: every family probed again on those dice)
   if (process.env.SALT && G.Interiors) { G.Interiors.SALT = Number(process.env.SALT) | 0; for (const k of Object.keys(G.Interiors.PROBED || {})) delete G.Interiors.PROBED[k]; }

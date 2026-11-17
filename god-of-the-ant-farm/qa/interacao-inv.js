@@ -22,7 +22,9 @@
     for (let i = L.length - 1; i >= 0 && L[i][1] >= day - 1; i--) {
       const e = L[i]; const code = e[8], de = e[3], para = e[4];
       if (code === 'dar' && (kind(de) !== 'm' || kind(para) !== 'm' || de === para)) add('interacao', 1, `o livro: «dar» de ${de} para ${para} — o que se dá vai de uma mochila para a de outra pessoa (G.Inv.give)`);
-      if (code === 'apanhou' && (kind(de) !== 'g' || kind(para) !== 'm')) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick)`);
+      // (from the ground always; into a bag — the body's G.Inv.pick — or into the hands of one of the world's people, who picks a
+      // plain load up to take it to the store — villagers.js 'apanhar', older than the bag: L-1245)
+      if (code === 'apanhou' && (kind(de) !== 'g' || (kind(para) !== 'm' && kind(para) !== 'v'))) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick) ou para as mãos de quem o leva ao armazém`);
       if ((code === 'guardou' || code === 'pegar') && kind(para) === 'f' && It.THINGS && It.THINGS.has(e[5])) add('interacao', 1, `o livro: uma coisa (${e[5]}) entrou no estoque do povo como coisa por «${code}» (D-371: conta como o seu bem)`);
     }
     // ---- the body's deeds of the hands: whole counts

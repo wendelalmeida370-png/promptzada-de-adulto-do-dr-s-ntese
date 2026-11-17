@@ -154,13 +154,14 @@
   };
 
   // ------------------------------ the materials ------------------------------
-  // the clouds of the sky's dome, read along the reflected ray: the very sum the dome makes (the same picture, the same drift
-  // with the wind, the same cover) — the water mirrors the sky that is drawn over it
-  const CLOUDS = `uniform float uCover; uniform vec3 uCloudCol; uniform vec3 uCloudSh; uniform sampler2D uNoise;
-float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
+  // the clouds of the sky's dome, read along the reflected ray: the sky's own sheet of clouds over its plane (gxCloud, the drift by
+  // the world's clock, the cover: ceu3d.js, 21d) met where the ray from the water reaches it, as the dome meets it from the eye — the
+  // water mirrors the sky that is drawn over it
+  const CLOUDS = `uniform float uCover; uniform vec3 uCloudCol; uniform vec3 uCloudSh;
+float aguaCloud(vec3 d, vec3 from, out float thick) {
   thick = 0.0; if (d.y <= 0.0) return 0.0;
-  vec2 uv = d.xz / (d.y + 0.08) * 0.11 + wind.xy * t * 0.0016;
-  float n = texture2D(uNoise, uv).r * 0.68 + texture2D(uNoise, uv * 3.1 + 0.37).g * 0.32;
+  vec2 cp = from.xz + d.xz * ((gxCl2.x - from.y) / (d.y + 0.06));
+  float n = gxCloud(cp);
   thick = smoothstep(0.98 - uCover, 1.5 - uCover, n);
   return smoothstep(0.98 - uCover, 1.18 - uCover, n) * smoothstep(0.0, 0.22, d.y);
 }`;
@@ -179,7 +180,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
     MAT.water = new THREE.MeshPhongMaterial({ vertexColors: true, transparent: true, opacity: 1, shininess: 60, specular: 0x1c2228, depthWrite: false });
     MAT.water.onBeforeCompile = sh => {
       Object.assign(sh.uniforms, { uTime: U.time, uSky: U.sky, uSkyTop: skyU.top, uKeyDir: skyU.keyDir, uKeyCol: WU.key, uIrr: WU.irr, uDeep: WU.deep, uDet: { value: G.Ground3D.detail() }, uWind: U.wind, uSeaY: { value: G.SEA * G.Space.HM }, uBed: WU.bed, uBedN: WU.bedN, uK: WU.k,
-        uFlow: WU.flow, uLook: WU.look, uShoreT: WU.shore, uFN: WU.fN, uCover: skyU.cover, uCloudCol: skyU.cloudCol, uCloudSh: skyU.cloudSh, uNoise: skyU.uNoise,
+        uFlow: WU.flow, uLook: WU.look, uShoreT: WU.shore, uFN: WU.fN, uCover: skyU.cover, uCloudCol: skyU.cloudCol, uCloudSh: skyU.cloudSh,
         uScene: WU.scene, uDepthT: WU.depth, uGrab: WU.grab, uProjK: WU.proj, uNF: WU.nf, uScr: WU.scr, uSSR: WU.ssr, uMir: WU.mir, uMirMat: WU.mirMat, uMirOn: WU.mirOn });
       sh.vertexShader = 'uniform float uTime; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; attribute float aShore; varying float vShore; varying float vSea; varying vec3 vWW;\n' + G.Agua.waveGLSL() + '\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         vec4 wp = modelMatrix * vec4(position, 1.0); float sea = 1.0 - step(0.15, abs(wp.y - uSeaY * uK)); float still = step(1.5, aShore);
@@ -188,7 +189,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         transformed.y += aguaWaveY(wp.xz, uTime, uWind, sea, dep) * (1.0 - still);
         vShore = aShore; vSea = sea; vWW = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
       sh.fragmentShader = 'uniform float uTime; uniform vec3 uSky; uniform vec3 uSkyTop; uniform vec3 uKeyDir; uniform vec3 uKeyCol; uniform vec3 uIrr; uniform vec3 uDeep; uniform sampler2D uDet; uniform vec3 uWind; uniform float uSeaY; uniform sampler2D uBed; uniform vec2 uBedN; uniform float uK; uniform sampler2D uFlow; uniform sampler2D uLook; uniform sampler2D uShoreT; uniform float uFN; varying float vShore; varying float vSea; varying vec3 vWW;\n'
-        + 'uniform sampler2D uScene; uniform sampler2D uDepthT; uniform float uGrab; uniform vec4 uProjK; uniform vec2 uNF; uniform vec2 uScr; uniform float uSSR; uniform sampler2D uMir; uniform mat4 uMirMat; uniform float uMirOn;\n#ifdef WSSR\nuniform mat4 projectionMatrix;\n#endif\n' + CLOUDS + '\n' + sh.fragmentShader
+        + 'uniform sampler2D uScene; uniform sampler2D uDepthT; uniform float uGrab; uniform vec4 uProjK; uniform vec2 uNF; uniform vec2 uScr; uniform float uSSR; uniform sampler2D uMir; uniform mat4 uMirMat; uniform float uMirOn;\n#ifdef WSSR\nuniform mat4 projectionMatrix;\n#endif\n' + sh.fragmentShader.replace('#include <lights_pars_begin>', '#include <lights_pars_begin>\n' + CLOUDS)
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         // (four trains of waves: their slopes summed, steeper with the wind, flatter on the rivers and against the land, none in a basin)
         vec2 wq = vWW.xz; float isSea = vSea; float still = step(1.5, vShore); float shore = clamp(vShore, 0.0, 1.0);
@@ -242,6 +243,8 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         vec3 nW = normalize(vec3(-gw.x, 1.0, -gw.y));
         normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz);`)
         .replace('#include <opaque_fragment>', `
+        // (the water's own key light, as much of it as reaches here — the clouds' shadow, the hills', the canopy: the sky's gxKS)
+        vec3 keyC = uKeyCol * gxKS;
         // (how deep it is here: its face over the bed under it)
         vec2 bu = (vWW.xz * uBedN.x + 0.5) * uBedN.y; float b0 = texture2D(uBed, bu).r;
         float wD = vShore < -0.5 ? 40.0 : max(vWW.y - (b0 + uSeaY) * uK, 0.0) / max(uK, 0.3);
@@ -255,7 +258,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         // deepens; lit softly by the sky and the key light, as water takes little light on itself; the torches by it a little)
         vec3 deepC = mix(uDeep, tint * 0.16, 0.45);
         vec3 body = mix(tint, deepC, 1.0 - exp(-wD * 0.32 / clar));
-        vec3 lit = mix(body * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.55 + uIrr) * 0.3183, outgoingLight * (body / max(diffuseColor.rgb, vec3(0.02))), 0.2);
+        vec3 lit = mix(body * (keyC * clamp(uKeyDir.y, 0.0, 1.0) * 0.55 + uIrr) * 0.3183, outgoingLight * (body / max(diffuseColor.rgb, vec3(0.02))), 0.2);
         // (how much of the bed it hides: nothing where it thins on the sand, all of it in the deep — and never less than its colour asks)
         float a = max(1.0 - exp(-wD * 0.9 / clar), diffuseColor.a);
         // (the sky in its face: the reflected ray's height picks the colour, as the sky's own dome has it — and its clouds)
@@ -267,7 +270,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         #endif
         float clR = 0.0;
         #ifdef WCLOUD
-        { float th; clR = aguaCloud(normalize(vec3(Rw.x, rel, Rw.z)), uTime, uWind, th);
+        { float th; clR = aguaCloud(normalize(vec3(Rw.x, rel, Rw.z)), vWW, th);
           vec3 cc = mix(uCloudCol, uCloudSh, clamp(th * 0.55 + 0.1, 0.0, 1.0)); skyR = mix(skyR, cc, clR * 0.9); }
         #endif
         // (the shallows show the sand and the clear water more than the sky: broken by the swash, their face mirrors less)
@@ -317,9 +320,9 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         } else {
           col = lit * a * (1.0 - fr) + skyR * fr; al = 1.0 - (1.0 - a) * (1.0 - fr);
         }
-        col += uKeyCol * (pow(rs, 900.0) * 1.7 + pow(rs, 90.0) * 0.075) * step(0.0, uKeyDir.y) * (1.0 - clR * 0.85);
+        col += keyC * (pow(rs, 900.0) * 1.7 + pow(rs, 90.0) * 0.075) * step(0.0, uKeyDir.y) * (1.0 - clR * 0.85);
         // (the crests lit from within where the sun shines through them)
-        col += vec3(0.02, 0.09, 0.08) * (smoothstep(-0.02, 0.05, hw) + swl * 0.6) * isSea * clamp(uKeyCol.g * 0.33, 0.0, 1.0) * (1.0 - shore * 0.5) * a;
+        col += vec3(0.02, 0.09, 0.08) * (smoothstep(-0.02, 0.05, hw) + swl * 0.6) * isSea * clamp(keyC.g * 0.33, 0.0, 1.0) * (1.0 - shore * 0.5) * a;
         // (the flames of the shore in the water at night: the reflected ray, where it rises to the height of the lights, finds them
         // in the painted light of the flames — a road of glitter under each lit door and each torch on the quay)
         #ifndef WCHEAP
@@ -358,7 +361,7 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
         float churn = fw.a * (1.0 - isSea) * (1.0 - still), bank = sht.a * (1.0 - isSea) * (1.0 - still);
         foam = max(foam, smoothstep(0.25, 0.85, laceF * 0.7 + churn * 0.75) * churn * 0.95);
         foam = max(foam, laceF * bank * 0.75 * smoothstep(0.0, 0.6, wD));
-        col = mix(col, vec3(0.9, 0.94, 0.96) * (uKeyCol * clamp(uKeyDir.y, 0.0, 1.0) * 0.6 + uIrr) * 0.3183, clamp(foam, 0.0, 0.88)); al = max(al, foam * 0.9);
+        col = mix(col, vec3(0.9, 0.94, 0.96) * (keyC * clamp(uKeyDir.y, 0.0, 1.0) * 0.6 + uIrr) * 0.3183, clamp(foam, 0.0, 0.88)); al = max(al, foam * 0.9);
         // (and where it thins to nothing it is gone — no sheen of a film of water over the sand, no flicker where the two meet; the
         // line wandering half a metre over the ground, as a wet edge does, not ruled along the slope of a bank)
         #ifdef WCHEAP

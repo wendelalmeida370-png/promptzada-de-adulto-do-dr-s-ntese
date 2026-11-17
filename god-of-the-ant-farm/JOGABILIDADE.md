@@ -656,6 +656,30 @@ furto só no fantasma (`beyond.js`); o `qa/combate-inv.js` na lista do `qa/junta
 - **Os gestos** (`js/interacao-clips.js`, D-404): `apanhar`, `bater`, `abrir`, `dar`, `aquecer`, `ler` — pelo `G.ANIM_CLIPS`, tocados
   como o `anim` do `Avatar.act`.
 
+### 4.11 O trabalho das mãos — `G.Trabalho` (20g, `js/trabalho.js`; D-425 a D-435)
+- **A tabela** `Tr.WORKS` (`cortar`, `quebrar`, `minerar`, `cavar`, `esfolar`, `ceifar`, `colher`, `pescar`, `vender`): `{ nome, tools:
+  [[tipo, parte]…] (por preferência; a parte, o que o tipo faz contra a ferramenta do ofício — 1 a dele; para a pesca, o jeito:
+  'rede' | 'linha' | 'arpao'), bare (o que a mão nua faz; 0: não se faz), sem (por que não), pior (o que se diz da ferramenta pior) }`;
+  `Tr.GEST` (o trabalho → `[clipe, ato que o mundo vê]`); `Tr.WT` (os segundos do mundo de cada trabalho, os do mundo).
+- **A ferramenta**: `Tr.tool(v, trabalho)` → `{ key, kind, share, mat, mul, hand }` ou `{ key: null, mul: bare, why, slow }` — só as
+  coisas da mochila do corpo (`G.Inv.list`), nunca o kit (D-426); `Tr.matMul(chave, v)` (o `trabalho` do material contra o da
+  ferramenta que o povo daria, `G.Inv.made`: D-427); `Tr.gear(v)` (o jeito de pescar: a coisa **na mão**, ou as mãos).
+- **O golpe** (dentro do arquivo): a ferramenta vai à mão quando o gesto começa (`G.Inv.equip`, pelo `Possess.apply`) e é perguntada
+  de novo no `op` do contato; o ato é do relógio do mundo (`world: true`), o `anim` é o clipe do trabalho (`trabalho-clips.js`) e o
+  `vact` o ato do mundo (o 3D do corpo escolhe o clipe pelo `anim` — `drawState` do `avatar.js`). O rendimento por `Tr.give(w, bem, n,
+  código, marcas, parte)` → `G.Depot.make('v:…')`.
+- **Para a tela e as provas** (só leem): `Tr.info()` → `{ id, work, nome, titulo, tool, toolKey, mul, slow, why, pct, falta, rende,
+  busy, chain }` (do trabalho em curso, do segurado ou do alvo mirado); `Tr.now()` (o golpe em curso), `Tr.last()` (a última resposta
+  do mundo), `Tr.stall(v)` (o dia da banca do corpo), `Tr.chain()`.
+- **O trabalho segurado** (o verbo `segurar`, D-460, D-431): `Tr.hold(provedor, alvo, até)`, `Tr.pump()` (na batida do corpo:
+  `trabalho-ui.js`; nas provas em Node, a prova chama), `Tr.stop()`. Andar (o empurrão das teclas ou do bastão) solta.
+- **Um provedor de trabalho** (`G.Interact.add`) diz o seu `work: '…'` e dá `info(ctx, t)`; o guard (152–158) cobra o golpe pelo
+  `stroke`, a pergunta ao `Tr.tool` no `can`, a escrita do mundo só no `op`, o ato do relógio do mundo.
+- **Portas novas noutros arquivos (o mínimo)**: `takes` no `G.Anim3D.clip` (os atos que um clipe novo do mesmo trabalho toma de
+  outro: `anim-clips.js`), `G.Avatar.VACT` (os atos do corpo que o controle devolve ao fim do ato: `avatar.js`), `G.Riches.noteKill`
+  (a crônica da pele rara: `riches.js`); no `inventario.js`, o `act()` sem o kit para quem tem coisas de verdade (D-426) e a foice de
+  quem colhe (`ACT_TOOL.harvest`).
+
 ## 5. Os donos de cada arquivo e as marcas
 
 | Arquivo | Dono | Os outros |
