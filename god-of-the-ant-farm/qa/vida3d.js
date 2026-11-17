@@ -248,6 +248,48 @@ if (on('v8')) {
     (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
 }
 
+if (on('v9')) {
+  // the scenes (D-607, D-608): the world's — who is in each, the act of each, the focus —; the reader finds the focus and, where the
+  // world gives all the same act, the part by who each one is; the heads turn to the focus; the far crowd keeps the posture
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = S.animals || new Map();
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const out = []; let okAll = true; const say = (c, t) => { out.push(t + (c ? '' : ' ✗')); if (!c) okAll = false; };
+  const awake = v => v && !v.inside && !v.sleeping && !v.aboard && !v.captive && !v.jail && !v.held;
+  const grown = [...S.villagers.values()].filter(v => awake(v) && v.age >= 18 && v.age < 60); const pick = i => grown[i % grown.length];
+  out.push(`${grown.length} crescidos acordados`);
+  // (1) the funeral: six round a grave, the world's act (mourn), the kin among them; the reader's part by kin and heart, the focus the
+  // grave, every head toward it after a few frames, no two in step
+  const cem = [...S.buildings.values()].find(b => b.type === 'cemetery') || [...S.buildings.values()][0]; const ring = grown.slice(0, 6);
+  ring.forEach((v, i) => { const a = i / ring.length * Math.PI * 2; v.x = cem.x + Math.cos(a) * 2.2; v.y = cem.y + Math.sin(a) * 2.2; v.path = null; v.moving = false; G.Vg.setTask(v, { type: 'funeral', id: cem.id, pri: 1.1, kind: 'funeral', st: 2 }); v.act = 'mourn'; v.mourn = i < 2 ? DAY * 0.3 : 0; G.faceTo(v, cem.x - v.x, cem.y - v.y); });
+  const parts = ring.map(v => A.stateOf(v, 0, P3.look(v))); const kin = parts.slice(0, 2), others = parts.slice(2);
+  say(kin.every(p => p === 'mourn' || p === 'ato-chorar-joelhos') && new Set(others).size >= 1 && others.every(p => p === 'mourn' || p === 'ato-luto-roda'), `o enterro: os parentes ${kin.join(', ')}; os outros ${others.join(', ')}`);
+  let looks = []; tryF('o enterro desenhado', () => { for (let k = 0; k < 40; k++) { for (const v of ring) { v.act = 'mourn'; v.moving = false; } P3.update(0.1, { X: cem.x * TL, Z: cem.y * TL }); }
+    looks = ring.map(v => { const s = P3.visOf(v.id); if (!s || !s.sc) return null; const want = V3.lookFar(s.yaw, s.X, s.Z, s.sc); return [s.sc.k, Math.abs((s.pose.lookY || 0) - want)]; }); });
+  say(looks.length && looks.every(l => l && l[0] === 'luto' && l[1] < 0.1), `as cabeças para o túmulo: ${looks.map(l => (l ? l[0] + ' ' + r2(l[1]) : '—')).join(', ')}`);
+  // (2) the crowd at the scaffold: the world's watchers with their stances; the focus the scaffold
+  const ex = { id: 987654, x: cem.x + 6, y: cem.y }; S.execs = (S.execs || []).concat([ex]); const w = pick(7); G.Vg.setTask(w, { type: 'justice', role: 'watch', j: ex.id, x: w.x, y: w.y, pri: 1.95, st: 2, kind: 'justice', stance: 'boo' });
+  const sw = V3.scene(w, null, {}); say(sw.k === 'cadafalso' && Math.abs(sw.X - ex.x * TL) < 1e-6 && Math.abs(sw.Z - ex.y * TL) < 1e-6, `o cadafalso: ${sw.k} no ${r2(sw.X)}, ${r2(sw.Z)}`);
+  for (const [act, want] of [['cheer', 3], ['boo', 3], ['weep', 4]]) { w.act = act; const p = P3.crowdPose(w, P3.look(w)); say(p === want, `a multidão de longe em «${act}»: postura ${p}`); }
+  S.execs = S.execs.filter(e => e !== ex); G.Vg.endTask(w);
+  // (3) the game of tag: the chaser's focus the one chased
+  const kids = [...S.villagers.values()].filter(v => awake(v) && v.age >= 5 && v.age < 12); if (kids.length >= 2) { const [c1, c2] = kids; G.Vg.setTask(c1, { type: 'play', st: 2, chase: c2.id, pri: 0.5, kind: 'play' }); const sc = V3.scene(c1, null, {});
+    say(sc.k === 'pega' && Math.abs(sc.X - c2.x * TL) < 1e-6, `o pega-pega: ${sc.k}, o foco em quem foge`); G.Vg.endTask(c1); } else out.push('o pega-pega: sem crianças neste mundo');
+  // (4) the child and the house's dog: the world has the dog with the child (pets.js: the dog's kid); the child kneels to it
+  const dog = [...S.animals.values()].find(a => a.kind === 'cao' && !a.dead && a.home); const kid = kids[2] || kids[0];
+  if (dog && kid) { kid.home = dog.home; kid.x = dog.x + 0.3; kid.y = dog.y; kid.moving = false; kid.path = null; G.Vg.setTask(kid, { type: 'play', st: 2, pri: 0.5, kind: 'play' }); kid.act = ''; dog.kid = kid.id;
+    const st = A.stateOf(kid, 0, P3.look(kid)), sc = V3.scene(kid, null, {}); say(st === 'crianca-cao' && sc.k === 'cao' && sc.dog === dog.id, `a criança e o cão da casa: ${st}, o foco no cão ${sc.dog === dog.id ? 'certo' : 'ERRADO'}`);
+    dog.kid = 0; const st2 = A.stateOf(kid, 0, P3.look(kid)); say(st2 !== 'crianca-cao', `o cão com outra coisa: a criança em «${st2}»`); } else out.push('a criança e o cão: sem cão de casa neste mundo');
+  // (5) the drill: the act's own gesture on the world's clock
+  const sold = pick(8); sold.act = 'drill'; G.Vg.setTask(sold, { type: 'drill', pri: 1 }); sold.act = 'drill'; const sd = A.stateOf(sold, 0, P3.look(sold)); say(sd === 'ato-treino', `o treino: ${sd}`);
+  // (6) the postures of the far crowd from the fine body's state: seated, kneeling, lying
+  const q = pick(9); for (const [act, want] of [['eat', 1], ['pray', 2], ['', 0]]) { G.Vg.endTask(q); q.act = act; q.sleeping = false; const p = P3.crowdPose(q, P3.look(q)); say(p === want, `de longe em «${act || 'parado'}»: postura ${p}`); }
+  q.sleeping = true; say(P3.crowdPose(q, P3.look(q)) === 5, 'de longe dormindo: deitado'); q.sleeping = false;
+  tryF('a multidão desenhada', () => { for (let k = 0; k < 10; k++) P3.update(0.1, { X: cem.x * TL, Z: cem.y * TL }); });
+  const chk = P3.check();
+  ok('v9 as cenas: o foco do mundo, o papel de cada um, as cabeças para o foco, a criança e o cão, o treino, as posturas da multidão', !errs.length && okAll && !chk.length && !Object.keys(G.modErr || {}).length,
+    (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
+}
+
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `VIDA3D: ${fails.length} falha(s): ${fails.join(', ')}` : 'VIDA3D: ok');
 process.exit(fails.length ? 1 : 0);

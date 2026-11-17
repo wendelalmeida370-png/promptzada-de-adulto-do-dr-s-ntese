@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', 'duo-clips.js', 'grupo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1648,5 +1648,21 @@ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((
   for (const f of files) { if (f === 'people3d.js') continue; if ((src[f] || []).some(l => /\bL[v]?\.duo\s*=[^=]/.test(l))) fails.push(`a dois: ${f} escreve as mãos de alguém no outro (L.duo) — só o quadro do people3d.js (D-605)`); }
   if (!/const held = papel === 'b' \? v : w; const T = held\.actT \|\| 0;/.test(v3)) fails.push('a dois: o leitor não anda o gesto de dois no relógio do ato do mundo (o actT de quem é segurado, D-605)');
   const i = v3.indexOf('V3.duo = function'), j = v3.indexOf('\n  };', i); if (i >= 0 && /\b(?:v|w)\.(?:x|y|fx|fy|task|act)\s*=[^=]/.test(v3.slice(i, j))) fails.push('a dois: o leitor escreve no mundo (D-605)'); }
+// 222. "a cena é do mundo" (D-607, D-608): o foco de uma cena (o túmulo, o cadafalso, a roda da festa, quem foge, o chão do treino)
+// sai do que o mundo tem, lido pelo leitor junto com o porte (Vida3D.scene, no V3.read); a cabeça se vira para ele pelo leitor
+// (V3.lookFar); e a postura da multidão de longe é a do estado que o corpo inteiro teria (o Anim.stateOf), refeita com o retrato
+// dela — nunca um estado inventado só para longe, nem uma conta a cada quadro
+{ const v3 = (src['vida3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  if (!/s\.sc = V3\.scene\(v, near, s\.sc \|\| \{\}\);/.test(v3)) fails.push('a cena é do mundo: o leitor não acha a cena com o porte (Vida3D.scene no V3.read, D-607)');
+  if (!/V3\.lookFar\(s\.yaw, s\.X, s\.Z, s\.sc\)/.test(v3)) fails.push('a cena é do mundo: a cabeça não se vira para o foco da cena pelo leitor (V3.lookFar, D-607)');
+  const i = v3.indexOf('const SCENE = V3.SCENE = {'), j = v3.indexOf('\n  };', i);
+  if (i < 0 || /\b(?:v|t|o|b|e)\.\w+\s*=[^=]/.test(v3.slice(i, j))) fails.push('a cena é do mundo: o foco de uma cena escreve no mundo, ou não há a tabela das cenas (D-607)');
+  if (!/function crowdPose\(v, L\) \{ if \(v\.moving\) return 0; const st = Anim\.stateOf\(v, 0, L\); return POSE_OF\[st\] \|\| 0; \}/.test(p3)) fails.push('a cena é do mundo: a postura da multidão não sai do estado do corpo inteiro (Anim.stateOf, D-608)');
+  if (!/e\.cL = color\(L\.robe \? L\.cloth : L\.pants\); e\.p = crowdPose\(v, L\); \}/.test(p3)) fails.push('a cena é do mundo: a postura da multidão não é refeita com o retrato dela (D-608)'); }
+// 223. "o cão da criança é o do mundo" (D-607): a criança se ajoelha ao cão da casa que o mundo tem brincando com ela (o kid do cão,
+// pets.js) — o leitor só procura e nunca escreve num bicho
+{ const v3 = (src['vida3d.js'] || []).join('\n'); const i = v3.indexOf('V3.dogOf = function'), j = v3.indexOf('\n  };', i); const f = i < 0 ? '' : v3.slice(i, j);
+  if (!/a\.kind === 'cao' && !a\.dead && a\.kid === v\.id && a\.home === v\.home/.test(f)) fails.push('o cão da criança é o do mundo: o leitor não acha o cão pela casa e pelo kid que o mundo dá (pets.js, D-607)');
+  if (/\ba\.\w+\s*=[^=]/.test(f)) fails.push('o cão da criança é o do mundo: o leitor escreve no cão (D-607)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

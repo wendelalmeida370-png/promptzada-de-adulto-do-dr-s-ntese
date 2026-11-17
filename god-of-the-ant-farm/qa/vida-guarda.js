@@ -1,4 +1,4 @@
-// vida-guarda: the guard's rules of the life that is seen (22c, rules 213 to 221) shown to bite — a copy of the game's js/ with one
+// vida-guarda: the guard's rules of the life that is seen (22c, rules 213 to 223) shown to bite — a copy of the game's js/ with one
 // line broken on purpose (the rest of the game linked, not copied), qa/guard.js run on it, and the rule's own words looked for in
 // what it says. A rule that lets its sabotage through is a rule that guards nothing.
 //   node qa/vida-guarda.js            ONLY=213,215 for some rules
@@ -27,16 +27,20 @@ const CASES = [
   ['221', 'as mãos no outro dadas fora do quadro', 'js/vida3d.js', s => s.replace("V3.lefty = v =>", "V3.maos = Lv => { Lv.duo = null; }; V3.lefty = v =>")],
   ['221', 'o gesto de dois num relógio do desenho', 'js/vida3d.js', s => s.replace("const held = papel === 'b' ? v : w; const T = held.actT || 0;", "const held = papel === 'b' ? v : w; const T = s.t || 0;")],
   ['221', 'o leitor movendo um dos dois', 'js/vida3d.js', s => s.replace("if (d > want + 0.45 || d < 0.15) return null;", "if (d > want + 0.45) { w.x = v.x; } if (d < 0.15) return null;")],
+  // (22c onda 2, fase 5: the scenes)
+  ['222', 'o foco da cena escrito no mundo', 'js/vida3d.js', s => s.replace("funeral: (v, t) => { const b = G.S.buildings.get(t.id);", "funeral: (v, t) => { t.seen = 1; const b = G.S.buildings.get(t.id);")],
+  ['222', 'a postura da multidão inventada', 'js/people3d.js', s => s.replace("function crowdPose(v, L) { if (v.moving) return 0; const st = Anim.stateOf(v, 0, L); return POSE_OF[st] || 0; }", "function crowdPose(v, L) { return v.act === 'cheer' ? 3 : 0; }")],
+  ['223', 'o leitor mexendo no cão', 'js/vida3d.js', s => s.replace("a.home === v.home && (a.x - v.x) ** 2", "a.home === v.home && (a.pose = 'sit') && (a.x - v.x) ** 2")],
 ];
 // (the opening words of each rule's own message: the rule bit, not another one)
-const RULE = { 213: 'o leitor da vida só lê', 214: 'toda tarefa tem pose', 215: 'o porte vem do leitor', 216: 'só o anim-rosto escreve o rosto', 217: 'a coisa do gesto é do inventário', 218: 'a micro-ação é uma conta', 219: 'todo ato do vocabulário tem pose' , 220: 'todo ato de dois tem as duas partes', 221: 'a dois'};
+const RULE = { 213: 'o leitor da vida só lê', 214: 'toda tarefa tem pose', 215: 'o porte vem do leitor', 216: 'só o anim-rosto escreve o rosto', 217: 'a coisa do gesto é do inventário', 218: 'a micro-ação é uma conta', 219: 'todo ato do vocabulário tem pose' , 220: 'todo ato de dois tem as duas partes', 221: 'a dois', 222: 'a cena é do mundo', 223: 'o cão da criança é o do mundo'};
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null;
 for (const e of fs.readdirSync(GAME)) if (e !== 'js') fs.symlinkSync(path.join(GAME, e), path.join(TMP, e));
 let bad = 0, n = 0;
 // (the game as it is: clean, or the sabotages say nothing)
 const guard = () => { try { return cp.execFileSync('node', [path.join(GAME, 'qa', 'guard.js'), TMP], { encoding: 'utf8' }); } catch (e) { return String(e.stdout || ''); } };
 cp.execFileSync('cp', ['-r', path.join(GAME, 'js'), path.join(TMP, 'js')]);
-{ const out = guard(); const own = out.split('\n').filter(l => Object.values(RULE).some(r => l.startsWith(r))); console.log(`${own.length ? 'FALHOU' : 'PASSOU'} | vida-guarda o jogo como está | ${own.length ? own.slice(0, 3).join(' ‖ ') : 'as regras 213 a 221 limpas'}`); if (own.length) bad++; }
+{ const out = guard(); const own = out.split('\n').filter(l => Object.values(RULE).some(r => l.startsWith(r))); console.log(`${own.length ? 'FALHOU' : 'PASSOU'} | vida-guarda o jogo como está | ${own.length ? own.slice(0, 3).join(' ‖ ') : 'as regras 213 a 223 limpas'}`); if (own.length) bad++; }
 for (const [rule, name, file, f] of CASES) {
   if (ONLY && !ONLY.has(rule)) continue; n++;
   const p = path.join(TMP, file), orig = path.join(GAME, file);

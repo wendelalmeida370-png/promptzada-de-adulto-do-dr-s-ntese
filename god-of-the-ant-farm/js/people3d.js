@@ -35,9 +35,9 @@
   const SHAPE = { pelvis: 'ball', torso: 'torso', torsoF: 'torsoF', head: 'head', hair: 'cap', hairL: 'limb', uArmL: 'uarm', uArmR: 'uarm', fArmL: 'farm', fArmR: 'farm', thighL: 'thigh', thighR: 'thigh', shinL: 'shin', shinR: 'shin', footL: 'foot', footR: 'foot', neckP: 'cyl', eyeL: 'sph', eyeR: 'sph', nose: 'sph', belt: 'cyl', brow: 'box', earL: 'ball', earR: 'ball', bun: 'ball', beard: 'ball', handL: 'ball', handR: 'ball' };
   const PI = {}; PARTS.forEach((p, k) => { PI[p[0]] = k; });
   let mesh = null; // InstancedMesh per part
-  let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
+  let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null, crowdArms = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = crowdArms[0].count = crowdArms[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
   // (a new world draws no body of the last one: the controller's feed goes with its world, L-1112)
   G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); P3.avatar = null; });
@@ -80,7 +80,9 @@
     crowd = new THREE.InstancedMesh(body, mat, MAXC); crowdHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 10, 8), mat, MAXC);
     crowdHair = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat, MAXC);
     crowdLegs = [new THREE.InstancedMesh(leg, mat, MAXC), new THREE.InstancedMesh(leg, mat, MAXC)];
-    for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
+    // (the arms only of those in the crowd whose arms say something — raised, at the face: 22c fase 5, D-608)
+    const arm = new THREE.CapsuleGeometry(0.055, 0.5, 2, 6); arm.translate(0, -0.3, 0); crowdArms = [new THREE.InstancedMesh(arm, mat, MAXC), new THREE.InstancedMesh(arm, mat, MAXC)];
+    for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs, ...crowdArms]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
@@ -1548,9 +1550,17 @@
   // (the crowd's portraits: each one's look kept and made again every ¾ to 1¼ s — each one on their own beat, by their id —, not
   // every frame: the crowd's colours are the clothes of the one they are, and they change in seconds, not frames — D-591)
   const CROWD = new Map(); G.worldHooks.push(() => { CROWD.clear(); NEARP.length = 0; NEAR.length = 0; INS.length = 0; });
+  // (the posture of one of the crowd, made again with their portrait: from the state the fine body would have — standing, seated,
+  // kneeling, the arms raised, the hands at the face, lying —: the cheering crowd at the feast and the scaffold, the mourners on their
+  // knees, the sleepers of a camp read from far off, D-608)
+  const CROWD_DY = [0, -0.62, -0.45, 0, 0, 0.12];
+  const POSE_OF = { sit: 1, rest: 1, eat: 1, eatg: 1, rockg: 1, rock: 1, 'ato-contar': 1, low: 1, cook: 1, pray: 2, 'ato-chorar-joelhos': 2, 'ato-implorar': 2, 'ato-condenado': 2, 'ato-propor': 2,
+    'ato-esconder': 2, 'crianca-cao': 2, 'fam-festa': 3, 'ato-alegria': 3, 'ato-rito': 3, 'ato-motim': 3, 'ato-gritar': 3, 'ato-vaia': 3, mourn: 4, 'ato-luto-roda': 0, 'ato-desmascarar': 4, sleep: 5, sick: 5 };
+  function crowdPose(v, L) { if (v.moving) return 0; const st = Anim.stateOf(v, 0, L); return POSE_OF[st] || 0; }
+  P3.crowdPose = crowdPose;
   function crowdLook(v) {
     let e = CROWD.get(v.id); if (!e) { e = { L: {}, t: -1e9 }; CROWD.set(v.id, e); }
-    if (vt - e.t > 0.75 + (v.id % 17) * 0.03) { const L = P3.lookInto(e.L, v); e.t = vt; e.cF = color(P3.farCol(L)); e.cS = color(L.skin); e.cH = color(L.hair); e.cL = color(L.robe ? L.cloth : L.pants); }
+    if (vt - e.t > 0.75 + (v.id % 17) * 0.03) { const L = P3.lookInto(e.L, v); e.t = vt; e.cF = color(P3.farCol(L)); e.cS = color(L.skin); e.cH = color(L.hair); e.cL = color(L.robe ? L.cloth : L.pants); e.p = crowdPose(v, L); }
     return e;
   }
   P3.update = function (dt, focus) {
@@ -1720,22 +1730,29 @@
     }
     if (cLod.size > 400) cLod.clear();
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
-    mats(); let c = 0; const tnow = performance.now() / 1000;
+    mats(); let c = 0, ca = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
       const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
-      const e = crowdLook(v), L = e.L; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
+      const e = crowdLook(v), L = e.L; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const pz = e.p | 0; const Y = Y0 + Math.abs(st) * 0.04 + CROWD_DY[pz] * s;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
+      if (pz === 5) { M.b.makeRotationX(-Math.PI / 2); M.root.multiply(M.b); } // (lying on the ground: the whole body laid down)
       // (from afar, the colour of what they wear over all: the mantle of their standing, the apron-dress, the undyed fleece —
       // the same clothes the fine body has, so a street of nobles and a street of the plain people read apart from far off)
       // (the colours kept with the portrait: crowdLook)
       M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, e.cF);
       M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, e.cS);
       M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, e.cH);
-      for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, e.cL); }
+      // (the legs by the posture: stepping; straight out before the seated; folded back under the kneeling)
+      const lx = pz === 1 ? -1.5 : pz === 2 ? 1.45 : 0;
+      for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX(lx + (sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, e.cL); }
+      // (the arms: raised, or bent up to the face)
+      if (pz === 3 || pz === 4) for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.22 : 0.22, 1.42, 0.02); M.a.multiply(M.b);
+        if (pz === 3) M.c.makeRotationZ((sd ? -1 : 1) * (Math.PI - 0.3 - 0.12 * Math.sin(tnow * 3 + v.id + sd))); else { M.c.makeRotationX(-2.55); M.b.makeRotationZ((sd ? 1 : -1) * 0.45); M.c.premultiply(M.b); }
+        M.a.multiply(M.c); crowdArms[sd].setMatrixAt(ca, M.a); crowdArms[sd].setColorAt(ca, e.cF); if (sd) ca++; }
       c++;
     }
-    crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; crowdArms[0].count = crowdArms[1].count = ca; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs, ...crowdArms]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.crowd = c; if (CROWD.size > 4 * MAXC) for (const [id, e] of CROWD) if (vt - e.t > 6) CROWD.delete(id); // (the portraits of those gone from the crowd: let go)
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx; P3.culled = culled;

@@ -70,6 +70,8 @@
     if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || Anim.CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' || V3.runs(v) ? 'run' : 'walk'; }
     if (v.downT && v.downT > G.S.clock) return 'sleep';
     // (the act's own gesture, where there is a clip of it — the axe, the pick, the rod, the word, the prayer: anim-clips.js)
+    // (a part in a scene of the world — the mourner at the grave, the child at the house's dog —: the reader's, D-607)
+    const sr = V3.sceneRole(v); if (sr) return sr;
     const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c;
     const a = Anim.ACT[v.act]; if (a && a !== 'run') return a;
     // (an act of the society's vocabulary with no gesture of its own: its family's pose — social-clips.js, D-603)
@@ -134,7 +136,7 @@
   // their id — or at once when it was never made: what the animator reads (I.porte) between two readings is the last one
   // — and with it the idle's context (s.ctx) and whom they look at (s.lookId: near, the drawn ones' [id, X, Z])
   V3.read = function (s, v, now, near) {
-    if (!s.porte || !(now - s.pt < 0.45 + (v.id % 9) * 0.015)) { s.porte = V3.porteOf(v, s.porte || {}); s.pt = now; if (near) V3.lookPick(s, v, near, now); s.ctx = V3.ctxOf(v, s.porte, s, s.ctx || {}); }
+    if (!s.porte || !(now - s.pt < 0.45 + (v.id % 9) * 0.015)) { s.porte = V3.porteOf(v, s.porte || {}); s.pt = now; if (near) V3.lookPick(s, v, near, now); s.ctx = V3.ctxOf(v, s.porte, s, s.ctx || {}); s.sc = V3.scene(v, near, s.sc || {}); }
     return s.porte;
   };
   // the mood beneath a face (−1..1): the society's (G.Indole.humor — neutral until the 22b fills it); until then, read from the life:
@@ -189,6 +191,13 @@
     let da = Math.atan2(az, ax) - yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
     return Math.abs(da) < 1.9 ? -G.clamp(da, -1.05, 1.05) : 0;
   };
+  // (the turn of the head toward a scene's focus: anywhere in front up to 40 m — the grave across the cemetery, the scaffold over the
+  // crowd; behind them, they do not turn)
+  V3.lookFar = function (yaw, X, Z, p) {
+    const ax = p.X - X, az = p.Z - Z, ad = Math.hypot(ax, az); if (ad >= 40 || ad <= 0.3) return 0;
+    let da = Math.atan2(az, ax) - yaw; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+    return Math.abs(da) < 1.9 ? -G.clamp(da, -1.05, 1.05) : 0;
+  };
   // the one a person is with, by the errand the world gave them (the talk, the visit, the courting: t.id is the other)
   const WITH = new Set(['talk', 'social', 'court', 'visit', 'amor', 'adeus', 'contato']);
   // (and the two of an act of the society: the one held for it — the task 'duo' — and the one who began it, by its part: t.papel)
@@ -219,6 +228,46 @@
     r.k = e.hands && (!e.reach || d <= e.reach) ? A.duoW(e, C ? u : 0.5) : 0; // (the hands on the other, or not this far apart)
     return r;
   };
+  // ------------------------------ the scenes of the world (22c fase 5, D-607) ------------------------------
+  // A scene is the world's: who is in it (their task), the part of each (the act the world gives), and its focus — the grave of the
+  // funeral, the scaffold of the sentence, the ring of the feast, the one chased in the game of tag, the soldiers' drill ground (the
+  // middle of those drilling), the house's dog for its child. The reader only finds the focus (in the view's metres: X, Z) and, where
+  // the world gives everyone the same act, the part by who each one is: at the grave the kin weep — on their knees, the tender ones —,
+  // the others bow the head or join the hands, by the id. The phase of each is each one's own (the clock that begins at their own
+  // place and keeps apart from a neighbour's, D-599); only reads (rule 213)
+  const TLm = () => (G.Space && G.Space.TILE) || 4;
+  const MID = (near, ok, v) => { let x = 0, z = 0, n = 0; if (near) for (const e of near) { const o = G.S.villagers.get(e[0]); if (o && o !== v && ok(o)) { x += e[1]; z += e[2]; n++; } } return n ? [x / n, z / n] : null; };
+  const SCENE = V3.SCENE = {
+    funeral: (v, t) => { const b = G.S.buildings.get(t.id); return b ? ['luto', b.x, b.y, 1] : null; },
+    justice: (v, t) => { if (t.role !== 'watch') return null; const e = (G.S.execs || []).find(q => q.id === t.j); return e ? ['cadafalso', e.x, e.y, 1] : null; },
+    fest: (v, t, near) => { const m = MID(near, o => o.task && o.task.type === 'fest' && o.task.fid === t.fid); return m ? ['festa', m[0], m[1], 0] : null; },
+    play: (v, t, near) => { const c = t.chase ? G.S.villagers.get(t.chase) : null; if (c) return ['pega', c.x, c.y, 1]; const m = MID(near, o => o.task && o.task.type === 'play'); return m ? ['pega', m[0], m[1], 0] : null; },
+    drill: (v, t, near) => { const m = MID(near, o => o.task && o.task.type === 'drill' && o.set === v.set); return m ? ['treino', m[0], m[1], 0] : null; },
+  };
+  // the scene a person is in, kept in the view's memory (out): k the kind, X Z the focus in the view's metres, or k '' for none
+  V3.scene = function (v, near, out) {
+    const r = out || {}; r.k = ''; r.dog = 0; const t = v.task; const f = t && SCENE[t.type]; const m = f ? f(v, t, near) : null;
+    if (m) { r.k = m[0]; const k = m[3] ? TLm() : 1; r.X = m[1] * k; r.Z = m[2] * k; return r; }
+    // (the house's dog the world has playing with this child — pets.js: the dog's kid —, near and the child standing)
+    const d = V3.dogOf(v); if (d) { r.k = 'cao'; r.X = d.x * TLm(); r.Z = d.y * TLm(); r.dog = d.id; }
+    return r;
+  };
+  // (the dog of the child's house the world has with them: within 2 m, the child not on the move — G.Animals.near, only read)
+  V3.dogOf = function (v) {
+    if (!(v.age >= 2 && v.age < 13) || v.moving || v.inside || v.sleeping || !G.Animals || !G.Animals.near) return null; let dog = null;
+    G.Animals.near(v.x, v.y, 1, a => { if (!dog && a.kind === 'cao' && !a.dead && a.kid === v.id && a.home === v.home && (a.x - v.x) ** 2 + (a.y - v.y) ** 2 < 0.25) dog = a; }); return dog;
+  };
+  // the part of a person in the scene they are in (null: the act's own): the mourner by kin and by heart; the child at the dog
+  V3.sceneRole = function (v) {
+    const t = v.task; if (!t) return null;
+    if (t.type === 'funeral' && v.act === 'mourn') {
+      const tender = G.Indole && G.Indole.de && G.Indole.de(v) ? G.Indole.faceta(v, 'empatico') : 0.5;
+      if (v.mourn > 0) return tender > 0.6 && v.age < 70 ? 'ato-chorar-joelhos' : 'mourn';
+      return G.hash(v.id * 13 + 5) < 0.5 ? 'ato-luto-roda' : 'mourn';
+    }
+    if (!v.act && (t.type === 'play' || (t.type === 'family' && t.play)) && !v.moving && V3.dogOf(v)) return 'crianca-cao';
+    return null;
+  };
   // (what the greeting reads: the people and the standing of the two — G.Fac's people, the group, the captive)
   V3.duoCtx = function (v, w, out) {
     const c = out || {}; const fv = G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null, fw = G.Fac && G.Fac.ofV ? G.Fac.ofV(w) : null;
@@ -231,6 +280,8 @@
     const b = V3.lookFor(s.yaw, s.X, s.Z, av, st); if (b) return b;
     const o = V3.partnerOf(v); const p = o && at ? at(o.id) : null;
     if (p) return V3.lookFor(s.yaw, s.X, s.Z, p, st);
+    // (the focus of the scene they are in — the grave, the scaffold, the ring of the feast, the one they chase, the house's dog —, D-607)
+    if (s.sc && s.sc.k && st !== 'run' && st !== 'sleep') { const w = V3.lookFar(s.yaw, s.X, s.Z, s.sc); if (w) return w; }
     // (22c fase 2, D-600: someone known or of renown passing — the reader's choice, s.lookId, a glance of a few seconds —; else
     // the eyes and the head wander a little, each one on their own beat: G.hash of the id and of the moment, never a roll)
     const q = s.lookId && at ? at(s.lookId) : null; if (q) { const w = V3.lookFor(s.yaw, s.X, s.Z, q, st); if (w) return w; }

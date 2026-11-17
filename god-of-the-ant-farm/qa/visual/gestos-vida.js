@@ -31,7 +31,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 for (const f of ['js/interacao-clips.js', 'js/trabalho-clips.js', 'js/combate-clips.js']) try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); } catch (e) { console.log('(sem ' + f + ': ' + e.message + ')'); }
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null; const on = k => !ONLY || ONLY.has(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | gestos-vida ${name} | ${info}`); if (!c) fails.push(name); };
-const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js', 'js/duo-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
+const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js', 'js/duo-clips.js', 'js/grupo-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
 const ids = Object.keys(A.CLIPS).filter(id => (process.env.GRUPO !== '22c' || OURS.has(id)) && (!process.env.CLIPES || process.env.CLIPES.split(',').includes(id))).sort();
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
 // the bodies: a man and a woman at three ages — the size of the age (People3D's lookFill: a child of 8 is 1.2 m, an elder of 75 1.68 m)
