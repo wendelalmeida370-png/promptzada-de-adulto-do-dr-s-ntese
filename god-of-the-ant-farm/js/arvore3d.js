@@ -621,22 +621,11 @@
       const oid = S.objAt[i]; if (!oid) continue;
       const r = S.rocks.get(oid);
       if (r) {
-        // (a boulder: lit on top, darker below; the stone's own grain and moss on its top in the wet lands, snow in the
-        // cold — drawn by the plants' material from its mark)
-        const base = rockBase(r, i);
-        const cold = snowAt(i) > 0.4; const sty = G.Biome && G.Biome.style ? G.Biome.style(i) : 'grass';
-        const moss = r.meteor || cold || sty === 'dune' || sty === 'savanna' ? 0 : sty === 'jungle' || sty === 'swamp' || sty === 'taiga' ? 0.85 : 0.45;
-        // (its faces softened a little in the light; a stone beside the big one, half sunk)
-        g.sph = [r.x * TL, W.groundH(r.x, r.y) * HM, r.y * TL, 0.35];
-        // (the shape is the Space's: the feet stand on these very faces)
-        const [big, small] = G.Space.stones(r);
-        const col = (X, Y, Z, nx, ny) => { let c = G.lerpColor([base[0] * 0.74, base[1] * 0.73, base[2] * 0.74], base, G.clamp(ny * 0.6 + 0.5, 0, 1)); if (ny > 0.55 && cold) c = G.lerpColor(c, SNOW, 0.8); return c; };
-        if (small) g.put(SH.dode, R3.mat(small.X, small.Y, small.Z, small.ry, small.sx, small.sy, small.sz), col, ROCK - moss * 0.7);
-        g.put(SH.dode, R3.mat(big.X, big.Y, big.Z, big.ry, big.sx, big.sy, big.sz), col, ROCK - moss);
-        g.sph = null;
-        // (and, near, the stones broken off it lying round its foot, sunk in the ground)
-        if (gl) for (let q = 0; q < 5; q++) { const a = G.hash(oid * 7 + q) * TAU, d = big.sx * (0.55 + G.hash(oid * 11 + q) * 0.5), s = 0.08 + G.hash(oid * 13 + q) * 0.12; const px = big.X + Math.cos(a) * d, pz = big.Z + Math.sin(a) * d;
-          if (!W.inb(px / TL, pz / TL) || S.road[W.idx(px / TL, pz / TL)]) continue; g.put(SH.dode, R3.mat(px, G.Space.floorY(px, pz) - s * 0.3, pz, a * 3, s * 1.3, s * 0.8, s), col, ROCK - moss * 0.5); }
+        // (21b: the boulder itself and the stones broken off round its foot are the relief's — G.Geo3D, js/geo3d.js, by instancing, in the
+        // bands of its rock; here only the grass round its foot)
+        const sty = G.Biome && G.Biome.style ? G.Biome.style(i) : 'grass';
+        const moss = r.meteor || snowAt(i) > 0.4 || sty === 'dune' || sty === 'savanna' ? 0 : sty === 'jungle' || sty === 'swamp' || sty === 'taiga' ? 0.85 : 0.45;
+        const [big] = G.Space.stones(r);
         // (and, where the land is green, the grass growing up round its foot: the stone sits in the ground, not on it)
         if (gl && moss > 0 && !S.road[i]) { const tc = tileCol(i, x, y); const root = calm([tc[0] * 0.62, tc[1] * 0.72, tc[2] * 0.55], 0.2), tip = calm([Math.min(255, tc[0] * 0.92 + 16), Math.min(255, tc[1] * 1.02 + 10), tc[2] * 0.82], 0.2);
           // (a ring of tufts hugging its foot — round the stone's own outline, just outside it —, their blades leaning out

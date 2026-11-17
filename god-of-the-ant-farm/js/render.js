@@ -521,6 +521,7 @@
     else c = COL.grass.slice();
     const bio = S.temp && S.biome ? S.biome[i] : -1;
     if (bio >= 0) c = G.Biome.groundColor(i, t, c).slice();
+    if (t === T.SAND && G.Geo) c = G.lerpColor(c, G.Geo.rock(i).sand, 0.3); // (21b: the beach the colour of the rock the sea grinds it from)
     if ((t === T.GRASS || t === T.MEADOW) && bio !== 1) {
       const f = S.fert[i];
       c = G.lerpColor(c, bio >= 0 ? [c[0] * 0.8, c[1] * 0.86, c[2] * 0.8] : [96, 150, 70], G.clamp((th - G.SEA) / 8, 0, 1) * 0.5);
@@ -537,27 +538,57 @@
   // (the ground's own colour, the same one the 3D view of the body uses: the land looks like itself from both heights)
   R.tileColor = (i, x, y) => tileColor(i, x, y);
   R.rockColor = (i, rg) => rockColor(i, null, rg);
-  // bare rock: granite, red sandstone in the dry lands, snow clinging where it is cold
+  // bare rock: the stone the place is made of (21b: G.Geo — granite, schist, sandstone, limestone, basalt), snow clinging where it is cold
   function rockColor(i, base, rg) {
     const S = G.S; const b = S.biome ? S.biome[i] : -1; const tp = S.temp ? S.temp[i] / 255 : 0.5;
     let c = [140, 134, 124];
-    if (b === 6 || b === 5) c = [186, 124, 86];
+    if (G.Geo) c = G.Geo.rock(i).col.slice();
+    else if (b === 6 || b === 5) c = [186, 124, 86];
     else if (b === 4) c = [118, 116, 100];
     c = G.lerpColor(c, [c[0] * 0.86, c[1] * 0.9, c[2] * 0.96], G.hash(i * 13 + 7));
     if (tp < 0.24) c = G.lerpColor(c, [226, 232, 240], G.clamp((0.24 - tp) * 6, 0, 0.7) * (rg > 3.5 ? 0.6 : 1));
     return c;
   }
+  // 21b: the layers of the rock across a steep face, in their own colours (D-495): the bands of the rock of the place at the height of its
+  // layers — the world's height plus the fold, G.Geo, the very bands the 3D draws on the same face —, each a strip of the tile between two
+  // levels of the layers, darker in the shade of the face as the face is; then the joints as lines
+  const sLay = [0, 0, 0, 0];
+  function bands(c, x, y, i, h00, h10, h11, h01, light) {
+    const Ge = G.Geo; const HMm = G.Space ? G.Space.HM : 1.5; const r = Ge.rockAt(i); const R = Ge.ROCKS[r]; const tp = G.S.temp ? G.S.temp[i] / 255 : 0.5;
+    const cold = tp < 0.24 ? G.clamp((0.24 - tp) * 6, 0, 0.7) : 0;
+    // (each corner's height in the layers, metres)
+    const P = [[x, y, h00], [x + 1, y, h10], [x + 1, y + 1, h11], [x, y + 1, h01]].map(p => [p[0], p[1], p[2], p[2] * HMm + Ge.fold(p[0], p[1])]);
+    const lo = Math.min(...P.map(p => p[3])), hi = Math.max(...P.map(p => p[3])); if (hi - lo < 0.05) return;
+    // (the levels: the joints between the bands crossing the tile)
+    const lv = [lo]; let s = lo; for (let k = 0; k < 40 && s < hi; k++) { const B = Ge.bandOf(r, s + 1e-3); s = B.s0 + B.t; if (s < hi) lv.push(s); } lv.push(hi);
+    for (let k = 0; k < lv.length - 1; k++) {
+      const a = lv[k], b = lv[k + 1]; const mid = (a + b) / 2; Ge.sample(r, mid, sLay);
+      let col = [sLay[0], sLay[1], sLay[2]]; if (cold) col = G.lerpColor(col, [226, 232, 240], cold * 0.8);
+      const f = light * (0.88 + 0.12 * sLay[3] / 255);
+      // (the part of the quad between the two levels: clipped along its edges, where the height runs straight)
+      let poly = P.map(p => [p[0], p[1], p[2], p[3]]);
+      for (const [lim, up] of [[a, true], [b, false]]) { const out = []; for (let q = 0; q < poly.length; q++) { const A = poly[q], B = poly[(q + 1) % poly.length]; const ina = up ? A[3] >= lim : A[3] <= lim, inb = up ? B[3] >= lim : B[3] <= lim;
+        if (ina) out.push(A); if (ina !== inb) { const t = (lim - A[3]) / (B[3] - A[3]); out.push([A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t, lim]); } } poly = out; if (poly.length < 3) break; }
+      if (poly.length < 3) continue;
+      c.fillStyle = G.rgb([col[0] * f, col[1] * f, col[2] * f]); c.beginPath(); for (let q = 0; q < poly.length; q++) { const p = proj(poly[q][0], poly[q][1], poly[q][2]); if (q) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]); } c.closePath(); c.fill();
+    }
+  }
   // layers of rock drawn as contour lines across a steep face
-  function strata(c, x, y, i, h00, h10, h11, h01, col) {
-    const P = [[x, y, h00], [x + 1, y, h10], [x + 1, y + 1, h11], [x, y + 1, h01]];
-    const lo = Math.min(h00, h10, h11, h01), hi = Math.max(h00, h10, h11, h01);
+  function strata(c, x, y, i, h00, h10, h11, h01, col, light) {
+    // (21b: with the rock of the place, its bands and the joints between them — the levels of its layers; without, contours every 1.15)
+    const geo = G.Geo && light !== undefined; const HMm = G.Space ? G.Space.HM : 1.5;
+    if (geo) bands(c, x, y, i, h00, h10, h11, h01, light);
+    const P = [[x, y, h00], [x + 1, y, h10], [x + 1, y + 1, h11], [x, y + 1, h01]].map(p => [p[0], p[1], p[2], geo ? p[2] * HMm + G.Geo.fold(p[0], p[1]) : p[2]]);
+    const lo = Math.min(...P.map(p => p[3])), hi = Math.max(...P.map(p => p[3]));
     const step = 1.15, off = (G.hash(Math.floor(x / 5) * 31 + Math.floor(y / 5) * 17) * step);
     const dark = G.rgb([col[0] * 0.72, col[1] * 0.7, col[2] * 0.68]), lite = G.rgb([Math.min(255, col[0] * 1.14), Math.min(255, col[1] * 1.12), Math.min(255, col[2] * 1.1)]);
-    for (let L = Math.ceil((lo - off) / step) * step + off; L < hi; L += step) {
+    const levels = []; if (geo) { const r = G.Geo.rockAt(i); let s = lo; for (let k = 0; k < 40; k++) { const B = G.Geo.bandOf(r, s + 1e-3); s = B.s0 + B.t; if (s >= hi) break; levels.push(s); } }
+    else for (let L = Math.ceil((lo - off) / step) * step + off; L < hi; L += step) levels.push(L);
+    for (const L of levels) {
       const pts = [];
       for (let k = 0; k < 4; k++) {
         const p = P[k], q = P[(k + 1) % 4];
-        if ((p[2] - L) * (q[2] - L) < 0) { const f = (L - p[2]) / (q[2] - p[2]); pts.push(proj(p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f, L)); }
+        if ((p[3] - L) * (q[3] - L) < 0) { const f = (L - p[3]) / (q[3] - p[3]); pts.push(proj(p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f, p[2] + (q[2] - p[2]) * f)); }
       }
       if (pts.length < 2) continue;
       c.lineWidth = 0.55; c.strokeStyle = dark; c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); c.lineTo(pts[1][0], pts[1][1]); if (pts.length === 4) { c.moveTo(pts[2][0], pts[2][1]); c.lineTo(pts[3][0], pts[3][1]); } c.stroke();
@@ -734,7 +765,7 @@
     const f = G.rgb(col);
     c.fillStyle = f; c.strokeStyle = f; c.lineWidth = 0.7;
     c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.lineTo(e[0], e[1]); c.closePath(); c.fill(); c.stroke();
-    if (steep) { strata(c, x, y, i, h00, h10, h11, h01, col); if (!S.road[i]) return; }
+    if (steep) { strata(c, x, y, i, h00, h10, h11, h01, col, light); if (!S.road[i]) return; }
     if (S.road[i] && S.burnt[i] <= 0 && S.scar[i] <= 0) { drawRoad(c, x, y, i, S.road[i], light); return; }
     // details
     const lv = G.pathLevel(S.wear[i]);

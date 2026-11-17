@@ -1384,6 +1384,36 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 { for (const f of ['mata.js', 'mata3d.js', 'arvore3d.js', 'planta-formas.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\b(t|tr|tree|v|a|b|o)\.(size|stage|x|y|kind|wood|fruit|chop|claim|z|tree|perch)\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a mata só lê: ${f}:${k + 1} escreve num objeto do mundo (D-470): ${l.trim().slice(0, 110)}`); }); }
 // === 21b: o relevo ===
+// 176. "o relevo da fase A só se vê" (D-465, D-490): na fase A nenhum módulo do mundo lê o G.Geo nem o entalhe dos penhascos (Sp.cliffAt) —
+// só o que só se vê (a lista LOOK) e o próprio geo.js; na fase B, a geração que ler a rocha pergunta a ele, e esta regra muda com o
+// protocolo inteiro
+{ const GEO_OK = new Set(LOOK.concat(['geo.js']));
+  for (const f of files) { if (GEO_OK.has(f)) continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Geo\b|\bcliffAt\(/.test(c)) fails.push(`o relevo só se vê: ${f}:${k + 1} lê o G.Geo ou o entalhe dos penhascos num módulo do mundo (a fase A não muda o mundo; D-490): ${l.trim().slice(0, 110)}`); }); } }
+// 177. "o entalhe não é o chão dos pés" (D-492): o chão onde o corpo e as portas pisam é o do mundo — o Sp.footAt, o Sp.drawnAt, o
+// Sp.stepTop, o Sp.entryFits e o Sp.doorFlight nunca perguntam pelo entalhe (Sp.cliffAt, G.Geo.cliffAt), nem o corpo (avatar.js, possess.js,
+// interact.js, cam3d.js); só o desenho dos escaladores e dos ninhos sobre um penhasco (people3d.js, things3d.js) e o próprio desenho do relevo
+{ const sp = (src['space.js'] || []).join('\n');
+  for (const fn of ['footAt', 'drawnAt', 'stepTop', 'entryFits', 'doorFlight', 'surface', 'bedAt', 'deckAt']) { const m = sp.match(new RegExp('Sp\\.' + fn + ' = function[\\s\\S]*?\\n  \\};')); if (m && /cliffAt|G\.Geo\b/.test(m[0])) fails.push(`o entalhe não é o chão: o Sp.${fn} do space.js pergunta pelo entalhe dos penhascos (D-492)`); }
+  for (const f of ['avatar.js', 'possess.js', 'interact.js', 'cam3d.js', 'input3d.js', 'modes.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/cliffAt|G\.Geo\b/.test(c)) fails.push(`o entalhe não é o chão: ${f}:${k + 1} o corpo pergunta pelo entalhe dos penhascos (o corpo pisa o chão do mundo; D-492): ${l.trim().slice(0, 110)}`); }); }
+// 178. "a pedra do mundo tem a forma dos pés" (D-493): as pedras do mundo (S.rocks) são desenhadas pelo relevo (geo3d.js) na forma que o
+// corpo pisa (G.Space.stones) — e o desenho das plantas (arvore3d.js) não as desenha mais (uma pedra desenhada duas vezes)
+{ const g3 = (src['geo3d.js'] || []).join('\n'), a3 = (src['arvore3d.js'] || []).join('\n');
+  if (g3 && !/G\.Space\.stones\(r\)/.test(g3)) fails.push('a pedra do mundo: o geo3d.js não desenha as pedras do mundo pela forma do G.Space.stones (D-493)');
+  if (a3 && /g\.put\(SH\.dode,[^\n]*ROCK/.test(a3)) fails.push('a pedra do mundo: o arvore3d.js ainda desenha as pedras do mundo (são do relevo, geo3d.js; D-493)'); }
+// 179. "o relevo pelas qualidades sem mexer na tabela" (D-498): os campos do relevo (geoCarve, geoCarveR, geoForm, geoFar, geoHor, geoKit) entram nas
+// qualidades pelo G.Realm.qualAdd do geo3d.js
+{ const g3 = (src['geo3d.js'] || []).join('\n'); for (const k of ['geoCarve', 'geoCarveR', 'geoForm', 'geoFar', 'geoHor', 'geoKit']) if (g3 && !new RegExp("qa\\('" + k + "'").test(g3)) fails.push(`as qualidades do relevo: o geo3d.js não acrescenta o campo ${k} pelo qualAdd (D-498)`); }
+// 180. "a terra além da borda é a do mapa" (D-467, D-497): só os mapas de continente e de istmo têm terra desenhada além da borda (a das
+// ilhas acaba no mar, como as expedições contam); só o desenho pergunta por ela (G.Geo.beyondH no geo3d.js)
+{ const ge = (src['geo.js'] || []).join('\n');
+  if (ge && !/const LAND_TYPES = \{ continente: 1, istmo: 1 \};/.test(ge)) fails.push('a terra além da borda: o geo.js desenha terra além da borda num tipo de mapa que não é continente nem istmo (D-467)');
+  const g3h = (src['geo3d.js'] || []).join('\n'); if (g3h && !/G3D\.partInto = function[^]*?G3D\.horizon\(\);/.test(g3h)) fails.push('a terra além da borda: o geo3d.js não a faz quando o pedaço de perto é feito (G3D.horizon no partInto; L-1553)');
+  for (const f of files) { if (f === 'geo.js' || f === 'geo3d.js') continue; src[f].forEach((l, k) => { if (/\bbeyondH\(/.test(l.replace(/(^|\s)\/\/\s.*$/, ''))) fails.push(`a terra além da borda: ${f}:${k + 1} pergunta pela terra além da borda (só o desenho do relevo; D-497): ${l.trim().slice(0, 110)}`); }); } }
+// 181. "a mesma rocha nas duas vistas" (D-495): a cor da rocha e as camadas da vista do deus (render.js) e as do 3D (ground3d.js, geo3d.js)
+// vêm do mesmo G.Geo — a rocha de cada casa, a dobra e a tabela das camadas —, nunca de uma conta de cada vista
+{ const rd = (src['render.js'] || []).join('\n'), gr = (src['ground3d.js'] || []).join('\n');
+  if (rd && (!/G\.Geo\.rock\(i\)/.test(rd) || !/Ge\.bandOf\(r, /.test(rd) || !/G\.Geo\.fold\(/.test(rd))) fails.push('a mesma rocha: a vista do deus (render.js) não tira a rocha e as camadas do G.Geo (D-495)');
+  if (gr && (!/G\.Geo\.table\(\)/.test(gr) || !/Ge\.rockAt\(i\)/.test(gr) || !/Ge\.foldAt\(i\)/.test(gr))) fails.push('a mesma rocha: o chão do 3D (ground3d.js) não tira a rocha, a dobra e as camadas do G.Geo (D-495)'); }
 // === 21c: a água ===
 // === 21d: o céu ===
 // 188. "a luz é do céu" (D-466, D-520): os uniformes do ar e da luz (GX) e a luz da hora (a força e a cor do sol e do céu, a

@@ -335,6 +335,7 @@
       if (m.kind === 'mina') continue; const X = (m.x + 0.5) * TL(), Z = (m.y + 0.5) * TL(); if (!near2(X, Z, f, Math.min(R, 150))) continue;
       const kind = G.Caves.mouthKind ? G.Caves.mouthKind(m, cv) : m.kind; const Y = W.hAt(m.x + 0.5, m.y + 0.5) * HM;
       const pit = kind === 'poco' || kind === 'poço' || kind === 'dolina';
+      if (!pit && G.Geo3D && G.Geo3D.mouthsIn) continue; // (21b: a mouth in a slope is cut into the hill by the relief — G.Geo3D, D-494)
       // (the way into the slope: toward where the land rises)
       const hx = W.hAt(m.x + 1.5, m.y + 0.5) - W.hAt(m.x - 0.5, m.y + 0.5), hz = W.hAt(m.x + 0.5, m.y + 1.5) - W.hAt(m.x + 0.5, m.y - 0.5);
       const yaw = m.fx || m.fy ? Math.atan2(-m.fy, -m.fx) : Math.atan2(hz, hx);
@@ -429,7 +430,7 @@
       if (n.type === 'tree') { const tr = S.trees.get(n.host); if (!tr) continue; x = tr.x; y = tr.y; up = 3 + tr.size * 3.2; const an = G.Arvore3D && G.Arvore3D.anchor(tr, 'ninho'); if (an) up = an[1] - gY(x, y); } // (21a: up in the crown as drawn — D-476)
       else if (n.type === 'roof') { const b = S.buildings.get(n.host); if (!b) continue; x = b.x + b.w / 2; y = b.y + b.h / 2; up = (G.Build3D ? G.Build3D.heightAt(W.idx(x, y)) : 4) + 0.2; }
       if (x === undefined || !W.inb(x, y)) continue; const X = x * TL(), Z = y * TL(); if (!near2(X, Z, f, Math.min(R, 70))) continue;
-      put('nest', X, gY(x, y) + up, Z, 0, 1, 1, 1, '#7a5a3a');
+      put('nest', X, (n.type === 'cliff' && G.Space.cliffAt && G.S.cliff && G.S.cliff[W.idx(x, y)] ? G.Space.cliffAt(x, y) : gY(x, y)) + up, Z, 0, 1, 1, 1, '#7a5a3a'); // (21b: on the face of a cliff as it is drawn)
     }
   }
 
