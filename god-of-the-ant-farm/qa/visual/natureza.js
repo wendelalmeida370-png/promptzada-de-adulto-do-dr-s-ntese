@@ -103,8 +103,14 @@ const VIEWS = [
       if (place === 'fall') {
         const fl = (S.relief.falls || []).filter(f => !f.sub).sort((a, b) => (b.tot || b.drop) - (a.tot || a.drop) || a.y - b.y || a.x - b.x)[0];
         if (fl) { const nx = fl.tx - fl.x, ny = fl.ty - fl.y; look = [fl.x + 0.5 + nx * 0.5, fl.y + 0.5 + ny * 0.5, S.wl[fl.y * N + fl.x] - (fl.tot || fl.drop) * 0.45];
-          // (the body downstream of the pool, a few tiles off, on dry walkable ground; the nearest to the line of the fall)
-          let bs = 1e9; for (let r = 2; r <= 7; r++) for (let sd = -4; sd <= 4; sd++) { const x = fl.tx + nx * r + (ny ? sd : 0), y = fl.ty + ny * r + (nx ? sd : 0); if (!walkAt(x, y)) continue; const sc = Math.abs(sd) * 1.6 + Math.abs(r - 3.5); if (sc < bs) { bs = sc; at = [x + 0.5, y + 0.5]; } } }
+          // (the body downstream of the pool, a few tiles off, on dry walkable ground low by the water — not up on a bank — with room behind it
+          // for the eye (no slope of the gorge between) and nothing higher than the two between it and the fall: the nearest to the line of it)
+          const HM = 1.5, lx = look[0], ly = look[1];
+          let bs = 1e9; for (let r = 2; r <= 9; r++) for (let sd = -5; sd <= 5; sd++) { const x = fl.tx + nx * r + (ny ? sd : 0), y = fl.ty + ny * r + (nx ? sd : 0); if (!walkAt(x, y)) continue;
+            const bx = x + 0.5, by = y + 0.5, gy = W.groundH(bx, by); const dl = Math.hypot(lx - bx, ly - by) || 1, ux = (lx - bx) / dl, uy = (ly - by) / dl;
+            const cx = bx - ux * dist / 4, cy = by - uy * dist / 4; if (!W.inb(cx, cy) || W.hAt(cx, cy) > gy + 1.1) continue;
+            let blocked = false; for (let q = 1; q < 8; q++) { const px = bx + (lx - bx) * q / 8, py = by + (ly - by) * q / 8; if (W.hAt(px, py) > Math.max(gy, S.wl[fl.y * N + fl.x]) + 0.6) { blocked = true; break; } } if (blocked) continue;
+            const sc = Math.abs(sd) * 1.2 + Math.abs(r - 4.5) + Math.max(0, gy - S.wl[fl.ty * N + fl.tx]) * 2; if (sc < bs) { bs = sc; at = [x + 0.5, y + 0.5]; } } }
       } else if (place === 'river') {
         // (a narrow river running down a slope: river tiles round it in a line, its levels falling, a bank to stand on)
         at = best((i, x, y) => { let n = 0, fall = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = W.inb(x + dx, y + dy) ? (y + dy) * N + x + dx : -1; if (j >= 0 && S.type[j] === T.RIVER) { n++; } }
@@ -125,8 +131,8 @@ const VIEWS = [
       if (opt.rain) { S.weather.rain = opt.rain; S.weather.storm = 0; }
       G.Avatar.place(at[0], at[1]); S.time = hour; if (opt.rain) S.weather.rain = opt.rain; f(30); if (opt.rain) S.weather.rain = opt.rain;
       document.querySelectorAll('#inc-hud, #hud, #inc-label').forEach(e => e.style.visibility = 'hidden');
-      const st = G.Avatar.state(); st.yaw = 0.3;
-      G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; f(40); st.yaw = 0.3; G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist;
+      const st = G.Avatar.state(); const byaw = /^agua/.test(place) || look ? yaw : 0.3; st.yaw = byaw; // (21c: in the water's views the body looks where the eye looks)
+      G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.dist = dist; G.Cam3D.cur = dist; f(40); st.yaw = byaw; G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist;
       // (the photo: drawn for real, three frames — the first one makes the shaders)
       quiet(false); const tq = performance.now(); for (let k = 0; k < 3; k++) { G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1); }
       const m = G.Realm.memory();
@@ -134,10 +140,12 @@ const VIEWS = [
       const chk = [].concat(G.Realm.floraCheck ? G.Realm.floraCheck(at[0], at[1], 14) : [], G.Grass3D && G.Grass3D.check ? G.Grass3D.check() : [], G.Mata3D && G.Mata3D.check ? G.Mata3D.check() : []);
       const mata = G.Mata3D ? { inst: G.Mata3D.stats.inst, tris: G.Mata3D.stats.tris, calls: G.Mata3D.stats.calls } : null;
       // (21c: the frame once all is made — the shaders compiled: its time, its calls and its triangles; what the water draws here)
-      let fms = 0; { const r = G.Realm.renderer(); const k0 = performance.now(); for (let k = 0; k < 4; k++) { G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1); } fms = Math.round((performance.now() - k0) / 4); }
+      let fms = 0, gms = 0; { const r = G.Realm.renderer(); const gl = r && r.getContext(); const k0 = performance.now(); for (let k = 0; k < 4; k++) { G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1); } fms = Math.round((performance.now() - k0) / 4);
+        // (and with the drawing waited for — gl.finish: the time the graphics (here, the software one) took, not only the orders given)
+        if (gl) { const k1 = performance.now(); for (let k = 0; k < 2; k++) { G.Cam3D.yaw = yaw; G.Cam3D.pitch = pitch; G.Cam3D.cur = dist; G.Main.frameFor(1); gl.finish(); } gms = Math.round((performance.now() - k1) / 2); } }
       const m2 = G.Realm.memory(); const agua = G.Agua3D ? Object.assign({}, G.Agua3D.stats, G.FX3D.water || {}, { check: G.Agua3D.check ? G.Agua3D.check().slice(0, 2) : [] }) : null;
       if (opt.rain) S.weather.rain = 0;
-      return { at: at.map(q => +q.toFixed(2)), yaw: +yaw.toFixed(2), frameMs: fms, calls2: m2 && m2.calls, tris2: m2 && m2.tris, agua, biome: G.Biome ? G.Biome.of(W.idx(at[0], at[1])) : -1, err: JSON.stringify(G.modErr), calls: m && m.calls, tris: m && m.tris, drawMs: Math.round((performance.now() - tq) / 3), checks: chk.length ? chk.slice(0, 3) : 0, mata };
+      return { at: at.map(q => +q.toFixed(2)), yaw: +yaw.toFixed(2), frameMs: fms, gpuMs: gms, calls2: m2 && m2.calls, tris2: m2 && m2.tris, agua, biome: G.Biome ? G.Biome.of(W.idx(at[0], at[1])) : -1, err: JSON.stringify(G.modErr), calls: m && m.calls, tris: m && m.tris, drawMs: Math.round((performance.now() - tq) / 3), checks: chk.length ? chk.slice(0, 3) : 0, mata };
     }, [w, place, yaw, pitch, dist, hour, world !== w, process.env.Q || 'media', SEED, opt || null]);
     world = w;
     if (info.skip) { log.push(`${name}: ${info.skip}`); console.log(log[log.length - 1]); continue; }
