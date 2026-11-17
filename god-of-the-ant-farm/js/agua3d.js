@@ -567,6 +567,8 @@ float aguaCloud(vec3 d, float t, vec3 wind, out float thick) {
   };
   function fallsGeo(x0, y0, w, h, far) {
     const S = G.S; const q = R3().Q(); const TL = G.Space.TILE;
+    // (from afar only the great falls, and only where the quality carries it: a call a chunk — the Média keeps its calls for what is near)
+    if (far && (q.aguaFall | 0) < 3) return null;
     const steps = G.Agua.steps(x0, y0, w, h).filter(s => !far || s.drop >= 1.5); if (!steps.length) return null;
     const P = [], Nn = [], Cc = [], F = [], Q = []; const fine = (q.aguaFall | 0) >= 3, apron = (q.aguaFall | 0) >= 2 && !far;
     const nU = far ? 2 : fine ? 6 : 4;

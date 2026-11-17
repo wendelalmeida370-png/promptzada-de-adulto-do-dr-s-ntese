@@ -129,8 +129,8 @@ if (on('g7')) {
   S = novo(); N = G.N; light(); const per = []; let fallT = 0, watT = 0, withF = 0; const t0 = process.hrtime.bigint();
   for (const h of buildAll()) { const ft = h.g.falls ? h.g.falls.attributes.position.count / 3 : 0, wt = h.g.water ? h.g.water.attributes.position.count / 3 : 0; fallT += ft; watT += wt; if (ft) { withF++; per.push(ft); } }
   const ms = Number(process.hrtime.bigint() - t0) / 1e6; per.sort((a, b) => b - a);
-  const far = buildAll(true).reduce((a, h) => a + (h.g.falls ? h.g.falls.attributes.position.count / 3 : 0), 0);
-  ok('g7', per[0] < 6000, `um mundo montanhoso de ${NC() * NC()} pedaços: a água ${watT} triângulos, as lâminas ${fallT} (${withF} pedaços com degrau — uma chamada a mais em cada; o mais cheio ${per[0]}, a mediana ${per[per.length >> 1]}); de longe, as lâminas das quedas ${far}; montar tudo ${ms.toFixed(0)} ms (${(ms / (NC() * NC())).toFixed(1)} por pedaço)`);
+  const farM = buildAll(true).reduce((a, h) => a + (h.g.falls ? 1 : 0), 0); R3.setQuality('alta'); const far = buildAll(true).reduce((a, h) => a + (h.g.falls ? h.g.falls.attributes.position.count / 3 : 0), 0); R3.setQuality('media');
+  ok('g7', per[0] < 6000 && farM === 0 && far > 0, `um mundo montanhoso de ${NC() * NC()} pedaços: a água ${watT} triângulos, as lâminas ${fallT} (${withF} pedaços com degrau — uma chamada a mais em cada; o mais cheio ${per[0]}, a mediana ${per[per.length >> 1]}); de longe, as lâminas das quedas ${far} triângulos na Alta e na Ultra (na Média e na Leve nenhuma: ${farM} chamadas); montar tudo ${ms.toFixed(0)} ms (${(ms / (NC() * NC())).toFixed(1)} por pedaço)`);
 }
 
 const er = M.erros(); const bad = Object.keys(er.mod).length || er.console.length;

@@ -635,7 +635,7 @@
       const r = u.r0[k] + (u.r1[k] - u.r0[k]) * Math.sqrt(f); const y = sea + (G.Agua ? G.Agua.waveY(u.x[k], u.z[k], t, w, 1, 9) : 0) + 0.05;
       M.a.makeScale(r, 1, r); M.a.setPosition(u.x[k], y, u.z[k]); wake.setMatrixAt(k, M.a); u.aT.array[k] = f; k++;
     }
-    wake.count = wakeN; wake.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aS.needsUpdate = true;
+    wake.count = wakeN; wake.visible = wakeN > 0; wake.instanceMatrix.needsUpdate = true; u.aT.needsUpdate = true; u.aS.needsUpdate = true;
   }
   const FALL = () => (G.Agua ? G.Agua.FALL : 1.2);
   function waterFX(dt, focus) {
