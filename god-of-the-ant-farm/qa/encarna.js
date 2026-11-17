@@ -81,7 +81,12 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
       // of a frame past 60 ms of the machine, and the parts that share the «cidade» after e3 lived another world on each machine
       // and on each run: T-262)
       f(n, ms) { for (let k = 0; k < n; k++) G.Main.frameFor(ms || 33, true); },
-      until(c, max, ms) { for (let k = 0; k < (max || 400); k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? max : -1; },
+      // (the ceiling of a wait, in frames of the world's time at D-015's 0,35: what it waits for — a meal, a load, the world's step
+      // that moves the body out of a house — is in the world's seconds, and at the slower time of the body of D-365 a frame is
+      // fewer of them; the ceiling only, never the condition, T-1394)
+      until(c, max, ms) { const n = Math.ceil((max || 400) * 0.35 / G.Space.TIME); for (let k = 0; k < n; k++) { if (c()) return k; G.Main.frameFor(ms || 33, true); } return c() ? n : -1; },
+      // (and the frames of a fixed wait for the world, the same way)
+      fw(n, ms) { E.f(Math.ceil(n * 0.35 / G.Space.TIME), ms); },
       enter(v) { if (!G.Modes.enter(v)) return false; return E.until(() => G.Modes.state === 'INC', 300) >= 0; },
       leave() { if (G.Modes.state === 'INC') G.Modes.leave('deus'); return E.until(() => G.Modes.state === 'GOD', 400) >= 0; },
       town: k => [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[k || 0],
@@ -513,7 +518,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // an S2 of the checker, the test's own doing: T-262)
     { const lotless = o => { const i = G.W.idx(Math.floor(o.x), Math.floor(o.y)); return !S.occ[i] && !S.wall[i]; };
       const v = __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y) && lotless(o))[0] || __E.adults(s, o => !o.aboard && !o.inside && G.W.walkableXY(o.x, o.y))[0] || __E.adults(s)[0]; __E.enter(v); __E.f(4); const x = Math.floor(v.x), y = Math.floor(v.y);
-      const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.f(60, 50);
+      const b = G.Village.addBuilding('house', x, y, v.set, true); if (b) G.W.touchWalk && G.W.touchWalk(); __E.fw(60, 50);
       out.building = { made: !!b, onIt: b ? (v.x >= b.x && v.x < b.x + b.w && v.y >= b.y && v.y < b.y + b.h && b.blocks) : null, walk: G.W.walkableXY(v.x, v.y), avatar: S.avatar && S.avatar.id === v.id };
       // the same on a ford (L-150): the water under the new building is no water to swim in — the building stops the feet, so
       // the world moves the body out like anyone (the swimmer's mark is for open water, which the world leaves alone, D-026)
