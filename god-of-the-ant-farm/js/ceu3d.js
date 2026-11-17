@@ -754,7 +754,8 @@ ${GXAIR}`;
     renderer.setClearColor(scene.fog.color);
     // (the eye opens under a closed canopy, as it does stepping into the woods — the canopy over the eye, from the map of the
     // air, read where the eye is and eased over the metres round it, never by the frames: the same eye, the same light)
-    L.expPlace = placeExp(camera.position); renderer.toneMappingExposure = L.exp * L.expPlace;
+    // (by day only: at night the eye is open already — and the exposure never past what the verifier allows)
+    L.expPlace = 1 + (placeExp(camera.position) - 1) * L.dayL; renderer.toneMappingExposure = Math.min(2.9, L.exp * L.expPlace);
     G.Build3D && G.Build3D.night(G.clamp((night - 0.25) * 1.6, 0, 1)); // (the windows light up as the dark comes)
     // the dome and the stars go with the eye; the key light's picture of the shadows over the ground round the body
     skyMesh.position.copy(camera.position); stars.position.copy(camera.position);
