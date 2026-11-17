@@ -107,8 +107,15 @@ if (run('g4')) {
   // (a damaged genome — cut short — is made again at the load, the same as the whole one would be)
   const one = [...G.S.villagers.values()][3]; const want = one.genoma; const dmg = JSON.parse(JSON.stringify(bare)); const ov = dmg.villagers.find(v => v.id === one.id); ov.genoma = 'abc';
   G.Save.apply(dmg); const fixed = G.S.villagers.get(one.id).genoma;
-  ok('g4 os saves de antes', all === people.length && same === g2.size && mxS < 3 && mxH < 5 && fixed === want && M.limpo(),
-    `a cidade pronta (sem genoma): ${all} de ${people.length} — vivos e mortos — ganham um ao abrir · aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
+  // (the verifier on the save filled from the looks: clean — the colour of who was born before is the one they had —; and a child
+  // born after with colour alleles from neither parent is still caught, L-1674)
+  const vq = () => QA.check().filter(q => q.sys === 'genoma'); const after = vq();
+  const kid = [...G.S.villagers.values()].find(v => G.person(v.mother) && G.person(v.father)); let caughtOld = null, caughtNew = null;
+  if (kid) { const keepG = kid.genoma, keepB = kid.born, A = Ge.alleles(keepG), Mo = Ge.alleles(G.person(kid.mother).genoma), mi = Ge.I.melanina * 2;
+    A[mi] = Math.abs(Mo[mi] - 0) + Math.abs(Mo[mi + 1] - 0) > Math.abs(Mo[mi] - 63) + Math.abs(Mo[mi + 1] - 63) ? 0 : 63; kid.genoma = Ge.encode(A);
+    caughtOld = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.born = G.mod('genoma.desde') + 1; caughtNew = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.genoma = keepG; kid.born = keepB; }
+  ok('g4 os saves de antes', all === people.length && same === g2.size && mxS < 3 && mxH < 5 && fixed === want && !after.length && caughtOld === false && caughtNew === true && M.limpo(),
+    `a cidade pronta (sem genoma): ${all} de ${people.length} — vivos e mortos — ganham um ao abrir · aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · o verificador depois: ${after.length ? after[0].msg : 'limpo'}; a cor de um filho fora dos pais: de quem nasceu antes ${caughtOld ? 'ACUSADA' : 'aceita (a cor que tinha)'}, de quem nasceu depois ${caughtNew ? 'acusada' : 'NÃO acusada'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ------------------------------ g5 o pai morto ------------------------------
@@ -162,8 +169,11 @@ if (run('inv')) {
   const kid = [...S.villagers.values()].find(v => v.mother && v.father && G.person(v.mother) && G.person(v.father));
   let byHand = [], gone = [];
   if (kid) { const keep = kid.genoma; kid.genoma = Ge.founder(777777, 'asteca', 0, 1); byHand = QA.check().filter(q => q.sys === 'genoma'); kid.genoma = 'xyz'; gone = QA.check().filter(q => q.sys === 'genoma'); kid.genoma = keep; }
-  ok('o verificador (qa/feicao-inv.js)', !now.length && byHand.some(q => /não vem do pai nem da mãe/.test(q.msg)) && gone.some(q => /sem um genoma válido/.test(q.msg)),
-    `agora ${now.length} · o genoma de um filho escrito à mão: «${(byHand[0] || {}).msg || 'NADA'}» · um genoma estragado: «${(gone[0] || {}).msg || 'NADA'}»`);
+  // (the shape's marks: a stump drawn on someone whole, a weight out of its box — told by the test's hand into the drawn feição)
+  let stump = [], box = []; const F = G.Feicao, whole = [...S.villagers.values()].find(v => !v.lost && F && F.of(v));
+  if (whole) { const w = F.of(whole).w, X = F.IDX; w[X.cotoBracoE] = 1; stump = QA.check().filter(q => q.sys === 'genoma'); w[X.cotoBracoE] = 0; const k = w[X.gordo]; w[X.gordo] = NaN; box = QA.check().filter(q => q.sys === 'genoma'); w[X.gordo] = k; }
+  ok('o verificador (qa/feicao-inv.js)', !now.length && byHand.some(q => /não vem do pai nem da mãe/.test(q.msg)) && gone.some(q => /sem um genoma válido/.test(q.msg)) && stump.some(q => /sem a causa no mundo/.test(q.msg)) && box.some(q => /fora da caixa/.test(q.msg)),
+    `agora ${now.length} · o genoma de um filho escrito à mão: «${(byHand[0] || {}).msg || 'NADA'}» · um genoma estragado: «${(gone[0] || {}).msg || 'NADA'}» · um coto sem causa: «${(stump[0] || {}).msg || 'NADA'}» · um peso sem número: «${(box[0] || {}).msg || 'NADA'}»`);
 }
 // ------------------------------ as regras do guard, sabotadas ------------------------------
 // (each rule of the 22a, 197–203, accuses a violation planted in a copy of the game's js/: the guard run on the copy fails with it)
@@ -179,10 +189,12 @@ if (run('gd')) {
     ['198', 'crime.js', s => s + '\nconst lookOf = v => v.genoma;\n', /o genoma só o desenho lê: crime\.js/],
     ['199 acaso', 'genoma.js', s => s.replace("const Ge = G.Genoma = {};", "const Ge = G.Genoma = {}; const roll = () => G.R();"), /o genoma é puro: genoma\.js:\d+ tira de um acaso/],
     ['199 o mundo na conta', 'genoma.js', s => s.replace("const Ge = G.Genoma = {};", "const Ge = G.Genoma = {}; const day = () => G.S.day;"), /o genoma é puro: genoma\.js:\d+ a conta lê o mundo/],
-    ['199 outro campo', 'genoma.js', s => s.replace("p.genoma = Ge.withLook(g, p.skin, p.hair);", "p.genoma = Ge.withLook(g, p.skin, p.hair); p.skin = '#000000';"), /as portas do mundo escrevem outro campo/],
+    ['199 outro campo', 'genoma.js', s => s.replace("p.genoma = Ge.withLook(g, p.skin, p.hair, mg && fg ? mg : null, mg && fg ? fg : null);", "p.genoma = Ge.withLook(g, p.skin, p.hair, mg && fg ? mg : null, mg && fg ? fg : null); p.skin = '#000000';"), /as portas do mundo escrevem outro campo/],
     ['200 número', 'body3d.js', s => s + '\nconst jawOf = pose => pose.face[3];\n', /o rosto pelo nome: body3d\.js:\d+ lê um canal do rosto por um número/],
     ['200 nome', 'body3d.js', s => s + '\nconst chinOf = pose => pose.face[RI.chin];\n', /lê o canal «chin»/],
     ['201', 'feicao.js', s => s.replace('MEMO.set(v.id, o);', 'MEMO.set(v.id, o); v.hp = 1;'), /a feição só se vê: feicao\.js/],
+    ['201 a casa', 'feicao.js', s => s.replace("heavy = HEAVY.has(v.role) ? 1 : 0;", "heavy = HEAVY.has(v.role) || (G.Eco.homeOf(v) || {}).coin > 500 ? 1 : 0;"), /pergunta pela casa, as moedas/],
+    ['201 um campo', 'feicao.js', s => s.replace("heavy = HEAVY.has(v.role) ? 1 : 0;", "heavy = HEAVY.has(v.role) || v.noble ? 1 : 0;"), /lê da pessoa «noble», que não é do corpo/],
     ['202 o retrato', 'look3d.js', s => s.replace('if (Fe) L.s *= Fe.alt;', ''), /o look3d\.js não desenha a altura/],
     ['202 a conta', 'art.js', s => s + '\nconst tone = () => G.Genoma.skinHex(0.5, 0.5);\n', /a cor e a altura da feição: art\.js/],
     ['203', 'people3d.js', s => s + '\nconst gx = v => v.genoma;\n', /o 3D lê a pessoa pela feição: people3d\.js/],

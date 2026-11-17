@@ -1533,7 +1533,7 @@ const GENOMA_OK = [
 // 199. "o genoma é puro" (D-551): o js/genoma.js não tira de acaso nenhum (nem do mundo, nem do que só se vê, nem o Math.random), não
 // pergunta ao relógio (Date, performance.now) nem ao THREE; a conta (os genes, o hash de 32 bits, o fundador, o filho, as cores) não lê o
 // mundo; só as portas do mundo (o nascimento e o load, abaixo da sua marca) leem a semente, o sol de um lugar e as pessoas — e lá o
-// único campo escrito é o genoma de uma pessoa
+// único campo escrito é o genoma de uma pessoa (e, no load de um save de antes, o dia em que os genomas vieram, pelo G.mod: L-1674)
 { const L = src['genoma.js'] || []; const at = L.findIndex(l => /-{20,} the world's doors -{20,}/.test(l));
   if (L.length && at < 0) fails.push("o genoma é puro: o genoma.js sem a marca das portas do mundo («the world's doors»: a regra 199 não acha onde o mundo pode ser lido)");
   L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
@@ -1548,9 +1548,14 @@ const GENOMA_OK = [
     if (/\bface\[\s*\d+\s*\]/.test(c)) fails.push(`o rosto pelo nome: ${f}:${k + 1} lê um canal do rosto por um número (pelo G.Rosto.IDX: D-543): ${l.trim().slice(0, 110)}`); }); }
 // 201. "a feição só se vê" (D-552): o js/feicao.js não escreve numa pessoa nem no mundo (só na sua memória), não tira de acaso nenhum,
 // não pergunta ao relógio e não chama porta que muda o mundo
-{ (src['feicao.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+{ const FE_READS = new Set(['id', 'age', 'g', 'genoma', 'skin', 'hair', 'hunger', 'hp', 'role', 'preg', 'lost']);
+  (src['feicao.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if (/\bG\.(R\(|rr\(|ri\(|pick\(|chance\(|shuffle\(|VR\(|vrr\(|vri\(|vpick\(|vchance\(|vshuffle\()|Math\.random|\bDate\b|performance\.now/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} tira de um acaso ou pergunta ao relógio (D-552): ${l.trim().slice(0, 110)}`);
-    if (/\b(v|w|p|S|G\.S)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bG\.(Vg|Village|Depot|Act|Possess|Inv|Urban)\.\w+\s*\(/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} escreve numa pessoa ou no mundo, ou chama uma porta do mundo (D-552): ${l.trim().slice(0, 110)}`); }); }
+    if (/\b(v|w|p|S|G\.S)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\bG\.(Vg|Village|Depot|Act|Possess|Inv|Urban)\.\w+\s*\(/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} escreve numa pessoa ou no mundo, ou chama uma porta do mundo (D-552): ${l.trim().slice(0, 110)}`);
+    // (22a, D-556: the body is marked by what was done to it — the years, the hunger, the health, the trade's work, a pregnancy, a
+    // limb lost — never by the house, the coins, the standing or the people: «the rich are fat» is not a cause)
+    for (const m of c.matchAll(/\bv\.([A-Za-z_]\w*)/g)) if (!FE_READS.has(m[1])) fails.push(`a feição só se vê: feicao.js:${k + 1} lê da pessoa «${m[1]}», que não é do corpo (a idade, o sexo, o genoma, a fome, a saúde, o ofício, a gravidez, o membro perdido: D-556; nunca a casa nem o povo): ${l.trim().slice(0, 110)}`);
+    if (/\bG\.(Fac|Eco|Trade|Casa|Court|Polity|Politics|Atmos|Estates|Crime)\b|\.(coin|elite|home|rank)\b/.test(c)) fails.push(`a feição só se vê: feicao.js:${k + 1} pergunta pela casa, as moedas, o grupo ou o povo (o corpo não sai da riqueza: D-556): ${l.trim().slice(0, 110)}`); }); }
 // 202. "a cor e a altura desenhadas vêm da feição" (D-552): o retrato do 3D (look3d.js) pede a feição de cada pessoa ao G.Feicao.of e
 // desenha por ela a altura, a pele, o cabelo e os olhos; só o feicao.js pede ao G.Genoma as cores e os genes de alguém (nenhum outro
 // desenho faz a conta por conta própria: as vistas iguais)

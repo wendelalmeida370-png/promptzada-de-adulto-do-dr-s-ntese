@@ -52,7 +52,10 @@
     L.str = (ad < 12 ? 0.35 : ad < 16 ? 0.7 : ad >= 70 ? 0.6 : ad >= 55 ? 0.8 : 1) * (v.g === 'f' ? 0.85 : 1);
     // (the things on the body: what the inventory says — G.Inv.held, the one door (D-336): a person's own things, or their trade's
     // kit — asked again only when what it reads changes)
-    L.inv = invOf(v, L); L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
+    L.inv = invOf(v, L);
+    // (22a: a hand lost holds nothing — the stump is drawn, D-555; what it held is not drawn floating where the hand was)
+    const lo = v.lost; if (lo && (lo.armL || lo.armR)) { const k = L._lostOf; if (!k || k.src !== L.inv) L._lostOf = { src: L.inv, inv: Object.assign({}, L.inv, { mao: lo.armR ? null : L.inv.mao, outra: lo.armL ? null : L.inv.outra }) }; L.inv = L._lostOf.inv; }
+    L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
     if (L.held) { if (P3.BUSY_HANDS.has(v.act) || v.sleeping) L.held = P3.setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } }
     L.reach = null; L.pair = null; L.bind = false;
     // (how drunk the world has them — the tavern's rounds, the wine of the wells —: the body weaves, Anim.stagger)
@@ -259,6 +262,23 @@
     }
     // (a cloak's collar of fur: the north's own — white on a ruler's —, and anyone's whose house has furs; else of its cloth)
     o.fur = o.cloakM === 'capa' && !v.robe && (civ === 'nordico' || D.fur) ? (ruler ? 2 : 1) : 0;
+    // (22a, D-555: the hair and the beard of the genome — the kind of hair turns the style the people and the trade chose into its
+    // waves, its curls, its tight curls; the hair goes from the temples and then from the crown with the years, early or late by the
+    // gene; the beard as thick as the gene — kept to what the meshes have)
+    const fe = L.fe; if (fe) {
+      const has = n => !!(G.BODYMESH && G.BODYMESH.meshes && G.BODYMESH.meshes[n]);
+      const T = fe.tex, H0 = o.hairM;
+      const turn = { longo: ['longo', 'ondulado', 'cacheado', 'crespo'], curto: ['curto', 'curto', 'cacheado', 'crespo'], chanel: ['chanel', 'chanel', 'cacheado', 'crespo'] };
+      if (H0 && turn[H0] && !(civ === 'egipcio' && H0 === 'chanel' && T < 3)) { const n = turn[H0][T]; if (has(n)) o.hairM = n; }
+      if (!fem && ad >= 25 && o.hairM && o.hairM !== 'peruca' && o.hairM !== 'careca') {
+        // (the years bring it on: a gene a spread above the middle at 47 is a bald one at 60 — by the whole years, as the outfit is
+        // keyed: drawn again after a load, the hair must not turn, L-1672)
+        const c = fe.calv + (Math.floor(ad) - 25) / 22;
+        if (c > 2.2 && ad >= 40) o.hairM = 'careca'; else if (c > 1.0 && has('entradas') && (o.hairM === 'curto' || o.hairM === 'cacheado' || o.hairM === 'crespo' || o.hairM === 'ondulado')) o.hairM = 'entradas';
+      }
+      if (o.beard) { const d = fe.barba; o.beard = d > 0.6 ? 'barba' : d > -0.4 ? 'curta' : 'bigode'; }
+      else if (!fem && ad >= 22 && fe.barba > 1.4 && civ !== 'egipcio' && !kid) o.beard = 'curta';
+    }
     // (what is worn over the clothes, from the inventory (G.Inv.held, D-346): a helmet takes the hat's place and the hair under
     // it — every hair of the body would show through a helmet that fits the head, D-350; a cuirass goes over the tunic, and
     // the blouse, the toga and the cloak, whose yokes hug the trunk, are not worn over it)

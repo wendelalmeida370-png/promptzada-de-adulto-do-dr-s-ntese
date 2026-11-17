@@ -23,6 +23,7 @@
     'olhosAfast', 'olhoTam', 'palpebra', 'orelhas', 'altura', 'massa', 'musculo', 'ombros', 'barbaDens', 'calvicie', 'sardas', 'sobrancelha']);
   const NG = Ge.NG = GENES.length, LEN = Ge.LEN = NG * 2;
   const GI = Ge.I = Object.freeze(Object.fromEntries(GENES.map((g, i) => [g, i])));
+  Ge.COLOR = Object.freeze([GI.melanina, GI.subtom, GI.cabeloCor, GI.cabeloRuivo]); // (the genes of the colours: what an old save's look sets)
   const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
   const DEC = new Int8Array(128).fill(-1); for (let i = 0; i < 64; i++) DEC[B64.charCodeAt(i)] = i;
   const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
@@ -100,9 +101,10 @@
   };
   // (each allele of a child is one of its mother's or its father's — or a step of a mutation away from one: what the verifier
   // asks of a genome somebody wrote by hand)
-  Ge.fromParents = function (cg, mg, fg) {
+  // (skip: genes not asked — the colour of one born before the genome came is the colour they had, B': Ge.COLOR)
+  Ge.fromParents = function (cg, mg, fg, skip) {
     const C = Ge.alleles(cg), M = Ge.alleles(mg), F = Ge.alleles(fg); if (!C || !M || !F) return true;
-    for (let g = 0; g < NG; g++) {
+    for (let g = 0; g < NG; g++) { if (skip && skip.includes(g)) continue;
       const near = (x, P) => Math.min(Math.abs(x - P[g * 2]), Math.abs(x - P[g * 2 + 1])) <= 16;
       if (!near(C[g * 2], M) || !near(C[g * 2 + 1], F)) return false;
     }
@@ -160,9 +162,16 @@
   Ge.nearest = nearest;
   // a genome whose pigment is a saved colour — the skin, the hair —, the other genes kept (a save from before the genome: the
   // person keeps the colour they had)
-  Ge.withLook = function (s, skin, hair) {
-    const al = dec(s);
-    const put = (g, sum) => { al[g * 2] = sum >> 1; al[g * 2 + 1] = sum - (sum >> 1); };
+  Ge.withLook = function (s, skin, hair, mg, fg) {
+    const al = dec(s), M = mg ? dec(mg) : null, F = fg ? dec(fg) : null;
+    // (the two alleles that make the colour: halves — or, for a child whose parents have theirs, the split nearest them, one by
+    // the mother's and one by the father's: a load keeps a family a family, L-1674)
+    const put = (g, sum) => {
+      let a = sum >> 1, b = sum - a;
+      if (M && F) { let best = Infinity;
+        for (const mc of [M[g * 2], M[g * 2 + 1]]) for (const fc of [F[g * 2], F[g * 2 + 1]]) for (let x = Math.max(0, sum - 63); x <= Math.min(63, sum); x++) {
+          const y = sum - x, e = Math.max(Math.abs(x - mc), Math.abs(y - fc)); if (e < best || (e === best && Math.abs(x - y) < Math.abs(a - b))) { best = e; a = x; b = y; } } }
+      al[g * 2] = a; al[g * 2 + 1] = b; };
     if (/^#[0-9a-f]{6}$/i.test(skin || '')) { const r = nearest('s', skin.toLowerCase()); put(GI.melanina, r[0]); put(GI.subtom, r[1]); }
     if (/^#[0-9a-f]{6}$/i.test(hair || '')) { const r = nearest('h', hair.toLowerCase()); put(GI.cabeloCor, r[0]); put(GI.cabeloRuivo, r[1]); }
     return enc(al);
@@ -199,8 +208,11 @@
       const mg = m && Ge.valid(m.genoma) ? m.genoma : null, fg = f && Ge.valid(f.genoma) ? f.genoma : null;
       const fa = !p.civ && p.fac && G.Fac && G.Fac.get ? G.Fac.get(p.fac) : null; const civ = p.civ || (fa && fa.civ) || null, seed = S.seed | 0;
       const g = mg || fg ? Ge.child(p.id, mg || Ge.founder(-p.id - 1, civ, 0, seed), fg || Ge.founder(-p.id - 1, civ, 0, seed), seed) : Ge.founder(p.id, civ, 0, seed);
-      p.genoma = Ge.withLook(g, p.skin, p.hair);
+      p.genoma = Ge.withLook(g, p.skin, p.hair, mg && fg ? mg : null, mg && fg ? fg : null);
     }
+    // (the day the genomes came: who was born by then has the colour the old save gave them, not one from the parents — the
+    // verifier asks the colour genes only of who was born after, L-1674)
+    if (G.mod) G.mod('genoma.desde', Math.max(G.mod('genoma.desde') || 0, S.day | 0));
     return all.length;
   };
   (G.saveHooks = G.saveHooks || []).push({ save() { }, load() { Ge.fill(); } });
