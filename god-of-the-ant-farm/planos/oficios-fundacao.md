@@ -139,6 +139,35 @@ As falas falam do ofício («pegou algo hoje?»), os laços nascem dele (o coleg
 nascem dele (a encomenda, o concurso da festa, a lenda que se caça), e a aba de Relacionamentos mostra o porquê («meu mestre
 de pesca»).
 
+### 2.13 A camada do ambiente (a presença de cada ofício — a ideia do dono, 18/11/2026)
+
+Cada ofício tem **o seu jeito de se ver, de se ouvir e de se sentir** — a fotografia, o som, o tremor, a tela e a mochila —, para
+que viver no porto não pareça viver na forja. Com uma condição: **o que se vê tem causa** (a regra do `G.Atmos`), então a camada
+do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
+
+- **A fotografia** — a câmera e as lentes de cada gesto: por cima do ombro na luta do peixe; baixa e larga no banco da galé, com os
+  remos em fila; perto e de lado na prancha do estivador. **A luz é a do mundo** (só o céu diz a luz, regras 188 e 189): o porão é
+  escuro porque é porão, a madrugada do pescador tem névoa porque a manhã tem névoa, a forja brilha porque há fogo. Nenhum filtro
+  por ofício que minta sobre a hora ou o tempo; a profundidade de campo e o enquadramento, sim.
+- **O som** — o fundo já vem do mundo (o porto soa a porto quando há mãos trabalhando, `G.Audio.scene`); **a música do ofício é
+  um arranjo dentro da música do povo** (a escala e o timbre continuam os do povo e da época, `G.Audio.musicOf` — a regra de
+  «nunca uma trilha por bairro» fica): o ritmo da flauta e dos remos na galé, o canto de trabalho no cais, o silêncio e a água na
+  pesca, a música que sobe no clímax.
+- **O tremor e a vibração** — de coisas que aconteceram: o choque do abalroamento, o barril que cai, a linha que parte, a ânfora
+  que se espatifa; o balanço do convés é o do navio de verdade. Com a opção de diminuir ou desligar o tremor (para quem enjoa).
+- **A tela (o HUD do gesto)** — só enquanto se faz o gesto, pequena e, sempre que der, dentro do mundo: a vara que enverga e a
+  marca da tensão na pesca; a flauta e a marca do tempo do remo na galé; o peso e o equilíbrio da carga na prancha. Some com a
+  tecla H, como o resto da tela, e só mostra o que o personagem sabe.
+- **A mochila** — **uma mochila só** (o lugar `m:` do livro, pelo peso), com **a vista do ofício**: uma aba que mostra e arruma as
+  coisas daquele ofício (os anzóis, as linhas e as iscas do pescador; nada de extra para quem não precisa) e **os recipientes como
+  coisas** (o cesto de pesca guarda o peixe com a sua própria capacidade). Assim quem tem vários ofícios não tem várias mochilas.
+
+| Ofício | A fotografia | O som | O tremor | A tela | A mochila |
+|---|---|---|---|---|---|
+| **A pesca** | o ombro na luta, o plano aberto da margem na espera | a água, as aves, a linha que zumbe; a música calma que sobe na luta | a linha que parte, o salto do peixe | a tensão, a mordida nomeada (com a prática) | a caixa do pescador; o cesto |
+| **A galé** | baixa e larga no banco, a fila dos remos; o escuro do porão | a flauta, as vozes do chefe dos remos, o remo na água, o chicote | o choque do abalroamento, a onda que entra | o tempo do remo, o fôlego, o ânimo | quase nada: o galeote não tem mochila (o esconderijo) |
+| **O estivador** | perto e de lado na prancha, alta no porão | o canto da turma, o ranger da prancha, o guindaste, o cais | a carga que cai, a prancha que balança | o peso e o equilíbrio da carga | a vista do carregador (o que se leva nos braços) |
+
 ## 3. As regras (o contrato da fundação)
 
 - **O mundo decide no passo do mundo:** a prática que sobe, a técnica aprendida, o título dado, a venda — no passo, pelo `G.R`
