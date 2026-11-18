@@ -211,8 +211,12 @@
     { const ch = 1 - sm(0, 15, aQ), hk = 1 - sm(0, 13, aQ); const cab = 1 + 0.3 * hk, per = 1 - 0.22 * ch, bra = 1 - 0.12 * ch;
       o.prop = { cabeca: cab, perna: per, braco: bra, tronco: (1.75 - 0.92 * per - 0.21 * cab) / 0.62 }; }
     o.cinza = 46 + 8 * zs(P[I.grisalho]); o.greyT = clamp((Math.floor(age) - o.cinza) / 22, 0, 0.92);
+    // (the hair as it is now: salt and pepper toward a grey, then toward white — the 3D and the god's view paint this one, D-640)
+    { const h0 = G.hex2rgb(o.hair), t = o.greyT, salt = [h0[0] + (150 - h0[0]) * 0.55, h0[1] + (146 - h0[1]) * 0.55, h0[2] + (140 - h0[2]) * 0.55];
+      const mix = (a, b, k) => [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * k), c = !t ? h0 : t < 0.45 ? mix(h0, salt, t / 0.45) : mix(salt, [226, 223, 216], (t - 0.45) / 0.55);
+      o.hairNow = '#' + c.map(q => Math.round(clamp(q, 0, 255)).toString(16).padStart(2, '0')).join(''); }
     o.girth = 1 + 0.12 * w[X.gordo] - 0.06 * w[X.magro] + 0.05 * Math.max(0, w[X.musculo]) + 0.25 * w[X.gestante]; // (how far a skirt is kept off the body)
-    MEMO.set(v.id, o); if (MEMO.size > 4000) MEMO.clear();
+    MEMO.set(v.id, o); if (MEMO.size > 4000 + 2 * (G.S && G.S.villagers ? G.S.villagers.size : 0)) MEMO.clear(); // (the god's view asks for everyone it draws, each frame: a cap under the people would make it all again each frame)
     return o;
   };
   // (the trades whose days are heavy work of the arms and the back: the body shows the years of it — the muscle, a little)

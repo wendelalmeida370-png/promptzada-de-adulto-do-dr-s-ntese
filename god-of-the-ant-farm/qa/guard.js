@@ -1589,6 +1589,17 @@ const GENOMA_OK = [
   for (const [nm, at] of [...pieces]) for (const f of files) for (const a of whole[f].matchAll(new RegExp('\\.(\\w+)\\s*=\\s*\\(\\)\\s*=>\\s*' + nm + '\\s*;', 'g'))) pieces.set(a[1] + '()', at);
   for (const [nm, at] of pieces) { const re = new RegExp((nm.endsWith('()') ? '\\.' + nm.slice(0, -2) + '\\(\\)' : '(?<![\\w.])' + nm + '(?![\\w(])') + '(?:\\s*:\\s*[^)+]*\\))?\\s*\\+(?!\\s*\'\\\\n\')', 'g'); // (also as one side of «c ? piece : '') +»
     for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '').replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''"); if (re.test(c)) fails.push(`o pedaço de sombreador termina numa linha nova: ${f}:${k + 1} junta por «+» o pedaço «${nm}» (${at}), que não acaba em quebra de linha (L-1248, L-1673): ${l.trim().slice(0, 100)}`); re.lastIndex = 0; }); } }
+// 237. "a vista do deus pinta a pessoa pela feição" (22a onda 2, D-640, L-1678): no js/art.js e no js/render.js a pele e o cabelo
+// (com o seu grisalho) de uma pessoa vêm só do Art.skinOf / Art.hairOf — o G.Feicao.of, a mesma fonte do 3D; o morto, as cores do
+// pintor dele —, e a altura do Art.villager é a da feição; o pintor do morto (o C.paintLook do carnage.js) pinta a cópia por eles
+{ const a = src['art.js'] || []; const i0 = a.findIndex(l => /Art\.villager = function/.test(l)), i1 = a.findIndex((l, k) => k > i0 && /^  Art\.\w+ = function/.test(l));
+  const defs = a.filter(l => /^  Art\.(skinOf|hairOf) = \(v, Fe = feOf\(v\)\) => \(Fe \? Fe\.(skin|hairNow) : /.test(l)).length + a.filter(l => /^  const feOf = v => \(!v\.dead && G\.Feicao && G\.Feicao\.of \? G\.Feicao\.of\(v\) : null\);/.test(l)).length;
+  if (i0 < 0 || defs !== 3) fails.push('a vista do deus pela feição: o Art.villager, o Art.skinOf ou o Art.hairOf (pelo G.Feicao.of, o morto pelo pintor) sumiu do art.js (D-640)');
+  else { const body = a.slice(i0, i1 < 0 ? a.length : i1);
+    if (!body.some(l => /const skin = Art\.skinOf\(v, v\.dead \? null : Fe\), hairNow = Art\.hairOf\(v, v\.dead \? null : Fe\);/.test(l)) || !body.some(l => /const Fe = G\.Feicao && G\.Feicao\.of \? G\.Feicao\.of\(v\) : null;/.test(l)) || !body.some(l => /\(Fe \? Fe\.alt : 1\)/.test(l))) fails.push('a vista do deus pela feição: o Art.villager não pinta pelo Art.skinOf / Art.hairOf ou não desenha a altura da feição (D-640)'); }
+  for (const f of ['art.js', 'render.js']) (src[f] || []).forEach((l, k) => { if (/^  Art\.(skinOf|hairOf) = /.test(l)) return; const c = l.replace(/(^|\s)\/\/\s.*$/, '').replace(/'(?:[^'\\]|\\.)*'/g, "''");
+    if (/\b(v|o|p|pv|L|r|vv|baby|w)(\.babyOn)?\.(skin|hair)\b(?!\s*=[^=])/.test(c)) fails.push(`a vista do deus pela feição: ${f}:${k + 1} pinta a pessoa pelo v.skin / v.hair (pelo Art.skinOf / Art.hairOf, como o 3D: D-640): ${l.trim().slice(0, 100)}`); });
+  if (!(src['carnage.js'] || []).some(l => /L\.skin = c\.pose === 'burnt' \? c\.look\.skin : G\.Art\.skinOf\(c\.look\); L\.hair = G\.Art\.hairOf\(c\.look\); L\.dead = true;/.test(l))) fails.push('a vista do deus pela feição: o pintor do morto (C.paintLook do carnage.js) não pinta a cópia pela feição (L-1678)'); }
 // === 22b: a sociedade ===
 // (the body of a function found by its name — `name = function`, `name = (…) =>`, `function name(` —, to its closing brace)
 const fnBody = (f, name) => {

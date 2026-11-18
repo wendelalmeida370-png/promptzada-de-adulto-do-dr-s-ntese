@@ -352,7 +352,10 @@
   // pose are painted on it, never on the corpse the world keeps and saves — the frame wrote them into the saved look, and a
   // world looked at was another than the world unseen; the dead raised took the rotten skin of a body drawn, L-588)
   const PAINT = new WeakMap();
-  C.paintLook = c => { let L = PAINT.get(c); if (!L) PAINT.set(c, L = {}); Object.assign(L, c.look); L._cloth = null; L.headless = !!c.headless; return L; };
+  // (22a wave 2, L-1678: the skin and the hair the body had — the feição's, as the 3D draws them, or what the fire left on it, the
+  // world's own mark —, painted as a dead one's: the god paints the copy in the colours set on it)
+  C.paintLook = c => { let L = PAINT.get(c); if (!L) PAINT.set(c, L = {}); Object.assign(L, c.look); L._cloth = null; L.headless = !!c.headless;
+    L.skin = c.pose === 'burnt' ? c.look.skin : G.Art.skinOf(c.look); L.hair = G.Art.hairOf(c.look); L.dead = true; return L; };
   function drawCorpse(ctx, o, sx, sy, t, nightF) {
     const c = o.c; const S = G.S;
     // shown on the gallows, the cross, the stake: justice draws them
@@ -370,7 +373,7 @@
     if (fall >= 0.99) ctx.scale(1, 0.9);
     if (st === 'bones') drawBones(ctx, c, t);
     else {
-      const L = C.paintLook(c), sk = c.look.skin;
+      const L = C.paintLook(c), sk = L.skin;
       const rot = st === 'fresh' ? 0 : st === 'rot' ? (days - ROT) / (DRY - ROT) : 1;
       L.skin = st === 'fresh' ? sk : st === 'rot' ? mix(sk, '#8a9a72', rot * 0.8) : mix('#8a9a72', '#7a6650', (days - DRY) / (BONES - DRY));
       L._cloth = st === 'fresh' ? null : mix(G.Art.clothOf(L), '#5a544c', st === 'rot' ? rot * 0.35 : 0.55);

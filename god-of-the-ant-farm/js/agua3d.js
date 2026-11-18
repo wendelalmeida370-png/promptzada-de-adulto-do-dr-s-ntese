@@ -460,7 +460,7 @@ float aguaCloud(vec3 d, vec3 from, out float thick) {
       g.computeBoundingSphere(); return g;
     }
   }
-  A3.WGeo = () => new WGeo();
+  A3.WGeo = () => { if (!THREE) THREE = window.THREE; return new WGeo(); }; // (a well's or a fountain's water, built by the 3D of the buildings — in Node too, T-1583)
   // (how far below the water a corner's bed is, and whether land touches it)
   function wetCorner(x, y, lvl, river) {
     const S = G.S; let d = 0, n = 0, land = 0;

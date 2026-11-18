@@ -1062,7 +1062,7 @@
     const flood = s.flood || 0; const tilt = flood > 0 ? Math.min(0.28, flood / 260) * (s.id % 2 ? 1 : -1) : 0;
     const face = G.Render.sface(s);
     // the crew, read once in a while (real people: their clothes, their skin)
-    if (!s._abT || Math.abs(t - s._abT) > 0.6) { s._abT = t; s._ab = Nv.aboardOf(s).slice(0, 12).map(v => ({ c: G.Art ? G.Art.clothOf(v) : '#c9763a', sk: v.skin, id: v.id, w: v.role === 'guerreiro' || (v.task && v.task.type === 'aboard' && s.kind === 'guerra'), f: v.g === 'f' })); }
+    if (!s._abT || Math.abs(t - s._abT) > 0.6) { s._abT = t; s._ab = Nv.aboardOf(s).slice(0, 12).map(v => ({ c: G.Art ? G.Art.clothOf(v) : '#c9763a', sk: G.Art ? G.Art.skinOf(v) : v.skin, id: v.id, w: v.role === 'guerreiro' || (v.task && v.task.type === 'aboard' && s.kind === 'guerra'), f: v.g === 'f' })); }
     const ppl = s._ab || [];
     // the sail goes up at sea, comes down at the quay
     const want = build >= 1 && s.moving && s.mast !== 0 ? 1 : 0.12; s._sf = s._sf === undefined ? want : s._sf + (want - s._sf) * 0.05;

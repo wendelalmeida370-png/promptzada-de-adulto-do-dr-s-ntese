@@ -228,6 +228,9 @@ if (run('gd')) {
     ['203', 'people3d.js', s => s + '\nconst gx = v => v.genoma;\n', /o 3D lê a pessoa pela feição: people3d\.js/],
     // (236, L-1248 = L-1673 planted again: the water's piece without its last new line, joined to the rock's by «+» as it was)
     ['236 o pedaço com nome', 'agua3d.js', s => s.replace("}\n`; // (ends in a line of its own", "}`; // (ends in a line of its own"), /junta por «\+» o pedaço «groundGLSL\(\)»/, 'ground3d.js', s => s.replace("[G3.texGLSL(), gMeans(), G.Agua3D ? G.Agua3D.groundGLSL() : '', FRAG()].join('\\n')", "G3.texGLSL() + gMeans() + (G.Agua3D ? G.Agua3D.groundGLSL() : '') + FRAG()")],
+    ['237', 'art.js', s => s.replace("c.fillStyle = skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();", "c.fillStyle = v.skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();"), /a vista do deus pela feição: art\.js:\d+ pinta a pessoa pelo v\.skin/],
+    // (237, L-1678 planted again: the dead's painter copying the look's stored colours, the living skin painted over the rot)
+    ['237 o morto', 'carnage.js', s => s.replace("L.skin = c.pose === 'burnt' ? c.look.skin : G.Art.skinOf(c.look); L.hair = G.Art.hairOf(c.look); L.dead = true; ", ''), /o pintor do morto \(C\.paintLook do carnage\.js\) não pinta a cópia pela feição/],
     ['236 o modelo', 'mira3d.js', s => s + '\nconst bad = `uniform float uX;\nvoid main() { }` + `#define Y 1\n`;\n', /um modelo de GLSL juntado a outro por «\+»/],
   ];
   const res = [];
@@ -238,7 +241,7 @@ if (run('gd')) {
     res.push(`${name}: ${want.test(out) ? 'acusada' : 'NÃO ACUSADA'}`);
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  ok('as regras 197–203 e 236 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
+  ok('as regras 197–203, 236 e 237 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
 }
 ok('sem erro de módulo nem aviso no console', M.limpo(), M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300));
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
