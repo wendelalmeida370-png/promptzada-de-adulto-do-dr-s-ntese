@@ -1482,7 +1482,7 @@
       const X = c.x * TL + (fell ? fell.ox : 0), Z = c.y * TL + (fell ? fell.oz : 0); if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > R2) continue;
       const stg = G.Carnage.stage(c); if (stg === 'bones') continue;
       P3.dead++; const Y = W.groundH(c.x, c.y) * HM; if (!inField(X, Y, Z, 1)) { culled++; continue; } // (in reach: counted, drawn where seen)
-      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod);
+      const L = P3.look(c.look); if (stg !== 'fresh') L.skin = stg === 'rot' ? '#8a8a6a' : '#7a6a5a'; else if (c.pose === 'burnt') L.skin = c.look.skin; L.lod = lodAt(cLod.get(c.id) || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2); cLod.set(c.id, L.lod); // (burnt: what the fire left, the world's mark over the feição's skin — L-1678)
       P3.body(idx++, X, Y, Z, fell ? fell.yaw : G.hash(c.id) * TAU, fell ? fell.pose : DEAD[c.id % DEAD.length], L, null);
     }
     if (cLod.size > 400) cLod.clear();

@@ -2444,7 +2444,7 @@
           if ((v.chosen || v.prophet) && !v.inside) emisGlow.push(sx, sy - 8, v.chosen ? 11 : 9, v.chosen ? 'gold' : 'cool', 0.28 + 0.12 * Math.sin(t * 2.5 + v.id));
         } else { // baby lying (no carrier)
           ctx.fillStyle = '#f4efe3'; ctx.beginPath(); ctx.ellipse(sx, sy - 1, 2.2, 1.2, 0, 0, TAU); ctx.fill();
-          ctx.fillStyle = v.skin; ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
+          ctx.fillStyle = G.Art.skinOf(v); ctx.beginPath(); ctx.arc(sx - 1.8, sy - 1.6, 1, 0, TAU); ctx.fill();
         }
         if (v.torch) { const tx = sx + R.sface(v) * 3, ty = sy - 12.5; light(tx, ty, R.under ? 48 : 30, 'warm', 0.85); emisTorch.push(tx, ty); }
         if (v.lantern && !v.inside) { const lx = sx + R.sface(v) * 2.6, ly = sy - (v.act === 'lantern' ? 6 : 3); light(lx, ly, R.under ? 40 : 24, 'warm', 0.8); emisGlow.push(lx, ly, 4, 'warm', 0.55); }

@@ -32,10 +32,11 @@
   // (out to 16 m: before a monument's front of 20 m and more, and in an arena of 20, the eye stands back to see it — it was 11)
   const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 16;
   C3.DMAX = DMAX;
-  let piv = null, lookT = -1e9, fovNow = 58, clock = 0;
+  let piv = null, lookT = -1e9, zoomT = -1e9, fovNow = 58, clock = 0;
   // (the target held, the aim, the shoulder as it is now, the time the eye last came in, a turn asked of it — recentre)
   let lockGet = null, lockPt = null, aiming = false, aimK = 0, shNow = 0.32, inT = -1e9, turnAsk = null;
-  G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; trauma = 0; attend = null; lockGet = null; lockPt = null; aiming = false; aimK = 0; turnAsk = null; });
+  let talkK = 0, talkPt = null, talkVeto = 0; // (22a wave 2, D-644: the conversation's framing — how far in, the other's face; a talk the player took the eye from)
+  G.worldHooks.push(() => { piv = null; C3.lock = null; C3.inside = false; trauma = 0; attend = null; lockGet = null; lockPt = null; aiming = false; aimK = 0; turnAsk = null; talkK = 0; talkPt = null; talkVeto = 0; talkS = { id: 0, s: 1 }; });
   // a blow taken (D-333): the eye shakes — the more the bigger the blow, fading in half a second — and, if what struck is out of
   // the picture and the mouse is left alone, it turns a while to bring it in beside the body. Only the eye: by the view's own
   // clock, no chance drawn (OPT.shake turns the shaking off)
@@ -60,7 +61,7 @@
     const k = 3.3 * OPT.padSens * (aiming ? 0.55 : 1) * rdt;
     C3.yaw += x * k; C3.pitch = G.clamp(C3.pitch + y * k * 0.62 * (OPT.invertY ? -1 : 1), PMIN, PMAX); turnAsk = null;
   };
-  C3.zoom = function (dy) { C3.dist = G.clamp(C3.dist * Math.exp(dy * 0.0012), DMIN, DMAX); OPT.dist = C3.dist; };
+  C3.zoom = function (dy) { C3.dist = G.clamp(C3.dist * Math.exp(dy * 0.0012), DMIN, DMAX); OPT.dist = C3.dist; zoomT = clock; };
   // the other shoulder (the eye goes over to it in a moment)
   C3.swap = function () { OPT.side = OPT.side < 0 ? 1 : -1; C3.saveOpt(); return OPT.side; };
   // back behind the body, quickly (the lock-on's key with nothing to hold, as in a game of swords)
@@ -90,6 +91,23 @@
   // the aim over the shoulder (the bow of the second wave): closer, over the shoulder, a narrower lens; the body faces where the
   // eye looks. aimRay: the ray through the middle of the picture, where the reticle is
   C3.aim = function (on) { aiming = !!on; return aiming; };
+  // the conversation (22a wave 2, D-644; SOCIEDADE §3.9): someone talking with the body, the body standing, the player's hands off
+  // the eye — it comes in to the faces, a little over a metre off, the lens narrower, the look between the two; it never turns (the
+  // yaw and the tilt stay the player's: the rule of D-368) and gives the eye back as soon as the body moves, the player looks or
+  // zooms, or the talk ends. Only seen: it reads who talks with whom in the world, writes nothing of it
+  C3.TALK_NEAR = 3.5; // (metres: the other this near the body)
+  C3.talking = () => (talkK > 0.05 ? talkPt : null); // (the other's face while the eye is in for a talk, for the tests and the screen)
+  // (who talks with the body: a word answered — the line of the hands' «talk», the society's verbs' «resposta» — never the hug's
+  // arms nor a dance round it; the height of their face read once a talker, from the 3D's portrait of them)
+  let talkS = { id: 0, s: 1 };
+  function talkOf(body) {
+    const S = G.S, av = S && S.avatar, id = av && (av.id || av.vid); if (!id || !S.villagers) return null; const L = G.Space.TILE;
+    let best = null, bd = C3.TALK_NEAR;
+    for (const o of S.villagers.values()) { const t = o.task; if (!t || t.kind !== 'talk' || t.id !== id || o.inside || o.aboard) continue;
+      const X = o.x * L, Z = o.y * L, d = Math.hypot(X - body.X, Z - body.Z); if (d < bd) { bd = d; best = o; } }
+    if (!best) return null; if (talkS.id !== best.id) talkS = { id: best.id, s: G.People3D && G.People3D.look ? G.People3D.look(best).s : 1 };
+    return { X: best.x * L, Y: G.W.groundH(best.x, best.y) * G.Space.HM + 1.6 * talkS.s, Z: best.y * L, id: best.id };
+  }
   C3.aiming = () => aiming;
   C3.aimRay = function () { const l = C3.last; if (!l) return null; const d = [l.at[0] - l.pos[0], l.at[1] - l.pos[1], l.at[2] - l.pos[2]]; const n = Math.hypot(d[0], d[1], d[2]) || 1; return { from: l.pos.slice(), dir: [d[0] / n, d[1] / n, d[2] / n] }; };
   // the look direction from yaw and pitch (pitch above 0 looks down)
@@ -236,6 +254,11 @@
     // the target held: let go when it is gone or too far; the eye keeps it in front, looking a little down at it
     if (lockGet) { const t = lockGet(); lockPt = t && Math.hypot(t.X - body.X, t.Z - body.Z) < C3.LOCK_FAR ? t : null; if (!lockPt) { lockGet = null; C3.lock = null; } }
     aimK += ((aiming ? 1 : 0) - aimK) * (1 - Math.exp(-10 * rdt));
+    { const t0 = talkOf(body); if (!t0) talkVeto = 0; // (the talk over: the next one may come in again)
+      // (the player's hands on the eye or the body during a talk give that talk's eye back for good — it does not come in again)
+      if (t0 && (aiming || lockPt || (body.speed || 0) >= 0.3 || clock - lookT < 0.8 || clock - zoomT < 0.8)) talkVeto = t0.id;
+      const t = t0 && t0.id !== talkVeto ? t0 : null; if (t) talkPt = t;
+      talkK += ((t ? 1 : 0) - talkK) * (1 - Math.exp(-(t ? 2.2 : 6) * rdt)); if (talkK < 0.01) talkPt = null; }
     // (what struck the body, out of the picture: the eye turns to bring it in beside the body — the player's mouse first)
     if (attend && !lockPt) { attend.t -= rdt; const want0 = Math.atan2(attend.Z - piv.Z, attend.X - piv.X); let off = want0 - C3.yaw; while (off > Math.PI) off -= TAU; while (off < -Math.PI) off += TAU;
       if (attend.t <= 0 || clock - lookT < 0.4) attend = null;
@@ -255,7 +278,7 @@
     // (looking up — at a front, a drum, a tower —: the eye goes down its orbit only to a hand over the feet, and from there it
     // tilts up as asked (below); down the orbit it met the ground and came in to a metre behind the head, and the top of a front of
     // 21 m stayed out of the picture 9 m before it)
-    const dist = G.lerp(C3.dist, Math.min(C3.dist, 1.9), aimK);
+    const dist = G.lerp(G.lerp(C3.dist, Math.min(C3.dist, 1.9), aimK), Math.min(C3.dist, 1.25), talkK * (1 - aimK));
     const poAt = dd => Math.max(C3.pitch, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, dd))));
     // over the shoulder — the right or the left, crossing over in a moment —, closer in, nearer the middle; aiming, farther out
     const shW = (OPT.side < 0 ? -1 : 1) * G.lerp(0.32 * G.clamp(C3.cur / 4, 0.3, 1), 0.58, aimK); shNow += (shW - shNow) * (1 - Math.exp(-7 * rdt));
@@ -285,7 +308,7 @@
     C3.inside = solid(P.X, P.Y, P.Z);
     // the running body: the lens opens a little (a sense of speed); aiming, it narrows
     const spK = body.sprintK !== undefined ? body.sprintK : body.speed > 4.6 ? 1 : 0; // (the sprint's own share — not a dodge's burst)
-    fovNow += (OPT.fov + 7 * spK - 12 * aimK - fovNow) * (1 - Math.exp(-3.5 * rdt));
+    fovNow += (OPT.fov + 7 * spK - 12 * aimK - 10 * talkK - fovNow) * (1 - Math.exp(-3.5 * rdt));
     // (the far end of the view where the haze of the quality has already hidden everything: nothing past it is drawn)
     cam.fov = fovNow; cam.near = 0.12; cam.far = G.Realm && G.Realm.viewFar ? G.Realm.viewFar() : 1600; cam.updateProjectionMatrix();
     cam.position.set(P.X, P.Y, P.Z);
@@ -296,6 +319,8 @@
       if (want > e0 + 0.02 && hd > 0.05) aim[1] = P.Y + hd * Math.tan(Math.min(want, e0 + 0.8 * fovNow * Math.PI / 360, 1.35)); }
     // (a target held: the look between the body and it, so both are in the picture)
     if (lockPt) { const k = 0.35; aim[0] += (lockPt.X - aim[0]) * k * 0.4; aim[2] += (lockPt.Z - aim[2]) * k * 0.4; aim[1] += (lockPt.Y - aim[1]) * k * 0.25; }
+    // (a talk: the look between the body's face and the other's, so both are in the picture — the eye does not turn for it)
+    if (talkPt && talkK > 0.01) { const k = 0.4 * talkK; aim[0] += (talkPt.X - aim[0]) * k; aim[2] += (talkPt.Z - aim[2]) * k; aim[1] += (talkPt.Y - aim[1]) * k * 0.5; }
     // (aiming: the look runs far out along the eye's own way, so the middle of the picture is where the shot goes)
     if (aimK > 0.01) { const f = fwd(C3.yaw, C3.pitch); for (let i = 0; i < 3; i++) aim[i] = G.lerp(aim[i], [P.X, P.Y, P.Z][i] + f[i] * 30, aimK); }
     // (the shake: the eye and its aim thrown about a little, by the square of the trauma — a small blow a tremor, a big one a jolt)

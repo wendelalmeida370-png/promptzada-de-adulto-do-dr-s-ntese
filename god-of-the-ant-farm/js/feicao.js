@@ -120,18 +120,19 @@
       blob(o, x, y, z, [0.048, 1.575, 0.06], 0.024, [0.002, -0.006, 0]); blob(o, x, y, z, CHIN, 0.02, [0, 0.002, -0.003]); const w = g2(x * 0.7, y - MY, z - 0.11, 0.016); o[2] -= 0.003 * w;
       blob(o, x, y, z, TIP, 0.016, [0, -0.002, 0.002]); swell(o, x, y, z, EAR, 0.028, 0.08); blob(o, x, y, z, [0.045, 1.64, 0.075], 0.016, [-0.002, 0, -0.002]); }, HEADBOX],
     // the body (the genome's, a little moved by the life: hunger thins, heavy work builds the muscle)
+    // (22a wave 2, D-643: the fat, the thin and the strong read a few tens of steps off — the outline, not only the near shape)
     ['gordo', 'corpo', (o, x, y, z) => {
-      trunk(o, x, y, z, 0.026, 0.045);
-      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => 0.013 * sm(1.1, 0.5, t)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => 0.022 * sm(0.75, 0.25, t) + 0.006); }
-      blob(o, x, y, z, [0, 1.55, 0.05], 0.025, [0, -0.005, 0.004]); blob(o, x, y, z, [0.055, 1.6, 0.05], 0.028, [0.006, 0, 0.003]); limb(o, x, y, z, [0, 1.44, -0.01], [0, 1.56, 0], 0.08, () => 0.007); }, BODYBOX],
+      trunk(o, x, y, z, 0.027, 0.054);
+      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => 0.013 * sm(1.1, 0.5, t) + 0.008 * sm(0.18, 0.4, t) * sm(1.1, 0.5, t)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => 0.024 * sm(0.75, 0.25, t) + 0.007); }
+      blob(o, x, y, z, [0, 1.55, 0.05], 0.025, [0, -0.007, 0.006]); blob(o, x, y, z, [0.055, 1.6, 0.05], 0.028, [0.009, 0, 0.004]); limb(o, x, y, z, [0, 1.44, -0.01], [0, 1.56, 0], 0.08, () => 0.011); }, BODYBOX],
     ['magro', 'corpo', (o, x, y, z) => {
-      trunk(o, x, y, z, -0.016, -0.012);
-      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => -0.007 * sm(1.1, 0.5, t)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => -0.012 * sm(0.75, 0.25, t)); }
+      trunk(o, x, y, z, -0.026, -0.022);
+      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => -0.011 * sm(1.1, 0.5, t)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => -0.018 * sm(0.75, 0.25, t)); }
       blob(o, x, y, z, [0.045, 1.635, 0.07], 0.018, [-0.002, 0, -0.003]); blob(o, x, y, z, TEMPLE, 0.018, [-0.002, 0, -0.001]); }, BODYBOX],
     ['musculo', 'corpo', (o, x, y, z) => {
-      blob(o, x, y, z, [0.215, 1.43, 0], 0.06, [0.012, 0.004, 0]); blob(o, x, y, z, [0.08, 1.3, 0.1], 0.06, [0.002, 0, 0.011]); blob(o, x, y, z, [0.1, 1.475, -0.02], 0.045, [0.004, 0.006, 0]);
-      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => (t < 0.55 ? 0.011 : 0.006)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => 0.011 * sm(0.75, 0.3, t) + 0.006 * g2(t - 0.7, 0, 0, 0.12)); } }, BODYBOX],
-    ['ombros', 'corpo', (o, x, y, z) => { const ax = Math.abs(x); if (y < 1.0) return; o[0] += Math.sign(x) * 0.018 * sm(0.08, 0.22, ax) * sm(1.2, 1.36, y) * sm(1.6, 1.5, y); }, BODYBOX],
+      blob(o, x, y, z, [0.215, 1.43, 0], 0.06, [0.018, 0.006, 0]); blob(o, x, y, z, [0.08, 1.3, 0.1], 0.06, [0.003, 0, 0.016]); blob(o, x, y, z, [0.1, 1.475, -0.02], 0.045, [0.006, 0.009, 0]);
+      for (const sd of [1, -1]) { const a = ARM(sd); limb(o, x, y, z, a[0], a[1], 0.09, t => (t < 0.55 ? 0.017 : 0.009)); const l = LEG(sd); limb(o, x, y, z, l[0], l[1], 0.12, t => 0.016 * sm(0.75, 0.3, t) + 0.009 * g2(t - 0.7, 0, 0, 0.12)); } }, BODYBOX],
+    ['ombros', 'corpo', (o, x, y, z) => { const ax = Math.abs(x); if (y < 1.0) return; o[0] += Math.sign(x) * 0.027 * sm(0.08, 0.22, ax) * sm(1.2, 1.36, y) * sm(1.6, 1.5, y); }, BODYBOX],
     ['gestante', 'corpo', (o, x, y, z) => { o[2] += 0.15 * g2(x * 0.85, (y - 1.03) * 0.85, 0, 0.13) * sm(-0.03, 0.07, z); o[1] -= 0.02 * g2(x, y - 0.98, 0, 0.12) * sm(0.0, 0.08, z); }, BODYBOX],
     ['cotoBracoE', 'corpo', (o, x, y, z) => { if (x < 0.15) return; const a = ARM(1); stump(o, x, y, z, a[0], a[1], 0.42, 0.045, 0.13); }, BODYBOX],
     ['cotoBracoD', 'corpo', (o, x, y, z) => { if (x > -0.15) return; const a = ARM(-1); stump(o, x, y, z, a[0], a[1], 0.42, 0.045, 0.13); }, BODYBOX],
@@ -166,6 +167,8 @@
   // (22a wave 2, D-636: more of what reads a few steps off — the nose, the chin, the cheekbones, the jaw's width, the face's length,
   // the skull —, inside the box of the verifier at the edges of a people: a face, never a caricature)
   const AMP = { cranio: 0.45, rostoLongo: 0.42, mandibula: 0.56, queixo: 0.6, macas: 0.6, arcada: 0.45, narizLongo: 0.6, narizLargo: 0.55, narizPonte: 0.56, labios: 0.45, olhosAfast: 0.4, olhoTam: 0.35, palpebra: 0.45, orelhas: 0.35 };
+  // (how far a skirt is kept off the body — the shape's own number, the same in the drawing and in the proofs)
+  F.girth = w => { const X = F.IDX; return 1 + 0.2 * w[X.gordo] - 0.09 * w[X.magro] + 0.08 * Math.max(0, w[X.musculo]) + 0.25 * w[X.gestante]; };
   F.of = function (v) {
     const Ge = G.Genoma; if (!v || !Ge || !Ge.valid(v.genoma)) return null;
     const age = v.age || 0; const lost = v.lost || null, preg = v.preg > 0 ? v.preg : 0;
@@ -211,8 +214,12 @@
     { const ch = 1 - sm(0, 15, aQ), hk = 1 - sm(0, 13, aQ); const cab = 1 + 0.3 * hk, per = 1 - 0.22 * ch, bra = 1 - 0.12 * ch;
       o.prop = { cabeca: cab, perna: per, braco: bra, tronco: (1.75 - 0.92 * per - 0.21 * cab) / 0.62 }; }
     o.cinza = 46 + 8 * zs(P[I.grisalho]); o.greyT = clamp((Math.floor(age) - o.cinza) / 22, 0, 0.92);
-    o.girth = 1 + 0.12 * w[X.gordo] - 0.06 * w[X.magro] + 0.05 * Math.max(0, w[X.musculo]) + 0.25 * w[X.gestante]; // (how far a skirt is kept off the body)
-    MEMO.set(v.id, o); if (MEMO.size > 4000) MEMO.clear();
+    // (the hair as it is now: salt and pepper toward a grey, then toward white — the 3D and the god's view paint this one, D-640)
+    { const h0 = G.hex2rgb(o.hair), t = o.greyT, salt = [h0[0] + (150 - h0[0]) * 0.55, h0[1] + (146 - h0[1]) * 0.55, h0[2] + (140 - h0[2]) * 0.55];
+      const mix = (a, b, k) => [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * k), c = !t ? h0 : t < 0.45 ? mix(h0, salt, t / 0.45) : mix(salt, [226, 223, 216], (t - 0.45) / 0.55);
+      o.hairNow = '#' + c.map(q => Math.round(clamp(q, 0, 255)).toString(16).padStart(2, '0')).join(''); }
+    o.girth = F.girth(w); // (how far a skirt is kept off the body)
+    MEMO.set(v.id, o); if (MEMO.size > 4000 + 2 * (G.S && G.S.villagers ? G.S.villagers.size : 0)) MEMO.clear(); // (the god's view asks for everyone it draws, each frame: a cap under the people would make it all again each frame)
     return o;
   };
   // (the trades whose days are heavy work of the arms and the back: the body shows the years of it — the muscle, a little)

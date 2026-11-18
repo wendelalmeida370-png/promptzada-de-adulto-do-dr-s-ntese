@@ -38,9 +38,10 @@
     const gT = Fe ? Fe.greyT : ad >= 62 ? G.clamp((Math.floor(ad) - 62) / 18, 0, 0.85) : 0, grey = Math.round(gT * 50);
     if (L._cloth !== cloth || L._hair !== hair0 || L._skin !== skin0 || L._grey !== grey) {
       L._cloth = cloth; L._hair = hair0; L._skin = skin0; L._grey = grey;
+      // (the hair as it is now: the feição's, the god's view paints the same — D-640; one with no genome greys by the years alone)
       const h0 = G.hex2rgb(hair0 || '#3a2a1a'), salt = G.lerpColor(h0, [150, 146, 140], 0.55);
-      const hair = grey ? (gT < 0.45 ? G.lerpColor(h0, salt, gT / 0.45) : G.lerpColor(salt, [226, 223, 216], (gT - 0.45) / 0.55)) : null;
-      L.skin = skin0 || '#d8a888'; L.hair = hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : hair0 || '#3a2a1a';
+      const hair = !Fe && grey ? (gT < 0.45 ? G.lerpColor(h0, salt, gT / 0.45) : G.lerpColor(salt, [226, 223, 216], (gT - 0.45) / 0.55)) : null;
+      L.skin = skin0 || '#d8a888'; L.hair = Fe ? Fe.hairNow : hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : hair0 || '#3a2a1a';
       L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(L.hair, 0.8); L.nose = darker(skin0 || '#d8a888', 0.88); L.lips = darker(skin0 || '#d8a888', 0.62);
     }
     L.fem = v.g === 'f' && ad >= 13; L.bun = v.g === 'f' && ad >= 16 && v.id % 3 === 1; L.beard = v.g === 'm' && ad >= 26 && v.id % 3 === 0; L.long = v.g === 'f' && ad >= 8 && v.id % 3 !== 1; L.bald = v.g === 'm' && ad >= 55 && v.id % 4 === 0;

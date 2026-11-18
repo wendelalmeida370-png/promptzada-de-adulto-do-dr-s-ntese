@@ -146,8 +146,8 @@ A máquina de teste não tem placa de vídeo: os tempos absolutos não valem, os
   `forest`, `grass`, `needles` passam de 200 — baixar a qualidade só tira 12% e borra o que importa); tecido e couro em
   256 px (o fio nunca chega à tela). O limite que manda é o total.
 - Os bichos (`js/faunamesh.js`, feito pelo `arte/fauna.py`, no formato 3 das malhas — D-266): 2,4 MB para as 72 espécies (as 67 da terra, da beira d'água e do ar e as 5 do mar, D-267), as 11 malhas de voo e o dragão no chão e no voo (D-270), perto e longe — uma categoria como a das pessoas (`bodymesh.js`, 1,75 MB), fora da conta das peças abaixo (D-266).
-- As formas das pessoas (`G.Feicao.ALVOS`, D-554): 44 alvos, uma tabela de ≈ 0,58 milhão de texels (8,8 MB na placa, números de 32
-  bits), feita ao começar o 3D (≈ 0,5–1 s numa máquina ocupada); nenhuma chamada de desenho nova; até ≈ 30 buscas de texel a mais
+- As formas das pessoas (`G.Feicao.ALVOS`, D-554): 44 alvos, uma tabela de ≈ 0,57 milhão de texels (4,4 MB na placa em meia precisão —
+  eram 8,6 MB de números de 32 bits, D-642 —, mais 64 KB dos cabeçalhos), feita ao começar o 3D (≈ 0,5–1 s numa máquina ocupada); nenhuma chamada de desenho nova; até ≈ 30 buscas de texel a mais
   por ponto desenhado (só as do corpo na sombra). O `bodymesh.js`, 2,2 MB.
 - Arquivo de malha: ≤ 60 KB cada (a cabeça de dragão: 25,6 KB; a pedra rúnica: 36,7 KB; o portal: 34,3 KB; a maior, a banca:
   40,4 KB); todas juntas ≤ 1 MB (hoje sete, 203 KB — a conta do `qa/visual/malhas.js`).
@@ -310,7 +310,7 @@ de trás, em Mênfis, lê como formiga gigante); o corpo atravessa a saia (duas 
 e os braços leem como manequim cinza de juntas (à noite, boneco de madeira); a pele pálida e acinzentada, que na sombra
 da mata faz o rosto parecer caveira. *Próximo:* os bichos do mar e o dragão na mesma pele (T-1283); o nado e o voo com prova de pose (T-1297);
 a saia sem o corpo passando; pele mais quente e manga com dobra.
-*Próximo (22a, onda 2):* a criança de pernas curtas (com a 22c), a vista do deus pelo `G.Feicao`, o retrato no painel, a câmera de conversa.
+*Depois (22a, onda 2):* a velhice que se lê a três passos e o grisalho do gene (D-635 a D-637), a vista do deus na pele e no cabelo do 3D (D-640), o retrato do painel pelo rosto do 3D (D-645), a câmera de conversa a 1,25 m do ombro (D-644), o suor que brilha e as gotas na testa de perto (D-641), o gordo, o magro e o forte lidos de longe (D-643). *Próximo:* a cintura bem mais larga com o pano que a acompanha (T-1584).
 
 **Luz, água e céu (A5).** *Cumpre:* a noite de verdade (estrelas, a poça quente da tocha, janela acesa, as tábuas lidas no
 escuro); o dia sem preto esmagado nem branco estourado, de sombra macia; a água com fundo e a beira acompanhando o chão;

@@ -780,12 +780,21 @@
     if (!k && !D.cold) return null;
     return { k, col: !k ? '' : !D.weave ? '#6e5236' : k === 'nobreza' ? At.deep(v.id, v._civ || 'classico') : At.bright(v.id), cold: v.robe && !v.hood ? 0 : D.cold, cloak: D.weave ? '#6a5a48' : '#6e5236' };
   };
+  // the colours a person is painted with (22a wave 2, D-640): the living as the 3D draws them — the skin and the hair with its grey
+  // from G.Feicao, one source for both views (one with no genome, as before) —; the dead in what their painter says (the grey of
+  // the dead's portrait, the rot, the fire, the lightning: the painter of the dead sets the copy's skin and hair, L-1678)
+  const feOf = v => (!v.dead && G.Feicao && G.Feicao.of ? G.Feicao.of(v) : null);
+  Art.skinOf = (v, Fe = feOf(v)) => (Fe ? Fe.skin : v.skin);
+  Art.hairOf = (v, Fe = feOf(v)) => (Fe ? Fe.hairNow : !v.dead && v.age >= 62 ? '#dcdcdc' : v.hair);
   Art.villager = function (c, v, x, y, t, lod) {
     const S = G.S;
     const age = v.age;
+    // (the height as the 3D's: the gene's ±8%, the dead's too)
+    const Fe = G.Feicao && G.Feicao.of ? G.Feicao.of(v) : null;
+    const skin = Art.skinOf(v, v.dead ? null : Fe), hairNow = Art.hairOf(v, v.dead ? null : Fe);
     // a blow that just landed throws the body back for a moment
     const act = v.stagT && v.stagT > S.clock ? 'stagger' : v.act, at = v.actT;
-    const sc = age < 2 ? 0.45 : age < 16 ? 0.55 + (age / 16) * 0.42 : 1;
+    const sc = (age < 2 ? 0.45 : age < 16 ? 0.55 + (age / 16) * 0.42 : 1) * (Fe ? Fe.alt : 1);
     const levy = !!(v.unit && v.task && v.task.type === 'band' && age >= 16 && !v.captive);
     const warrior = (v.role === 'guerreiro' && age >= 16 && !v.captive) || levy;
     const mounted = v.unit === 'cavalaria' && !v.elite && levy && act !== 'sit';
@@ -794,7 +803,7 @@
       c.fillStyle = cloth; c.fillRect(x - 1.6 * sc, y - 7 * sc, 3.2 * sc, 5 * sc);
       // (the standing still reads from far: a stripe of the mantle's or the sash's dye down the back)
       const rk0 = Art.rank(v); if (rk0 && rk0.k) { c.fillStyle = rk0.col; c.fillRect(x - 1.6 * sc, y - 7 * sc, 1.1 * sc, 5 * sc); }
-      c.fillStyle = v.skin; c.fillRect(x - 1.2 * sc, y - 9.5 * sc, 2.4 * sc, 2.4 * sc);
+      c.fillStyle = skin; c.fillRect(x - 1.2 * sc, y - 9.5 * sc, 2.4 * sc, 2.4 * sc);
       return;
     }
     c.save();
@@ -803,8 +812,8 @@
     if ((v.sleeping && !v.inside) || act === 'lie') {
       c.fillStyle = '#8a6a4a'; c.beginPath(); c.ellipse(0, 0, 6.5, 2.4, 0, 0, TAU); c.fill();
       c.fillStyle = cloth; c.beginPath(); c.ellipse(0.8, -0.8, 4.5, 1.7, 0, 0, TAU); c.fill();
-      c.fillStyle = v.skin; c.beginPath(); c.arc(-4.2, -1.3, 1.7, 0, TAU); c.fill();
-      c.fillStyle = v.age >= 62 ? '#d8d8d8' : v.hair; c.beginPath(); c.arc(-4.6, -1.8, 1.4, Math.PI * 0.8, Math.PI * 1.9); c.fill();
+      c.fillStyle = skin; c.beginPath(); c.arc(-4.2, -1.3, 1.7, 0, TAU); c.fill();
+      c.fillStyle = hairNow; c.beginPath(); c.arc(-4.6, -1.8, 1.4, Math.PI * 0.8, Math.PI * 1.9); c.fill();
       c.restore(); return;
     }
     if (act === 'dive') { // under the water: only the rings and the bubbles show where they went down
@@ -814,9 +823,9 @@
     }
     if (act === 'swim') {
       c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 0.6; c.beginPath(); c.ellipse(0, 0, 4 + Math.sin(t * 6) * 0.6, 1.8, 0, 0, TAU); c.stroke();
-      c.fillStyle = v.skin; c.beginPath(); c.arc(0, -2, 1.9, 0, TAU); c.fill();
-      c.fillStyle = v.hair; c.beginPath(); c.arc(0, -2.6, 1.8, Math.PI, TAU); c.fill();
-      c.strokeStyle = v.skin; c.lineWidth = 0.9; const s = Math.sin(t * 9) * 2; line(c, -1.5, -1, -3, -3 + s); line(c, 1.5, -1, 3, -3 - s);
+      c.fillStyle = skin; c.beginPath(); c.arc(0, -2, 1.9, 0, TAU); c.fill();
+      c.fillStyle = hairNow; c.beginPath(); c.arc(0, -2.6, 1.8, Math.PI, TAU); c.fill();
+      c.strokeStyle = skin; c.lineWidth = 0.9; const s = Math.sin(t * 9) * 2; line(c, -1.5, -1, -3, -3 + s); line(c, 1.5, -1, 3, -3 - s);
       c.restore(); return;
     }
     c.scale(G.Render.sface(v) * sc, sc);
@@ -886,9 +895,9 @@
       if (rk.cold && rk.k !== 'nobreza') { c.fillStyle = rk.cloak; c.beginPath(); c.moveTo(-2.4, -9); c.lineTo(-0.7, -9); c.lineTo(-1.2, -2.6); c.lineTo(-3, -2.6); c.closePath(); c.fill(); }
     }
     // arms & tools
-    c.strokeStyle = v.skin; c.lineWidth = 1;
+    c.strokeStyle = skin; c.lineWidth = 1;
     const sh = [-0.2, -8]; // shoulder
-    const tool = (ang, len, draw) => { c.save(); c.translate(sh[0], sh[1]); c.rotate(ang); c.strokeStyle = v.skin; line(c, 0, 0, 0, 3.4); c.translate(0, 3.4); draw && draw(); c.restore(); };
+    const tool = (ang, len, draw) => { c.save(); c.translate(sh[0], sh[1]); c.rotate(ang); c.strokeStyle = skin; line(c, 0, 0, 0, 3.4); c.translate(0, 3.4); draw && draw(); c.restore(); };
     const sw = Math.sin(at * 11);
     // a lost arm: the far arm is simply not there any more
     const oneArm = v.lost && (v.lost.armL || v.lost.armR);
@@ -897,7 +906,7 @@
       case 'chop': tool(-2.2 + (sw > 0 ? sw : sw * 0.3) * 1.9, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.8; line(c, 0, 0, 0, 4); c.fillStyle = '#9aa0a8'; c.fillRect(-0.2, 3, 2.2, 1.6); }); break;
       case 'mine': tool(-2.4 + (sw > 0 ? sw : sw * 0.3) * 2, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.8; line(c, 0, 0, 0, 4.2); c.strokeStyle = '#8a8e96'; c.lineWidth = 0.9; c.beginPath(); c.arc(0, 4.4, 2.4, Math.PI * 0.1, Math.PI * 0.9); c.stroke(); }); break;
       case 'build': tool(-1.8 + Math.abs(Math.sin(at * 14)) * 1.4, 3, () => { c.strokeStyle = '#7a5230'; c.lineWidth = 0.7; line(c, 0, 0, 0, 3); c.fillStyle = '#6a6e76'; c.fillRect(-1.2, 2.6, 2.4, 1.2); }); break;
-      case 'fight': { const j = Math.max(0, Math.sin(at * 7)); c.save(); c.translate(0, -7); c.rotate(1.35); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3, 0, 7 - j * 3); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3); c.lineTo(0, 9.2 - j * 3); c.lineTo(0.9, 7 - j * 3); c.fill(); c.restore(); c.strokeStyle = v.skin; line(c, 0, -8, 2.2 + j * 2, -6.8); break; }
+      case 'fight': { const j = Math.max(0, Math.sin(at * 7)); c.save(); c.translate(0, -7); c.rotate(1.35); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3, 0, 7 - j * 3); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3); c.lineTo(0, 9.2 - j * 3); c.lineTo(0.9, 7 - j * 3); c.fill(); c.restore(); c.strokeStyle = skin; line(c, 0, -8, 2.2 + j * 2, -6.8); break; }
       case 'pray': c.lineWidth = 1; arm(c, -1.6, -8, -2.6, -11.5); line(c, 1.6, -8, 2.6, -11.5); break;
       case 'run': { const s2 = Math.sin(ph * 1.3) * 1.5; arm(c, -1.6, -8, -3, -11 + s2); line(c, 1.6, -8, 3, -11 - s2); break; }
       case 'dance': { const s2 = Math.sin(at * 7 + v.id) * 2; arm(c, -1.6, -8, -3.2, -10.5 + s2); line(c, 1.6, -8, 3.2, -10.5 - s2); break; }
@@ -916,7 +925,7 @@
         break;
       }
       case 'plant': case 'harvest': case 'gather': case 'fill': { const s3 = Math.sin(at * 6) * 0.8; line(c, 0, -8, 1.5 + s3, -4); arm(c, -0.5, -8, 0.6 - s3, -4.2); if (act === 'fill') { c.fillStyle = '#7a5a3a'; c.fillRect(0.6, -4.4, 2.2, 2); } break; }
-      case 'throw': { const k = Math.min(1, at / 0.4); c.save(); c.translate(0, -8); c.rotate(-2.6 + k * 2.2); c.strokeStyle = v.skin; line(c, 0, 0, 0, 3.4); c.fillStyle = '#7a5a3a'; c.fillRect(-1.2, 3, 2.4, 2); c.restore(); break; }
+      case 'throw': { const k = Math.min(1, at / 0.4); c.save(); c.translate(0, -8); c.rotate(-2.6 + k * 2.2); c.strokeStyle = skin; line(c, 0, 0, 0, 3.4); c.fillStyle = '#7a5a3a'; c.fillRect(-1.2, 3, 2.4, 2); c.restore(); break; }
       case 'beat': tool(-2.4 + Math.abs(Math.sin(at * 9)) * 2, 3, () => { c.strokeStyle = '#5a4a2a'; c.lineWidth = 0.9; line(c, 0, 0, 0, 5); c.fillStyle = '#4a7a3a'; c.beginPath(); c.ellipse(0, 5.4, 1.6, 1, 0, 0, TAU); c.fill(); }); break;
       case 'eat': line(c, 0, -8, 1.8, -8.6); c.fillStyle = '#c86a3a'; c.beginPath(); c.arc(2, -9, 0.9, 0, TAU); c.fill(); break;
       case 'story': { const a1 = Math.sin(at * 2.3 + v.id), a2 = Math.sin(at * 1.7 + 1 + v.id); line(c, 0, -8, 2.6 + a1 * 0.6, -10.4 - a1 * 2); arm(c, -0.4, -8, -2.4 - a2 * 0.6, -9 - a2 * 2.2); break; }
@@ -949,11 +958,11 @@
         break;
       }
       case 'look': { // the head back, a hand shading the eyes, looking up at the nest
-        line(c, 0, -8, 1.2, -10.6); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = v.skin; c.lineWidth = 0.9; line(c, 1.2, -10.6, 2, -10.9); break;
+        line(c, 0, -8, 1.2, -10.6); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = skin; c.lineWidth = 0.9; line(c, 1.2, -10.6, 2, -10.9); break;
       }
       case 'play': { // a lute in the arms, one hand strumming
         const s2 = Math.sin(at * 9) * 0.6; c.fillStyle = '#a8703a'; c.beginPath(); c.ellipse(1.4, -6.2, 1.9, 1.4, -0.5, 0, TAU); c.fill(); c.fillStyle = '#3a2416'; c.beginPath(); c.arc(1.5, -6.2, 0.45, 0, TAU); c.fill();
-        c.strokeStyle = '#7a4a2a'; c.lineWidth = 0.6; line(c, 2.4, -7, 4.6, -9.4); c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 1.4 + s2, -6.6); arm(c, -0.4, -8, 3.8, -8.6); break;
+        c.strokeStyle = '#7a4a2a'; c.lineWidth = 0.6; line(c, 2.4, -7, 4.6, -9.4); c.strokeStyle = skin; c.lineWidth = 1; line(c, 0, -8, 1.4 + s2, -6.6); arm(c, -0.4, -8, 3.8, -8.6); break;
       }
       case 'press': { // treading the grapes: skirts held up, purple to the shins
         line(c, 0, -8, 2.2, -6.2); arm(c, -0.4, -8, -2, -6.4); c.fillStyle = 'rgba(110,20,60,0.75)'; c.fillRect(-1.6, -2.6, 3.2, 1.2); break;
@@ -993,34 +1002,34 @@
       case 'drink': line(c, 0, -8, 1.8, -10.4); c.fillStyle = '#a07040'; c.fillRect(1.4, -11.4, 1.2, 1.6); arm(c, -0.4, -8, -0.6, -4.6); break;
       case 'write': { arm(c, -0.4, -8, 1.6, -6.4); c.fillStyle = '#e8dcc0'; c.fillRect(1.2, -7.4, 2.6, 1.8); c.fillStyle = 'rgba(60,40,20,0.5)'; c.fillRect(1.5, -6.9, 1.8, 0.25); c.fillRect(1.5, -6.3, 1.4, 0.25); const s2 = Math.sin(at * 10) * 0.5; line(c, 0, -8, 2.4 + s2, -7.2); break; }
       case 'act': { const g = Math.sin(at * 3 + v.id) * 1.6; line(c, 0, -8, 2.6, -10.5 + g); arm(c, -0.4, -8, -2.4, -9.5 - g); break; }
-      case 'climb': { const s2 = Math.sin(at * 6) * 1.4; c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; const g0 = (v.z || 0) / sc; line(c, 1.4, g0, 2.4, -15); line(c, 3.4, g0, 4.4, -15); for (let yy = g0 - 1.5; yy > -15; yy -= 2.2) { const f = (g0 - yy) / (g0 + 15); line(c, 1.4 + f, yy, 3.4 + f, yy); } c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, -8, 2.2, -11 + s2); arm(c, -0.4, -8, 2, -10.4 - s2); break; }
+      case 'climb': { const s2 = Math.sin(at * 6) * 1.4; c.strokeStyle = '#7a5a3a'; c.lineWidth = 0.6; const g0 = (v.z || 0) / sc; line(c, 1.4, g0, 2.4, -15); line(c, 3.4, g0, 4.4, -15); for (let yy = g0 - 1.5; yy > -15; yy -= 2.2) { const f = (g0 - yy) / (g0 + 15); line(c, 1.4 + f, yy, 3.4 + f, yy); } c.strokeStyle = skin; c.lineWidth = 1; line(c, 0, -8, 2.2, -11 + s2); arm(c, -0.4, -8, 2, -10.4 - s2); break; }
       case 'knock': line(c, 0, -8, 2.5, -9 + Math.abs(Math.sin(at * 9)) * 0.9); arm(c, -0.4, -8, -0.4, -4.4); break;
       case 'sneak': line(c, 0, -8, 1.6, -5.4); arm(c, -0.4, -8, 1.2, -5); break;
       case 'guard': line(c, 0.3, -8, 0.4, -4.4); arm(c, -0.3, -8, -0.4, -4.4); if (warrior) G.Arch.arms(c, v); break;
-      case 'drill': { const j = Math.max(0, Math.sin(at * 5)); c.save(); c.translate(0, -7); c.rotate(1.45); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3.5, 0, 7 - j * 3.5); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3.5); c.lineTo(0, 9.2 - j * 3.5); c.lineTo(0.9, 7 - j * 3.5); c.fill(); c.restore(); c.strokeStyle = v.skin; line(c, 0, -8, 2.2 + j * 2.4, -6.8); break; }
+      case 'drill': { const j = Math.max(0, Math.sin(at * 5)); c.save(); c.translate(0, -7); c.rotate(1.45); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.7; line(c, 0, -3 - j * 3.5, 0, 7 - j * 3.5); c.fillStyle = '#b8bcc4'; c.beginPath(); c.moveTo(-0.9, 7 - j * 3.5); c.lineTo(0, 9.2 - j * 3.5); c.lineTo(0.9, 7 - j * 3.5); c.fill(); c.restore(); c.strokeStyle = skin; line(c, 0, -8, 2.2 + j * 2.4, -6.8); break; }
       case 'kneel': line(c, 0, -8, -1.4, -5.8); arm(c, -0.4, -8, -1.8, -5.6); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(-1.6, -5.7, 0.7, 0, TAU); c.stroke(); break;
       case 'cross': line(c, 0, -8, 4.4, -9.4); arm(c, -0.4, -8, -4.6, -9.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; line(c, 3.8, -9.8, 3.8, -8.8); line(c, -4, -9.8, -4, -8.8); break;
       case 'hangd': line(c, 0, -8, 0.8, -4.2); arm(c, -0.4, -8, -0.6, -4.2); break;
       case 'writhe': { const a1 = Math.sin(at * 13 + v.id), a2 = Math.sin(at * 11 + 2); line(c, 0, -8, 2.6 + a1, -10.4 + a2 * 1.6); arm(c, -0.4, -8, -2.8 - a2, -10 + a1 * 1.6); break; }
       case 'axe': { // the executioner: the axe held high, then down
         const k = (at % 2.2) / 2.2; const up = k < 0.7 ? Math.min(1, k / 0.45) : 1 - (k - 0.7) / 0.08; const a = -0.35 - G.clamp(up, 0, 1) * 2.6;
-        c.save(); c.translate(0, -7.6); c.rotate(a); c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, 0, 0, 3.4); line(c, 0.6, 0, 0.6, 3.2); c.translate(0.3, 3.2);
+        c.save(); c.translate(0, -7.6); c.rotate(a); c.strokeStyle = skin; c.lineWidth = 1; line(c, 0, 0, 0, 3.4); line(c, 0.6, 0, 0.6, 3.2); c.translate(0.3, 3.2);
         c.strokeStyle = '#5a3a22'; c.lineWidth = 0.9; line(c, 0, -0.6, 0, 7.4); c.fillStyle = '#9aa0a8'; c.beginPath(); c.moveTo(0, 5.2); c.lineTo(3.2, 4.4); c.quadraticCurveTo(3.8, 6.4, 3.2, 8.4); c.lineTo(0, 7.6); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(2.8, 4.8, 0.4, 3.2); c.restore(); break;
       }
       case 'sword2': { const k = (at % 2) / 2; const up = k < 0.65 ? Math.min(1, k / 0.4) : 1 - (k - 0.65) / 0.08; const a = -0.4 - G.clamp(up, 0, 1) * 2.5;
-        c.save(); c.translate(0, -7.6); c.rotate(a); c.strokeStyle = v.skin; c.lineWidth = 1; line(c, 0, 0, 0, 3.4); line(c, 0.6, 0, 0.6, 3.2); c.translate(0.3, 3.4); c.strokeStyle = '#3a2a1a'; c.lineWidth = 0.9; line(c, 0, -0.6, 0, 1.4); c.fillStyle = '#c8ccd4'; c.beginPath(); c.moveTo(-0.5, 1.4); c.lineTo(0.5, 1.4); c.lineTo(0.9, 9.6); c.quadraticCurveTo(0, 10.6, -0.3, 9.6); c.closePath(); c.fill(); c.restore(); break; }
+        c.save(); c.translate(0, -7.6); c.rotate(a); c.strokeStyle = skin; c.lineWidth = 1; line(c, 0, 0, 0, 3.4); line(c, 0.6, 0, 0.6, 3.2); c.translate(0.3, 3.4); c.strokeStyle = '#3a2a1a'; c.lineWidth = 0.9; line(c, 0, -0.6, 0, 1.4); c.fillStyle = '#c8ccd4'; c.beginPath(); c.moveTo(-0.5, 1.4); c.lineTo(0.5, 1.4); c.lineTo(0.9, 9.6); c.quadraticCurveTo(0, 10.6, -0.3, 9.6); c.closePath(); c.fill(); c.restore(); break; }
       case 'pull': { const k = Math.min(1, at / 0.6); line(c, 0, -8, 2.8, -6.6 + k * 2.6); arm(c, -0.4, -8, 2.4, -6.4 + k * 2.6); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 2.8, -6.8 + k * 2.6, 3.6, -11 + k * 4); break; }
       case 'stab': { const k = (at % 1.6) / 1.6; const up = k < 0.6 ? Math.min(1, k / 0.35) : 1 - (k - 0.6) / 0.1; const hy2 = -13.6 + (1 - G.clamp(up, 0, 1)) * 7;
         line(c, 0, -8, 1.4, hy2); arm(c, -0.4, -8, 1.1, hy2 + 0.4); c.fillStyle = '#1a1a22'; c.beginPath(); c.moveTo(1.2, hy2 - 0.4); c.lineTo(1.8, hy2 - 3.6); c.lineTo(2.2, hy2 - 0.4); c.closePath(); c.fill(); c.fillStyle = 'rgba(160,200,220,0.5)'; c.fillRect(1.6, hy2 - 3, 0.3, 2.2); break; }
       case 'heart': line(c, 0, -8, 1.2, -14.6); arm(c, -0.4, -8, 0.9, -14.2); c.fillStyle = '#b8121e'; c.beginPath(); c.ellipse(1.1, -15.4, 1.3, 1.1, 0, 0, TAU); c.fill(); c.fillStyle = 'rgba(255,90,80,' + (0.4 + Math.sin(t * 9) * 0.3) + ')'; c.beginPath(); c.arc(1.1, -15.4, 2.4, 0, TAU); c.fill(); break;
       case 'hold': line(c, 0, -8, 2.8, -4.6); arm(c, -0.4, -8, 2.4, -4.2); break;
-      case 'boo': { const s2 = Math.abs(Math.sin(at * 6 + v.id)) * 1.4; line(c, 0, -8, 1.2, -12.2 - s2); arm(c, -0.4, -8, -0.4, -4.4); c.fillStyle = v.skin; c.beginPath(); c.arc(1.2, -12.6 - s2, 0.75, 0, TAU); c.fill(); break; }
+      case 'boo': { const s2 = Math.abs(Math.sin(at * 6 + v.id)) * 1.4; line(c, 0, -8, 1.2, -12.2 - s2); arm(c, -0.4, -8, -0.4, -4.4); c.fillStyle = skin; c.beginPath(); c.arc(1.2, -12.6 - s2, 0.75, 0, TAU); c.fill(); break; }
       case 'riot': { const s2 = Math.abs(Math.sin(at * 5 + v.id)) * 1.6; line(c, 0, -8, 1.4, -12.6 - s2); arm(c, -0.4, -8, -2.2, -11 + s2 * 0.5); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.7; line(c, 1.4, -11.6 - s2, 1.8, -16 - s2);
         const fl = Math.sin(t * 14 + v.id) * 0.4; c.fillStyle = '#ff9a2a'; c.beginPath(); c.moveTo(1.2, -15.8 - s2); c.quadraticCurveTo(1.8 + fl, -19.6 - s2, 2.6, -15.8 - s2); c.fill(); c.fillStyle = '#ffe07a'; c.beginPath(); c.arc(1.9, -16.6 - s2, 0.6, 0, TAU); c.fill(); break; }
       case 'read': line(c, 0, -8, 2.4, -9.6); arm(c, -0.4, -8, 1.6, -9.8); c.fillStyle = '#efe4c8'; c.fillRect(1.4, -12.2, 2.2, 3.2); c.fillStyle = '#b8a070'; c.fillRect(1.2, -12.4, 2.6, 0.6); c.fillRect(1.2, -9.2, 2.6, 0.6); c.fillStyle = 'rgba(80,60,40,0.6)'; for (let q = 0; q < 3; q++) c.fillRect(1.7, -11.4 + q * 0.8, 1.6, 0.25); break;
       case 'torchfwd': line(c, 0, -8, 3, -8.6); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.7; line(c, 2.8, -8.4, 4.6, -10.8); c.fillStyle = '#ff9a2a'; c.beginPath(); c.moveTo(4.2, -10.6); c.quadraticCurveTo(5 + Math.sin(t * 15) * 0.4, -14, 5.6, -10.6); c.fill(); break;
       case 'point': line(c, 0, -8, 4.4, -8.6); arm(c, -0.4, -8, -0.6, -4.4); break;
-      case 'shout': { const s2 = Math.abs(Math.sin(at * 7)) * 0.8; line(c, 0, -8, 1.6, -12.8 - s2); arm(c, -0.4, -8, 2.6, -8.6); c.fillStyle = v.skin; c.beginPath(); c.arc(1.6, -13.2 - s2, 0.75, 0, TAU); c.fill(); break; }
+      case 'shout': { const s2 = Math.abs(Math.sin(at * 7)) * 0.8; line(c, 0, -8, 1.6, -12.8 - s2); arm(c, -0.4, -8, 2.6, -8.6); c.fillStyle = skin; c.beginPath(); c.arc(1.6, -13.2 - s2, 0.75, 0, TAU); c.fill(); break; }
       case 'cower': line(c, 0, -8, 1.4, -10.8); arm(c, -0.4, -8, 0.6, -11); break;
       case 'beg': { const s2 = Math.sin(at * 3) * 0.5; line(c, 0, -8, 2.8, -10.6 + s2); arm(c, -0.4, -8, 2.2, -10.9 - s2); break; }
       case 'weep': case 'weepk': line(c, 0, -8, 1.3, -10.2); arm(c, -0.4, -8, 0.9, -10.4); break;
@@ -1032,7 +1041,7 @@
       }
       case 'lantern': { line(c, 0, -8, 2.8, -7.8); arm(c, -0.4, -8, -0.4, -4.4); c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; line(c, 2.8, -7.8, 2.8, -6.8); c.fillStyle = '#3a2a1a'; c.fillRect(1.9, -6.9, 1.8, 2.4); c.fillStyle = '#ffd56a'; c.fillRect(2.2, -6.5, 1.2, 1.6); break; }
       case 'wave': { const s2 = Math.sin(at * 9) * 1.2; line(c, 0, -8, 1.4 + s2, -13); arm(c, -0.4, -8, -0.4, -4.4); break; }
-      case 'swear': line(c, 0, -8, 1.2, -12.8); arm(c, -0.4, -8, 0.6, -7.2); c.fillStyle = v.skin; c.fillRect(0.7, -14, 1, 1.4); break;
+      case 'swear': line(c, 0, -8, 1.2, -12.8); arm(c, -0.4, -8, 0.6, -7.2); c.fillStyle = skin; c.fillRect(0.7, -14, 1, 1.4); break;
       case 'brandish': { // the blade raised high: an oath, a call to arms
         line(c, 0, -8, 1, -13.4); arm(c, -0.4, -8, -1.6, -6); c.strokeStyle = '#5a3a22'; c.lineWidth = 0.8; line(c, 0.8, -13, 1.2, -14.4); c.fillStyle = '#d4d8e0'; c.beginPath(); c.moveTo(0.6, -14.4); c.lineTo(1.6, -14.4); c.lineTo(1.3, -21); c.closePath(); c.fill(); c.fillStyle = 'rgba(255,255,255,0.6)'; c.fillRect(1, -20, 0.3, 5); break;
       }
@@ -1049,7 +1058,7 @@
         if (v.carry && v.carry.jar) { line(c, 0.3, -8, 1.2, -12.4); arm(c, -0.3, -8, -0.3 - sw2, -4.4); }
         else if (v.carry && v.carry.k !== 'water') { line(c, 0, -8, 1.5, -10.2); arm(c, -0.5, -8, -1.2, -10); }
         else { line(c, 0.3, -8, 0.3 + sw2, -4.4); arm(c, -0.3, -8, -0.3 - sw2, -4.4); }
-        if (v.captive && age >= 5) { c.strokeStyle = v.skin; line(c, 0, -8, 1.4, -5.6); arm(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
+        if (v.captive && age >= 5) { c.strokeStyle = skin; line(c, 0, -8, 1.4, -5.6); arm(c, -0.4, -8, 1, -5.4); c.strokeStyle = '#8a6a44'; c.lineWidth = 0.5; c.beginPath(); c.arc(1.2, -5.4, 0.75, 0, TAU); c.stroke(); }
         if (levy && v.role !== 'guerreiro' && !v.carry) {
           // the levy: what the forge gave them — or a club
           if (v.unit === 'milicia') { c.strokeStyle = '#6e4a2c'; c.lineWidth = 0.9; line(c, 1.6, -4.5, 2.6, -12.5); c.fillStyle = '#5a3a22'; c.beginPath(); c.ellipse(2.7, -12.8, 1, 1.5, 0.2, 0, TAU); c.fill(); }
@@ -1071,7 +1080,7 @@
         if (v.carry && v.carry.k === 'water' && !v.carry.jar) { c.fillStyle = '#7a5a3a'; c.fillRect(0.4 + sw2, -4.8, 2.2, 2.2); c.fillStyle = '#6ab8e8'; c.fillRect(0.6 + sw2, -4.8, 1.8, 0.6); }
       }
     }
-    if (oneArm) { c.strokeStyle = v.skin; c.lineWidth = 1; line(c, -0.4, -8, -1, -6.9); c.fillStyle = '#ece4d4'; c.fillRect(-1.4, -7.4, 0.9, 0.9); if (v.lostT && G.S.clock - v.lostT < 40) { c.fillStyle = '#9a1e24'; c.fillRect(-1.25, -6.9, 0.55, 0.55); } }
+    if (oneArm) { c.strokeStyle = skin; c.lineWidth = 1; line(c, -0.4, -8, -1, -6.9); c.fillStyle = '#ece4d4'; c.fillRect(-1.4, -7.4, 0.9, 0.9); if (v.lostT && G.S.clock - v.lostT < 40) { c.fillStyle = '#9a1e24'; c.fillRect(-1.25, -6.9, 0.55, 0.55); } }
     // gear on the shoulder (the fisherman's net, an oar): not a good, nobody stores it
     if (!v.carry && v.gear && !['mend', 'lift', 'haul', 'build', 'fight'].includes(act)) carried(c, v.gear, { crate: v.gear === 'caixa' }, t);
     // carried goods
@@ -1086,8 +1095,8 @@
     // head
     const hy = -10.6;
     if (v.headless) { c.fillStyle = '#8a1a1e'; c.beginPath(); c.ellipse(0, -8.9, 1.4, 0.7, 0, 0, TAU); c.fill(); c.fillStyle = '#e8dccc'; c.fillRect(-0.3, -9.4, 0.6, 0.6); } else {
-    c.fillStyle = v.skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();
-    const hair = age >= 62 ? '#dcdcdc' : v.hair;
+    c.fillStyle = skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();
+    const hair = hairNow;
     c.fillStyle = hair;
     c.beginPath(); c.arc(-0.2, hy - 0.5, 2.1, Math.PI * 0.95, Math.PI * 2.05); c.fill();
     if (v.g === 'f' && age >= 5) { c.beginPath(); c.moveTo(-2.1, hy - 0.4); c.quadraticCurveTo(-2.9, hy + 2.6, -1.4, hy + 3.4); c.lineTo(-0.9, hy + 0.2); c.fill(); }
@@ -1143,7 +1152,7 @@
     }
     if (v.hood && !v.headless) { c.fillStyle = '#16121a'; c.beginPath(); c.arc(0, hy, 2.35, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-2.3, hy - 0.6); c.lineTo(0.1, hy - 5.2); c.lineTo(2.3, hy - 0.6); c.closePath(); c.fill(); c.fillRect(-2.5, hy + 1, 5, 2.4); c.fillStyle = '#e8dcc8'; c.fillRect(0.4, hy - 0.5, 0.7, 0.45); c.fillRect(1.5, hy - 0.5, 0.6, 0.45); }
     // baby on the back
-    if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = v.babyOn.skin; c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }
+    if (v.babyOn) { c.fillStyle = '#f4efe3'; c.beginPath(); c.ellipse(-2.6, -8, 1.5, 2, 0.3, 0, TAU); c.fill(); c.fillStyle = Art.skinOf(v.babyOn); c.beginPath(); c.arc(-2.7, -9.8, 1.1, 0, TAU); c.fill(); }
     c.restore();
     // a lantern in the hand (the scenes give them out at night)
     if (v.lantern && act !== 'lantern') { c.strokeStyle = '#4a3a2a'; c.lineWidth = 0.4; line(c, 2.4, -4.6, 2.4, -3.8); c.fillStyle = '#3a2a1a'; c.fillRect(1.6, -3.9, 1.6, 2.2); c.fillStyle = '#ffd56a'; c.fillRect(1.9, -3.5, 1, 1.4); }
