@@ -17,7 +17,7 @@ G.Ready.list({
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1141895
+  "bytes": 1160750
  },
  "metropole": {
   "day": 53,
