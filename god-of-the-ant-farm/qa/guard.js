@@ -1856,5 +1856,13 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
   if (!/const sg = s \* \(L && L\.legK > 0 \? L\.legK : 1\);/.test(ab) || !/stride\(out, a, st, v, sg, I, go\)/.test(ab)) fails.push('os ossos da criança: a passada não é a da perna (o tamanho do passo pelo L.legK, D-614)');
   if (!/L\.legK = L\.fe \? L\.fe\.prop\.perna : 1;/.test(lk)) fails.push('os ossos da criança: o retrato não leva a perna da forma (L.legK = G.Feicao.of(v).prop.perna, D-639)');
   for (const f of files) if (/^anim-.*\.js$/.test(f) || f === 'vida3d.js') (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(legK|armK|trunkK)\s*=(?!=)/.test(c)) fails.push(`os ossos da criança: ${f}:${k + 1} escreve a proporção do corpo (é da forma, G.Feicao — D-639): ${l.trim().slice(0, 110)}`); }); }
+// 248. "o save antigo das provas é fixo" (L-1715): o qa/oldsave_7.json é o save de uma versão antiga que as provas do save antigo
+// leem (o o1 e o o11 da origem, o i15 do inventário, o s3 do sabe) — nenhuma prova escreve um oldsave_ dentro de qa/ (o qa/oldsave.js
+// guardava ali o save da versão velha que ele faz, e as provas do save antigo passaram a abrir um save novo); e o save continua de
+// antes das jazidas do bronze, como o o1 o pede
+{ for (const f of fs.readdirSync(__dirname).filter(n => n.endsWith('.js'))) fs.readFileSync(path.join(__dirname, f), 'utf8').split('\n').forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/writeFileSync\([^)]*oldsave_/.test(c)) fails.push(`o save antigo das provas é fixo: qa/${f}:${k + 1} escreve um oldsave_ dentro de qa/ (o qa/oldsave_7.json é só lido: L-1715)`); });
+  let o = null; try { o = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8')); } catch (e) { fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json não abre (' + e.message.slice(0, 60) + ')'); }
+  if (o && (o.oresV || (o.ores || []).some(q => q.kind === 'cobre' || q.kind === 'estanho'))) fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json já tem as jazidas do bronze — um save novo no lugar do antigo (L-1715; o de antes está no 580a920)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

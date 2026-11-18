@@ -399,9 +399,10 @@ if (on('i10')) {
 
 // ================================================================ save and load in the middle
 if (on('i12')) {
-  const c = body(o => o.role === 'lenhador') || body(); if (!c) ok('i12 salvar e carregar', false, 'ninguém');
+  // (one with the arms free: the hands busy with a load hold no sword — the player would set the load down first, T-1626)
+  const c = body(o => o.role === 'lenhador' && !o.carry) || body(o => !o.carry); if (!c) ok('i12 salvar e carregar', false, 'ninguém');
   else {
-    const { v, fid } = c; teach(fid, 'bronze'); give(fid, 'armas', 3); give(fid, 'ferramentas', 2);
+    const { v, fid } = c; teach(fid, 'bronze'); give(fid, 'armas', 3, 'bronze'); give(fid, 'ferramentas', 2, 'bronze'); // (of bronze: the art and the metal had, 20h — T-1626)
     ask(w => Inv.make(w, 'espada')); ask(w => Inv.make(w, 'escudo')); ask(w => Inv.make(w, 'faca'));
     const sw = keyIn(v, 'espada'), sh = keyIn(v, 'escudo'), fk = keyIn(v, 'faca');
     ask(w => Inv.equip(w, sw)); ask(w => Inv.equip(w, sh)); ask(w => Inv.shortcut(w, 4, sw));

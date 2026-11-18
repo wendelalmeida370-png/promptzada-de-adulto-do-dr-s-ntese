@@ -52,7 +52,11 @@ const PLAIN = { lenhador: 1, coletor: 1, agricultor: 1, construtor: 1, mineiro: 
 const ownCloak = v => civOf(v) === 'asteca' && v.g === 'm';
 // (a factor alone: the test's hand on Atmos's reading of the cold — the clothes of r1 to r3 in a mild street)
 const mild = fn => { const c = At.cold; At.cold = () => 0; try { return fn(); } finally { At.cold = c; } };
-const flush = () => { At.flush(); };
+// (the test's hand on the world within the same instant: what each people could weave taken again, as the day's turn takes it —
+// the clothes read the economy's record of the day, L-1714 —, and Atmos's memory of the instant dropped)
+const flush = () => { for (const f of G.S.factions.values()) if (f.eco && f.eco.last) f.eco.last.veste = G.Eco.veste(f); At.flush(); };
+// (the economy's turn of the day, as the step makes it when the day changes: the books closed, the record of what the people could weave)
+const turn = () => { G.inSim++; try { G.Eco.update(0); } finally { G.inSim--; } };
 
 // ------------------------------ r1: the standing ------------------------------
 if (run('r1')) mild(() => {
@@ -127,11 +131,13 @@ if (run('r3')) mild(() => {
     const v = P.find(o => PLAIN[o.role]); const o = v ? P3.outfit(v) : null; const RAWC = ['#b9aa8c', '#a39478', '#8c7c64', '#c4b79c', '#97886c', '#6e5236', '#7c5c3c', '#5e452e'];
     if (o && !(RAWC.includes(o.cloth) && (o.fab === 1 || o.fab === 3))) bad.push(`#${v.id} cru de ${o.cloth}, tecido ${o.fab}`);
     for (const b of L) b.built = true; fl.stock.tecido = t0; flush();
-    // (what a people can make is asked again with the day, nobody telling Atmos: the looms down and the store without cloth
-    // by the test's hand — the same day, dressed as before; the day turned, hides)
-    { const d0 = S.day; const a0 = P.filter(q => P3.outfit(q).raw).length; for (const b of L) b.built = false; fl.stock.tecido = 0; const a1 = P.filter(q => P3.outfit(q).raw).length; S.day = d0 + 1; const a2 = P.filter(q => P3.outfit(q).raw).length;
-      for (const b of L) b.built = true; fl.stock.tecido = t0; S.day = d0; flush();
-      if (a0 !== 0 || a1 !== 0 || a2 !== P.length) bad.push(`${fl.name}: sem tear nem pano, de cru ${a1} no mesmo dia e ${a2}/${P.length} virado o dia (antes ${a0})`); info.push(`o dia virado sem tear nem pano: cru ${a0} → ${a1} no mesmo dia → ${a2} no dia seguinte`); }
+    // (what a people can make is read again when the day turns — the economy's record of the day, nobody telling Atmos (L-1714):
+    // the looms down and the store without cloth by the test's hand — the same day, dressed as before; the day turned, the record
+    // taken by the turn of the step, hides)
+    { const d0 = S.day, e0 = G.mod('eco.day'); const a0 = P.filter(q => P3.outfit(q).raw).length; for (const b of L) b.built = false; fl.stock.tecido = 0; const a1 = P.filter(q => P3.outfit(q).raw).length; S.day = d0 + 1; turn(); const a2 = P.filter(q => P3.outfit(q).raw).length;
+      const rec = fl.eco && fl.eco.last && fl.eco.last.veste, recOk = !!rec && rec.tear === 0 && rec.pano === 0;
+      for (const b of L) b.built = true; fl.stock.tecido = t0; S.day = d0; G.mod('eco.day', e0); flush();
+      if (a0 !== 0 || a1 !== 0 || a2 !== P.length || !recOk) bad.push(`${fl.name}: sem tear nem pano, de cru ${a1} no mesmo dia e ${a2}/${P.length} virado o dia (antes ${a0}); o registro do dia ${JSON.stringify(rec)}`); info.push(`o dia virado sem tear nem pano: cru ${a0} → ${a1} no mesmo dia → ${a2} no dia seguinte (o registro do dia: ${rec ? rec.tear + ' tear(es), ' + rec.pano + ' de pano' : 'nenhum'})`); }
   }
   // silk: only where the people have it and the house is rich
   const fs2 = [...S.factions.values()].filter(f => f.alive && people(f).length > 20).sort((a, b) => a.id - b.id).find(f => looms(f).length) || fl;

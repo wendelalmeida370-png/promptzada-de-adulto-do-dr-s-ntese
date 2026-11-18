@@ -1271,8 +1271,17 @@
     if (tPen >= 2) { penTick(tPen); tPen = 0; }
     if (tHouse >= 3) { houseTick(tHouse); tHouse = 0; }
     if (tBM >= 30) { tBM = 0; for (const s of S.settlements.values()) { const f = G.Fac.get(s.fac); if (f) { E.ensure(f); considerBlackMarket(s, f); } } }
-    // (the day's books close once a day — the day is the world's, in the save: a load closed them again at any hour, L-694)
-    if (G.mod('eco.day') !== S.day) { G.mod('eco.day', S.day); for (const f of G.Fac.all()) { E.ensure(f); f.eco.last = { made: f.eco.made, used: f.eco.used, tax: f.eco.tax, wages: f.eco.wages, sales: f.eco.sales, stolen: f.eco.stolen || 0 }; f.eco.made = {}; f.eco.used = {}; f.eco.tax = 0; f.eco.wages = 0; f.eco.sales = 0; f.eco.stolen = 0; } }
+    // (the day's books close once a day — the day is the world's, in the save: a load closed them again at any hour, L-694;
+    // and what the people could weave and dress in is kept with them — the clothes all wear the day long, L-1714)
+    if (G.mod('eco.day') !== S.day) { G.mod('eco.day', S.day); for (const f of G.Fac.all()) { E.ensure(f); f.eco.last = { made: f.eco.made, used: f.eco.used, tax: f.eco.tax, wages: f.eco.wages, sales: f.eco.sales, stolen: f.eco.stolen || 0, veste: E.veste(f) }; f.eco.made = {}; f.eco.used = {}; f.eco.tax = 0; f.eco.wages = 0; f.eco.sales = 0; f.eco.stolen = 0; } }
+  };
+  // what a people could weave and dress in (G.Atmos.dress reads it): its looms and its silk houses standing, the cloth and the silk
+  // in its store — taken when the day turns (f.eco.last.veste, in the save): a people's clothes are the day's, the same before a
+  // save and after the load (L-1714); nothing in the world decides by it
+  E.veste = function (f) {
+    const S = G.S; let tear = 0, bicho = 0;
+    for (const b of S.buildings.values()) { if (!b.built || (b.type !== 'tecelagem' && b.type !== 'sericultura')) continue; const s = S.settlements.get(b.set); if (!s || s.fac !== f.id) continue; if (b.type === 'tecelagem') tear++; else bicho++; }
+    return { tear, bicho, pano: (f.stock && f.stock.tecido) || 0, seda: (f.stock && f.stock.seda) || 0 };
   };
 
   // ------------------------------ words ------------------------------

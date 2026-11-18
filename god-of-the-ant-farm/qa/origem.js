@@ -55,6 +55,9 @@ function building(set, type) {
 // (a tavern of the world — of a people, if asked —, its work finished by the proof's hand when the world has it still in work)
 function tavern(f) {
   const L = [...S.buildings.values()].filter(b => b.type === 'taverna' && (!f || V.facOfSet(b.set) === f.id)).sort(byId);
+  // (a people with none — the ready world made again may have its first tavern still to come: the god's hand founds one in its
+  // capital, as the people knows how to raise it, T-1627)
+  if (!L.length && f && capOf(f)) { const t = god(() => V.handFound(capOf(f), 'taverna', G.Escala.n0('taverna'), { built: true, R: 40 })); if (t) L.push(t); }
   const b = L.find(x => x.built) || L[0]; if (!b) return null;
   if (!b.built) god(() => V.completeBuilding(b));
   return b.built ? b : null;

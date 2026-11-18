@@ -23,7 +23,7 @@
   // (one pass over the people for every question of the same instant of the world: who is inside each building — awake, at
   // the house's fire, cooking —, who has each house for home and their trades)
   let cen = null, cenS = null, cenK = -1, cenN = -1;
-  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); wet.clear(); };
+  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); now.clear(); nowS = null; wet.clear(); };
   G.worldHooks.push(drop);
   At.flush = drop; // (for the proofs: the world changed by hand within the same instant)
   function census() {
@@ -218,18 +218,19 @@
     const sun = G.Ceu && G.Ceu.sun ? G.clamp(G.Ceu.sun(S.time, SUN).s / 0.7, 0, 1) : 1;
     return G.clamp((tp - 0.55) / 0.3, 0, 1) * (0.3 + 0.7 * sun) * G.clamp(1 - (w.rain || 0) * 1.4, 0, 1);
   };
-  // what a people can make and has (kept for the day): a loom standing in one of its towns — or cloth in its stores, come by
-  // trade —, a house of silk or silk in its stores, the bronze and the iron it has learnt
-  const arts = new Map(); const ARTS0 = Object.freeze({ weave: true, silk: false, metal: 1 });
+  // what a people can make and has: a loom standing in one of its towns — or cloth in its stores, come by trade —, a house of silk
+  // or silk in its stores, as the economy found them when the day turned (G.Eco.veste, kept in f.eco.last.veste: the clothes are
+  // the day's, and the same before a save and after the load — the memory of the first look of the day was not, L-1714); a people
+  // with no record yet (its first instant, a save of before) as its towns are now. And the bronze and the iron it has learnt and
+  // had, as the kit has them (G.Origem.had, 20h: never the art alone, and once had, kept)
+  const arts = new Map(), now = new Map(); let nowS = null, nowT = NaN; const ARTS0 = Object.freeze({ weave: true, silk: false, metal: 1 }), NOVESTE = Object.freeze({ tear: 0, bicho: 0, pano: 0, seda: 0 });
   function artsOf(f) {
-    const S = G.S; let a = arts.get(f.id); if (a && a.day === S.day && a.nb === S.buildings.size) return a;
-    let loom = false, worms = false;
-    for (const b of S.buildings.values()) { if (!b.built || (b.type !== 'tecelagem' && b.type !== 'sericultura')) continue; const s = S.settlements.get(b.set); if (!s || s.fac !== f.id) continue; if (b.type === 'tecelagem') loom = true; else worms = true; }
-    const K = (f.tech && f.tech.known) || NOINV;
-    // (the metal worn is a metal the people had, never the art alone: G.Origem.had, 20h)
-    const had = m => !!(G.Origem && G.Origem.had(f.id, m));
-    a = { day: S.day, nb: S.buildings.size, weave: loom || !!(f.stock && f.stock.tecido >= 1), silk: worms || !!(f.stock && f.stock.seda >= 1), metal: K.ferro !== undefined && had('ferro') ? 2 : K.bronze !== undefined && had('bronze') ? 1 : 0 };
-    arts.set(f.id, a); return a;
+    const S = G.S; const L = f.eco && f.eco.last; let w = L && L.veste;
+    if (!w || typeof w !== 'object') { if (nowS !== S || nowT !== S.clock) { nowS = S; nowT = S.clock; now.clear(); } w = now.get(f.id); if (!w) now.set(f.id, w = G.Eco && G.Eco.veste ? G.Eco.veste(f) : NOVESTE); }
+    const K = (f.tech && f.tech.known) || NOINV; const had = m => !!(G.Origem && G.Origem.had(f.id, m));
+    const weave = w.tear > 0 || w.pano >= 1, silk = w.bicho > 0 || w.seda >= 1, metal = K.ferro !== undefined && had('ferro') ? 2 : K.bronze !== undefined && had('bronze') ? 1 : 0;
+    let a = arts.get(f.id); if (!a || a.weave !== weave || a.silk !== silk || a.metal !== metal) arts.set(f.id, a = { weave, silk, metal });
+    return a;
   }
   // the standing of a person among their people (polity.js: v.grp), as the clothes tell it
   const GRP = At.GRP = ['', 'povo', 'artesaos', 'mercadores', 'militares', 'sacerdotes', 'nobreza'];
