@@ -12,7 +12,8 @@
 //     (e sem elmo, se nunca teve couro); depois da fornada de bronze, a lança é de bronze; o armazém dá o que a divisão tem;
 //  o5 o couro só de quem caça ou abate: sem couro, nem elmo nem couraça de couro; o couro da caça entra, e o elmo de couro aparece;
 //  o6 a cerveja só de cereal: a cuba não começa com peixe na prateleira, começa com cevada, e gasta a cevada (o peixe fica);
-//  o7 a vila de pescadores: um povo só de peixe — o taverneiro compra comida, e a cuba nunca tem grão —: nenhuma cerveja;
+//  o7 a vila de pescadores: um povo só de peixe — o taverneiro compra comida —: nenhum grão sem fonte; o que chega à taverna é o
+//     que o comércio trouxe pelo cais e pelas carroças, e sem ele nenhuma cerveja (T-1628);
 //  o8 o prato: um prato de peixe só onde há peixe na prateleira (e a fala diz o prato do que se come);
 //  o9 a divisão soma a contagem: dois dias vividos, cada armazém com as partes iguais ao que tem, nenhuma comida nova de origem
 //     desconhecida das portas já ligadas, e o verificador limpo (o sistema «origem»);
@@ -127,7 +128,10 @@ function forgeWorld() {
   open();
   const f = facs().find(q => !O.had(q.id, 'bronze') && !O.had(q.id, 'cobre')) || facs()[0]; const set = capOf(f);
   teach(f, 'bronze'); const b = building(set, 'forja');
-  const v = people(x => x.set === set.id && grown(x) && !x.carry)[0];
+  // (a hand with no duty of the people — never who governs, the nobles, the priests, the warriors, the chosen: the oracle, the council
+  // and the assembly call them from the forge for days, T-1628 —; a smith of the town if there is one)
+  const free = x => x.set === set.id && grown(x) && !x.carry && x.id !== f.leader && !x.chosen && !x.prophet && x.grp !== 'nobreza' && x.grp !== 'sacerdotes' && x.grp !== 'militares';
+  const v = people(x => free(x) && x.role === 'ferreiro')[0] || people(free)[0];
   if (b && v) god(() => { v.role = 'ferreiro'; v.job = b.id; v.hunger = 0; v.energy = 100; v.sleeping = false; });
   give('f:' + f.id, 'wood', 30, null, 'teste');
   return { f, set, b, v };
@@ -257,15 +261,22 @@ if (on('o7')) {
   const f = tv ? G.Fac.get(V.facOfSet(tv.set)) : null; const ref = tv ? 'b:' + tv.id : null; const fr = f ? 'f:' + f.id : null;
   if (!tv) ok('o7 a vila de pescadores', false, 'nenhuma taverna');
   else {
-    // (a people that only fishes: its store all fish — the fields of its towns gone —, its tavern's shelf empty)
+    // (a people that only fishes: its store all fish — the fields of its towns gone —, the food of its houses, shelves and hands gone,
+    // its tavern's shelf empty. What still reaches it comes by its doors of trade — the quay where a ship unloads, a cart from another
+    // people (T-1628) —: barley had, bought, and a tavern that buys it may brew it. So the claim: no grain from nothing — the tavern's
+    // grain no more than the food that came in by trade, and no beer before any came)
     for (const b of [...S.buildings.values()]) if (b.type === 'farm' && V.facOfSet(b.set) === f.id) god(() => V.removeBuilding(b));
+    for (const b of S.buildings.values()) if (V.facOfSet(b.set) === f.id) { clear('b:' + b.id, 'food'); clear('h:' + b.id, 'food'); }
+    for (const p of S.villagers.values()) if (G.Fac.ofV(p) === f) clear('v:' + p.id, 'food');
     clear(fr, 'food'); give(fr, 'food', 300, 'peixe', 'pesca'); clear(ref, 'food'); for (const op of Of.batches(tv)) god(() => Of.cut(op, 'prova'));
-    const k = G.Taverna.keeperOf(tv); let brewed = 0, bought = 0;
-    for (let i = 0; i < 3000; i++) { M.viver(0.1); if (Of.batches(tv).some(op => Of.rx(op) && Of.rx(op).k === 'cerveja')) brewed++; }
-    const shelf = parts(ref, 'food'); bought = Object.values(shelf).reduce((a, b) => a + b, 0);
-    if (brewed) bad.push('a cuba começou');
-    if (O.amount(ref, 'food', O.CEREAL) > 0.01) bad.push('grão na prateleira: ' + JSON.stringify(shelf));
-    ok('o7 a vila de pescadores sem campo não faz cerveja', !bad.length && !errs(), `${f.name}: o armazém só de peixe; 5 minutos depois a prateleira da taverna tem ${JSON.stringify(shelf)} (${Math.round(bought)} de comida${k ? ', comprada por ' + k.name : ''}), cerveja na cuba: ${brewed ? 'SIM' : 'nenhuma'}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+    const mine = r => { const [t, id] = r.split(':'); if (t === 'f') return +id === f.id; if (t === 'v') { const p = S.villagers.get(+id); return !!p && G.Fac.ofV(p) === f; } if (t === 'b' || t === 'h') { const b = S.buildings.get(+id); return !!b && V.facOfSet(b.set) === f.id; } return false; };
+    const n00 = lastN(); const tradedNow = () => lines(n00, e => e[5] === 'food' && /^(q|c):/.test(e[3]) && mine(e[4])).reduce((a, e) => a + e[6], 0);
+    const k = G.Taverna.keeperOf(tv); let brewed = 0, bought = 0, early = 0;
+    for (let i = 0; i < 3000; i++) { M.viver(0.1); if (Of.batches(tv).some(op => Of.rx(op) && Of.rx(op).k === 'cerveja')) { brewed++; if (!(tradedNow() > 0)) early++; } }
+    const shelf = parts(ref, 'food'); bought = Object.values(shelf).reduce((a, b) => a + b, 0); const traded = tradedNow(), grain = O.amount(ref, 'food', O.CEREAL);
+    if (early) bad.push('a cuba começou sem grão nenhum de fora');
+    if (grain > traded + 0.01) bad.push(`grão na prateleira (${Math.round(grain * 100) / 100}) além do que o comércio trouxe (${Math.round(traded * 100) / 100}): ` + JSON.stringify(shelf));
+    ok('o7 a vila de pescadores sem campo: nenhum grão sem fonte — o da taverna é o que o comércio trouxe', !bad.length && !errs(), `${f.name}: o armazém só de peixe; 5 minutos depois a prateleira da taverna tem ${JSON.stringify(shelf)} (${Math.round(bought)} de comida${k ? ', comprada por ' + k.name : ''}; pelo cais e pelas carroças entraram ${Math.round(traded)} de comida), cerveja na cuba: ${brewed ? 'sim, do grão comprado' : 'nenhuma'}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
   }
 }
 

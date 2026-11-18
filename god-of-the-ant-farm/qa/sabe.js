@@ -53,6 +53,10 @@ const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'js/interact.js', 'js/diario-ui.js', 'qa/sabe-inv.js'] });
 const WORLD = process.argv[2] || 'metropole';
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
+// (a name said in a text: the whole word, and not in the name of a place or a people the text also says — «Tenoch» is not said by
+// «Tenochtitlan · Altepetl de Tenoch», the city and the people of the metropolis made again, where a Tenoch lives: T-1629)
+const placeless = t => { const S0 = G.S; if (!S0) return t; const L = [...S0.settlements.values()].map(q => q.name).concat([...S0.factions.values()].map(q => q.name)).filter(Boolean).sort((a, b) => b.length - a.length); let o = t; for (const n of L) o = o.split(n).join('·'); return o; };
+const says = (t, name) => !!name && new RegExp(`(^|[^\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u').test(placeless(t));
 const on = (...ks) => !ONLY || ks.some(k => ONLY.includes(k));
 const fails = [];
 const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | sabe ${name} | ${info}`); if (!c) fails.push(name.split(' ')[0]); };
@@ -256,7 +260,7 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
     // ---------------- p1
     const lbl0 = P.label({ v }, { o: st }), can0 = P.can({ v }, { o: st }), nm0 = K.name(v, st), card0 = I.personCard(st, v);
     const texts0 = [lbl0, can0.why || '', nm0, JSON.stringify(card0)];
-    if (on('p1')) ok('p1 o estranho não tem nome: no letreiro, na conversa, na ficha', tk && K.person(v, st) === 0 && texts0.every(t => !t.includes(st.name)) && lbl0 === `Conversar com ${K.looks(st, v).o}` && /está dormindo\.$/.test(can0.why || '') && card0.knows === 0 && !card0.bio.length && !card0.parents.length && !card0.set && nm0 === G.cap(K.looks(st, v).um),
+    if (on('p1')) ok('p1 o estranho não tem nome: no letreiro, na conversa, na ficha', tk && K.person(v, st) === 0 && texts0.every(t => !says(t, st.name)) && lbl0 === `Conversar com ${K.looks(st, v).o}` && /está dormindo\.$/.test(can0.why || '') && card0.knows === 0 && !card0.bio.length && !card0.parents.length && !card0.set && nm0 === G.cap(K.looks(st, v).um),
       `${v.name} diante de ${st.name}: letreiro «${nm0}», «${lbl0}», «${can0.why}», ficha «${card0.name} · ${card0.sub} · ${card0.doing}»`);
     // ---------------- p2
     if (on('p2')) {
@@ -270,7 +274,7 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
       const said = new Set([st.name].concat(knownKin.map(p => p.name)));
       const famN = card1.parents.length + (card1.partner ? 1 : 0) + card1.kids.length, same = fam.filter(p => said.has(p.name)).length;
       ok('p2 depois da conversa, o nome; os dois se lembram; a ficha não conta a vida', !!r && r.first === true && how.n === 1 && how.why === 'encontro' && back.n === 1 && lbl1 === `Conversar com ${st.name}` && K.name(v, st) === st.name
-        && told.name.startsWith(st.name) && told.knows === 1 && !told.bio.length && !told.traits.length && !told.from && card1.why === 'de conversa' && famN === knownKin.length && fam.filter(p => !said.has(p.name)).every(p => !JSON.stringify(card1).includes(p.name)) && v.ken.p.includes(st.id) && st.ken.p.includes(v.id),
+        && told.name.startsWith(st.name) && told.knows === 1 && !told.bio.length && !told.traits.length && !told.from && card1.why === 'de conversa' && famN === knownKin.length && fam.filter(p => !said.has(p.name)).every(p => !says(JSON.stringify(card1), p.name)) && v.ken.p.includes(st.id) && st.ken.p.includes(v.id),
         `${v.name} e ${st.name}: «${lbl1}», ficha «${card1.name} · ${card1.sub}», «${card1.why}»; memórias na ficha ${told.bio.length}, parentes dela que ${v.name} não conhece e a ficha não diz: ${fam.length}${same ? ` (${same} com o nome de quem a ficha diz)` : ''}; a família na ficha: ${famN}, os parentes que ${v.name} conhece: ${knownKin.length}; ${st.name} também o conhece (${back.why})`);
     }
     // ---------------- p4
@@ -384,7 +388,7 @@ if (on('c1')) {
     const sMine = [...S.buildings.values()].filter(b => store(b) && V.facOfSet(b.set) === fid).sort(byId)[0], sTheirs = [...S.buildings.values()].filter(b => store(b) && V.facOfSet(b.set) !== fid).sort(byId)[0];
     const cm = sMine ? I.buildingCard(sMine, v) : null, ct = sTheirs ? I.buildingCard(sTheirs, v) : null;
     ok('c1 as moedas e quem está em casa: só da própria casa; o estoque só do próprio povo', tk && coin(h) === 5555 && coin(ot) === 7777 && K.house(v, h) && !K.house(v, ot) && !!row(mine, 'Moedas da família') && row(mine, 'Moedas da família')[1] === 5555 && !!row(mine, 'Em casa agora')
-      && !row(theirs, 'Moedas da família') && !row(theirs, 'Em casa agora') && texts.every(t => !t.includes('7777')) && /não conhece/.test(row(theirs, 'Moram aqui')[1]) && people(x => x.home === ot.id).every(x => !JSON.stringify(theirs).includes(x.name))
+      && !row(theirs, 'Moedas da família') && !row(theirs, 'Em casa agora') && texts.every(t => !t.includes('7777')) && /não conhece/.test(row(theirs, 'Moram aqui')[1]) && people(x => x.home === ot.id).every(x => !says(JSON.stringify(theirs), x.name))
       && !!row(gods, 'Moedas da família') && row(gods, 'Moedas da família')[1] === 7777 && (!cm || !!row(cm, 'No estoque do povo')) && (!ct || !row(ct, 'No estoque do povo')),
       `${v.name}: a sua casa mostra ${row(mine, 'Moedas da família') ? row(mine, 'Moedas da família')[1] : 'NADA'} moedas; a de ${owner.name} (7777, estranhos): «${theirs.rows.map(r => r.join(': ')).join(' · ')}» — o 7777 em ${texts.filter(t => t.includes('7777')).length} dos ${texts.length} textos do corpo; o deus vê ${row(gods, 'Moedas da família') ? row(gods, 'Moedas da família')[1] : 'NADA'}; o estoque: do seu povo ${cm ? (row(cm, 'No estoque do povo') ? 'sim' : 'NÃO') : '(sem armazém)'}, de outro povo ${ct ? (row(ct, 'No estoque do povo') ? 'SIM' : 'não') : '(sem armazém)'}`);
     const nv = novas(), e = errs(); ok('c verificador', !nv.length && !e, nv.slice(0, 3).join(' | ') || e || 'limpo');
@@ -400,7 +404,7 @@ if (on('g1', 't1')) {
     const bio = o ? G.Life.bioList(o).slice(-6).reverse().map(e => e.txt) : []; const bc = h ? I.buildingCard(h, null) : null; const res = h ? people(x => x.home === h.id) : [];
     const all = !!o && people(x => x.set === set.id).every(x => K.person(null, x) === 2) && U.districtsOf(set).every(d => !!K.district(null, d)) && [...S.settlements.values()].every(s => !!K.town(null, s)) && [...S.buildings.values()].slice(0, 50).every(b => K.house(null, b) && K.stock(null, b));
     ok('g1 o deus sabe tudo: todas as portas, e os cartões de antes', all && !!c && c.knows === 2 && c.name.startsWith(o.name) && JSON.stringify(c.bio.map(e => e.txt)) === JSON.stringify(bio) && JSON.stringify(c.parents) === JSON.stringify([nm(o.mother), nm(o.father)].filter(Boolean)) && JSON.stringify(c.traits) === JSON.stringify(o.traits) && c.why === ''
-      && !!bc && res.every(x => JSON.stringify(bc.rows).includes(x.name)) && (h.coin === undefined || !!bc.rows.find(r => r[0] === 'Moedas da família')) && K.name(null, o) === o.name && DU.page(o, { god: true }).html.length > 20,
+      && !!bc && res.every(x => says(JSON.stringify(bc.rows), x.name)) && (h.coin === undefined || !!bc.rows.find(r => r[0] === 'Moedas da família')) && K.name(null, o) === o.name && DU.page(o, { god: true }).html.length > 20,
       o ? `sem corpo: ${people(x => x.set === set.id).length} pessoas, ${U.districtsOf(set).length} bairros e ${S.settlements.size} cidades de ${set.name}, todos sabidos (${all}); a ficha de ${o.name} com ${c.bio.length} memórias, ${c.parents.length} pais, ${c.traits.length} jeitos; a casa com ${res.length} moradores pelo nome${h.coin !== undefined ? ' e as moedas' : ''}` : 'ninguém');
   }
   if (on('t1')) {
@@ -413,7 +417,7 @@ if (on('g1', 't1')) {
       const tA = take(a); meet(y.id); const nA = [K.name(Po.body(), x), K.name(Po.body(), y)], wA = K.where(Po.body()).txt, metA = S.avatar.met.slice();
       const tB = take(b); const nB = [K.name(Po.body(), x), K.name(Po.body(), y)], wB = K.where(Po.body()).txt, metB = S.avatar.met.slice();
       const tA2 = take(a); const nA2 = [K.name(Po.body(), x), K.name(Po.body(), y)];
-      ok('t1 trocar de corpo troca o que se sabe; o que cada um viveu fica com ele', tA && tB && tA2 && nA[0] === x.name && nA[1] === y.name && !nB[0].includes(x.name) && !nB[1].includes(y.name) && metA.includes(y.id) && !metB.length && nA2[1] === y.name && a.ken.p.includes(y.id) && !(b.ken && b.ken.p.includes(y.id)),
+      ok('t1 trocar de corpo troca o que se sabe; o que cada um viveu fica com ele', tA && tB && tA2 && nA[0] === x.name && nA[1] === y.name && !says(nB[0], x.name) && !says(nB[1], y.name) && metA.includes(y.id) && !metB.length && nA2[1] === y.name && a.ken.p.includes(y.id) && !(b.ken && b.ken.p.includes(y.id)),
         `${a.name} conhece ${x.name} («${K.how(a, x).why}») e conheceu ${y.name}: «${nA.join('», «')}», em «${wA}»; no corpo de ${b.name}: «${nB.join('», «')}», em «${wB}»; de volta a ${a.name}: «${nA2.join('», «')}»`);
     }
   }
