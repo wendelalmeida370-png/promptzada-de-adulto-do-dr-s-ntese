@@ -79,7 +79,7 @@ Como na vida: **um ofício principal e quantos o tempo deixar praticar.**
 | A água, o relevo, o céu, a mata | feito (a natureza, fase A) | — |
 | O mercado do corpo | as bancas existem | comprar e vender com preço que reage, a oficina própria |
 | Mestre e aprendiz | — | ensinar e aprender técnicas, pelos laços |
-| A vida a bordo | o navio existe por fora | andar no convés, as funções a bordo, dias no mar |
+| A vida a bordo e o porto | o navio existe por fora | os barcos e os navios por dentro, o chão que anda, o itinerário do porto, a viagem, a batalha no mar ([`navios.md`](navios.md)) |
 | A arena | o anfiteatro e os gladiadores existem | lutar nela com o corpo, a plateia, a fama |
 | A montaria | o cavalariço existe | montar, cavalgar |
 | A construção pelo corpo | as obras existem | o corpo levantando, pedra a pedra |
@@ -175,7 +175,7 @@ fato do mundo, nunca de um menu.
 - **Os derivados:** o pescador de alto-mar (o navio, a tripulação, dias no mar — depois da vida a bordo), o mergulhador (o
   fôlego, as pérolas para o ourives), o marinheiro, o navegador.
 
-**Outro modelo, das condições: o escravo de galé.** O ritmo do remo (que dá a velocidade do navio, também na batalha), as
+**Outro modelo, das condições: o escravo de galé** (por inteiro em [`condicao-escravo-gale.md`](condicao-escravo-gale.md)). O ritmo do remo (que dá a velocidade do navio, também na batalha), as
 correntes, o chicote, a fome; os laços com os outros remadores; o plano de fuga (uma missão com eles: a ferramenta escondida,
 a hora da tempestade, a revolta); e a saída — fugir, ser libertado, morrer — para o próximo ofício.
 
@@ -186,7 +186,7 @@ a hora da tempestade, a revolta); e a saída — fugir, ser libertado, morrer �
 | 26 — A fundação dos ofícios | a máquina comum a todos (o registro dos ofícios, a prática, as técnicas, os títulos, a coleção, os recordes, a aba do ofício no painel), o kit da recompensa audiovisual (a câmera, a câmera lenta, o som que sobe, o cartão da coisa, a reação das pessoas), o mercado do corpo, mestre e aprendiz; e **a Pesca** inteira | as bases da água e do peixe existem |
 | 27 — A terra | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | o campo, as estações e os bichos existem |
 | 28 — A arena e a guerra | o combate profundo; o guerreiro, o gladiador (a arena com o corpo), o mercenário, o campeão | depende do combate |
-| 29 — O mar | a vida a bordo; o marinheiro, o navegador, o remador de galé, o pirata, o pescador de alto-mar | depende do navio por dentro |
+| 29 — O mar | a vida a bordo e o porto ([`navios.md`](navios.md)); o marinheiro, o navegador, o remador de galé ([`condicao-escravo-gale.md`](condicao-escravo-gale.md)), o pirata, o pescador de alto-mar | depende do navio por dentro |
 | 30 — A mata | o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro | a mata e os bichos existem |
 | 31 — A oficina | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | a origem das coisas existe |
 | 32 — A sombra | o ladrão, o contrabandista, o espião, o assassino | depende do conflito (Patch 24) |

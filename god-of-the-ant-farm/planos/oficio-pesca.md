@@ -15,6 +15,9 @@ Onze quilos e meio: o recorde da cidade era de onze. À noite, na taverna, já e
 
 ## 2. O que já existe no jogo
 
+- **Os barcos e os navios por dentro ainda não existem:** entrar na canoa, remar, ficar de pé no barco que balança, o navio por
+  dentro e o itinerário do porto são uma mecânica fundamental que o dono vai pedir ([`navios.md`](navios.md)); a Pesca da
+  margem não depende dela, a da costa e a de alto-mar sim.
 - **O peixe é contado** (`js/act-pesca.js`): cada água tem os seus pesqueiros (quadras de 8×8 casas), cada um comporta o peixe
   da sua água (o mar aberto muito, o recife mais, o rio pouco); onde se pesca demais o peixe acaba e, deixado em paz, volta.
 - **O que morde** é o daquela água (`G.Waters`); **o jeito de pescar é o do povo** (as mãos, o arpão, a linha, a rede).
@@ -172,10 +175,10 @@ corpo — andar pela margem, ceder com o braço, enrolar a linha no pulso. A **c
 | Fase | O quê |
 |---|---|
 | P1 — O rio e o lago | a vara, a linha de mão, o arpão, o covo; ≈ 14 espécies; o Velho do Lago; a tábua dos recordes |
-| P2 — A costa | a tarrafa, o polvo, o caranguejo, o marisco; a canoa e o barco a remo com o corpo remando; ≈ 12 espécies |
+| P2 — A costa | a tarrafa, o polvo, o caranguejo, o marisco; pescar da canoa e do barco a remo (pede os barcos pequenos da vida a bordo, a N1 do [`navios.md`](navios.md)); ≈ 12 espécies |
 | P3 — O mergulho | o fôlego, as pérolas, as esponjas, a moreia, o tubarão |
 | P4 — A conserva e o mercado | a salga, a defumação, o garum; as encomendas; o concurso da festa |
-| Depois (Patch 29) | o alto-mar, com a vida a bordo do navio |
+| Depois (Patch 29) | o alto-mar, com a vida a bordo do navio (o navio por dentro, o porto e a viagem: [`navios.md`](navios.md)) |
 
 ## 13. As provas
 
