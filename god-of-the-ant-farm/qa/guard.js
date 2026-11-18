@@ -1813,5 +1813,13 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
 { const oc = (src['anim-ocio.js'] || []).join('\n'), ab = (src['anim-body.js'] || []).join('\n');
   if (!/Anim\.ocioClip = \(k, id, L\) => \(k === 'oc-bracos-cruzados' && L && !\(L\.armOut > 0\) && H\(id \* 41 \+ 7\) < 0\.5/.test(oc)) fails.push('as mãos na cintura: o anim-ocio.js sem a porta que troca só o clipe dos braços cruzados, pela figura e pelo id (Anim.ocioClip, D-613)');
   if (!/ovk = Anim\.ocioClip \? Anim\.ocioClip\(o\.k, I\.id \|\| 0, L\) : o\.k; ovu = o\.u;/.test(ab)) fails.push('as mãos na cintura: o animador não toca a coisinha da agenda pela porta da figura (Anim.ocioClip, D-613)'); }
+// 245. "os ossos da criança são os da forma" (D-639, D-614): o rig põe a perna, o braço e o tronco pelos números do retrato (L.legK,
+// L.armK, L.trunkK — os do G.Feicao.of(v).prop, que só o look3d.js passa), como a cabeça pelo L.headK, e estica cada osso ao longo
+// dele; a passada é da perna (o tamanho do passo, s × L.legK, no animador); nenhum arquivo da animação inventa a proporção pela idade
+{ const p3 = (src['people3d.js'] || []).join('\n'), ab = (src['anim-body.js'] || []).join('\n'), lk = (src['look3d.js'] || []).join('\n');
+  if (!/LK = L\.legK > 0 \? L\.legK : 1; AK = L\.armK > 0 \? L\.armK : 1; TK = L\.trunkK > 0 \? L\.trunkK : 1;/.test(p3) || !/if \(LK !== 1 \|\| AK !== 1 \|\| TK !== 1\) stretch\(R\);/.test(p3)) fails.push('os ossos da criança: o rig não põe a perna, o braço e o tronco pelos números do retrato (D-614)');
+  if (!/const sg = s \* \(L && L\.legK > 0 \? L\.legK : 1\);/.test(ab) || !/stride\(out, a, st, v, sg, I, go\)/.test(ab)) fails.push('os ossos da criança: a passada não é a da perna (o tamanho do passo pelo L.legK, D-614)');
+  if (!/L\.legK = L\.fe \? L\.fe\.prop\.perna : 1;/.test(lk)) fails.push('os ossos da criança: o retrato não leva a perna da forma (L.legK = G.Feicao.of(v).prop.perna, D-639)');
+  for (const f of files) if (/^anim-.*\.js$/.test(f) || f === 'vida3d.js') (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(legK|armK|trunkK)\s*=(?!=)/.test(c)) fails.push(`os ossos da criança: ${f}:${k + 1} escreve a proporção do corpo (é da forma, G.Feicao — D-639): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

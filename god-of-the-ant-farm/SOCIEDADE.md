@@ -173,7 +173,12 @@ custo), `qa/feicao-inv.js`; as do corpo de hoje (`corpo-rig`, `roupa`, `andar`, 
   IK dos pés) do comprimento dela, o braço e o antebraço, o tronco; a passada da perna curta. O jeito é o do `L.headK` de hoje: o
   quadro do osso escalado ao longo dele (o `Body3D` pele por `R · inv`, e a malha segue o osso escalado sem nada novo).
 - Até a 22c ler o `L.legK`, `L.armK` e `L.trunkK`, só a cabeça muda (o `L.headK` já posto pelo rig); nenhum dos dois mexe no que
-  é do outro.
+  é do outro. **Feito pela 22c (D-614)**: o rig põe os ossos por eles (a bacia na altura da perna, a coxa, a canela e o alcance da IK
+  dos pés, o braço e o antebraço e o alcance da IK das mãos, o tronco, o pescoço e os ombros) e estica cada osso ao longo dele
+  (`stretch`, as meias juntas do quadril e do ombro como estão); a passada anda com o tamanho da perna (`s × L.legK`, o número de
+  Froude: a criança dá passos mais curtos e mais rápidos, o pé de apoio parado); a muleta de uma criança é do tamanho da axila dela.
+  Provas: o g14 do `qa/visual/gestos-vida.js` (e todas as outras partes dele com as crianças de 8 anos nas proporções da idade) e o
+  v11 do `qa/vida3d.js`; a regra 245.
 
 ### 22b — A sociedade
 **Onda 1**, nesta ordem (as fases do `estudo-social.md` §6):

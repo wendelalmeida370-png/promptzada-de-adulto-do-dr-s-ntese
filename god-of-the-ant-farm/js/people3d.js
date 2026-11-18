@@ -670,7 +670,7 @@
   // the pose's own — kneeling, lying, in the air) and its steps (L.plant[k].step: from where it stood to where it goes)
   function footFK(R, pose, k, out) {
     const sd = k ? -1 : 1; const hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL, an = (k ? pose.anR : pose.anL) || 0;
-    thighAt(M.a, R, sd, thighRot(M.th, hp, hipYaw(pose, k), hipRoll(pose, k), hipTwist(pose, k))); fr(M.c2, M.a, 0, -LEG.L1, 0, kn, 0, 0); return fr(out, M.c2, 0, -RIG.shin, 0.02, an, 0, 0);
+    thighAt(M.a, R, sd, thighRot(M.th, hp, hipYaw(pose, k), hipRoll(pose, k), hipTwist(pose, k))); fr(M.c2, M.a, 0, -LEG.L1 * LK, 0, kn, 0, 0); return fr(out, M.c2, 0, -RIG.shin * LK, 0.02, an, 0, 0);
   }
   function strike(ft, e, L) {
     ft.on = 1; ft.x = e[12] - (e[4] * LEG.sole + e[8] * LEG.heel); ft.z = e[14] - (e[6] * LEG.sole + e[10] * LEG.heel); const l = Math.hypot(e[8], e[10]) || 1; ft.dx = e[8] / l; ft.dz = e[10] / l; ft.off = 0;
@@ -727,7 +727,7 @@
         rollTo(T, ft, p2, s);
         if (stw <= 0.5 || ft.mode === 'plant') break;
         M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k); const hx = M.v.x - (k ? -0.095 : 0.095), hy = M.v.y + 0.04, hz = M.v.z;
-        if (hz > 0 || hx * hx + hy * hy + hz * hz <= REACH * REACH || p2 >= 1.0) break;
+        if (hz > 0 || hx * hx + hy * hy + hz * hz <= REACH * REACH * LK * LK || p2 >= 1.0) break;
         p2 = Math.max(p2, ft.gp || 0) + 0.07;
       }
       if (p2 > p) ft.pmin = p2; const pUse = p2;
@@ -748,9 +748,12 @@
   }
   // (how much lower the hips must be for the leg to reach T with the knee a little bent: 0 if it does; -1 if no lowering would do)
   const REACH = Math.sqrt(LEG.L1 * LEG.L1 + (RIG.shin * RIG.shin + 0.0004) + 2 * LEG.L1 * Math.hypot(RIG.shin, 0.02) * Math.cos(0.1));
+  // (the body's own proportions this rig: the leg, the arm and the trunk as the look gives them — a child's legs and arms shorter, its
+  // trunk longer, G.Feicao.of(v).prop through L.legK, L.armK, L.trunkK: 22a with 22c, D-639, D-614. 1 for a grown one)
+  let LK = 1, AK = 1, TK = 1;
   function dropFor(R, T, k) {
     M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
-    const vx = M.v.x - (k ? -0.095 : 0.095), vy = M.v.y + 0.04, vz = M.v.z, Lm = REACH, h2 = vx * vx + vz * vz;
+    const vx = M.v.x - (k ? -0.095 : 0.095), vy = M.v.y + 0.04, vz = M.v.z, Lm = REACH * LK, h2 = vx * vx + vz * vz;
     if (vy * vy + h2 <= Lm * Lm) return 0;
     if (h2 >= Lm * Lm) return -1;
     return -Math.sqrt(Lm * Lm - h2) - vy;
@@ -761,7 +764,7 @@
   const IKL = { rx: 0, ry: 0, rz: 0, kn: 0, ok: true, m: null };
   function legIK(R, k, T, dx0, dy0, dz0) {
     const sd = k ? -1 : 1; M.k.copy(R[B.pel]).invert(); M.v.copy(T).applyMatrix4(M.k);
-    const L1 = LEG.L1, L2 = Math.hypot(RIG.shin, 0.02), dl = Math.atan2(0.02, RIG.shin);
+    const L1 = LEG.L1 * LK, L2 = Math.hypot(RIG.shin * LK, 0.02), dl = Math.atan2(0.02, RIG.shin * LK);
     let dx = M.v.x - sd * 0.095, dy = M.v.y + 0.04, dz = M.v.z; let c = Math.hypot(dx, dy, dz); IKL.ok = true;
     if (c < 1e-5) { dx = 0; dy = -1; dz = 0; c = 1e-5; }
     const ux = dx / c, uy = dy / c, uz = dz / c; const cmax = (L1 + L2) * 0.9995, cmin = Math.abs(L1 - L2) + 0.02; if (c > cmax) { c = cmax; IKL.ok = false; } else if (c < cmin) c = cmin;
@@ -785,7 +788,7 @@
   function leg(R, pose, L, k, s, grounded, want) {
     const sd = k ? -1 : 1; let hp = k ? pose.hipR : pose.hipL, kn = k ? pose.knR : pose.knL; let an = (k ? pose.anR : pose.anL) || 0;
     thighRot(M.th, hp, hipYaw(pose, k), hipRoll(pose, k), hipTwist(pose, k));
-    const chain = () => { thighAt(R[B.thL + k], R, sd, M.th); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0); };
+    const chain = () => { thighAt(R[B.thL + k], R, sd, M.th); fr(R[B.snL + k], R[B.thL + k], 0, -LEG.L1 * LK, 0, kn, 0, 0); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin * LK, 0.02, an, 0, 0); };
     chain();
     let toe = -Math.max(0, an) * 0.8; const ft = L.plant ? L.plant[k] : null;
     if (grounded) {
@@ -810,14 +813,14 @@
       if (want) {
         // (planted: the foot at the stride's pitch to the ground — its forward axis measured, the ankle turned by the difference)
         const f = R[B.ftL + k].elements; const cur = Math.atan2(-f[9], Math.hypot(f[8], f[10])); const p = G.lerp(cur, want.p, want.w);
-        an += p - cur; fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0); toe = -Math.max(0, p);
+        an += p - cur; fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin * LK, 0.02, an, 0, 0); toe = -Math.max(0, p);
       } else {
         // (free: where the heel or the ball would go into the ground, the ankle turns to set it on it instead)
         for (let it = 0; it < 2; it++) {
           const hh = ptY(R[B.ftL + k], 0, -LEG.sole, -LEG.heel), hb = ptY(R[B.ftL + k], 0, -LEG.sole, LEG.ball);
           const lo = Math.min(hh, hb); if (lo >= gy - 0.004) break;
           const a = Math.asin(G.clamp((gy - lo) / s / (hh < hb ? 0.075 : 0.13), 0, 0.8));
-          an += hh < hb ? a : -a; an = G.clamp(an, -0.9, 1.1); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin, 0.02, an, 0, 0);
+          an += hh < hb ? a : -a; an = G.clamp(an, -0.9, 1.1); fr(R[B.ftL + k], R[B.snL + k], 0, -RIG.shin * LK, 0.02, an, 0, 0);
         }
         toe = -Math.max(0, an) * 0.8;
         fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
@@ -826,7 +829,7 @@
     }
     fr(R[B.toeL + k], R[B.ftL + k], 0, RIG.toeY, RIG.toe, toe, 0, 0);
     { const H = R[B.hpHL + k]; H.copy(R[B.pel]); M.b.makeTranslation(sd * 0.095, -0.04, 0); H.multiply(M.b); Q.a.setFromRotationMatrix(M.th); Q.b.identity().slerp(Q.a, 0.5); M.c.makeRotationFromQuaternion(Q.b); H.multiply(M.c); }
-    fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1, 0, kn / 2, 0, 0);
+    fr(R[B.knHL + k], R[B.thL + k], 0, -LEG.L1 * LK, 0, kn / 2, 0, 0);
     LG[k * 2] = hp; LG[k * 2 + 1] = kn; LGR[k] = M.th.elements[1]; // (and how far the thigh is drawn in or out: its down axis's side)
     // (where the ankle came to, for the animator's steps: from here a step begins)
     if (ft) { const f = R[B.ftL + k].elements; ft.cx = f[12]; ft.cy = f[13]; ft.cz = f[14]; const l = Math.hypot(f[8], f[10]) || 1; ft.cdx = f[8] / l; ft.cdz = f[10] / l; }
@@ -836,7 +839,7 @@
   // middle of the palm (a hair to the thumb's side of the forearm's line — the elbow's hinge carries it). armIK turns the
   // shoulder three ways and bends the elbow so the palm reaches a point, the elbow falling toward its pole (down and out, as a
   // real one goes): the shoulder's turn in the rig's own order (YXZ) and the elbow's bend. Points in the trunk's frame (body units)
-  const AU = 0.3, AF = 0.366, AX = 0.027; // (the upper arm; the forearm to the palm; the palm off the elbow's plane, along its hinge)
+  const AU0 = 0.3, AF0 = 0.29, AX = 0.027; let AU = AU0, AF = AF0 + 0.076; // (the upper arm; the forearm to the palm — a child's shorter, AK: the hand as it is; the palm off the elbow's plane, along its hinge)
   const IKO = { rx: 0, ry: 0, rz: 0, el: 0, ok: false, reach: 0 };
   function armIK(sd, S, T, pole) {
     // (the palm is off the arm's plane by AX along the hinge: reach for the point the plane must hold — twice, the hinge from
@@ -908,7 +911,7 @@
       if (w > 0) {
         // (where the point lies in the trunk of the body bent all the way down to it — the squat and the bow of reachDepth, from
         // the feet's own frame —, then, at the very end, the point itself in the trunk as it is)
-        const ground = L.ground !== undefined ? L.ground : r.Y; const D = Anim.reachDepth(H, L, r.Y - ground, 1); const hipF = 0.92 - 0.72 * D.sq * 0.92 + 0.06, ln = 1.05 * D.bw;
+        const ground = L.ground !== undefined ? L.ground : r.Y; const D = Anim.reachDepth(H, L, r.Y - ground, 1); const hipF = (0.92 - 0.72 * D.sq * 0.92 + 0.06) * LK, ln = 1.05 * D.bw;
         V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.k.copy(M.root).invert()); V3.b.y -= hipF; { const c = Math.cos(-ln), sn = Math.sin(-ln), y = V3.b.y, z = V3.b.z; V3.b.y = c * y - sn * z; V3.b.z = sn * y + c * z; }
         V3.a.set(HP.p[0], HP.p[1], HP.p[2]).lerp(V3.b, w);
         const e = G.smooth(0.88, 1, r.w); if (e > 0) { V3.b.set(r.X, r.Y, r.Z).applyMatrix4(M.ci); V3.a.lerp(V3.b, e); }
@@ -953,10 +956,11 @@
   P3.rig = function (X, Y, Z, yaw, pose, L) {
     mats(); if (!RF) { RF = BONES.map(() => new THREE.Matrix4()); M.th = new THREE.Matrix4(); IKL.m = new THREE.Matrix4(); Q.a = new THREE.Quaternion(); Q.b = new THREE.Quaternion(); M.k = M.k || new THREE.Matrix4(); M.c2 = new THREE.Matrix4(); M.t = [new THREE.Vector3(), new THREE.Vector3()]; M.ci = new THREE.Matrix4(); V3.a = new THREE.Vector3(); V3.b = new THREE.Vector3(); Q.c = new THREE.Quaternion(); Q.d = new THREE.Quaternion(); M.eu2 = new THREE.Euler(); M.ic = new THREE.Matrix4(); M.tb = new THREE.Matrix4(); M.tb2 = new THREE.Matrix4(); }
     const R = RF; const s = L.s; const lie = pose.lie || 0;
+    LK = L.legK > 0 ? L.legK : 1; AK = L.armK > 0 ? L.armK : 1; TK = L.trunkK > 0 ? L.trunkK : 1; AU = AU0 * AK; AF = AF0 * AK + 0.076;
     const root = M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); root.multiply(M.b);
     if (lie > 0.01) { const pr = pose.prone ? 1 : -1; M.b.makeTranslation(0, 0.16 * s * lie, 0); root.multiply(M.b); M.b.makeRotationX(pr * lie * Math.PI / 2); root.multiply(M.b); M.b.makeTranslation(0, -0.92 * s * lie, 0); root.multiply(M.b); }
     M.b.makeScale(s, s, s); root.multiply(M.b);
-    let hipY = 0.92 - pose.crouch * 0.92 + pose.bob;
+    let hipY = (0.92 - pose.crouch * 0.92 + pose.bob) * LK; // (the hips at the leg's height: a child's short legs, D-614)
     const pel = pose.pelY || 0, prl = pose.pelR || 0;
     const pelvis = () => fr(R[B.pel], root, pose.shift || 0, hipY, 0, pose.pelP || 0, pose.twist * 0.3 + pel, (pose.sway || 0) + prl);
     pelvis();
@@ -976,9 +980,9 @@
       if (drop > 0) { hipY -= Math.min(0.4, drop); pelvis(); L.drop = drop; } else L.drop = 0;
     }
     const tx = pose.lean, ty = pose.twist * 0.7 - pel * 1.7, tz = -(pose.sway || 0) * 0.6 - prl * 0.8 + (pose.tilt || 0);
-    fr(R[B.chest], R[B.pel], 0, 0.06, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06, 0, tx / 2, ty / 2, tz / 2);
+    fr(R[B.chest], R[B.pel], 0, 0.06 * TK, 0, tx, ty, tz); fr(R[B.spine], R[B.pel], 0, 0.06 * TK, 0, tx / 2, ty / 2, tz / 2);
     const nx = pose.neck, ny = (pose.lookY || 0) - (pose.twist - pel * 0.7) * 0.85;
-    const nz = pose.headR || 0; fr(R[B.head], R[B.chest], 0, 0.56, 0, nx, ny, nz); fr(R[B.neck], R[B.chest], 0, 0.56, 0, nx / 2, ny / 2, nz / 2);
+    const nz = pose.headR || 0; fr(R[B.head], R[B.chest], 0, 0.56 * TK, 0, nx, ny, nz); fr(R[B.neck], R[B.chest], 0, 0.56 * TK, 0, nx / 2, ny / 2, nz / 2);
     // (a child's head is big for the body; the grip of the hands: what they hold, the run's fists, the wave's open palm)
     if (L.headK && L.headK !== 1) { M.b.makeScale(L.headK, L.headK, L.headK); R[B.head].multiply(M.b); }
     const hold = (L.torch || L.lantern) && !lie && !L.bind;
@@ -1022,16 +1026,16 @@
       if (!k && off) { V3.a.set(off[0], off[1], off[2]).applyMatrix4(R[B.tool]).applyMatrix4(M.ci); OFFT[0] = V3.a.x; OFFT[1] = V3.a.y; OFFT[2] = V3.a.z; T = OFFT; w = offW; pole0 = POLE_TWO; }
       if (CR.ok && k === CR.k) { T = CR.Tc; w = 1; pole0 = POLE_CRUTCH; } // (the hand on the crutch: 22c)
       if (T) {
-        const pole = PL; pole[0] = pole0[0] * sd; pole[1] = pole0[1]; pole[2] = pole0[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46; SH0[2] = jz;
+        const pole = PL; pole[0] = pole0[0] * sd; pole[1] = pole0[1]; pole[2] = pole0[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46 * TK; SH0[2] = jz;
         let o = armIK(sd, SH0, T, pole); const jz2 = G.clamp(-o.rx, -1, 1) * 0.03; if (Math.abs(jz2 - jz) > 0.004) { SH0[2] = jz2; o = armIK(sd, SH0, T, pole); }
         if (w >= 0.999) { sp = o.rx; ry = o.ry; roll = o.rz; el = o.el; }
         else { M.eu.set(sp, 0, roll, 'YXZ'); Q.c.setFromEuler(M.eu); M.eu.set(o.rx, o.ry, o.rz, 'YXZ'); Q.d.setFromEuler(M.eu); Q.c.slerp(Q.d, w); M.eu2.setFromQuaternion(Q.c, 'YXZ'); sp = M.eu2.x; ry = M.eu2.y; roll = M.eu2.z; el = G.lerp(el, o.el, w); }
         jz = G.clamp(-sp, -1, 1) * 0.03;
       }
-      fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46, jz, sp, ry, roll);
-      frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46, jz * 0.5, 0, 0, sd * RIG.roll, sp, ry, roll);
-      fr(R[B.faL + k], R[B.shL + k], 0, -0.3, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -0.3, 0, -el / 2, 0, 0);
-      fr(R[B.hdL + k], R[B.faL + k], 0, -0.29, 0, k ? 0 : (pose.wristL || 0), 0, 0);
+      fr(R[B.shL + k], R[B.chest], sd * 0.235, 0.46 * TK, jz, sp, ry, roll);
+      frHalf(R[B.shHL + k], R[B.chest], sd * 0.235, 0.46 * TK, jz * 0.5, 0, 0, sd * RIG.roll, sp, ry, roll);
+      fr(R[B.faL + k], R[B.shL + k], 0, -AU0 * AK, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -AU0 * AK, 0, -el / 2, 0, 0);
+      fr(R[B.hdL + k], R[B.faL + k], 0, -AF0 * AK, 0, k ? 0 : (pose.wristL || 0), 0, 0);
       const onIt = !!PR || (H && H.hands.includes(k ? 'R' : 'L'));
       const g = (hold && sd > 0) || (k ? !!kR || pose.tool : !!kL || offW > 0.3) || onIt ? 1 : k ? grip : pose.gripL || grip; // (the hands close on what they hold)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
@@ -1053,7 +1057,7 @@
     fr(R[B.skB], R[B.pel], 0, -0.04, 0, Math.max(hl + LG[1] * 0.5, hr + LG[3] * 0.5, 0) * 0.85 + Math.max(0, cl) * 0.5 - Math.min(hl, hr, 0) * (L.fem ? 0.2 : 0.12), 0, cs * 0.3); // (seated, drawn back over the buttocks — a woman's the fuller)
     // (its sides: their thigh's swing, and its way in or out — a stride's legs are drawn in under the body, 20a)
     fr(R[B.skL], R[B.pel], 0.095, -0.04, 0, sk(hl) + cl * 0.3, 0, cs * 0.4 + LGR[0] * 0.6); fr(R[B.skR], R[B.pel], -0.095, -0.04, 0, sk(hr) + cl * 0.3, 0, cs * 0.4 + LGR[1] * 0.6);
-    fr(R[B.clk1], R[B.chest], 0, 0.46, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
+    fr(R[B.clk1], R[B.chest], 0, 0.46 * TK, -0.11, Math.max(0, cl) * 0.6, 0, cs * 0.3); fr(R[B.clk2], R[B.clk1], 0, -0.45, 0, Math.max(0, cl) * 0.5, 0, cs * 0.3);
     // (what is held: the torch upright in the left hand whatever the arm does; the tool in the right; the load at the chest)
     M.v.setFromMatrixPosition(R[B.hdL]); R[B.torch].makeRotationY(-yaw + Math.PI / 2); R[B.torch].setPosition(M.v.x, M.v.y, M.v.z); M.b.makeScale(s, s, s); R[B.torch].multiply(M.b);
     // (the things on the body this frame: the hands', the back's, the belt's — frames for the drawing, none of them a bone)
@@ -1067,8 +1071,18 @@
       else { V3.a.set(-0.42, 0, 0.3).applyMatrix4(root); V3.a.y = (L.ground !== undefined ? L.ground : Y) + H.size[1] / 2; }
       C.makeRotationY(-yaw + Math.PI / 2); C.setPosition(V3.a);
     } else if (!H) fr(R[B.carry], R[B.chest], 0, 0.3, 0.26, 0, 0, 0);
+    // (a child's proportions, D-639, D-614: each bone's frame stretched along itself by its part's number — the leg's, the arm's, the
+    // trunk's —, as the head's is by L.headK; the joints were placed at those lengths above, the things on the body by the frames
+    // before the stretch; the skin follows the frame, R · inv, with nothing new)
+    if (LK !== 1 || AK !== 1 || TK !== 1) stretch(R);
     return R;
   };
+  function stretch(R) {
+    const by = (b, k) => { if (k === 1) return; M.b.makeScale(1, k, 1); R[b].multiply(M.b); };
+    for (let k = 0; k < 2; k++) { by(B.thL + k, LK); by(B.snL + k, LK); by(B.knHL + k, LK); by(B.shL + k, AK); by(B.faL + k, AK); by(B.elHL + k, AK); } // (the half joints at the hip and the shoulder sit on the joint: as they are)
+    by(B.chest, TK); by(B.spine, TK);
+  }
+  P3.propK = () => ({ LK, AK, TK }); // (for the tests: the proportions of the last rig)
   // ------------------------------ the things on the body: their frames ------------------------------
   // (a thing's kind; where the other hand takes a thing of two hands — the item art's grip (G.ItemArt.grip(key).off), else the
   // drawing's own: both hands near the butt of a pick, a hoe, an axe felling; down the haft of a spade; forward on a spear, an oar)
@@ -1090,7 +1104,7 @@
   function crutchAt(R, pose, L, k, want, s, yaw) {
     if (!CR.F) { CR.F = new THREE.Matrix4(); CR.A = new THREE.Vector3(); CR.T = new THREE.Vector3(); CR.G = new THREE.Vector3(); CR.ci = new THREE.Matrix4(); }
     const sd = k ? -1 : 1; CR.k = k;
-    CR.A.set(sd * CRUTCH.A[0], CRUTCH.A[1], CRUTCH.A[2]).applyMatrix4(R[B.chest]);
+    CR.A.set(sd * CRUTCH.A[0], CRUTCH.A[1] * TK, CRUTCH.A[2]).applyMatrix4(R[B.chest]); const pad = CRUTCH.pad * (0.92 * LK + 0.385 * TK) / 1.305; // (a child's crutch as long as its armpit is high: D-614)
     // (the foot of that leg: where the stride has it standing, else where the pose puts it — its sole, a hand out)
     const wt = want && want[k] && want[k].T ? want[k].T : null;
     if (wt) CR.T.copy(wt); else { const e = footFK(R, pose, k, M.a).elements; CR.T.set(e[12], e[13], e[14]); }
@@ -1099,14 +1113,14 @@
     // (on the ground where it stands; swung, lifted only a little — a crutch is swung low, not lifted as a knee lifts a foot)
     if (L.ground !== undefined) { const g = groundOf(L, CR.T.x, CR.T.z); if (Number.isFinite(g)) CR.T.y = g + Math.min(0.07 * s, Math.max(0, CR.T.y - g) * 0.4); }
     const dx = CR.A.x - CR.T.x, dy = CR.A.y - CR.T.y, dz = CR.A.z - CR.T.z; const d = Math.hypot(dx, dy, dz); if (!(d > 0.2 * s) || !(dy > 0.3 * s)) return false;
-    const kY = G.clamp(d / (CRUTCH.pad * s), 0.85, 1.15); CR.d = d; CR.kY = kY;
+    const kY = G.clamp(d / (pad * s), 0.85, 1.15); CR.d = d; CR.kY = kY;
     const Yx = dx / d, Yy = dy / d, Yz = dz / d;
-    CR.T.set(CR.A.x - Yx * CRUTCH.pad * s * kY, CR.A.y - Yy * CRUTCH.pad * s * kY, CR.A.z - Yz * CRUTCH.pad * s * kY);
-    CR.G.set(CR.A.x - Yx * CRUTCH.grip * s * kY, CR.A.y - Yy * CRUTCH.grip * s * kY, CR.A.z - Yz * CRUTCH.grip * s * kY);
+    CR.T.set(CR.A.x - Yx * pad * s * kY, CR.A.y - Yy * pad * s * kY, CR.A.z - Yz * pad * s * kY);
+    const gk = CRUTCH.grip * pad / CRUTCH.pad; CR.G.set(CR.A.x - Yx * gk * s * kY, CR.A.y - Yy * gk * s * kY, CR.A.z - Yz * gk * s * kY);
     // (its frame: Y up it to the pad, Z the body's way square to it — the crosspiece along the body's way)
     let Zx = Math.cos(yaw), Zz = Math.sin(yaw); const zd = Zx * Yx + Zz * Yz; let Zx2 = Zx - zd * Yx, Zy2 = -zd * Yy, Zz2 = Zz - zd * Yz; const zl = Math.hypot(Zx2, Zy2, Zz2) || 1; Zx2 /= zl; Zy2 /= zl; Zz2 /= zl;
     const Xx = Yy * Zz2 - Yz * Zy2, Xy = Yz * Zx2 - Yx * Zz2, Xz = Yx * Zy2 - Yy * Zx2;
-    CR.F.set(Xx * s, Yx * s * kY, Zx2 * s, CR.G.x, Xy * s, Yy * s * kY, Zy2 * s, CR.G.y, Xz * s, Yz * s * kY, Zz2 * s, CR.G.z, 0, 0, 0, 1);
+    const kL = kY * pad / CRUTCH.pad; CR.F.set(Xx * s, Yx * s * kL, Zx2 * s, CR.G.x, Xy * s, Yy * s * kL, Zy2 * s, CR.G.y, Xz * s, Yz * s * kL, Zz2 * s, CR.G.z, 0, 0, 0, 1);
     CR.ci.copy(R[B.chest]).invert(); V3.a.copy(CR.G).applyMatrix4(CR.ci); CR.Tc[0] = V3.a.x; CR.Tc[1] = V3.a.y; CR.Tc[2] = V3.a.z;
     return true;
   }
@@ -1632,7 +1646,8 @@
     if (fauna) for (const e of G.Fauna3D.check()) out.push(e);
     // (each beast drawn as a skin at the level its distance from the eye and its size give it — D-322: none of the near level far
     // off, none of the far level close by; a metre of margin each side, as the edges have)
-    if (fauna) for (const id of P3.bdrawn) { const s = bvis.get(id), a = G.S.animals.get(id); if (!s || !a || s.fl === undefined || s.f !== bframe || !G.Fauna3D.has(a.kind)) continue;
+    // (only the ones drawn as a skin this frame: past the skin's rows the farthest go as the pieces, their level the last skin's — L-1777)
+    if (fauna) for (const id of P3.bdrawn) { const s = bvis.get(id), a = G.S.animals.get(id); if (!s || !a || s.fl === undefined || s.f !== bframe || s.fs !== bframe || !G.Fauna3D.has(a.kind)) continue;
       const F3 = G.Fauna3D, size = F3.sizeOf(a.kind) * (a.big || 1) * (a.age !== undefined && a.age < 1 ? 0.55 + 0.45 * Math.max(0, a.age) : 1); const d2 = (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2;
       if (s.fl !== beastLod(0, d2, size) && s.fl !== beastLod(1, d2, size) && s.fl !== beastLod(2, d2, size)) { out.push(`bicho ${id}: desenhado no nível ${s.fl} a ${Math.sqrt(d2).toFixed(1)} m do olho (D-322)`); break; } }
     if (skin) {
@@ -1891,7 +1906,7 @@
     const kb = s.kb || (s.kb = new Float32Array(KB.length * 16)); for (let k = 0; k < KB.length; k++) kb.set(R[B[KB[k]]].elements, k * 16);
     s.kf = form; s.ksc = sc; s.kfr = G.Fauna3D.frame;
     const GX = FA.Gest; const eye = GX ? GX.P[GX.I.EYE] : 0;
-    s.fl = beastLod(s.fl || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2, G.Fauna3D.sizeOf(a.kind) * sc / G.Fauna3D.scaleOf(a.kind));
+    s.fl = beastLod(s.fl || 0, (X - seenAt[0]) ** 2 + (Z - seenAt[1]) ** 2, G.Fauna3D.sizeOf(a.kind) * sc / G.Fauna3D.scaleOf(a.kind)); s.fs = bframe; // (drawn as a skin this frame: the verifier's, L-1777)
     G.Fauna3D.put(row, R, a.kind, FA.coat(THREE, a), s.fl, X, Y, Z, fly, marksOf(a, sp, s, G.clamp(eye, 0, 1)));
   }
   // (a beast's level of detail, D-322: the people's edges from the eye — LODD — as far again as the beast is bigger than a person, a

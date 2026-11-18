@@ -13,6 +13,7 @@
 //       porte read again is the same), the person dies in the middle, the god's hand takes one of two who talk, the map changes
 //       under someone drawn;
 //   v5  the same world lived with the 3D drawing and without it gives the same save, byte for byte (and the world's chance untouched).
+//   v11 the child of short legs: each child's look carries G.Feicao's proportions, the rig poses the bones by them (D-639, D-614).
 //   node qa/vida3d.js [cidade|metropole|…]     ONLY=v1,v3 for some parts
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
@@ -342,6 +343,21 @@ if (on('v10')) {
     bodyInfo = av ? `o porte ${pz ? 'velho ' + r2(pz.velho) + ', frio ' + r2(pz.frio) : 'NENHUM'}, o rosto ${av.pose && av.pose.face ? 'vivo' : 'parado'}` : 'sem corpo desenhado (sem o 3D do corpo neste teste)'; });
   say(bodyOk, 'o corpo do jogador: ' + bodyInfo);
   ok('v10 o som das coisinhas na hora do desenho; o corpo do jogador com porte e rosto', !errs.length && okAll, (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · '));
+}
+
+if (on('v11')) {
+  // the child of short legs in the world (D-639, D-614): each child's look carries the proportions of G.Feicao (the head, the leg, the
+  // arm, the trunk of their age), the rig poses the bones by them; a grown one's are 1; and the world's children walk in the frame
+  M.pronto(key); S = G.S; M.viver(1); const out = []; const bad = []; let n = 0;
+  const kids = [...S.villagers.values()].filter(v => v.age < 15 && !v.aboard).sort((a, b) => a.age - b.age);
+  for (const v of kids.concat([adult()])) { const L = P3.look(v), Fe = G.Feicao && G.Feicao.of(v); if (!Fe) continue; n++; const p = Fe.prop;
+    if (L.legK !== p.perna || L.armK !== p.braco || L.trunkK !== p.tronco || L.headK !== p.cabeca) bad.push(`#${v.id} (${Math.floor(v.age)} anos): o retrato ${[L.legK, L.armK, L.trunkK, L.headK].map(r2).join('/')} e a forma ${[p.perna, p.braco, p.tronco, p.cabeca].map(r2).join('/')}`);
+    L.ground = 0; L.plant = [{ on: 0 }, { on: 0 }]; P3.rig(0, 0, 0, 0, A.POSE0(), L); const k = P3.propK(); if (k.LK !== (L.legK || 1) || k.AK !== (L.armK || 1) || k.TK !== (L.trunkK || 1)) bad.push(`#${v.id}: o rig com ${JSON.stringify(k)}`);
+    if (v.age >= 15 && (k.LK !== 1 || k.AK !== 1 || k.TK !== 1)) bad.push(`#${v.id} crescido com ${JSON.stringify(k)}`); }
+  const young = kids[0]; if (young) out.push(`a mais nova (${Math.floor(young.age)} anos): a perna ${r2(P3.look(young).legK)}, o braço ${r2(P3.look(young).armK)}, o tronco ${r2(P3.look(young).trunkK)}, a cabeça ${r2(P3.look(young).headK)}`);
+  const errs = []; try { for (let k = 0; k < 20; k++) P3.update(0.1, { X: (young || adult()).x * TL, Z: (young || adult()).y * TL }); } catch (e) { errs.push(e.message); }
+  const chk = P3.check();
+  ok('v11 a criança de pernas curtas: a forma no retrato, o rig pelos números dela', n > 3 && !bad.length && !errs.length && !chk.length, `${n} pessoas (${kids.length} crianças) · ${out.join(' · ')}${bad.length ? ' · ' + bad.slice(0, 4).join(' | ') : ''}${errs.length ? ' · ERROS: ' + errs.join('; ') : ''}${chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''}`);
 }
 
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
