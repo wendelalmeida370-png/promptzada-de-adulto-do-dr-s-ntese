@@ -29,11 +29,11 @@ const ROOT = path.resolve(process.argv[3] || path.join(__dirname, '..', '..'));
     const pool = [...S.villagers.values()].filter(o => o.set === s.id && !o.aboard && !o.jail && !o.captive && !o.ug && !o.held && !(o.carry && o.carry.n > 0)).sort(byId); // (inside too: the proof brings them out; never one with a load in the arms — the hands are the load's)
     const grown = pool.filter(o => o.age >= 18 && o.age < 55);
     const body = grown.find(o => G.Possess.can(o).ok);
-    // (open level ground near the town: 7 × 7 tiles with nothing built, no water, road or tree)
+    // (open level ground near the town: 7 × 7 tiles with nothing built, no water, road, tree or bush)
     const bad = new Set(); for (const b of S.buildings.values()) for (let y = b.y - 1; y < b.y + b.h + 1; y++) for (let x = b.x - 1; x < b.x + b.w + 1; x++) bad.add(y * N + x);
     let best = null, bs = 1e9;
     for (let cy = 5; cy < N - 5; cy++) for (let cx = 5; cx < N - 5; cx++) { let ok = true, lo = 1e9, hi = -1e9;
-      for (let y = cy - 3; y <= cy + 3 && ok; y++) for (let x = cx - 3; x <= cx + 3 && ok; x++) { const i = y * N + x; if (bad.has(i) || S.type[i] <= G.T.RIVER || !Wd.walkable(i) || (S.treeAt && S.treeAt[i]) || (S.road && S.road[i])) { ok = false; break; } const h = Wd.groundH(x + 0.5, y + 0.5); lo = Math.min(lo, h); hi = Math.max(hi, h); }
+      for (let y = cy - 3; y <= cy + 3 && ok; y++) for (let x = cx - 3; x <= cx + 3 && ok; x++) { const i = y * N + x; if (bad.has(i) || S.type[i] <= G.T.RIVER || !Wd.walkable(i) || (S.treeAt && S.treeAt[i]) || (S.objAt && S.objAt[i]) || (S.road && S.road[i])) { ok = false; break; } const h = Wd.groundH(x + 0.5, y + 0.5); lo = Math.min(lo, h); hi = Math.max(hi, h); }
       const sc = (hi - lo) * 40 + Math.hypot(cx - s.cx, cy - s.cy) * 0.15; if (ok && sc < bs) { bs = sc; best = [cx + 0.5, cy + 0.5]; } }
     if (!best || !body) return { err: 'sem chão aberto ou sem corpo' };
     const until = (c, m) => { for (let k = 0; k < m; k++) { if (c()) return k; G.Main.frameFor(33); } return -1; };
@@ -55,7 +55,7 @@ const ROOT = path.resolve(process.argv[3] || path.join(__dirname, '..', '..'));
       ['grande', pick(o => o.age >= 25 && o.age < 50 && o.g === 'm'), o => { o.act = ''; }],
     ];
     G.inSim++; try {
-      cast.forEach(([n, o, f], i) => { if (!o) return; G.Vg.endTask(o); o.sleeping = false; o.inside = 0; o.held = false; o.hunger = 5; o.energy = 100; o.x = best[0] - 2.5 + i * 1.0; o.y = best[1]; o.tx = o.x; o.ty = o.y; o.path = null; o.moving = false; o.fx = 0.25; o.fy = 1; f(o); }); // (facing the eye: south, a little to the side)
+      cast.forEach(([n, o, f], i) => { if (!o) return; G.Vg.endTask(o); o.sleeping = false; o.inside = 0; o.held = false; o.hunger = 5; o.energy = 100; o.x = best[0] + (i - 2.5) * 1.3 / G.Space.TILE; o.y = best[1]; o.tx = o.x; o.ty = o.y; o.path = null; o.moving = false; o.fx = 0.25; o.fy = 1; f(o); }); // (1,3 m apart — a tile is 4 m —, facing the eye: south, a little to the side)
     } finally { G.inSim--; }
     G.Modes.menu(true); // (the world stopped: the acts and the gestures' clocks stay where the proof put them; the drawing goes on)
     for (let k = 0; k < 40; k++) G.Main.frameFor(33);
@@ -63,11 +63,11 @@ const ROOT = path.resolve(process.argv[3] || path.join(__dirname, '..', '..'));
     return { spot: best, cast: cast.map(([n, o]) => o ? `${n}: ${o.name}#${o.id} (${Math.floor(o.age)} anos)${G.Inv ? ' ' + JSON.stringify(Object.fromEntries(Object.entries(G.Inv.held(o)).filter(([k, x]) => typeof x === 'string'))) : ''}` : `${n}: ninguém`) };
   }, { Q: process.env.Q || 'media', W, HOUR: +process.env.HOUR || 10.5 });
   console.log(JSON.stringify(info)); if (info.err) { await browser.close(); console.log('FALHOU: ' + info.err); process.exit(1); }
-  const shots = [['frente', 0, 5.2, 1.4, 0], ['perto-esq', -0.15, 2.6, 1.1, -1.5], ['perto-dir', 0.15, 2.6, 1.1, 1.2]];
+  const shots = [['frente', 0, 6.8, 1.5, 0], ['perto-esq', -0.15, 3.2, 1.1, -1.95], ['perto-dir', 0.15, 3.2, 1.1, 1.95]]; // (the side, the distance and the height in metres, dx along the row in metres: the three on each side)
   for (const [name, side, D, up, dx] of shots) {
     await page.evaluate(o => {
       for (let k = 0; k < 4; k++) G.Main.frameFor(33);
-      const sh = window.__show; const TL = G.Space.TILE; const cx = sh.X0 + o.dx * TL; const cam = G.Realm.camera(); cam.position.set(cx + Math.sin(o.side) * o.D, sh.Y + o.up, sh.Z0 + Math.cos(o.side) * o.D); cam.lookAt(cx, sh.Y + 0.8, sh.Z0); cam.fov = 45; cam.updateProjectionMatrix();
+      const sh = window.__show; const TL = G.Space.TILE; const cx = sh.X0 + o.dx; const cam = G.Realm.camera(); cam.position.set(cx + Math.sin(o.side) * o.D, sh.Y + o.up, sh.Z0 + Math.cos(o.side) * o.D); cam.lookAt(cx, sh.Y + 0.8, sh.Z0); cam.fov = 45; cam.updateProjectionMatrix();
       G.Realm.renderer().render(G.Realm.scene(), cam);
     }, { side, D, up, dx });
     const f = path.join(OUT, `coisas-${name}.png`); await page.screenshot({ path: f, timeout: 240000 }); console.log(`foto ${f}`);
