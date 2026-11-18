@@ -24,6 +24,7 @@
 //   m14 a vida longa: anos de salto em mundos de vários tipos e sementes, as contas do que o meio fez os bichos fazerem, as
 //       linhas da crônica, o verificador e os tetos da fauna;
 //   m15 a mesma semente, o mesmo mundo: duas vezes o mesmo salto, as mesmas contas e os mesmos bichos;
+//   m17 o pombo voando baixo sobre o rio não está parado na água funda (T-1625)
 //   m16 a cidade que o mato evita (D-305): um ano de um mundo de savana e de floresta com cidades, vivido duas vezes do mesmo
 //       save — com a cidade afastando os bichos e sem (G.Meio.off.town) —, e as feras e os gigantes dentro das cidades de dia,
 //       e os outros bichos ariscos da manhã ao meio da tarde, contados a cada segundo: com a cidade, quase nenhum; as horas de
@@ -403,5 +404,23 @@ if (on('m16')) { const SEC = +(process.env.SEG || G.DAY_LEN); const said16 = [];
   said16.push(`o leão na praça de ${st.name} (raio ${st.radius.toFixed(1)}), de dia: saiu em ${lday.out} s e ${lday.back ? 'VOLTOU ' + lday.back + ' vezes' : 'não voltou'} em 80 s; com um save no meio da saída ${lsave.saved ? '' : '(SEM save) '}saiu em ${lsave.out} s${lsave.back ? ', VOLTOU' : ''}; sem a cidade afastar, ${loff.at} s dentro dos 80 (só o medo das pessoas); de noite a cidade não o afasta: ${lnight.at} s dentro (só o medo das pessoas e do fogo)`);
   const c = clean(); const e = M.erros();
   ok('m16 a cidade que o mato evita', drop && lionOk && !after.v3 && !c.n && M.limpo() && !gestErr(), `${said16.join('; ')}; verificador ${c.n}${c.n ? ': ' + c.msg : ''}; erros de módulo ${JSON.stringify(e.mod)}`); }
+
+// ---------------------------------------------------------------- m17 the pigeon in flight over the river
+// (the flock of a square goes up together and lands a few tiles off — pets.js: a.fly, the height a.z low as it rises and as it
+// comes down, a.moving false while it flies —: low over a deep river it is flying, not standing in the water; the verifier took
+// the pigeon of the world-war ready world rising off a bridge for a land beast stopped in deep water, T-1625)
+if (on('m17')) {
+  M.pronto('cidade'); const S2 = S(); let rv = -1;
+  for (let i = 0; i < S2.type.length && rv < 0; i++) if (S2.type[i] === G.T.RIVER && S2.deep[i] && !S2.road[i] && !(S2.ice && S2.ice[i])) rv = i;
+  if (rv < 0) ok('m17 o pombo voando sobre o rio', false, 'nenhum rio fundo na cidade pronta');
+  else {
+    const x = (rv % S2.N) + 0.5, y = Math.floor(rv / S2.N) + 0.5; const p = A.spawn('pombo', x, y, { home: 0 });
+    const deepQ = () => QA.check().filter(q => q.sys === 'meio' && /água funda/.test(q.msg) && q.msg.includes('#' + p.id));
+    p.fly = true; p.z = 1.5; p.moving = false; p.tx = x + 3; p.ty = y; const flying = deepQ().length;
+    p.fly = false; p.z = 0; const standing = deepQ().length;
+    G.Animals.remove(p);
+    ok('m17 o pombo voando sobre o rio', !flying && standing === 1, `voando baixo sobre a água funda: ${flying ? 'ACUSADO' : 'não acusado'}; pousado nela: ${standing ? 'acusado' : 'NÃO acusado'}`);
+  }
+}
 
 console.log(fails.length ? `FALHOU: ${fails.length} (${fails.join(', ')})` : 'TUDO PASSOU'); process.exit(fails.length ? 1 : 0);

@@ -49,7 +49,8 @@
     // no land beast that cannot swim standing in deep water
     let deep = 0;
     for (const a of s.animals.values()) {
-      if (a.dead || a.held || a.air) continue; const sp = D[a.kind]; if (!sp || sp.cls !== 'land' || sp.swims || (a.z || 0) > 3) continue;
+      // (and a city pigeon in flight — pets.js: a.fly, low as it rises and as it comes down — flies over the water, T-1625)
+      if (a.dead || a.held || a.air || a.fly) continue; const sp = D[a.kind]; if (!sp || sp.cls !== 'land' || sp.swims || (a.z || 0) > 3) continue;
       const tx = Math.floor(a.x), ty = Math.floor(a.y); if (tx < 0 || ty < 0 || tx >= N || ty >= N) continue; const i = ty * N + tx;
       if (s.type[i] === T.RIVER && s.deep[i] && !s.road[i] && !(s.ice && s.ice[i]) && a.state !== 'leave' && !a.moving) { if (deep++ < 3) add('meio', 2, `${a.kind}#${a.id} (que não nada) parado na água funda`, a.id); }
     }
