@@ -64,7 +64,7 @@
   // ------------------------------ the shaders ------------------------------
   // (the skin: the point moved by its four bones, each a 3×4 matrix of three texels in its person's row)
   const SKIN = `
-uniform highp sampler2D uBody; uniform highp sampler2D uMorph;
+uniform highp sampler2D uBody; uniform highp sampler2D uMorph; uniform highp sampler2D uMorphH;
 attribute vec4 aBone; attribute vec4 aWt; attribute float aRow; attribute float aZone; attribute float aAO; attribute vec2 aMorph;
 ivec2 b3mi(int i) { return ivec2(i - (i / B3_MW) * B3_MW, i / B3_MW); }
 float b3mw(vec4 w4, int j) { return j == 0 ? w4.x : j == 1 ? w4.y : j == 2 ? w4.z : w4.w; }
@@ -74,7 +74,7 @@ vec3 b3morph(vec3 p, int k0, int k1) {
   for (int k = k0; k < k1; k++) {
     float w = b3mw(texelFetch(uBody, ivec2(PB + B3_WT + k / 4, row), 0), k - (k / 4) * 4);
     if (abs(w) < 0.002) continue;
-    vec4 h = texelFetch(uMorph, b3mi(base + k), 0);
+    vec4 h = texelFetch(uMorphH, b3mi(base + k), 0); // (the headers, whole numbers: full floats; the runs, half floats — D-642)
     float i = aMorph.y - h.y;
     if (h.x < 0.0 || i < -0.5 || i > h.z - 0.5) continue;
     d += w * texelFetch(uMorph, b3mi(int(h.x + i + 0.5)), 0).xyz;
@@ -126,7 +126,8 @@ vec3 b3out(vec3 P, vec3 a, vec3 b, float r, vec3 u) {
 }
 vec3 b3cloth(vec3 P, vec3 p) {
   int z = int(aZone + 0.5); bool cape = z == 7 || z == 15 || z == 21; if (!cape && z != 5 && z != 6) return P; // (a cape, a toga, a blouse; a skirt)
-  vec4 m = b3V(20), gs = b3V(21); float s = gs.y * (b3V(43).w > 0.0 ? b3V(43).w : 1.0); // (22a: the girth of the body under it)
+  vec4 m = b3V(20), gs = b3V(21); float g43 = b3V(43).w > 0.0 ? b3V(43).w : 1.0, s = gs.y * g43; // (22a: the girth of the body under it)
+  float sA = gs.y * (1.0 + (g43 - 1.0) * 0.35); // (the arms fatten less than the trunk: their push on a blouse's sides by it, L-1677)
   vec3 pel = b3V(22).xyz, nk = b3V(23).xyz, ex = b3V(24).xyz, ez = b3V(25).xyz;
   vec3 up = normalize(nk - pel); float L = dot(nk - pel, up);
   // (a skirt's panels turn about the line of the hips: a point blended between two of them keeps its distance from that
@@ -147,9 +148,9 @@ vec3 b3cloth(vec3 P, vec3 p) {
     // (the arms: the shoulder caps, the upper arm from a little under the shoulder — the yoke is made for the shoulder as it
     // hangs —, the forearm, the hand)
     vec3 sL = b3V(26).xyz, eL = b3V(27).xyz, wL = b3V(28).xyz, sR = b3V(29).xyz, eR = b3V(30).xyz, wR = b3V(31).xyz;
-    if (z != 21) { P = b3off(P, b3V(38).xyz, b3V(38).xyz, 0.078 * s); P = b3off(P, b3V(39).xyz, b3V(39).xyz, 0.078 * s); } // (a blouse has no yoke on them)
-    P = b3off(P, mix(sL, eL, 0.15), eL, 0.072 * s); P = b3off(P, eL, wL, 0.056 * s); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.052 * s);
-    P = b3off(P, mix(sR, eR, 0.15), eR, 0.072 * s); P = b3off(P, eR, wR, 0.056 * s); P = b3off(P, wR, wR + (wR - eR) * 0.62, 0.052 * s);
+    if (z != 21) { P = b3off(P, b3V(38).xyz, b3V(38).xyz, 0.078 * sA); P = b3off(P, b3V(39).xyz, b3V(39).xyz, 0.078 * sA); } // (a blouse has no yoke on them)
+    P = b3off(P, mix(sL, eL, 0.15), eL, 0.072 * sA); P = b3off(P, eL, wL, 0.056 * sA); P = b3off(P, wL, wL + (wL - eL) * 0.62, 0.052 * sA);
+    P = b3off(P, mix(sR, eR, 0.15), eR, 0.072 * sA); P = b3off(P, eR, wR, 0.056 * sA); P = b3off(P, wR, wR + (wR - eR) * 0.62, 0.052 * sA);
     // (then the trunk, last — nothing pushes the cloth into it: an elliptic cylinder round the hips-to-neck axis, a little
     // inside the cloth's place at rest; not the yoke, which lies on the shoulders as it was made)
     float h = dot(P - pel, up); vec3 q = P - pel - up * clamp(h, 0.0, L); float qx = dot(q, ex), qz = dot(q, ez);
@@ -222,6 +223,7 @@ vec3 b3cl(vec3 c, float k, vec3 p) {
 vec3 b3band(vec3 c, float u, float v, float motif) { if (motif < 0.5) return c; float d = abs(fract(u) - 0.5) * 2.0 + abs(v - 0.5) * 2.0; return mix(c, mix(c, vec3(0.95, 0.88, 0.62), 0.6), smoothstep(0.62, 0.52, d) * step(0.25, v) * step(v, 0.75) + 0.0); }
 float b3gl = 0.0; // (the eyes' glint: a light of its own, added after the lighting — it shines in the shade too)
 float b3sk = 0.0; // (22a: a pixel of skin — the light goes a little into it and comes out warm at the edge of the shade)
+float b3sw = 0.0; // (22a wave 2, D-641: the sweat on a pixel of skin — the face's channel: the heat, the effort, the fever)
 vec3 b3eye(vec3 skin, bool lidded) {
   vec4 f = b3T(0), m = b3T(1), x = b3T(40); vec3 d = normalize(vBindN);
   float outer = d.x * (vZoneI == 1 || vZoneI == 26 ? 1.0 : -1.0); // (toward the eye's outer corner)
@@ -333,6 +335,13 @@ vec3 b3face(vec3 p, vec3 skin) {
       vec2 q = vec2(p.x, p.y) * 420.0; vec2 cell = floor(q); float rnd = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
       float sp = smoothstep(0.32, 0.18, length(fract(q) - 0.5)) * step(1.0 - pp.x * 0.55, rnd) * smoothstep(0.075, 0.03, length(vec2(ax - 0.03, p.y - 1.67)));
       c = mix(c, c * vec3(0.78, 0.62, 0.5), sp * fine * 0.8);
+    }
+    // (beads of sweat on the brow, near only — the face's channel, D-641; the shine of the wet skin is the light's, below)
+    vec4 chS2 = b3T(B3_CH_SWEAT_T); float swt = clamp(chS2[B3_CH_SWEAT_C], 0.0, 1.0);
+    if (swt > 0.2 && fine > 0.0 && p.y > 1.725 && p.y < 1.79 && ax < 0.05 && p.z > 0.06) {
+      vec2 q3 = vec2(p.x, p.y) * 260.0; vec2 c3 = floor(q3); float r3 = fract(sin(dot(c3, vec2(27.619, 57.583))) * 31337.17);
+      float bead = (1.0 - smoothstep(0.12, 0.3, length(fract(q3) - vec2(0.5, 0.42)))) * step(1.0 - (swt - 0.2) * 0.35, r3);
+      c = mix(c, c * 1.3 + vec3(0.05), bead * fine * 0.7);
     }
     // (the spots of the age: few and broader than freckles, from the sixties on, near only — D-637)
     if (yrs > 0.4 && fine > 0.0 && p.y > 1.62 && p.y < 1.79 && ax < 0.075) {
@@ -501,11 +510,11 @@ vec3 b3paint() {
     const fd = D.face || { lid: [0.6109, 0.6632, 1.117], eyes: [[0.037, 1.7036, 0.089]] };
     const Fe = G.Feicao, NTs = Fe && Fe.NT ? Fe.NT : 0, KB = Fe && Fe.KIND ? Fe.KIND.corpo : [0, 0];
     const RX = G.Rosto ? G.Rosto.IDX : { cry: 16, pale: 19 }; const chi = k => '#define B3_CH_' + k.toUpperCase() + '_T ' + (44 + (RX[k] >> 2)) + '\n#define B3_CH_' + k.toUpperCase() + '_C ' + (RX[k] & 3) + '\n';
-    const pb = chi('cry') + chi('pale') + '#define PB ' + PB + '\n#define B3_WT ' + WT + '\n#define B3_MW ' + MW + '\n#define B3_NT ' + NTs + '\n#define B3_K0 ' + KB[0] + '\n#define B3_K1 ' + KB[1] + '\n#define B3_LIDU ' + fd.lid[0].toFixed(5) + '\n#define B3_EYEY ' + fd.eyes[0][1].toFixed(5) + '\n#define B3_CHEST ' + B3.CHEST + '\n#define B3_THL ' + D.bones.indexOf('thL') + '\n#define B3_THR ' + D.bones.indexOf('thR') + '\n#define B3_HPL ' + D.bones.indexOf('hpHL') + '\n#define B3_HPR ' + D.bones.indexOf('hpHR') + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
+    const pb = chi('cry') + chi('pale') + chi('sweat') + '#define PB ' + PB + '\n#define B3_WT ' + WT + '\n#define B3_MW ' + MW + '\n#define B3_NT ' + NTs + '\n#define B3_K0 ' + KB[0] + '\n#define B3_K1 ' + KB[1] + '\n#define B3_LIDU ' + fd.lid[0].toFixed(5) + '\n#define B3_EYEY ' + fd.eyes[0][1].toFixed(5) + '\n#define B3_CHEST ' + B3.CHEST + '\n#define B3_THL ' + D.bones.indexOf('thL') + '\n#define B3_THR ' + D.bones.indexOf('thR') + '\n#define B3_HPL ' + D.bones.indexOf('hpHL') + '\n#define B3_HPR ' + D.bones.indexOf('hpHR') + '\n#define B3_SR ' + Math.sin(D.roll).toFixed(6) + '\n#define B3_CR ' + Math.cos(D.roll).toFixed(6) + '\n#define B3_HEMC ' + hem.saiaC.toFixed(4) + '\n#define B3_HEML ' + hem.saiaL.toFixed(4) + '\n#define B3_HEMK ' + hem.cape.toFixed(4) + '\n';
     const TEX = !!(G.Ground3D && G.Ground3D.texGLSL && G.Ground3D.U3 && G.TEX3D && G.TEX3D.wool && G.TEX3D.linen && G.TEX3D.leather); // (the materials' stack, where the 3D has it)
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
-      sh.uniforms.uBody = B3.U; sh.uniforms.uMorph = B3.U2; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind; sh.uniforms.uRim = B3.rim;
+      sh.uniforms.uBody = B3.U; sh.uniforms.uMorph = B3.U2; sh.uniforms.uMorphH = B3.U3; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind; sh.uniforms.uRim = B3.rim;
       if (TEX) Object.assign(sh.uniforms, G.Ground3D.U3());
       sh.vertexShader = pb + SKIN + CLOTH + VARY + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `vec3 b3P, b3N; b3skin(b3morph(position, 0, B3_NT), normal, b3P, b3N);
@@ -518,23 +527,23 @@ vec3 b3paint() {
       // (22a, D-553: the skin's warm edge of the shade — narrow and faint: wider and at 0.2 it read as rouge on a pale cheek a few
       // steps off, the first photos; and less red: even at 0.08 the second sheet kept a blush on the pale cheeks)
       const LC = THREE.ShaderChunk.lights_lambert_pars_fragment, LA = 'vec3 irradiance = dotNL * directLight.color;';
-      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.68, 0.52 ) * ( b3sk * 0.05 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );') : LC;
+      const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.68, 0.52 ) * ( b3sk * 0.05 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );\n\tif ( b3sw > 0.0 ) { vec3 b3h = normalize( directLight.direction + geometryViewDir ); reflectedLight.directDiffuse += directLight.color * ( b3sw * 0.45 * pow( max( dot( geometryNormal, b3h ), 0.0 ), 36.0 ) ); }') : LC;
       sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader.replace('#include <lights_lambert_pars_fragment>', LIGHT)
-        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);')
+        .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);\n  vec4 b3chS = b3T(B3_CH_SWEAT_T); b3sw = b3sk * clamp(b3chS[B3_CH_SWEAT_C], 0.0, 1.0); diffuseColor.rgb *= 1.0 - 0.06 * b3sw;')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
     };
-    mat.customProgramCacheKey = () => 'body3d-v7';
+    mat.customProgramCacheKey = () => 'body3d-v9';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind;
-      sh.uniforms.uMorph = B3.U2;
+      sh.uniforms.uMorph = B3.U2; sh.uniforms.uMorphH = B3.U3;
       // (22a: in the shadow's pass the face's relief is pressed flat — the nose, the brows, the lips and the eyes cast no shadow on
       // the face, whose blocks of the shadow map read as dark stains on the cheeks and the chin; the head still shades the world)
       sh.vertexShader = pb + SKIN + CLOTH + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 b3q = b3morph(position, B3_K0, B3_K1); if (position.y > 1.55 && position.z > 0.035 && (aZone < 2.5 || (aZone > 21.5 && aZone < 28.5))) b3q.z = 0.035 + (b3q.z - 0.035) * 0.25;\n  vec3 b3P, b3N; b3skin(b3q, vec3(0.0, 1.0, 0.0), b3P, b3N); vec3 transformed = b3cloth(b3P, position);');
     };
-    depth.customProgramCacheKey = () => 'body3d-depth-v4';
+    depth.customProgramCacheKey = () => 'body3d-depth-v5';
   }
 
   // ------------------------------ starting ------------------------------
@@ -550,7 +559,7 @@ vec3 b3paint() {
       buf = new Float32Array(TW * MAXR * 4);
       tex = new THREE.DataTexture(buf, TW, MAXR, THREE.RGBAFormat, THREE.FloatType);
       tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
-      B3.U = { value: tex }; B3.U2 = { value: null };
+      B3.U = { value: tex }; B3.U2 = { value: null }; B3.U3 = { value: null };
       shaders();
       for (const name in D.meshes) {
         const o = geometryOf(D.meshes[name]);
@@ -589,7 +598,7 @@ vec3 b3paint() {
   const Q3 = [0, 0, 0];
   function shapes() {
     const Fe = G.Feicao; if (!Fe || !Fe.ALVOS) return;
-    const t0 = performance.now(), NT = Fe.NT; const hdr = [], runs = []; let off = 0;
+    const t0 = performance.now(), NT = Fe.NT; const hdr = [], runs = [], rk = []; let off = 0;
     const eyes = D.face ? D.face.eyes : [[0.0371, 1.7036, 0.089], [-0.0371, 1.7036, 0.089]], jaw = D.face ? D.face.jaw : [0, 1.657, -0.004];
     const names = Object.keys(MESH); const HB = names.length * NT; // (the headers first, then the runs)
     // (what is worn — the hair, a beard, a hat, the clothes — takes the shape of the body where it sits: each of its points moves as
@@ -627,16 +636,24 @@ vec3 b3paint() {
           d[i * 3] = q[0]; d[i * 3 + 1] = q[1]; d[i * 3 + 2] = q[2]; if (first < 0) first = i; last = i;
         }
         if (first < 0) { hdr.push(-1, 0, 0, 0); continue; }
-        const cnt = last - first + 1; hdr.push(HB + off, first, cnt, 0); runs.push(d.subarray(first * 3, (last + 1) * 3)); off += cnt;
+        const cnt = last - first + 1; hdr.push(off, first, cnt, 0); runs.push(d.subarray(first * 3, (last + 1) * 3)); rk.push(T.kind !== 'corpo' ? 'rosto' : /^coto/.test(T.name) ? 'coto' : 'corpo'); off += cnt;
       }
       for (let i = 0; i < n; i++) M.mo[i * 2] = base; M.geo.attributes.aMorph.needsUpdate = true;
     }
-    const total = HB + off, rows = Math.ceil(total / MW), buf = new Float32Array(MW * rows * 4);
-    buf.set(hdr, 0); let j = HB * 4; for (const r of runs) { for (let i = 0; i < r.length / 3; i++) { buf[j] = r[i * 3]; buf[j + 1] = r[i * 3 + 1]; buf[j + 2] = r[i * 3 + 2]; j += 4; } }
-    mtex = new THREE.DataTexture(buf, MW, rows, THREE.RGBAFormat, THREE.FloatType); mtex.minFilter = mtex.magFilter = THREE.NearestFilter; mtex.generateMipmaps = false; mtex.needsUpdate = true;
-    B3.U2.value = mtex; B3._morph = { buf, hdr: Float32Array.from(hdr), names, NT };
+    // (22a wave 2, D-642: the runs in half floats — half the memory on the card; the headers, whole numbers past what a half keeps,
+    // in a small table of full floats. The CPU's sum reads the very halves the card reads; err is what a half loses)
+    const rows = Math.max(1, Math.ceil(off / MW)), hrows = Math.max(1, Math.ceil(HB / MW)), DU = THREE.DataUtils;
+    const half = new Uint16Array(MW * rows * 4), buf = new Float32Array(MW * rows * 4), hbuf = new Float32Array(MW * hrows * 4); hbuf.set(hdr, 0);
+    // (the nearest half — THREE's own cuts toward zero, a whole step lost —, and what a half loses by the kind of target: the face's —
+    // the identity, the years, the features —, the body's, the stump's)
+    const toHalf = x => { let h = DU.toHalfFloat(x); const h2 = h + 1; if ((h2 & 0x7fff) < 0x7c00 && Math.abs(DU.fromHalfFloat(h2) - x) < Math.abs(DU.fromHalfFloat(h) - x)) h = h2; return h; };
+    let j = 0, err = 0; const errs = { rosto: 0, corpo: 0, coto: 0 };
+    runs.forEach((r, q) => { for (let i = 0; i < r.length / 3; i++) { for (let a = 0; a < 3; a++) { const h16 = toHalf(r[i * 3 + a]); half[j + a] = h16; const b = DU.fromHalfFloat(h16); buf[j + a] = b; const e = Math.abs(b - r[i * 3 + a]); if (e > err) err = e; if (e > errs[rk[q]]) errs[rk[q]] = e; } j += 4; } });
+    const tx = (data, h, type) => { const t = new THREE.DataTexture(data, MW, h, THREE.RGBAFormat, type); t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; t.needsUpdate = true; return t; };
+    mtex = tx(half, rows, THREE.HalfFloatType); const htex = tx(hbuf, hrows, THREE.FloatType);
+    B3.U2.value = mtex; B3.U3.value = htex; B3._morph = { buf, hdr: Float32Array.from(hdr), names, NT, err, errs };
     PIV = Fe.ALVOS.map((T, k) => [eyes[0], eyes[1], jaw].map(c => Array.from(Fe.at(k, c[0], c[1], c[2]))));
-    B3.MORPH = { texels: total, bytes: buf.byteLength, ms: performance.now() - t0 };
+    B3.MORPH = { texels: off + HB, bytes: half.byteLength + hbuf.byteLength, full: (off + HB) * 16, ms: performance.now() - t0, err, errs };
   }
   // (for the tests and the verifier: the displacement of every point of a mesh for the weights w — the shader's own sum, on the CPU)
   B3.morphOf = function (name, w) {
@@ -796,6 +813,7 @@ vec3 b3paint() {
     return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
   }
   B3.meshes = () => Object.keys(MESH).map(k => ({ name: k, n: MESH[k].n, tris: MESH[k].tris }));
+  B3.layer = n => { for (const k in MESH) MESH[k].mesh.layers.enable(n); }; // (the god's panel's portrait sees the bodies on a layer of its own: Retrato3D, D-645)
   B3.at = row => AT[row]; // (for the verifier: where row's person stands [X, Y, Z, size, hips X, Y, Z, the body's level of detail])
   B3._buf = () => buf; B3._tw = () => TW; // (for the tests: the rows of numbers, read only)
   // (a shader the graphics card refused when it first drew — no error to catch at the start: People3D asks after drawing,

@@ -39,8 +39,8 @@ function posed(o) {
 function bentM(name, w, girth) {
   const m = MESH[name]; const d = B3.morphOf(name, w); const keep = m.pos;
   if (d) { const q = new Float32Array(keep.length); for (let i = 0; i < q.length; i++) q[i] = keep[i] + d[i]; m.pos = q; }
-  const buf = B3._buf(), at = (B3.bones().length * 3 + 21) * 4 + 1, s0 = buf[at]; if (girth) buf[at] = s0 * girth; // (the shader's cloth: s × the girth)
-  try { return bend(m, 0); } finally { m.pos = keep; buf[at] = s0; }
+  const buf = B3._buf(), at = (B3.bones().length * 3 + 43) * 4 + 3, g0 = buf[at]; if (girth) buf[at] = girth; // (the person's girth where the shader reads it: texel 43.w)
+  try { return bend(m, 0); } finally { m.pos = keep; buf[at] = g0; }
 }
 // the first thing a ray meets (Möller–Trumbore), among the triangles of the meshes given: [t, zone]
 function hit(meshes, o, d, far) {
@@ -75,8 +75,9 @@ else {
     const d = B3.morphOf('corpoM', Object.assign(w0(), { [X.olhosAfast]: 1 })); const m = MESH.corpoM; let spread = 0; const eyeD = [];
     for (let i = 0; i < m.n; i++) if (m.zone[i] === 26) eyeD.push([d[i * 3], d[i * 3 + 1], d[i * 3 + 2]]);
     for (const q of eyeD) spread = Math.max(spread, Math.hypot(q[0] - eyeD[0][0], q[1] - eyeD[0][1], q[2] - eyeD[0][2]));
-    ok('r1 os alvos', !bad && !big && moved > 1000 && spread < 1e-6 && Math.abs(eyeD[0][0] - 0.0035) < 0.0008,
-      `${NT} alvos em ${Mo.names.length} malhas: ${B3.MORPH.texels} texels (${(B3.MORPH.bytes / 1048576).toFixed(1)} MB na placa), feitos em ${B3.MORPH.ms.toFixed(0)} ms · números inválidos ${bad} · deslocamentos além do alcance de cada alvo (o rosto 3,5 cm, o corpo 20 cm, o coto 70 cm) ${big}${big ? ` (o maior ${(worst * 100).toFixed(1)} cm, ${wn})` : ''} · o olho afastado anda inteiro (${(eyeD[0][0] * 1000).toFixed(1)} mm, desvio ${spread.toExponential(1)})`);
+    const ER = Mo.errs || {}; // (the runs in half floats, D-642: what a half loses — under a third of a millimetre in a stump of 70 cm, less than a tenth in the body, a fiftieth in the face: never a pixel of a face at the closest eye)
+    ok('r1 os alvos', !bad && !big && moved > 1000 && spread < 1e-6 && Math.abs(eyeD[0][0] - 0.0035) < 0.0008 && (Mo.err || 0) < 3e-4 && ER.rosto < 2e-5 && ER.corpo < 8e-5,
+      `${NT} alvos em ${Mo.names.length} malhas: ${B3.MORPH.texels} texels (${(B3.MORPH.bytes / 1048576).toFixed(1)} MB na placa em meia precisão, eram ${(B3.MORPH.full / 1048576).toFixed(1)}: o maior erro ${((Mo.err || 0) * 1000).toFixed(3)} mm — no rosto ${((ER.rosto || 0) * 1000).toFixed(4)}, no corpo ${((ER.corpo || 0) * 1000).toFixed(3)}, nos cotos ${((ER.coto || 0) * 1000).toFixed(3)}), feitos em ${B3.MORPH.ms.toFixed(0)} ms · números inválidos ${bad} · deslocamentos além do alcance de cada alvo (o rosto 3,5 cm, o corpo 20 cm, o coto 70 cm) ${big}${big ? ` (o maior ${(worst * 100).toFixed(1)} cm, ${wn})` : ''} · o olho afastado anda inteiro (${(eyeD[0][0] * 1000).toFixed(1)} mm, desvio ${spread.toExponential(1)})`);
   }
   // ------------------------------ r2 the lids ------------------------------
   if (want('r2')) {
@@ -161,7 +162,7 @@ else {
     const report = []; let worse = 0, tested = 0;
     for (const [body, fem] of [['corpoM', false], ['corpoF', true]]) for (const name of ['saiaC', 'saiaL', 'toga', 'bata']) {
       const piece = MESH[name]; if (!piece) continue; let base = -1;
-      for (const [fname, w, girth] of [['nenhum', w0(), 1], ['gordo', Object.assign(w0(), { [X.gordo]: 1.2 }), 1.144], ['grávida', Object.assign(w0(), { [X.gestante]: 1 }), 1.25], ['forte', Object.assign(w0(), { [X.musculo]: 1.1, [X.ombros]: 0.9 }), 1.055]]) {
+      for (const [fname, w] of [['nenhum', w0()], ['gordo', Object.assign(w0(), { [X.gordo]: 1.2 })], ['grávida', Object.assign(w0(), { [X.gestante]: 1 })], ['forte', Object.assign(w0(), { [X.musculo]: 1.1, [X.ombros]: 0.9 })]]) { const girth = Fe.girth(w); // (the shape's own girth)
         posed({ w, girth, look: { fem }, st: process.env.ST }); const S = bentM(body, w, girth); const Bm = MESH[body];
         const H = binned(piece, bentM(name, w, girth), cyl, NA, NB);
         // (the points of the trunk under a blouse or a toga, of the hips and the thighs under a skirt — by the bone that carries them:

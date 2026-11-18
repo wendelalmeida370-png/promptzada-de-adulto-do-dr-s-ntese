@@ -61,7 +61,9 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   };
   const near = { d: 0.85, fov: 26, hy: 1.6 }, mid = { d: 3.4, fov: 40, hy: 0.95 };
   // a person of the metropolis that answers a question (the first by id: always the same)
-  const find = q => page.evaluate(q => { const all = [...G.S.villagers.values()].sort((a, b) => a.id - b.id); const fn = new Function('o', 'return ' + q); const v = all.find(o => { try { return fn(o); } catch (e) { return false; } }); return v ? v.id : null; }, q);
+  const find1 = q => page.evaluate(q => { const all = [...G.S.villagers.values()].sort((a, b) => a.id - b.id); const fn = new Function('o', 'return ' + q); const v = all.find(o => { try { return fn(o); } catch (e) { return false; } }); return v ? v.id : null; }, q);
+  // (a list of questions: the first one someone answers — a ready world made again may have no one of seventy)
+  const find = async q => { for (const one of [].concat(q)) { const id = await find1(one); if (id) return id; } return null; };
   // (what stands between the studio's camera and the person: each thing of the scene hidden in turn, the part of the frame where
   // the person is drawn compared — the thing whose hiding changes it most is in the way, or is the person)
   if (want('vista')) {
@@ -85,14 +87,14 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   }
   if (want('cinco')) {
     for (const [n, q] of [['1-nordico-jovem', "o.civ === 'nordico' && o.g === 'm' && o.age >= 19 && o.age < 30"], ['2-egipcia-adulta', "o.civ === 'egipcio' && o.g === 'f' && o.age >= 26 && o.age < 40"],
-      ['3-asteca-jovem', "o.civ === 'asteca' && o.g === 'm' && o.age >= 17 && o.age < 24"], ['4-grega-idosa', "o.civ === 'grego' && o.g === 'f' && o.age >= 58"], ['5-romano-idoso', "o.civ === 'romano' && o.g === 'm' && o.age >= 60"]]) {
+      ['3-asteca-jovem', "o.civ === 'asteca' && o.g === 'm' && o.age >= 17 && o.age < 24"], ['4-grega-idosa', ["o.civ === 'grego' && o.g === 'f' && o.age >= 58", "o.civ === 'grego' && o.g === 'f' && o.age >= 50"]], ['5-romano-idoso', ["o.civ === 'romano' && o.g === 'm' && o.age >= 60", "o.civ === 'romano' && o.g === 'm' && o.age >= 50"]]]) {
       const id = await find(q); if (!id) { log(n + ': ninguém'); continue; }
       await shoot('cinco-perto-' + n, id, near, FACE); await shoot('cinco-meio-' + n, id, mid, MID);
     }
   }
   if (want('fila')) {
     for (const [n, q] of [['bebe', 'o.age < 2'], ['crianca', 'o.age >= 5 && o.age < 9'], ['menina', "o.g === 'f' && o.age >= 9 && o.age < 13"], ['adolescente', 'o.age >= 14 && o.age < 17'],
-      ['adulto', "o.g === 'm' && o.age >= 25 && o.age < 40"], ['adulta', "o.g === 'f' && o.age >= 25 && o.age < 40"], ['idoso', "o.g === 'm' && o.age >= 66"], ['idosa', "o.g === 'f' && o.age >= 66"],
+      ['adulto', "o.g === 'm' && o.age >= 25 && o.age < 40"], ['adulta', "o.g === 'f' && o.age >= 25 && o.age < 40"], ['idoso', ["o.g === 'm' && o.age >= 66", "o.g === 'm' && o.age >= 55"]], ['idosa', ["o.g === 'f' && o.age >= 66", "o.g === 'f' && o.age >= 58"]],
       ['gravida', 'o.preg > 0'], ['sem-braco', 'o.lost && (o.lost.armL || o.lost.armR)'], ['sem-perna', 'o.lost && o.lost.leg'], ['ferreiro', "o.role === 'ferreiro' && o.age >= 25"], ['crespo', "o.genoma && G.Feicao.of(o) && G.Feicao.of(o).tex === 3 && o.age >= 18"], ['gordo', "o.age >= 20 && G.Feicao.of(o) && G.Feicao.of(o).w[G.Feicao.IDX.gordo] > 0.5"], ['magro', "o.age >= 20 && G.Feicao.of(o) && G.Feicao.of(o).w[G.Feicao.IDX.magro] > 0.4"]]) {
       const id = await find(q); if (!id) { log('fila-' + n + ': ninguém'); continue; } await shoot('fila-' + n, id, mid, MID);
     }
@@ -100,7 +102,7 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   if (want('anos')) {
     // (one person — their genome — drawn at five ages: the identity stays, the years go over it)
     // (bareheaded, so the grey and the hair that goes are seen; and a few steps off at 25, 45 and 70: the age read from there, D-637)
-    const id = await find("o.age >= 25 && o.age < 45 && o.g === 'm' && !o.lost && !G.People3D.outfit(o).hatM");
+    const id = await find("o.age >= 25 && o.age < 45 && o.g === 'm' && !o.lost && o.role !== 'guerreiro' && !G.People3D.outfit(o).hatM && !(G.People3D.look(o).inv || {}).cabeca");
     for (const a of [5, 15, 25, 45, 70]) { await page.evaluate(([id, a]) => { const v = G.S.villagers.get(id); window.__anos = Object.assign({}, v, { age: a, role: a < 16 ? 'crianca' : v.role }); }, [id, a]); await shoot('anos-' + a, '__anos', near, FACE);
       if (a >= 25) await shoot('anos-meio-' + a, '__anos', mid, MID); }
     // (and four other men of the people at 25 and at 45: what a face of one person over the years is measured against —
@@ -114,7 +116,7 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   }
   if (want('humor')) {
     const id = await find("o.civ === 'asteca' && o.g === 'm' && o.age >= 17 && o.age < 26") || await find('o.age >= 18');
-    for (const [n, face] of [['calma', { smile: 0.12 }], ['alegria', { smile: 1, squint: 0.6, jaw: 0.4 }], ['tristeza', { smile: -0.7, browSad: 1, gazeY: -0.2 }], ['raiva', { browIn: 1, press: 0.8, squint: 0.3 }], ['medo', { browUp: 1, wide: 1, jaw: 0.45, stretch: 0.6 }], ['fala', { jaw: 0.55, smile: 0.2 }], ['piscar', { blink: 1 }], ['nojo', { sneer: 1, browIn: 0.4 }]])
+    for (const [n, face] of [['calma', { smile: 0.12 }], ['alegria', { smile: 1, squint: 0.6, jaw: 0.4 }], ['suor', { sweat: 1, squint: 0.3, jaw: 0.15 }], ['tristeza', { smile: -0.7, browSad: 1, gazeY: -0.2 }], ['raiva', { browIn: 1, press: 0.8, squint: 0.3 }], ['medo', { browUp: 1, wide: 1, jaw: 0.45, stretch: 0.6 }], ['fala', { jaw: 0.55, smile: 0.2 }], ['piscar', { blink: 1 }], ['nojo', { sneer: 1, browIn: 0.4 }]])
       await shoot('humor-' + n, id, Object.assign({ face }, near), FACE);
   }
   if (want('custo')) {

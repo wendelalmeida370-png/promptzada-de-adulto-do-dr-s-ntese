@@ -7,7 +7,8 @@
 //   · os mortos do registro guardam o genoma que tinham (o pai morto antes do parto ainda passa os genes) — S3;
 //   · a feição desenhada (G.Feicao, onde o 3D está) tem números: a cor de cada um é uma cor e a altura fica nos ±8% — S4;
 //   · a forma desenhada (os pesos dos alvos, D-554) fica na caixa — S4 —, e o coto e a barriga da gravidez só com a causa no mundo
-//     (o membro perdido, v.lost; a gravidez, v.preg) — S3.
+//     (o membro perdido, v.lost; a gravidez, v.preg) — S3;
+//   · a memória dos retratos do painel do deus (G.Retrato3D, D-645) não passa do teto — S4.
 // Carregado depois do qa/qa.js (QA.more); o junta-inv.js o leva para dentro do qa.js.
 (function () {
   if (!window.QA || !QA.more) return;
@@ -40,5 +41,7 @@
       if (bad && !wc++) ec = `${v.name} #${v.id}`; }
     if (wb) add('genoma', 4, `${wb} pessoa(s) com a forma desenhada fora da caixa — ${ew}`);
     if (wc) add('genoma', 3, `${wc} pessoa(s) com um coto ou a barriga da gravidez sem a causa no mundo (v.lost, v.preg) — ${ec}`);
+    // (the portraits of the god's panel, D-645: the view's memory under its cap — a face kept per change of the face, never more)
+    const RT = G.Retrato3D; if (RT && RT.size && RT.size() > RT.CAP) add('genoma', 4, `a memória dos retratos do painel com ${RT.size()} rostos, acima do teto de ${RT.CAP}`);
   });
 })();

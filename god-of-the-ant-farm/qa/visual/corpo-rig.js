@@ -71,7 +71,7 @@ function cloth(P, p, zn, buf, pb, clock, U) {
   const cl = (v, a, b) => Math.min(b, Math.max(a, v)), ss = (a, b, x) => { const t = cl((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
   const off = (P, a, b, r) => { const ab = sub(b, a); const t = cl(dot(sub(P, a), ab) / Math.max(dot(ab, ab), 1e-8), 0, 1); const d = sub(P, add(a, ab, t)); const l = len(d); return l < r && l > 1e-5 ? add(P, d, (r - l) / l) : P; };
   const out = (P, a, b, r, u) => { const ab = sub(b, a); const t = cl(dot(sub(P, a), ab) / Math.max(dot(ab, ab), 1e-8), 0, 1); const d = sub(P, add(a, ab, t)); const l2 = dot(d, d); if (l2 >= r * r) return P; const du = dot(d, u); return add(P, u, -du + Math.sqrt(Math.max(du * du - l2 + r * r, 0))); };
-  const cape = zn === 7 || zn === 15 || zn === 21; const m = V(20), gs = V(21), s = gs[1];
+  const cape = zn === 7 || zn === 15 || zn === 21; const m = V(20), gs = V(21), g43 = V(43)[3] > 0 ? V(43)[3] : 1, s = gs[1] * g43, sA = gs[1] * (1 + (g43 - 1) * 0.35); // (the girth of the body, 22a; the arms fatten less: L-1677)
   const pel = V(22), nk = V(23), ex = V(24), ez = V(25); const L = len(sub(nk, pel)), up = sub(nk, pel).map(q => q / L);
   // (the skirt: a point blended between two panels keeps its distance from the hips' line)
   if (!cape) { const ob = pb - G.BODYMESH.bones.length * 12; const q0 = buf.slice(ob, ob + 4), q1 = buf.slice(ob + 4, ob + 8), q2 = buf.slice(ob + 8, ob + 12);
@@ -87,9 +87,9 @@ function cloth(P, p, zn, buf, pb, clock, U) {
   P = add(P, rd, Math.sin(t * (5 + W[2] * 2) + p[0] * 17 - p[1] * 11) * 0.006 * W[2] * w * (cape ? 1 : 0.4) * s);
   if (cape) {
     const sL = V(26), eL = V(27), wL = V(28), sR = V(29), eR = V(30), wR = V(31);
-    if (zn !== 21) { P = off(P, V(38), V(38), 0.078 * s); P = off(P, V(39), V(39), 0.078 * s); }
-    P = off(P, add(sL, sub(eL, sL), 0.15), eL, 0.072 * s); P = off(P, eL, wL, 0.056 * s); P = off(P, wL, add(wL, sub(wL, eL), 0.62), 0.052 * s);
-    P = off(P, add(sR, sub(eR, sR), 0.15), eR, 0.072 * s); P = off(P, eR, wR, 0.056 * s); P = off(P, wR, add(wR, sub(wR, eR), 0.62), 0.052 * s);
+    if (zn !== 21) { P = off(P, V(38), V(38), 0.078 * sA); P = off(P, V(39), V(39), 0.078 * sA); }
+    P = off(P, add(sL, sub(eL, sL), 0.15), eL, 0.072 * sA); P = off(P, eL, wL, 0.056 * sA); P = off(P, wL, add(wL, sub(wL, eL), 0.62), 0.052 * sA);
+    P = off(P, add(sR, sub(eR, sR), 0.15), eR, 0.072 * sA); P = off(P, eR, wR, 0.056 * sA); P = off(P, wR, add(wR, sub(wR, eR), 0.62), 0.052 * sA);
     const h = dot(sub(P, pel), up); const q = sub(sub(P, pel), up.map(v => v * cl(h, 0, L))); const qx = dot(q, ex), qz = dot(q, ez);
     const u = cl(h / L, 0, 1); const rx = (0.17 + 0.03 * u) * s, rz = (0.135 - 0.013 * u) * s; const k = Math.cbrt(Math.abs(qx / rx) ** 3 + Math.abs(qz / rz) ** 3);
     const kk = cl((1.40 - p[1]) / 0.1, 0, 1); if (k < 1 && k > 1e-4 && zn !== 21) P = add(add(P, ex, qx * (1 / k - 1) * kk), ez, qz * (1 / k - 1) * kk);

@@ -174,6 +174,32 @@ custo), `qa/feicao-inv.js`; as do corpo de hoje (`corpo-rig`, `roupa`, `andar`, 
   quadro do osso escalado ao longo dele (o `Body3D` pele por `R · inv`, e a malha segue o osso escalado sem nada novo).
 - Até a 22c ler o `L.legK`, `L.armK` e `L.trunkK`, só a cabeça muda (o `L.headK` já posto pelo rig); nenhum dos dois mexe no que
   é do outro.
+- **Os números, para a 22c pôr os ossos** (22a, onda 2; os mesmos para toda pessoa — a proporção é só da idade, o genoma dá a altura
+  por cima, `L.s`): a escala ao longo do osso, 1 no crescido. O quadril desce pela perna (a altura do quadril de hoje × `legK`), a coxa
+  e a canela × `legK` (o alcance da IK dos pés também), o braço e o antebraço × `armK`, a coluna até o pescoço × `trunkK`, a cabeça ×
+  `headK` (já); a passada é da 22c (a perna curta dá o passo curto: o `G.Gait` pela perna, não pela altura).
+
+  | idade | cabeça (`headK`) | perna (`legK`) | braço (`armK`) | tronco (`trunkK`) |
+  |---|---|---|---|---|
+  | 0,5 | 1,30 | 0,78 | 0,88 | 1,22 |
+  | 2 | 1,28 | 0,79 | 0,89 | 1,22 |
+  | 4 | 1,23 | 0,82 | 0,90 | 1,19 |
+  | 6 | 1,17 | 0,86 | 0,92 | 1,15 |
+  | 8 | 1,10 | 0,90 | 0,95 | 1,11 |
+  | 10 | 1,04 | 0,94 | 0,97 | 1,07 |
+  | 12 | 1,01 | 0,98 | 0,99 | 1,03 |
+  | 15 | 1 | 1 | 1 | 1 |
+
+  O `Body3D` pele os ossos como o rig os põe (o quadro de cada osso, escalado ao longo dele): a malha segue sem nada novo da 22a. O
+  pano (a saia, a capa) lê os pontos dos ossos (os texels 22 a 31 do corpo), que vêm do rig: segue a perna curta sozinho. A prova
+  que a 22a cobra quando a 22c entrar: o r8 do `rostos.js` (os números) e o `corpo-rig` (a criança sem a pele passar o pano).
+
+**A câmera de conversa e o retrato (22a, onda 2; D-644, D-645).** A câmera do corpo chega ao rosto quando alguém **responde** ao
+corpo: a tarefa de quem fala com ele com `kind: 'talk'` e `t.id` = o corpo (a conversa das mãos, `talk`; a resposta dos verbos
+sociais, `resposta`, da 22b). Um verbo novo do corpo cuja resposta seja de fala dá à tarefa `kind: 'talk'`; um gesto em que a câmera
+não deve chegar (o abraço, a dança, a briga) não — a câmera não lê o ato, lê a tarefa. O retrato no painel do deus é o rosto do 3D
+com o que dura na vida (o luto, a ferida, a doença: o `G.Vida3D.porteOf` e o `Anim3D.faceMix` da 22c, só lidos); o susto do instante
+e o frio não entram no retrato.
 
 ### 22b — A sociedade
 **Onda 1**, nesta ordem (as fases do `estudo-social.md` §6):
@@ -219,7 +245,7 @@ orçamento (≤ 4 ms por quadro para as pessoas no centro da metrópole), a medi
 | Arquivo | Dono | Os outros |
 |---|---|---|
 | `js/rosto.js`, `js/soc-atos.js` (o vocabulário) | o contrato | a 22c pede um canal novo ao arquiteto; a 22b acrescenta atos ao vocabulário, com a linha do som |
-| `js/genoma.js`, `js/feicao.js`, `js/look3d.js`, `js/body3d.js`, `js/bodymesh.js`, `arte/corpo*.py`, `arte/rosto*.py` | 22a | só leem (a sociedade, nunca o genoma) |
+| `js/genoma.js`, `js/feicao.js`, `js/look3d.js`, `js/body3d.js`, `js/bodymesh.js`, `js/retrato3d.js`, `arte/corpo*.py`, `arte/rosto*.py` | 22a | só leem (a sociedade, nunca o genoma) |
 | `js/soc-*.js` (fora o vocabulário), `qa/sociedade*.js` | 22b | o desenho só as leituras (§3.5) |
 | `js/vida3d.js`, `js/anim-*.js`, `js/vida-clips.js`, `js/social-clips.js` | 22c | — |
 | `js/people3d.js` | o retrato e a roupa: 22a (para o `look3d.js`); o laço do quadro, a atuação, a multidão e o `P3.rig`: 22c | os ossos novos do rosto ao fim do `P3.rig`: 22a, mínimo e dito |

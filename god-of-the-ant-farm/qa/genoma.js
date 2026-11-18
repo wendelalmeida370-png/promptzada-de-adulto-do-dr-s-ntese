@@ -231,6 +231,15 @@ if (run('gd')) {
     ['237', 'art.js', s => s.replace("c.fillStyle = skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();", "c.fillStyle = v.skin; c.beginPath(); c.arc(0, hy, 2.05, 0, TAU); c.fill();"), /a vista do deus pela feição: art\.js:\d+ pinta a pessoa pelo v\.skin/],
     // (237, L-1678 planted again: the dead's painter copying the look's stored colours, the living skin painted over the rot)
     ['237 o morto', 'carnage.js', s => s.replace("L.skin = c.pose === 'burnt' ? c.look.skin : G.Art.skinOf(c.look); L.hair = G.Art.hairOf(c.look); L.dead = true; ", ''), /o pintor do morto \(C\.paintLook do carnage\.js\) não pinta a cópia pela feição/],
+    // (238: the panel's portrait drawn by the god only; another file putting someone in the body's rows; the studio at work while
+    // the 3D draws the body's world)
+    ['238 o painel', 'ui.js', s => s.replace("    if (G.Retrato3D && G.Retrato3D.into(c, v)) return c; // (22a, D-645: the face by the 3D, made once and kept — the god's drawing until it is)\n", ''), /o portrait do ui\.js não pede o rosto ao G\.Retrato3D\.into/],
+    ['238 as linhas', 'fx3d.js', s => s + '\nconst pose1 = () => G.Body3D.put(0, null, null, null, 0, 0, 0);\n', /fx3d\.js:\d+ põe gente nas linhas do corpo do 3D/],
+    ['238 o corpo', 'retrato3d.js', s => s.replace('if (R3.on) { asks.clear(); return; }', ''), /o retrato3d\.js faz retratos com o 3D desenhando o mundo do corpo/],
+    // (239: the society's answer without the talk's kind; the eye of a talk turning the player's yaw; the eye reading the act, not the task)
+    ['239 a resposta', 'soc-verbos.js', s => s.replace("act: 'argue', pri: 1.1, wait: 3 * K, kind: 'talk' }", "act: 'argue', pri: 1.1, wait: 3 * K }"), /soc-verbos\.js:\d+ uma tarefa de fala com o corpo sem o kind 'talk'/],
+    ['239 o olho gira', 'cam3d.js', s => s.replace("if (t) talkPt = t;", "if (t) { talkPt = t; C3.yaw += 0.01; }"), /cam3d\.js:\d+ o olho da conversa muda o rumo/],
+    ['239 o ato', 'cam3d.js', s => s.replace("t.kind !== 'talk'", "!/talk|resposta/.test(t.type)"), /o talkOf do cam3d\.js não pergunta pelo kind 'talk'/],
     ['236 o modelo', 'mira3d.js', s => s + '\nconst bad = `uniform float uX;\nvoid main() { }` + `#define Y 1\n`;\n', /um modelo de GLSL juntado a outro por «\+»/],
   ];
   const res = [];
@@ -241,7 +250,7 @@ if (run('gd')) {
     res.push(`${name}: ${want.test(out) ? 'acusada' : 'NÃO ACUSADA'}`);
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  ok('as regras 197–203, 236 e 237 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
+  ok('as regras 197–203 e 236 a 239 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
 }
 ok('sem erro de módulo nem aviso no console', M.limpo(), M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300));
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');

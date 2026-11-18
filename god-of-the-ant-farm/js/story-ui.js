@@ -30,6 +30,7 @@
     const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
     const g = x.createRadialGradient(32, 26, 4, 32, 32, 36); g.addColorStop(0, '#f2e2c0'); g.addColorStop(1, '#a88c5c');
     x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    if (v && G.Retrato3D && G.Retrato3D.into(c, v)) return c; // (22a, D-645: the face by the 3D, as the person's card has it)
     if (v) {
       x.save(); x.translate(32, 52); x.scale(3.3, 3.3);
       const pv = Object.assign({}, v, { act: '', moving: false, face: 1, sleeping: false, inside: 0, hurt: 0, torch: false, emo: null });

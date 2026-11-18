@@ -499,6 +499,7 @@
     const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0);
     const g = x.createRadialGradient(32, 28, 4, 32, 32, 34); g.addColorStop(0, '#f4e6c8'); g.addColorStop(1, '#b89a6a');
     x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    if (G.Retrato3D && G.Retrato3D.into(c, v)) return c; // (22a, D-645: the face by the 3D, made once and kept — the god's drawing until it is)
     x.save(); x.translate(32, 50); x.scale(3.4, 3.4);
     const pv = Object.assign({}, v, { act: '', moving: false, face: 1, sleeping: false, inside: 0, hurt: 0, torch: false, emo: null });
     if (v.dead) { pv.role = v.role; pv.skin = '#c8c0b0'; pv.hair = '#9a948a'; pv.kidCloth = '#8a8a8a'; }
