@@ -2,58 +2,58 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 17,
-  "pop": 138,
+  "day": 14,
+  "pop": 132,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Roma",
+   "name": "Hedeby",
    "tier": 3,
-   "pop": 35
+   "pop": 40
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1168241
+  "bytes": 1141895
  },
  "metropole": {
-  "day": 68,
-  "pop": 944,
-  "peoples": 6,
-  "towns": 20,
+  "day": 53,
+  "pop": 575,
+  "peoples": 5,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Argos",
+   "name": "Hedeby",
    "tier": 4,
-   "pop": 116
+   "pop": 51
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 4065229
+  "bytes": 3191780
  },
  "mega": {
-  "day": 69,
-  "pop": 720,
-  "peoples": 5,
+  "day": 75,
+  "pop": 1076,
+  "peoples": 4,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Hedeby",
+   "name": "Tenochtitlan",
    "tier": 5,
-   "pop": 148
+   "pop": 191
   },
   "wars": 0,
   "ww": null,
   "world": "Corante",
-  "bytes": 3709164
+  "bytes": 4585117
  },
  "mundial": {
   "day": 65,
