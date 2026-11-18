@@ -28,6 +28,10 @@ que for feito sai da lista «a fazer» com o commit que fez.
   batalha no mar): a mecânica fundamental que o dono vai pedir, da qual a Pesca e o mar dependem.
 - [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do galeote e o ofício
   do remador livre; Patch 29).
+- [`oficio-gladiador.md`](oficio-gladiador.md) — o gladiador por inteiro (a escola, os tipos, a arena visceral, o favor da
+  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 28).
+- [`oficio-capataz.md`](oficio-capataz.md) — o capataz por inteiro (o comitre da galé e o feitor: o poder, o medo, o ódio que
+  volta, a corrupção, a redenção; Patch 29).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
 - `pdf/` — os planos em PDF para o dono ler.

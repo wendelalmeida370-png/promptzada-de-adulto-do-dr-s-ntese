@@ -118,7 +118,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
   alfaiate e costureira, sapateiro, cordoeiro (a corda), cesteiro (o vime), escultor, arquiteto (as obras grandes)
 
 **Combate** (tronco: o Combate)
-- **guerreiro**, **arqueiro**, **gladiador**, **vigia**, **carcereiro**
+- **guerreiro**, **arqueiro**, **gladiador** ([`oficio-gladiador.md`](oficio-gladiador.md)), **vigia**, **carcereiro**, o capataz — o comitre e o feitor ([`oficio-capataz.md`](oficio-capataz.md))
 - mercenário, cavaleiro, lanceiro, campeão de duelos, caçador de recompensas, guarda-costas, mestre de armas, comandante
 
 **Sombra** (tronco: o crime)
