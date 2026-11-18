@@ -2,6 +2,8 @@
 
 O jogo está em `god-of-the-ant-farm/` (HTML + JavaScript puro, sem build: abra `index.html`). As ferramentas de teste estão em `god-of-the-ant-farm/qa/` (leia `qa/README.md`). O histórico de bugs, reformas e decisões está em `qa/AUDIT.md`; o relatório da estabilização, em `qa/RELATORIO.md`.
 
+**Os planos do que vem** (as ideias do dono, os brainstorms, os patches planejados e a ordem deles) ficam em `god-of-the-ant-farm/planos/` — leia o `planos/README.md` antes de planejar ou de começar um patch; ideia nova do dono entra lá.
+
 O dono do projeto fala português e não é programador: responda em português, explique em linguagem simples, dê notícias curtas do andamento. O objetivo dele é que o jogo cresça muito sem acumular bugs — **o protocolo abaixo não é opcional**.
 
 ## Protocolo de qualidade (vale para toda mudança, grande ou pequena)

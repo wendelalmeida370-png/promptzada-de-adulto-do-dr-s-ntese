@@ -5,7 +5,7 @@ mundo** — nunca um minijogo solto. Gostoso de fazer (a recompensa que se vê e
 ciclo que prende: «só esse ofício poderia ser um jogo». Ofício no sentido largo: **o que o personagem está vivendo** —
 pescar, guerrear, roubar, rezar, e também ser escravo de galé, preso, órfão. Uma escada: as mecânicas fundamentais, os
 ofícios fundamentais e os ofícios derivados. Vem depois do Patch 25 (o plano dos NPCs está em
-`arte/sociedade/patch23-plano.md`); é trabalho de meses, um ofício por vez, cada um até ficar ótimo.
+`planos/patch23-as-vidas.md`); é trabalho de meses, um ofício por vez, cada um até ficar ótimo.
 
 ## 1. O princípio: o ofício é um laço do mundo, não um minijogo
 
