@@ -45,7 +45,7 @@
   // the greeting: the hand shaken (a little up and down), the forearm gripped, the bow, the head down
   c('duo-aperto', 1.5, U, go({ shRp: -40, shRr: -2, elR: 36, grip: 0.9, neck: 6 }, 0.25, 0.75, [[0.4, { shRp: -44, shRr: -2, elR: 38, grip: 0.9, neck: 8 }], [0.55, { shRp: -36, shRr: -2, elR: 34, grip: 0.9, neck: 6 }]]));
   c('duo-antebraco', 1.5, U, go({ shRp: -56, shRr: -4, elR: 30, grip: 0.9, lean: 3, neck: 4 }, 0.25, 0.75));
-  c('duo-reverencia', 2, 'full', go({ lean: 32, neck: 16, shRp: -46, shRr: 10, elR: 100, shRy: 40, shLp: 6, elL: 10, grip: 0.1 }, 0.3, 0.7), { feet: 'plant' });
+  c('duo-reverencia', 2, 'full', go({ lean: 30, neck: 18, shRp: -40, shRr: 6, elR: 96, shRy: 30, shLp: 6, elL: 10, grip: 0.1 }, 0.3, 0.7), { feet: 'plant' });
   c('duo-cabeca-baixa', 2, U, go({ neck: 30, lean: 9, shLp: -34, shRp: -34, shLr: -12, shRr: 12, elL: 78, elR: 78, shLy: -60, shRy: 60, grip: 0.4, gripL: 0.4 }, 0.25, 0.8));
   // the push on the chest; the one who parts two, the hands held on the other's chest
   c('duo-empurrar', 1, U, go({ shLp: -76, shRp: -76, shLr: 6, shRr: -6, elL: 26, elR: 26, lean: 12, neck: -4, grip: 0.1, gripL: 0.1 }, 0.25, 0.5, [[0.35, { shLp: -80, shRp: -80, shLr: 6, shRr: -6, elL: 8, elR: 8, lean: 16, neck: -6 }]]));
