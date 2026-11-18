@@ -33,6 +33,8 @@
     if (v.widow === o.id) return 'viuvo';
     if (v.mother === o.id || v.father === o.id) return 'pai';
     if (o.mother === v.id || o.father === v.id) return 'filho';
+    if (v.tutor && v.tutor === o.id) return 'pai'; // (who raised the other feels as the family does: G.Tutela, D-632)
+    if (o.tutor && o.tutor === v.id) return 'filho';
     if ((v.mother && v.mother === o.mother) || (v.father && v.father === o.father)) return 'irmao';
     return null;
   }
@@ -131,6 +133,7 @@
     lisonja: { a: [0, 0, 0, 0], b: [-2, -6, -2, 0], frente: 1 }, beijo: { a: [6, 3, 0, 12], b: [6, 3, 0, 12], frente: 1 },
     ameaca: { a: [-4, 0, 0, 0], b: [-16, -14, 4, -8], frente: 1 }, abraco: { a: [5, 3, 0, 1], b: [6, 3, 0, 1], frente: 1 },
     convite: { a: [3, 2, 0, 1], b: [6, 3, 1, 1], frente: 1 }, pedido: { a: [0, 0, 0, 0], b: [0, 0, -2, 0], frente: 1 },
+    tutela: { a: [10, 5, 0, 0], b: [15, 10, 5, 0], frente: 1 }, // (4b: one takes an orphan in — a the one who raises, b the child)
   };
   L.TIPOS = () => Object.keys(TIPO);
   L.tipo = (k, def) => { if (!TIPO[k]) TIPO[k] = def; };
@@ -296,6 +299,7 @@
     if (G.Fama && G.Fama.dayOf) G.Fama.dayOf(set);
     if (G.Convivio && G.Convivio.dayOf) G.Convivio.dayOf(set);
     if (G.Boatos && G.Boatos.dayOf) G.Boatos.dayOf(set); // (what is said: the rumours of the town, soc-boatos.js)
+    if (G.Tutela && G.Tutela.dayOf) G.Tutela.dayOf(set); // (the orphans to who will raise them, soc-tutela.js)
   };
   function cool(x, rate, floor) {
     if (!x) return 0;

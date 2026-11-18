@@ -66,6 +66,8 @@
   // (the society, SOCIEDADE.md, D-541, D-542: the look's genome — only genoma.js writes it, 22a; who the person is, the ties, the
   // marks of who did what, the name in each community, the rumours known by name — only the soc-*.js files write them, 22b)
   'genoma', 'indole', 'lacos', 'marcas', 'fama', 'sabe',
+  // (22b, D-632: the one who raises a child whose parents are gone — only soc-tutela.js writes it)
+  'tutor',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -256,7 +258,8 @@
   Vg.familyOf = function (adults, setId, can) {
     const S = G.S; const ids = new Set(adults.map(v => v.id)); const kids = [];
     for (const k of S.villagers.values()) {
-      if (k.set !== setId || k.age >= 16 || !(ids.has(k.mother) || ids.has(k.father)) || ids.has(k.id)) continue;
+      // (and the ones they raise: the orphan goes with who took it in — G.Tutela, 22b D-632)
+      if (k.set !== setId || k.age >= 16 || !(ids.has(k.mother) || ids.has(k.father) || (k.tutor && ids.has(k.tutor))) || ids.has(k.id)) continue;
       if (!can(k)) return null;
       for (const pid of [k.mother, k.father]) { if (!pid || ids.has(pid)) continue; const o = S.villagers.get(pid); if (o && o.set === setId && !o.captive) return null; }
       kids.push(k);
@@ -738,6 +741,7 @@
     if (a.mother && (a.mother === b.id || a.mother === b.mother)) return true;
     if (a.father && (a.father === b.id || a.father === b.father)) return true;
     if (b.mother === a.id || b.father === a.id) return true;
+    if ((a.tutor && a.tutor === b.id) || (b.tutor && b.tutor === a.id)) return true; // (who raised the other: 22b D-632)
     return false;
   }
   // ------------------------------ the couple's door (22b, D-565) ------------------------------

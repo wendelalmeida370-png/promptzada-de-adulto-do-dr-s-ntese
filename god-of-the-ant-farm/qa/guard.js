@@ -1584,6 +1584,10 @@ for (const f of files) { if (f === 'soc-boatos.js') continue; src[f].forEach((l,
 // G.hash do boato, da cidade e da pessoa: o mesmo em cada carga, e o acaso de ninguém deslocado
 (src['soc-boatos.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`o boato sem o acaso do mundo: soc-boatos.js:${k + 1} sorteia (D-620): ${l.trim().slice(0, 110)}`); });
 if (!(src['soc-boatos.js'] || []).length) fails.push('o que se diz é do soc-boatos.js: falta o js/soc-boatos.js (D-620)');
+// 232. "quem cria um órfão é do soc-tutela.js" (D-632): quem cria uma criança sem pai nem mãe (v.tutor) só o js/soc-tutela.js escreve —
+// pelo G.Tutela.adota e pelo dia da cidade —; a casa, a família que vai junta, as histórias, o corpo e os laços perguntam ao G.Tutela
+for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.tutor\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.tutor\b|\[['"]tutor['"]\]\s*=(?!=)/.test(c)) fails.push(`quem cria um órfão é do soc-tutela.js: ${f}:${k + 1} escreve quem cria a criança (D-632): ${l.trim().slice(0, 110)}`); }); }
 // 233. "o corpo trata com as pessoas pelas portas" (D-628): os verbos do corpo (js/soc-verbos.js) mudam o mundo só dentro do
 // G.Possess.apply — o que a mão pede, o passo do mundo faz —, e o que a pessoa responde é lido pela leitura pura (SV.leitura,
 // SV.olhos), sem sortear; os verbos entram na pessoa só pelo registro (G.Interact.verb)

@@ -1,4 +1,4 @@
-// sociedade-corpo: node qa/sociedade-corpo.js [mundo=cidade] [ONLY=c1,c2,…] — a sociedade com o corpo do jogador (22b, as fases 3 e 4),
+// sociedade-corpo: node qa/sociedade-corpo.js [mundo=cidade] [ONLY=c1,c2,…] — a sociedade com o corpo do jogador (22b, as fases 3, 4 e 4b),
 // em Node, num mundo pronto, com o corpo encarnado (o molde do qa/interacao.js):
 //   c1 a faixa do corpo: o que a pessoa vivida sabe vira a linha «Dizem que…» na versão dela, o deus não ouve boatos, a crônica de
 //      outra cidade só chega pela conversa (knows.hearsNow) e a da própria cidade na hora
@@ -13,6 +13,10 @@
 //   c7 pedir em casamento: com atração e afeto, o casal pela porta (Vg.pair, «pedido»); sem, a recusa
 //   c8 fazer as pazes: quem perdoa tira as marcas leves; o rancoroso não
 //   c9 perguntar o que se diz: o boato que o outro sabe passa ao corpo por nome, na versão do outro
+//   c10 adotar (4b): o órfão vai morar na casa do corpo, vai junto com a família, é família para os laços e para o corpo; a criança
+//      que tem medo do corpo não vai
+//   c11 o dia da cidade dá o órfão (4b): a quem mais gosta dele e tem casa (a família antes); morto quem o criava, outro o cria; o
+//      save guarda; o corpo nunca é escolhido pelo dia
 //   c12 o corpo morre no meio de uma resposta: quem respondia volta ao seu dia
 // Erro de módulo ou aviso do jogo é falha.
 const M = require('./nodemundo.js');
@@ -20,7 +24,7 @@ const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/posses
 const WORLD = process.argv[2] || 'cidade';
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k => !ONLY || ONLY.includes(k);
 const fails = []; const ok = (k, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | sociedade-corpo ${k} | ${info}`); if (!c) fails.push(k); };
-const Po = G.Possess, I = G.Interact, L = G.Lacos, B = G.Boatos, SV = G.SocVerbos, D = G.Depot;
+const Po = G.Possess, I = G.Interact, L = G.Lacos, B = G.Boatos, SV = G.SocVerbos, Tu = G.Tutela, D = G.Depot;
 const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const RDT = 1 / 30; const frame = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); }; const frames = n => { for (let k = 0; k < n; k++) frame(); };
 const still = n => { for (let k = 0; k < (n || 2); k++) G.Avatar.frame(RDT); };
@@ -197,12 +201,52 @@ if (on('c9')) {
   back();
 }
 
+if (on('c10')) {
+  // (a body with room in its house: another grown one of the town lived for this case, and the first one back after)
+  const ad = people(o => o !== v && o.set === v.set && o.age >= 22 && o.age < 55 && !o.captive && !o.jail && !o.aboard && o.home && G.Village.bedsOf(S().buildings.get(o.home)) > 0 && Tu.carga(o) <= 3)[0];
+  if (ad) { Po.release('deus'); frames(4); god(() => { G.Vg.endTask(ad); ad.sleeping = false; ad.inside = 0; }); Po.take(ad); G.Avatar.attach(ad, 0); frames(6); }
+  const v0 = v; v = Po.body() || v;
+  const kid = people(o => o.set === v.set && o.age >= 6 && o.age < 13 && !o.captive && !Po.kin(v, o))[0];
+  const scared = people(o => o.set === v.set && o.age >= 6 && o.age < 13 && !o.captive && o !== kid && !Po.kin(v, o))[0];
+  if (!kid) ok('c10 adotar', false, 'nenhuma criança na cidade');
+  else {
+    // (the proof's hand makes them orphans: the parents to another town's records — the world's door would kill them)
+    god(() => { for (const c of [kid, scared].filter(Boolean)) for (const pid of [c.mother, c.father]) { const p = S().villagers.get(pid); if (p) G.Village.kill(p, 'old'); } for (const c of [kid, scared].filter(Boolean)) c.tutor = 0; });
+    god(() => { for (const c of [kid, scared].filter(Boolean)) G.Vg.endTask(c); });
+    // (the child who fears the body first: it does not go)
+    if (scared) { god(() => { L.marca(scared, 'bateu', v.id, 80); L.ato(v, scared, 'agressao'); }); face2(v, scared); const r2 = verbo('adotar'); ok('c10 com-medo-nao', !scared.tutor && /não quer/.test(r2.msg), `${scared.name}, que apanhou do corpo: «${r2.msg}»`); back(); }
+    face2(v, kid); const r = verbo('adotar'); back();
+    god(() => G.Village.forceUpdate && G.Village.forceUpdate()); frames(10);
+    const pt = v.partner && S().villagers.get(v.partner);
+    const fam = G.Vg.familyOf([v, pt].filter(Boolean), v.set, () => true) || [];
+    ok('c10 adotar', !!ad && kid.tutor === v.id && Tu.de(kid) === v && Po.kin(v, kid) && L.kin(kid, v) === 'pai' && fam.includes(kid), `${kid.name}: «${r.msg}» — quem a cria: ${Tu.de(kid) ? Tu.de(kid).name : 'ninguém'}; para o corpo é ${Po.kin(v, kid) || '—'}; vai junto: ${fam.includes(kid) ? 'sim' : 'NÃO'}; mora ${kid.home === v.home ? 'na casa do corpo' : 'noutra casa (#' + kid.home + ')'}`);
+  }
+}
+
+if (on('c10') && Po.body() !== BODY0) { Po.release('deus'); frames(4); god(() => { G.Vg.endTask(BODY0); BODY0.sleeping = false; BODY0.inside = 0; }); Po.take(BODY0); G.Avatar.attach(BODY0, 0); frames(6); v = BODY0; }
+
 if (on('c12')) {
   const o = others()[0]; if (o && Po.body()) {
     face2(v, o); verbo('cumprimentar'); const was = o.task && o.task.type;
     god(() => G.Village.kill(Po.body(), 'old')); frames(40);
     ok('c12 o-corpo-morre', o.task ? o.task.type !== 'resposta' : true, `${o.name} respondia (${was || '—'}); o corpo morreu: agora ${o.task ? o.task.type : 'sem tarefa'}`);
   }
+}
+
+if (on('c11')) {
+  M.pronto(WORLD); const S1 = G.S; const set = [...S1.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
+  const kid = [...S1.villagers.values()].filter(o => o.set === set.id && o.age >= 3 && o.age < 12 && !o.captive).sort(byId)[0];
+  const gp = [...S1.villagers.values()].filter(o => o.set === set.id && o.age >= 25 && o.age < 60 && !o.captive && o.home && o.id !== kid.mother && o.id !== kid.father).sort(byId);
+  god(() => { for (const pid of [kid.mother, kid.father]) { const p = S1.villagers.get(pid); if (p) G.Village.kill(p, 'old'); } });
+  // (one who may take it in, not of the blood, made fond of it by the proof's hand: the most fond wins over a stranger)
+  const fond = gp.find(a => S1.villagers.has(a.id) && G.Tutela.pode(a, kid) && !G.Tutela.parente(kid, a)) || gp[0], other = gp[1];
+  god(() => { for (let k = 0; k < 20; k++) L.ato(fond, kid, 'conversa'); });
+  god(() => Tu.dayOf(set)); const t1 = Tu.de(kid);
+  god(() => G.Village.kill(t1, 'old')); god(() => Tu.dayOf(set)); const t2 = Tu.de(kid);
+  const save = G.Save.serialize(); M.abrir(JSON.parse(save)); const k2 = G.S.villagers.get(kid.id); const t3 = G.Tutela.de(k2);
+  ok('c11 o-dia-da-cidade', (t1 === fond || (t1 && G.Tutela.parente(kid, t1))) && !!t2 && t2 !== t1 && !!t3 && t3.id === t2.id, `${kid.name}, órfã${kid.g === 'f' ? '' : 'o'}: o dia a deu a ${t1 ? t1.name : 'NINGUÉM'} (que mais gostava del${kid.g === 'f' ? 'a' : 'e'}); morto, a ${t2 ? t2.name : 'NINGUÉM'}; depois do load: ${t3 ? t3.name : 'NINGUÉM'}`);
+  void other;
+  const bad = soc(); ok('c11 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
 }
 
 { const bad = soc(); ok('verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300)); }

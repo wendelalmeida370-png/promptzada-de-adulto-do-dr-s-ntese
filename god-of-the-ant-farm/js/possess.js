@@ -455,6 +455,8 @@
     if (me.mother === o.id || me.father === o.id) return f ? 'mãe' : 'pai';
     if (o.mother === me.id || o.father === me.id) return f ? 'filha' : 'filho';
     if (me.partner === o.id) return f ? 'companheira' : 'companheiro';
+    if (me.tutor && me.tutor === o.id) return f ? 'mãe' : 'pai'; // (who raised the body, and who the body raises: 22b D-632)
+    if (o.tutor && o.tutor === me.id) return f ? 'filha' : 'filho';
     if ((me.mother && me.mother === o.mother) || (me.father && me.father === o.father)) return f ? 'irmã' : 'irmão';
     const gp = [me.mother, me.father].map(id => G.person(id)).filter(Boolean);
     if (gp.some(p => p.mother === o.id || p.father === o.id)) return f ? 'avó' : 'avô';

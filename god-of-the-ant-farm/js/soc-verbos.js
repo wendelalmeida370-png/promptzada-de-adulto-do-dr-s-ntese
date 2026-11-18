@@ -236,6 +236,15 @@
         responde(o, me, 'agree', 'Está bem. Vamos esquecer isso.', 2.5);
         return { ok: true, say: `${Who(me, o)} aceita fazer as pazes.` };
       } },
+    { id: 'adotar', anim: 'hug', dur: 1.6, label: (me, o) => (G.Tutela && G.Tutela.orfao(o) && !G.Tutela.de(o) && me.age >= 18 && o.set === me.set ? `Adotar ${who(me, o)}` : ''),
+      can(me, o) { const c = base(me, o); if (!c.ok) return c; if (!G.Tutela.pode(me, o)) return { ok: false, why: me.home ? 'Você já tem pequenos demais em casa.' : 'Você não tem uma casa para levá-l' + oa(o) + '.' }; return OK; },
+      faz(me, o, R) {
+        // (a child old enough to say asks whether it wants to: one it fears, or hates, no)
+        if (o.age >= 6 && (R.af <= -20 || L().lembra(o, me.id).some(m => L().MARCA[m[0]] < 0 && m[3] >= 30))) { responde(o, me, 'refuse', 'Não quero ir com você.', 2.5); return { ok: true, say: `${Who(me, o)} não quer ir com você.` }; }
+        if (!G.Tutela.adota(me, o, 'corpo')) return { ok: false, why: 'Agora não dá.' };
+        deed('adocao'); responde(o, me, 'hug', o.age >= 6 ? 'Eu posso morar com você?' : '', 3); G.Vg.emote(o, 'heart', 3);
+        return { ok: true, say: `Você passa a criar ${who(me, o)}. ${o.g === 'f' ? 'Ela' : 'Ele'} vai morar na sua casa.` };
+      } },
   ];
   SV.VERBS = VERBS.map(d => d.id);
   SV.def = id => VERBS.find(d => d.id === id) || null;

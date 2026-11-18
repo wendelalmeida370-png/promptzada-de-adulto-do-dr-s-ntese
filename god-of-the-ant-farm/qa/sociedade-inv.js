@@ -69,6 +69,15 @@
           }
         }
       }
+      // (who raises the child, 4b: someone who lives, or died two days ago or less — the town's day frees the child —, never oneself,
+      // never a child)
+      if (v.tutor) {
+        const t = s.villagers.get(v.tutor), d = s.dead.get(v.tutor);
+        if (v.tutor === v.id) add('sociedade', 1, `${nm}: criad${v.g === 'f' ? 'a' : 'o'} por si mesm${v.g === 'f' ? 'a' : 'o'}`, v.id);
+        else if (!t && !d) add('sociedade', 2, `${nm}: criad${v.g === 'f' ? 'a' : 'o'} por #${v.tutor}, que nunca existiu`, v.id);
+        else if (!t && s.day - (d.died || 0) > 2) add('sociedade', 3, `${nm}: criad${v.g === 'f' ? 'a' : 'o'} por ${d.name}, morto há ${s.day - (d.died || 0)} dias`, v.id);
+        else if (t && t.age < 16) add('sociedade', 2, `${nm}: criad${v.g === 'f' ? 'a' : 'o'} por ${t.name}, uma criança de ${Math.floor(t.age)} anos`, v.id);
+      }
       const f = v.fama;
       if (f !== undefined && f !== null) {
         if (!Array.isArray(f)) add('sociedade', 1, `${nm}: a fama não é uma lista`, v.id);
