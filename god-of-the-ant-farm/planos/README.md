@@ -34,6 +34,8 @@ que for feito sai da lista «a fazer» com o commit que fez.
   volta, a corrupção, a redenção; Patch 29).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
+- [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
+  verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -50,5 +52,7 @@ que for feito sai da lista «a fazer» com o commit que fez.
   sentido largo: o que o personagem está vivendo, também as condições (escravo de galé, preso, órfão) e as passagens entre elas.
 - **Os barcos e os navios por dentro** (entrar em canoas, barcos e navios gigantes, o itinerário do porto, a hora em que cada
   navio sai e chega): o dono vai pedir mais para frente; todo plano de ofício do mar conta com eles.
+- **O subterrâneo no Modo Encarnado** (as minas, as cavernas, os tesouros, a arqueologia, os aventureiros): o dono vai pedir em
+  breve; o tesouro é sempre o passado de verdade do mundo.
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).
 - **O alvo é o PC;** o celular continua funcionando, sem pôr teto em nada.

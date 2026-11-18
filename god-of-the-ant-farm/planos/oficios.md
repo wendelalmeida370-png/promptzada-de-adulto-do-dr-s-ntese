@@ -117,6 +117,12 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 - armeiro, fundidor do bronze, pedreiro e canteiro, carpinteiro, marceneiro (os móveis das casas), vidreiro, tintureiro,
   alfaiate e costureira, sapateiro, cordoeiro (a corda), cesteiro (o vime), escultor, arquiteto (as obras grandes)
 
+**Subterrâneo** (os troncos: a Mineração e o Saber; o plano em [`subterraneo.md`](subterraneo.md))
+- **mineiro**
+- garimpeiro, escorador, o homem do fogo, aguadeiro da mina, lapidário, explorador de cavernas, coletor de cristais e de
+  salitre, arqueólogo, caçador de tesouros, decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos,
+  negociante de antiguidades, guia das profundezas, sapador, poceiro, cavador de túneis
+
 **Combate** (tronco: o Combate)
 - **guerreiro**, **arqueiro**, **gladiador** ([`oficio-gladiador.md`](oficio-gladiador.md)), **vigia**, **carcereiro**, o capataz — o comitre e o feitor ([`oficio-capataz.md`](oficio-capataz.md))
 - mercenário, cavaleiro, lanceiro, campeão de duelos, caçador de recompensas, guarda-costas, mestre de armas, comandante
