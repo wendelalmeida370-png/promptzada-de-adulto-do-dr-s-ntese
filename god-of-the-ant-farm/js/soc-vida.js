@@ -290,7 +290,6 @@
       const th = S.villagers.get(c.thief); if (!th) continue;
       if (F) F.feito(th, c.kind === 'homicidio' ? 'matou' : c.kind === 'agressao' ? 'agrediu' : 'furtou', set.id);
       if (c.kind === 'homicidio' && F) F.respondida(set, c.victim);
-      if (G.Indole && G.Indole.vive) G.Indole.vive(th, 'prisao'); // (a sentence served changes who one is: the wave 2 of D-570)
       if (c.kind === 'furto') for (const o of folk) if (o.home && o.home === c.house && o.age >= 12) { L.ato(th, o, 'furto'); L.marca(o, 'roubou', th.id, 50); }
     }
   };
@@ -302,11 +301,6 @@
   const kill0 = G.Village.kill;
   G.Village.kill = function (v, cause) {
     const S = S_();
-    // (and who one is changes with what life did: the parents who lose a child; the soldier who killed in a war — G.Indole.vive)
-    if (G.inSim && v && S.villagers.has(v.id) && G.Indole && G.Indole.vive) {
-      if (cause !== 'old') for (const pid of [v.mother, v.father]) { const p = S.villagers.get(pid); if (p) G.Indole.vive(p, 'filho'); }
-      if ((cause === 'war' || cause === 'arrow') && v.lastBy && v.lastBy !== v.id) { const k = S.villagers.get(v.lastBy); if (k) G.Indole.vive(k, 'guerra'); }
-    }
     if (G.inSim && v && S.villagers.has(v.id) && VIOLENT[cause] && v.lastBy && v.lastBy !== v.id) {
       const k = S.villagers.get(v.lastBy);
       if (k) {
