@@ -27,6 +27,7 @@
 //       danificado (boatos tortos, quem sabe um boato que não existe) carrega limpo
 //   so15 a cidade muda de povo com boatos correndo: as linhas ficam com a cidade, nada se quebra
 //   (a faixa do corpo — o que a pessoa vivida ouve — é provada com o corpo: qa/sociedade-corpo.js c1)
+//   so20 a vida muda quem se é: quem perde um filho fica mais nervoso e mais calado; quem mata na guerra, menos bondoso; nada fora do passo
 //   so17 a conversa do secrets.js é um boato: o calor é a parte da cidade, contada de novo esquenta, o governante a cala
 //   so18 a lenda e a memória do povo: quem morre com um nome pesado vira lenda nas palavras da cidade; o que passou pela maior parte
 //       das cidades de um povo fica na memória dele
@@ -419,6 +420,25 @@ if (on3('so19')) {
   const line = said.find(t => /^Revolução/.test(t)) || '';
   ok('so19 os-rostos-do-levante', /Ao lado de .*um morto a vingar/.test(line) && !!f.rev && f.rev.faces.length > 0, line.slice(0, 260) || 'NENHUM LEVANTE');
   const bad = soc(); ok('so19 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+// ------------------------------ so20 who one is changes with life ------------------------------
+if (on('so20')) {
+  M.pronto('metropole'); const S = G.S; const Ix = I();
+  const kid = [...S.villagers.values()].filter(v => v.age >= 5 && v.age < 30 && S.villagers.has(v.mother)).sort((a, b) => a.id - b.id)[0]; const mom = S.villagers.get(kid.mother);
+  const m0 = mom.indole.slice(); const f0 = Ix.fora; const out = Ix.vive(mom, 'filho');
+  sim(() => G.Village.kill(kid, 'sick')); const m1 = mom.indole.slice();
+  // (a war, if the world has none at this hour: two peoples by the world's door)
+  if (![...S.factions.values()].some(f => f.alive !== false && G.Fac.enemiesOf(f.id).length)) { const fs = [...S.factions.values()].filter(f => f.alive !== false && G.Fac.pop(f.id) > 10); if (fs.length >= 2) sim(() => G.Politics.declareWar(fs[0], fs[1], 'fronteira')); }
+  const en = [...S.factions.values()].find(f => G.Fac.enemiesOf(f.id).length); let war = 'nenhuma guerra';
+  let ok2 = true;
+  if (en) { const foe = G.Fac.enemiesOf(en.id)[0]; const sol = [...S.villagers.values()].find(v => G.Fac.idOfV(v) === foe.id && v.age >= 18 && !v.captive); const vic = [...S.villagers.values()].find(v => G.Fac.idOfV(v) === en.id && v.age >= 18 && !v.captive);
+    const s0 = sol.indole.slice(); sim(() => { vic.lastBy = sol.id; G.Village.kill(vic, 'war'); }); const s1 = sol.indole;
+    ok2 = s1[1] === Math.max(0, s0[1] - 2) && s1[3] === Math.min(99, s0[3] + 2); war = `${sol.name} matou ${vic.name} na guerra: bondade ${s0[1]} → ${s1[1]}, nervo ${s0[3]} → ${s1[3]}`; }
+  const iN = Ix.IDX;
+  ok('so20 a-vida-muda-quem-se-e', !!en && out === false && Ix.fora === f0 + 1 && m1[iN.neu] === Math.min(99, m0[iN.neu] + 4) && m1[iN.ext] === Math.max(0, m0[iN.ext] - 3) && ok2,
+    `fora do passo: nada (contado); ${mom.name} perdeu ${kid.name}: nervo ${m0[iN.neu]} → ${m1[iN.neu]}, expansão ${m0[iN.ext]} → ${m1[iN.ext]}, fé ${m0[iN.fe]} → ${m1[iN.fe]}; ${war}`);
+  const bad = soc(); ok('so20 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
 }
 
 if (!M.limpo()) console.log('ERROS: ' + JSON.stringify(M.erros()).slice(0, 800));

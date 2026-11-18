@@ -38,6 +38,17 @@
   I.nasce = function (v, mae, pai) { if (ok(v.indole)) return; v.indole = make(v, mae, pai); };
   const ok = a => Array.isArray(a) && a.length === 9 && a.every(x => Number.isInteger(x) && x >= 0 && x <= 99);
   I.ok = ok;
+  // life changes who one is, a little at a time (22b, the wave 2 of D-570): the one who killed in a war comes back harder and more
+  // on edge; one who lost a child is more nervous, keeps more to oneself, holds to the gods; one who served a sentence comes out
+  // harder and less loyal. Only in the world's step (outside it, nothing, and counted); no chance
+  const VIVE = I.VIVE = Object.freeze({ guerra: { ama: -2, neu: 2 }, filho: { neu: 4, ext: -3, fe: 2 }, prisao: { ama: -2, neu: 2, lea: -2 } });
+  I.fora = 0;
+  I.vive = function (v, k) {
+    if (!G.inSim) { I.fora++; return false; }
+    const d = VIVE[k]; if (!d || !v || !ok(v.indole) || !G.S.villagers.has(v.id)) return false;
+    for (const e in d) v.indole[K[e]] = clamp(v.indole[K[e]] + d[e]);
+    return true;
+  };
   if (G.Vg && G.Vg.born) G.Vg.born.push((v, m, f) => I.nasce(v, m || null, f || null));
   // a save from before the temperament, or a damaged one: the account without the parents (the same at every load), in the order of
   // birth; and a broken one mended the same way
