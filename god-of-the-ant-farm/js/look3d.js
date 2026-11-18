@@ -63,7 +63,9 @@
     // (how drunk the world has them — the tavern's rounds, the wine of the wells —: the body weaves, Anim.stagger)
     L.drunk = P3.drunkOf(v);
     if (skin) {
-      L.out = outfitOf(v, L, fac); L.headK = L.out.headK; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
+      L.out = outfitOf(v, L, fac); L.headK = L.fe ? L.fe.prop.cabeca : L.out.headK;
+      // (the legs, the arms and the trunk of a child against a grown one — G.Feicao's, D-639: the rig poses the bones by them)
+      L.legK = L.fe ? L.fe.prop.perna : 1; L.armK = L.fe ? L.fe.prop.braco : 1; L.trunkK = L.fe ? L.fe.prop.tronco : 1; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
     }
     return L;
   }

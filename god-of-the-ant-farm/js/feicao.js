@@ -205,6 +205,11 @@
     const tx = P[I.cabeloTextura]; o.tex = tx < 0.42 ? 0 : tx < 0.52 ? 1 : tx < 0.62 ? 2 : 3; o.calv = zs(P[I.calvicie]); o.barba = zs(P[I.barbaDens]);
     // (the grey of the years, D-635: from the age the gene says — a spread either way is eight years —, salt and pepper and then
     // white over twenty-two years; by whole years, as the look is kept)
+    // (a child's proportions, D-639: against a grown one of the same scale, the head bigger and the legs and arms shorter, the trunk
+    // as long as keeps the height the age gives — the rig (22c) poses the bones by them: the head's frame (headK, as before), the
+    // legs and the arms along their bones, the trunk; the numbers here, the shape's)
+    { const ch = 1 - sm(0, 15, aQ), hk = 1 - sm(0, 13, aQ); const cab = 1 + 0.3 * hk, per = 1 - 0.22 * ch, bra = 1 - 0.12 * ch;
+      o.prop = { cabeca: cab, perna: per, braco: bra, tronco: (1.75 - 0.92 * per - 0.21 * cab) / 0.62 }; }
     o.cinza = 46 + 8 * zs(P[I.grisalho]); o.greyT = clamp((Math.floor(age) - o.cinza) / 22, 0, 0.92);
     o.girth = 1 + 0.12 * w[X.gordo] - 0.06 * w[X.magro] + 0.05 * Math.max(0, w[X.musculo]) + 0.25 * w[X.gestante]; // (how far a skirt is kept off the body)
     MEMO.set(v.id, o); if (MEMO.size > 4000) MEMO.clear();
