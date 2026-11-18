@@ -1,8 +1,9 @@
 // coisas-fotos: as coisas dos gestos e a criança de pernas curtas no mundo do jogo, pelo desenho do próprio jogo (22c, D-612 a D-614)
 // — para o dono ver, antes e depois. No Modo Encarnado, com o mundo parado (G.Modes.menu: os atos e os relógios dos gestos ficam onde
 // a prova os põe), num chão aberto da maior cidade: quem bebe (a caneca no gole), quem é levado amarrado (os grilhões), a criança
-// que brinca com a bola, quem perdeu a perna (a muleta), uma criança pequena ao lado de um grande, e duas pessoas com as mãos na
-// cintura e de braços cruzados. A mão da prova só põe a cena (o lugar, o ato, a perna perdida) numa cópia do mundo que não se salva.
+// que brinca com a bola, quem perdeu a perna (a muleta), uma criança pequena ao lado de um grande (as mãos na cintura são da agenda
+// do ócio, que a prova não força: a folha do ócio, `folha-vida.js ocio`, as mostra). A mão da prova só põe a cena (o lugar, o ato, a
+// perna perdida) numa cópia do mundo que não se salva; ninguém com carga nos braços (as mãos são da carga).
 //   bash qa/navegador.sh node qa/visual/coisas-fotos.js PASTA [PASTA_DO_JOGO]     env: WORLD (cidade), Q (media), HOUR (10.5)
 // FALHA: um erro de página, um aviso ou um erro no console, um erro de módulo
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');

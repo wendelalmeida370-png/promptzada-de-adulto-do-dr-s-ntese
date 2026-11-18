@@ -137,7 +137,9 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 - **As coisas do dia** (22c, D-612): a **caneca** de quem bebe ou brinda (o ato), os **grilhões** de quem é levado amarrado (o
   ato `bound`), a **bola** da criança que brinca (numa casa em duas), a **muleta** de quem perdeu a perna (`v.lost`) — todas pelo
   kit, no melhor material que o povo teve: a caneca de barro onde houve cerâmica, os grilhões de ferro onde o povo forja o ferro,
-  a bola de couro onde houve couro; senão a madeira, a corda e o vime de sempre. Nenhuma é arma.
+  a bola de couro onde houve couro; senão a madeira, a corda e o vime de sempre. Nenhuma é arma. A caneca e os grilhões são **do
+  lugar** (a casa onde se bebe, quem leva o preso), não da pessoa: passam também a quem tem coisas de verdade — o corpo do deus —,
+  no mesmo material (`PLACE_TOOL`, L-1778); a ferramenta do ofício, não (D-426).
 - **O kit** (o que o 3D desenha de cada um, `G.Inv.kit`, puro) e **as coisas do ofício que viram de verdade** (`Inv.realize`) usam o
   melhor material **que o povo teve** (`O.matOK`). Um povo do bronze que nunca teve cobre e estanho desenha os guerreiros de lança de
   pedra e escudo de madeira; sem couro nem metal, sem elmo. O tido é para sempre: a lança de bronze do guerreiro não vira de pedra
