@@ -36,7 +36,7 @@
     // the stance or the walk)
     // (the society's, 22b: the act between two — its pose is the act the world gives each of the two, v.act from G.SocAtos, or the
     // stance between —; the score to settle — the walk to the one, then the acts of the quarrel)
-    duo: MOVE, acerto: MOVE,
+    duo: MOVE, acerto: MOVE, resposta: MOVE, // (22b: the answer to the body's word — the act of the vocabulary gives the pose)
     abastecer: MOVE, adeus: MOVE, ajudar: MOVE, amor: MOVE, apanhar: MOVE, appr: MOVE, arrumar: MOVE, assembly: 'soc-ouvir', atacado: MOVE, atender: MOVE,
     atuar: MOVE, baleia: MOVE, banca: MOVE, band: MOVE, barco: MOVE, barraco: MOVE, boardBack: MOVE, build: MOVE, cais: MOVE, callwork: MOVE,
     carga: MOVE, cela: MOVE, celebrate: MOVE, chop: MOVE, citylife: MOVE, combat: MOVE, compra: MOVE, conclave: MOVE, condemned: MOVE, conferir: MOVE,

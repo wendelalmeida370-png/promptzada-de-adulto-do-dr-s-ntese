@@ -126,6 +126,11 @@
     furto: { a: [0, 0, 0, 0], b: [-20, -30, -5, 0] }, denunciou: { a: [-4, 0, 0, 0], b: [-25, -25, 0, 0] },
     matou: { a: [-60, -50, 0, -20], b: [0, 0, 0, 0] }, separacao: { a: [-20, -20, -5, -20], b: [-20, -20, -5, -20] },
     reconcilia: { a: [12, 6, 2, 0], b: [12, 6, 2, 0], frente: 1 },
+    // (phase 4: what the body's hands do to someone — soc-verbos.js; a the body, b the other — and the hug of anyone)
+    cumprimento: { a: [2, 1, 0, 0], b: [2, 1, 0, 0], frente: 1 }, elogio: { a: [1, 0, 0, 0], b: [6, 2, 5, 1], frente: 1 },
+    lisonja: { a: [0, 0, 0, 0], b: [-2, -6, -2, 0], frente: 1 }, beijo: { a: [6, 3, 0, 12], b: [6, 3, 0, 12], frente: 1 },
+    ameaca: { a: [-4, 0, 0, 0], b: [-16, -14, 4, -8], frente: 1 }, abraco: { a: [5, 3, 0, 1], b: [6, 3, 0, 1], frente: 1 },
+    convite: { a: [3, 2, 0, 1], b: [6, 3, 1, 1], frente: 1 }, pedido: { a: [0, 0, 0, 0], b: [0, 0, -2, 0], frente: 1 },
   };
   L.TIPOS = () => Object.keys(TIPO);
   L.tipo = (k, def) => { if (!TIPO[k]) TIPO[k] = def; };
@@ -179,7 +184,7 @@
   // kindness in the kind; and a weight that fades, day by day. A debt or a promise does not fade: it is paid, or broken (soc-vida.js)
   const MARCA = L.MARCA = Object.freeze({
     salvou: 1, ajudou: 1, deu: 1, consolou: 1, pagou: 1, ensinou: 1, defendeu: 1,
-    humilhou: -1, insultou: -1, bateu: -1, roubou: -1, traiu: -1, matou: -1, denunciou: -1, recusou: -1,
+    humilhou: -1, insultou: -1, bateu: -1, roubou: -1, traiu: -1, matou: -1, denunciou: -1, recusou: -1, ameacou: -1,
     deve: 0, emprestou: 0, prometeu: 0,
   });
   L.MARCAS = 8;

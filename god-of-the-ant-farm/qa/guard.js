@@ -1584,6 +1584,15 @@ for (const f of files) { if (f === 'soc-boatos.js') continue; src[f].forEach((l,
 // G.hash do boato, da cidade e da pessoa: o mesmo em cada carga, e o acaso de ninguém deslocado
 (src['soc-boatos.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`o boato sem o acaso do mundo: soc-boatos.js:${k + 1} sorteia (D-620): ${l.trim().slice(0, 110)}`); });
 if (!(src['soc-boatos.js'] || []).length) fails.push('o que se diz é do soc-boatos.js: falta o js/soc-boatos.js (D-620)');
+// 233. "o corpo trata com as pessoas pelas portas" (D-628): os verbos do corpo (js/soc-verbos.js) mudam o mundo só dentro do
+// G.Possess.apply — o que a mão pede, o passo do mundo faz —, e o que a pessoa responde é lido pela leitura pura (SV.leitura,
+// SV.olhos), sem sortear; os verbos entram na pessoa só pelo registro (G.Interact.verb)
+{ const sv = src['soc-verbos.js'] || []; if (!sv.length) fails.push('o corpo trata com as pessoas pelas portas: falta o js/soc-verbos.js (D-628)');
+  sv.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\.verbs\s*=|\.verbs\.push\(/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: soc-verbos.js:${k + 1} sorteia ou escreve os verbos de outro (D-628): ${l.trim().slice(0, 110)}`); });
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bSocVerbos\.faz\(/.test(c) && !/G\.Possess\.apply\(/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: ${f}:${k + 1} pede um verbo do corpo fora do G.Possess.apply (D-628): ${l.trim().slice(0, 110)}`); });
+  const fz = fnBody('soc-verbos.js', 'SV.faz') || []; if (!fz.some(([, , c]) => /G\.inSim/.test(c))) fails.push('o corpo trata com as pessoas pelas portas: o SV.faz do soc-verbos.js não confere o passo do mundo (D-628)');
+  for (const nm of ['SV.leitura', 'SV.olhos']) { const b = fnBody('soc-verbos.js', nm); if (!b) { fails.push(`o corpo trata com as pessoas pelas portas: não achei ${nm} (D-628)`); continue; }
+    for (const [k, l, c] of b) if (/\b(Lacos|L\(\))\.(ato|marca|desmarca)\(|\b(Fama|F\(\))\.(feito|lembra)\(|\bsetTask\(|\b(v|o|me|p)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: soc-verbos.js:${k + 1} (${nm}) escreve (D-628): ${l.trim().slice(0, 110)}`); } }
 // === 22c: a vida que se vê ===
 // 213. "o leitor da vida só lê" (D-590): o js/vida3d.js lê o mundo para o animador e não escreve nada nele — nem numa pessoa, nem
 // na tarefa dela, nem no G.S —, não dá tarefa nem ato, não tira de acaso nenhum (nem o do mundo, nem o do que só se vê: a variedade

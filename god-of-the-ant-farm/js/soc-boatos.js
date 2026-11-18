@@ -37,6 +37,7 @@
     cerco: { sal: 55, r: 1.1, hold: 4, exa: 1 },
     fera: { sal: 45, r: 0.8, hold: 4, exa: 1 },
     fofoca: { sal: 25, r: 0.25, hold: 3 },
+    traicao: { sal: 55, r: 1.0, hold: 5, fama: 'traiu', exa: 1 }, // (the kiss with another that someone saw: soc-verbos.js, D-634)
   });
   const HOW = B.HOW = Object.freeze({ viu: 3, soube: 2, ouviu: 1, boato: 0 });
   const S_ = () => G.S;
@@ -90,6 +91,7 @@
       case 'batalha': return `houve uma batalha${n.pl || ''}${r.mortos ? `, com ${ex ? r.mortos * 3 : r.mortos} mortos` : ''}`;
       case 'cerco': return `os de ${n.fb} cercaram ${n.s}${ex ? ', e lá dentro já se morre de fome' : ''}`;
       case 'fera': return r.b ? `${nm(r.b)} matou ${n.beast}${ex ? ' com as próprias mãos' : ''}` : `${n.beast} matou ${n.a}${ex ? ', e há outros como ele no mato' : ''}`;
+      case 'traicao': return ex ? `${n.a} trai ${n.b} há muito tempo` : `${n.a} traiu ${n.b}${n.c ? ' com ' + n.c : ''}`;
       case 'fofoca': { const t = String(r.tx || '').replace(/\.$/, ''); return n.a && t.startsWith(n.a) ? t : t.charAt(0).toLowerCase() + t.slice(1); }
     }
     return '';

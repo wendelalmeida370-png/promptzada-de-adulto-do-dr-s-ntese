@@ -370,6 +370,24 @@
       return out;
     },
   });
+  // ------------------------------ 22b: the body's social verbs on a person (D-628) ------------------------------
+  // (each verb of G.SocVerbos on the person — the card's buttons, its number keys, the touch —: the body's gesture now, the world's
+  // doing in its step — the other's answer, said once it is done —; and the gift given warms the one who took it)
+  if (G.SocVerbos) {
+    G.SocVerbos.VERBS.forEach((id, i) => { const d = G.SocVerbos.def(id);
+      I.verb('pessoa', { id: 'soc-' + id, k: 'outra', ord: 20 + i, label: (ctx, t) => d.label(ctx.v, t.o), can: (ctx, t) => d.can(ctx.v, t.o),
+        run(ctx, t) {
+          const me = ctx.v, o = t.o; const c = d.can(me, o); if (!c.ok) return { ok: false, msg: c.why || 'Agora não dá.' };
+          if (G.Avatar.busy()) G.Avatar.cancelAct();
+          G.Avatar.act({ anim: d.anim || 'talk', dur: d.dur || 1.4, lock: false, face: face(ctx, o.x * L(), o.y * L()) });
+          const ask = G.Possess.apply(w => { if (!G.S.villagers.has(o.id)) return { ok: false, why: '' }; G.Possess.meet(o.id); return G.SocVerbos.faz(id, w, o, G.Space.TIME); });
+          // (what is said of it is the world's answer, read when it has come)
+          return { ok: true, ask, get msg() { return (ask.res && (ask.res.say || ask.res.why)) || '…'; } };
+        } }); });
+    Object.assign(G.Possess.DEED, G.SocVerbos.DEEDS);
+    const gave0 = G.Possess.gave;
+    G.Possess.gave = function (o) { const r = gave0.apply(this, arguments); const me = G.Possess.body(); if (r && me && o && me !== o && G.Lacos) G.Lacos.ato(me, o, 'dadiva'); return r; };
+  }
   // (may the body give someone a thing now: there, awake, old enough to hold it, beside it — and something of its own to give)
   I.canGive = function (me, o) {
     if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
@@ -398,7 +416,9 @@
   I.canHug = function (me, o) {
     if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
     const k = G.Possess.kin(me, o); const grief = o.mourn > 0;
-    if (!k && !grief) return { ok: false, why: '' };
+    // (and one fond of the body: the hug of a friend — what the other feels, G.Lacos; 22b D-629)
+    const fond = !k && !grief && !!(G.Lacos && (G.Lacos.sente(o, me) || { afeto: 0 }).afeto >= 40);
+    if (!k && !grief && !fond) return { ok: false, why: '' };
     const label = grief && !k ? `Consolar ${who(me, o)}` : `Abraçar ${who(me, o)}`;
     if (o.sleeping) return { ok: false, label, why: `${Who(me, o)} está dormindo.` };
     if (o.inside || o.aboard || o.held || o.air || o.jail || o.age < 2) return { ok: false, label, why: `Não dá para abraçar ${who(me, o)} agora.` };
@@ -429,6 +449,7 @@
         const grief = o.mourn > 0; if (grief) o.mourn = Math.max(0, o.mourn - G.DAY_LEN * 0.35);
         G.Vg.endTask(o); // (and they go back to their day)
         G.Possess.deed(grief ? 'consolo' : 'abraco');
+        if (G.Lacos) G.Lacos.ato(me, o, 'abraco'); // (and it stays in what the two feel — 22b D-629)
         return { ok: true };
       } });
     // (what is said of it is said once the one hugged has answered: ask, for the card that asked)

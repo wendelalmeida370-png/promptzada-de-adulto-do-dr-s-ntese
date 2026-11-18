@@ -270,6 +270,7 @@
   G.Input3D.on('inventario', () => { UI.toggle(); return true; });
   for (let i = 0; i < NQ; i++) G.Input3D.on('rapido' + (i + 1), () => {
     if (open && (hover || (sel && sel.k))) { const k = hover || sel.k; tell(G.Possess.apply(w => G.Inv.shortcut(w, i, k)), `${Nm(k)} no atalho ${i + 1}.`); return true; }
+    if (G.IncUI && G.IncUI.cardKey && G.IncUI.cardKey(i)) return true; // (22b: over a person's card the key is its verb, D-628)
     if (!open) quick(i); return true;
   });
 
