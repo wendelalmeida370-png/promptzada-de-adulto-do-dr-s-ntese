@@ -455,6 +455,8 @@
     if (me.mother === o.id || me.father === o.id) return f ? 'mãe' : 'pai';
     if (o.mother === me.id || o.father === me.id) return f ? 'filha' : 'filho';
     if (me.partner === o.id) return f ? 'companheira' : 'companheiro';
+    if (me.tutor && me.tutor === o.id) return f ? 'mãe' : 'pai'; // (who raised the body, and who the body raises: 22b D-632)
+    if (o.tutor && o.tutor === me.id) return f ? 'filha' : 'filho';
     if ((me.mother && me.mother === o.mother) || (me.father && me.father === o.father)) return f ? 'irmã' : 'irmão';
     const gp = [me.mother, me.father].map(id => G.person(id)).filter(Boolean);
     if (gp.some(p => p.mother === o.id || p.father === o.id)) return f ? 'avó' : 'avô';
@@ -651,6 +653,16 @@
     if (god(v) || !e || !Number.isFinite(e.x)) return true;
     let set = null, sd = 1e9; for (const s of G.S.settlements.values()) { const d = G.dist(s.cx, s.cy, e.x, e.y); if (d < sd) { sd = d; set = s; } }
     return !set || !!K.town(v, set);
+  };
+  // (22b, D-623) what the lived person heard: the rumours they know now — by name or by the talk of their town —, in the version
+  // they heard, «Dizem que…» (G.Boatos.doCorpo; the god, nothing: the chronicle is the god's). And the chronicle's line told far
+  // off reaches the ears at once only from the person's own town or of no place: of another town it comes as the talk brings it
+  K.boatos = function (v) { if (god(v) || !G.Boatos) return []; return G.Boatos.doCorpo(v); };
+  K.hearsNow = function (v, e) {
+    if (god(v) || !e || !Number.isFinite(e.x)) return true;
+    if (!G.Boatos) return K.hears(v, e);
+    let set = null, sd = 1e9; for (const s of G.S.settlements.values()) { const d = G.dist(s.cx, s.cy, e.x, e.y); if (d < sd) { sd = d; set = s; } }
+    return !set || set.id === v.set;
   };
   // (a record that came back from a save: only what it can hold — a damaged one is mended, never trusted)
   function mendKen(v) {

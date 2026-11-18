@@ -25,7 +25,9 @@ const A = G.Anim3D, V3 = G.Vida3D, P3 = G.People3D; let S = G.S; const TL = G.Sp
 const DAY = G.DAY_LEN || 200;
 const r2 = x => Math.round(x * 100) / 100;
 // (a grown person of the world in the open, awake, in health — the proof's subject; the proof's hand puts them in each case)
-const adult = () => [...S.villagers.values()].find(v => v.age >= 25 && v.age < 45 && !v.inside && !v.aboard && !v.sleeping && !v.sick && !v.preg && !(v.mourn > 0) && !v.captive && v.g === 'm');
+// (a grown man the proof can set at rest: blank() clears the sickness, the mourning, the feelings, the house and the sleep — the
+// ready worlds made with the society (22b) have most of their grown men mourning a friend, and «none in mourning» found nobody: T-1598)
+const adult = () => [...S.villagers.values()].find(v => v.age >= 25 && v.age < 45 && !v.aboard && !v.captive && !v.jail && v.g === 'm');
 const blank = v => { v.age = 30; v.energy = 90; v.sick = 0; v.wound = null; v.hp = 100; v.lost = null; v.preg = 0; v.mourn = 0; v.fear = 0; v.fury = 0; v.emo = null; v.grp = 'povo'; v.inside = 0; v.sleeping = false; v.traits = v.traits.filter(t => t !== 'Corajoso' && t !== 'Medroso' && t !== 'Sociável'); };
 // (the place of a person made mild, cold or hot by the proof's hand on a copy of the map: the map's warmth, the hour, the sky)
 const mild = v => { S.temp[G.W.idx(v.x, v.y)] = 128; S.time = 0.35; S.weather.rain = 0; S.weather.storm = -1; };
@@ -38,7 +40,17 @@ function poseOf(porte, st, extra) {
   return pose;
 }
 const diff = (p, q, js) => Math.max(...js.map(j => Math.abs((p[j] || 0) - (q[j] || 0))));
+// (walking, the largest change over the last second — a stride and more —, frame against frame of the same phase: what a cause
+// gives only over one leg's stance — the limp's lean over the bad leg — was measured at the last frame alone, nothing when that
+// leg was in its swing there: the side of the limp is the person's own, T-1599)
+function walkDiff(porte, js) {
+  const run = pt => { const a = A.memory(), pose = A.POSE0(), L = Object.assign({}, LOOK, { plant: [{ on: 0 }, { on: 0 }], held: null, carry: false, reach: null, pair: null, gnd: null }); const I = {}, out = []; let z = 0;
+    for (let i = 0; i < 90; i++) { z += 1.3 / 60; Object.assign(I, { st: 'walk', t: i / 60, sp: 1.3, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s: 1, run: 0, walk: 1, over: null, overK: undefined, clipK: undefined, drunk: 0, tired: pt ? pt.cansado || 0 : 0, id: 11, porte: pt, clock: i / 60, lefty: false }); A.drive(a, I, pose, L, 1 / 60); if (i >= 30) out.push(Object.assign({}, pose)); }
+    return out; };
+  const P = run(porte), Z0 = run(ZERO_W()); let m = 0; for (let i = 0; i < P.length; i++) m = Math.max(m, diff(P[i], Z0[i], js)); return m;
+}
 const ZERO = Object.fromEntries(V3.PORTE.map(k => [k, 0]));
+const ZERO_W = () => ZERO;
 
 if (on('v1') || on('v2')) {
   const v = adult(); blank(v); mild(v);
@@ -65,7 +77,7 @@ if (on('v1') || on('v2')) {
   for (const [k, hand, chS, chW] of CASES) {
     blank(v); mild(v); v.g = 'm'; hand(); const p = V3.porteOf(v, {});
     const f = Math.abs(p[k]); const ps = poseOf(p, 'idle'), pw = poseOf(p, 'walk');
-    const dS = diff(ps, still0, chS), dW = diff(pw, walk0, chW);
+    const dS = diff(ps, still0, chS), dW = Math.max(diff(pw, walk0, chW), walkDiff(p, chW));
     // (the opposite: the other causes stay out — the cold gives no heat, the heat no cold, the sickness no fear…)
     const others = V3.PORTE.filter(q => q !== k && q !== 'confia' && q !== 'expans' && Math.abs(p[q]) > 0.05 && !(k === 'gravida' && q === 'crianca'));
     res.push(`${k} ${r2(f)} → parado ${r2(dS)} rad, andando ${r2(dW)} rad${others.length ? ' (e ' + others.join(', ') + ')' : ''}`);

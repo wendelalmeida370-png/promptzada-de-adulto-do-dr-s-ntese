@@ -135,6 +135,14 @@
     unmask: still('o gesto de um instante'), torchfwd: still('a tocha à frente não soa'),
     // (22b: the acts the society gives — the argument is voices raised; the help and the being helped are still)
     argue: { s: 'voz', q: 'curso', cada: 1.4, v: 0.6, alc: 1.1 }, help: still('a ajuda é dada em silêncio'), helped: still('quem é ajudado recebe calado'),
+    // (phase 4: the answers to the body's word — a greeting, a thanks, a refusal are a word; the insult and the threat are raised;
+    // a kiss, a nod and the shoulder that comforts are still; what is told is a voice kept low)
+    greet: { s: 'voz', q: 'curso', cada: 2.2, v: 0.35, alc: 0.8 }, nod: still('o aceno de cabeça é calado'), kiss: still('o beijo é calado'),
+    insult: { s: 'voz', q: 'curso', cada: 1.2, v: 0.7, alc: 1.2 }, threaten: { s: 'voz', q: 'curso', cada: 1.6, v: 0.6, alc: 1.1 },
+    refuse: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, accept: { s: 'voz', q: 'curso', cada: 2.4, v: 0.4, alc: 0.9 },
+    agree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, disagree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 },
+    laugh: { s: 'voz', q: 'curso', cada: 2, v: 0.4, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
+    console: still('quem consola fala baixo demais para se ouvir longe'),
   };
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {

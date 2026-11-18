@@ -127,8 +127,11 @@ function finish() {
   { const s = JSON.stringify(QA.canon()); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } o.fp = (h >>> 0).toString(16) + '/' + S.rng; }
   o.gente = vs.length; o.adultos = vs.filter(v => v.age >= 16 && v.age < 62).length;
   o.piramide = [0, 0, 0, 0, 0, 0]; for (const v of vs) o.piramide[v.age < 2 ? 0 : v.age < 16 ? 1 : v.age < 30 ? 2 : v.age < 45 ? 3 : v.age < 62 ? 4 : 5]++;
-  o.orfaos = 0; o.criancas = 0;
-  for (const v of vs) { const p = o.porPovo(v.civ); p.gente++; if (v.age < 16) { o.criancas++; if (!S.villagers.has(v.mother) && !S.villagers.has(v.father)) { o.orfaos++; p.orfaos++; } } }
+  o.orfaos = 0; o.criancas = 0; o.criados = 0;
+  // (and the orphans someone raises — the phase 4b, G.Tutela —: the ones with nobody are the orphans less these)
+  for (const v of vs) { const p = o.porPovo(v.civ); p.gente++; if (v.age < 16) { o.criancas++; if (!S.villagers.has(v.mother) && !S.villagers.has(v.father)) { o.orfaos++; p.orfaos++; if (v.tutor && S.villagers.has(v.tutor)) o.criados++; } } }
+  // (the rumours alive at the end, and how many were born — the phase 3, G.Boatos)
+  o.boatos = S.boatos && S.boatos.list ? S.boatos.list.length : 0; o.boatosN = S.boatos ? S.boatos.tot || 0 : 0;
   // the ties (22b): how many each one keeps, the friends and the enemies, and what the others feel for each people
   const lens = vs.map(v => (Array.isArray(v.lacos) ? v.lacos.length : 0)).sort((a, b) => a - b);
   o.lacosMedia = lens.reduce((a, b) => a + b, 0) / Math.max(1, lens.length); o.lacosP90 = lens[Math.floor(lens.length * 0.9)] || 0;
@@ -160,7 +163,7 @@ for (const seed of seeds) {
   G.Main.skipStep = function (dt) { const r = step0.apply(this, arguments); if (++k % 10 === 0) { lookCrimes(); lookPeople(); } return r; };
   const t0 = ms();
   try {
-    for (let y = 1; y <= anos; y++) { const a = ms(); M.saltar(1); lookCrimes(); lookYear(); R.msAno.push(ms() - a); if (y % 10 === 0) console.log(`  semente ${seed}, ano ${y}: ${G.S.villagers.size} pessoas, ${Math.round((ms() - t0) / 1000)} s`); }
+    for (let y = 1; y <= anos; y++) { const a = ms(); M.saltar(1); lookCrimes(); lookYear(); R.povoAnos = (R.povoAnos || 0) + [...G.S.factions.values()].filter(f => f.alive !== false && G.Fac.pop(f.id) > 0).length; R.msAno.push(ms() - a); if (y % 10 === 0) console.log(`  semente ${seed}, ano ${y}: ${G.S.villagers.size} pessoas, ${Math.round((ms() - t0) / 1000)} s`); }
   } finally { G.Main.skipStep = step0; }
   const o = finish(); R = null;
   if (o.erros) bad = true;
@@ -182,9 +185,9 @@ function soma(dir, dir0) {
   const pick = L => L.filter(o => both.includes(o.seed));
   if (!A.length) { console.log('nenhum mundo medido em ' + dir); return; }
   const tot = L => {
-    const t = { n: L.length, gente: 0, adultos: 0, nasc: 0, casaisN: 0, viuvosCasam: 0, idade1: [], mortes: {}, crimes: {}, presos: 0, politica: {}, pessoasAno: 0, orfaos: 0, criancas: 0, lacos: 0, amigos: 0, inimigos: 0, marcas: 0, save: 0, savePessoa: 0, msAno: 0, piramide: [0, 0, 0, 0, 0, 0], coups: 0, revolutions: 0, govChanges: 0, casais: {}, solteiros3062: 0, adultos3062: 0, pov: {}, gov: 0, cru: 0, agg: 0, furtoCond: {}, agrCond: {} };
+    const t = { n: L.length, gente: 0, adultos: 0, nasc: 0, casaisN: 0, viuvosCasam: 0, idade1: [], mortes: {}, crimes: {}, presos: 0, politica: {}, pessoasAno: 0, orfaos: 0, criados: 0, boatos: 0, boatosN: 0, criancas: 0, lacos: 0, amigos: 0, inimigos: 0, marcas: 0, save: 0, savePessoa: 0, msAno: 0, piramide: [0, 0, 0, 0, 0, 0], coups: 0, revolutions: 0, govChanges: 0, casais: {}, solteiros3062: 0, adultos3062: 0, pov: {}, gov: 0, cru: 0, agg: 0, furtoCond: {}, agrCond: {} };
     for (const o of L) {
-      for (const k of ['gente', 'adultos', 'nasc', 'casaisN', 'viuvosCasam', 'presos', 'pessoasAno', 'orfaos', 'criancas', 'amigos', 'inimigos', 'marcas', 'save', 'savePessoa', 'coups', 'revolutions', 'govChanges', 'solteiros3062', 'adultos3062', 'gov', 'cru', 'agg']) t[k] += o[k] || 0;
+      for (const k of ['gente', 'adultos', 'nasc', 'casaisN', 'viuvosCasam', 'presos', 'pessoasAno', 'orfaos', 'criados', 'boatos', 'boatosN', 'povoAnos', 'criancas', 'amigos', 'inimigos', 'marcas', 'save', 'savePessoa', 'coups', 'revolutions', 'govChanges', 'solteiros3062', 'adultos3062', 'gov', 'cru', 'agg']) t[k] += o[k] || 0;
       t.lacos += o.lacosMedia * o.gente; t.idade1.push(...o.idade1); t.msAno += o.msAno.reduce((a, b) => a + b, 0) / o.msAno.length;
       for (const k of ['mortes', 'crimes', 'politica', 'casais', 'furtoCond', 'agrCond']) for (const [q, n] of Object.entries(o[k] || {})) add(t[k], q, n);
       o.piramide.forEach((n, i) => { t.piramide[i] += n; });
@@ -209,7 +212,10 @@ function soma(dir, dir0) {
     ['agressões por mil pessoas-ano', t => +((t.crimes.agressao || 0) / t.pessoasAno * 1000).toFixed(2)], ['homicídios por mil pessoas-ano', t => +((t.crimes.homicidio || 0) / t.pessoasAno * 1000).toFixed(2)],
     ['presos por mil pessoas-ano', t => +(t.presos / t.pessoasAno * 1000).toFixed(2)], ['executados por mil pessoas-ano', t => +((t.mortes.execution || 0) / t.pessoasAno * 1000).toFixed(2)],
     ['revoltas (levantes)', t => t.politica.uprising || 0], ['motins', t => t.politica.riot || 0], ['golpes', t => t.coups], ['revoluções', t => t.revolutions], ['mudanças de governo', t => t.govChanges],
-    ['órfãos', t => t.orfaos], ['crianças', t => t.criancas], ['laços por pessoa', t => +(t.lacos / Math.max(1, t.gente)).toFixed(2)], ['amigos (laços de amizade)', t => t.amigos], ['inimigos (laços de ódio)', t => t.inimigos], ['marcas', t => t.marcas],
+    ['órfãos', t => t.orfaos], ['  criados por alguém (4b)', t => t.criados || 0], ['  sem ninguém', t => t.orfaos - (t.criados || 0)], ['crianças', t => t.criancas],
+    ['boatos vivos no fim (soma)', t => t.boatos || 0], ['boatos nascidos (soma)', t => t.boatosN || 0],
+    ['revoltas por milhão de pessoas-ano', t => +((t.politica.uprising || 0) / t.pessoasAno * 1e6).toFixed(0)], ['golpes por milhão de pessoas-ano', t => +(t.coups / t.pessoasAno * 1e6).toFixed(0)],
+    ['revoltas por mil povo-anos', t => +((t.politica.uprising || 0) / Math.max(1, t.povoAnos || 1) * 1000).toFixed(1)], ['golpes por mil povo-anos', t => +(t.coups / Math.max(1, t.povoAnos || 1) * 1000).toFixed(1)], ['laços por pessoa', t => +(t.lacos / Math.max(1, t.gente)).toFixed(2)], ['amigos (laços de amizade)', t => t.amigos], ['inimigos (laços de ódio)', t => t.inimigos], ['marcas', t => t.marcas],
     ['save por pessoa (B, média dos mundos)', t => Math.round(t.savePessoa / t.n)], ['save (MB, média)', t => +(t.save / t.n / 1e6).toFixed(2)], ['um ano do salto (ms, média)', t => Math.round(t.msAno / t.n)],
     ['crueldade média dos governantes (pe.cru)', t => +(t.cru / Math.max(1, t.gov)).toFixed(3)], ['agressividade média dos governantes (pe.agg)', t => +(t.agg / Math.max(1, t.gov)).toFixed(3)],
   ];

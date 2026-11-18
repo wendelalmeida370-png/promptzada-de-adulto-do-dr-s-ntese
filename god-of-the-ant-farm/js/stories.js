@@ -116,6 +116,9 @@
     if ((p.kids || []).includes(q.id)) return q.g === 'f' ? 'filha' : 'filho';
     if (p.partner === q.id || q.partner === p.id || p.widow === q.id || q.widow === p.id) return q.g === 'f' ? 'companheira' : 'companheiro';
     if ((p.mother && p.mother === q.mother) || (p.father && p.father === q.father)) return q.g === 'f' ? 'irma' : 'irmao';
+    // (who raised the other is the family the stories tell: 22b D-632)
+    if (p.tutor && p.tutor === q.id) return q.g === 'f' ? 'mae' : 'pai';
+    if (q.tutor && q.tutor === p.id) return q.g === 'f' ? 'filha' : 'filho';
     return null;
   }
   St.relOf = relOf;
@@ -125,10 +128,10 @@
   // the living close family of someone
   function kin(v) {
     const S = G.S; const out = new Set(); const add = id => { if (id && id !== v.id && S.villagers.has(id)) out.add(id); };
-    add(v.mother); add(v.father); add(v.partner); add(v.widow);
+    add(v.mother); add(v.father); add(v.partner); add(v.widow); add(v.tutor);
     for (const id of v.kids || []) add(id);
     for (const pid of [v.mother, v.father]) { const p = P(pid); if (p) for (const id of p.kids || []) add(id); }
-    for (const o of S.villagers.values()) if (o.widow === v.id || o.partner === v.id) add(o.id);
+    for (const o of S.villagers.values()) if (o.widow === v.id || o.partner === v.id || o.tutor === v.id) add(o.id);
     return [...out].map(id => S.villagers.get(id)).filter(Boolean);
   }
   St.kin = kin;

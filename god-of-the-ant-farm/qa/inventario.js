@@ -168,7 +168,7 @@ if (on('i3')) {
   const kit3 = lines(n0, e => e[8] === 'kit' && e[4] === 'm:' + (v && v.id));
   // (someone given a thing: theirs in their hands when held, the kit in the other places)
   const o = people(x => grown(x) && x.id !== (v && v.id) && (x.role === 'cacador' || x.role === 'construtor'))[0] || people(x => grown(x) && x.id !== (v && v.id))[0];
-  const ok1 = !!v && tk && kit1.length === 1 && eq1.costas === It.keyOf('machado', It.bestMat('machado', Inv.artsOf(v))) && eq1.atalhos[0] === eq1.costas && eq1.kit > 0 && held1.real && held1.costas === eq1.costas;
+  const ok1 = !!v && tk && kit1.length === 1 && eq1.costas === Inv.made('machado', v) /* (the material the people has, not only the art — D-440; a ready world where the people knows bronze and has none gave the stone axe: T-1602) */ && eq1.atalhos[0] === eq1.costas && eq1.kit > 0 && held1.real && held1.costas === eq1.costas;
   let ok2 = false, ho = null;
   if (o) { god(() => { D.make('m:' + o.id, 'faca.pedra', 1, { code: 'teste' }); Inv.equip(o, 'faca.pedra', 'cinto'); }); ho = Inv.held(o); const kt = Inv.kit(o); ok2 = ho.real && ho.cinto === 'faca.pedra' && (kt.mao ? ho.mao === kt.mao : true); }
   ok('i3 as coisas do ofício viram de verdade uma vez só; quem recebe uma coisa a segura, e o kit nos outros lugares', ok1 && kit2.length === 1 && !!dr && dr.ok && kit3.length === 1 && ok2 && !novas().length,
@@ -290,15 +290,16 @@ if (on('i7')) {
     const k = keyIn(v, 'faca'); const bad = [];
     // (a step off the store's door, on open ground)
     const [x0, y0] = door(c.b); let spot = null; for (let d = 1; d < 6 && !spot; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) { const x = x0 + dx, y = y0 + dy; if (W.inb(x, y) && W.walkableXY(x, y) && !S.occ[W.idx(x, y)]) { spot = [x, y]; break; } }
-    put(v, ...spot); const n0 = lastN();
+    // (the body may have had a knife of its own before — the hunter's, made real from the kit —: the count goes by one, T-1603)
+    put(v, ...spot); const n0 = lastN(); const c0 = Inv.count(v, k);
     const r1 = ask(w => Inv.drop(w, k)); const g = (S.loose || []).find(o => o.id === r1.g);
-    if (!(r1.ok && g && g.k === k && g.n === 1 && !g.fac && !g.op && Inv.count(v, k) === 0 && lines(n0, e => e[8] === 'largou').length === 1 && !G.Vg.groundLoad(g))) bad.push('largar ' + JSON.stringify(r1) + JSON.stringify(g));
+    if (!(r1.ok && g && g.k === k && g.n === 1 && !g.fac && !g.op && Inv.count(v, k) === c0 - 1 && lines(n0, e => e[8] === 'largou').length === 1 && !G.Vg.groundLoad(g))) bad.push('largar ' + JSON.stringify(r1) + JSON.stringify(g));
     M.viver(20); const still = (S.loose || []).find(o => o.id === r1.g);
     if (!still) bad.push('os carregadores levaram o que foi largado de propósito');
     // (too far, then near: picked up)
     put(v, spot[0] + 3, spot[1]); const r2 = ask(w => Inv.pick(w, r1.g));
     put(v, ...spot); const near = Inv.near(v); const r3 = ask(w => Inv.pick(w, r1.g));
-    if (r2.ok || !(r3.ok && Inv.count(v, k) === 1 && !(S.loose || []).some(o => o.id === r1.g) && near.some(o => o.g === r1.g))) bad.push(`pegar: longe ${JSON.stringify(r2)}, perto ${JSON.stringify(r3)}`);
+    if (r2.ok || !(r3.ok && Inv.count(v, k) === c0 && !(S.loose || []).some(o => o.id === r1.g) && near.some(o => o.g === r1.g))) bad.push(`pegar: longe ${JSON.stringify(r2)}, perto ${JSON.stringify(r3)}`);
     // (an operation's crate on the ground is the porters')
     // (asked in the same step it is set down: an operation of no use ends at its own next look, and its crate is nobody's then)
     // (its books kept: the crate taken from its source, the store, and back there when the test is done)

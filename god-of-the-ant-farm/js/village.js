@@ -2085,7 +2085,8 @@
     for (const v of vs) {
       if (v.age >= 16) continue;
       const m = S.villagers.get(v.mother), f = S.villagers.get(v.father);
-      const h = (m && m.set === v.set && m.home) || (f && f.set === v.set && f.home) || 0;
+      const t = G.Tutela ? G.Tutela.de(v) : null; // (with no parent, the one raising it: 22b D-632)
+      const h = (m && m.set === v.set && m.home) || (f && f.set === v.set && f.home) || (t && t.set === v.set && t.home) || 0;
       if (h && h !== v.home) { if (v.home && byId.get(v.home)) byId.get(v.home).res--; v.home = h; byId.get(h).res++; }
     }
     for (const v of vs) {
@@ -2104,7 +2105,7 @@
     // grown single adults move out of an overcrowded home when possible, the youngest first — never the parent the children
     // follow, the house's owner, the old one who minds the little ones there (G.Lar.minder), nor the god's body (its house is
     // the player's to leave, as in act-casa.js): D-098
-    const minders = new Set(); for (const v of vs) if (v.age < 16 && v.home) { const m = S.villagers.get(v.mother), f = S.villagers.get(v.father); if (m && m.home === v.home) minders.add(m.id); else if (f && f.home === v.home) minders.add(f.id); }
+    const minders = new Set(); for (const v of vs) if (v.age < 16 && v.home) { const m = S.villagers.get(v.mother), f = S.villagers.get(v.father); if (m && m.home === v.home) minders.add(m.id); else if (f && f.home === v.home) minders.add(f.id); else if (v.tutor && G.Tutela) { const t = G.Tutela.de(v); if (t && t.home === v.home) minders.add(t.id); } }
     const cares = v => !!(G.Lar && G.Lar.minder && G.Lar.minder(v));
     const body = S.avatar ? S.avatar.id : 0;
     for (const b of homes) {

@@ -696,6 +696,7 @@
       }
       s.goods = null;
       { const st = S.settlements.get(ob.set); s.port = st ? st.name : fb ? fb.name : ''; } // (where it has been: the crew's tale, and its pay)
+      if (G.Boatos && ob.set) G.Boatos.porto(s, ob.set); // (and the port's talk: the crew brings theirs, and hears its — 22b D-622)
       const h = home(s); if (h && sailTo(s, h.moor[0], h.moor[1])) s.st = 'back'; else removeShip(s);
       return;
     }

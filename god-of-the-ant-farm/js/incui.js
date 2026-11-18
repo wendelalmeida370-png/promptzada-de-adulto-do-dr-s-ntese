@@ -225,7 +225,7 @@
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
     // (what happens far away reaches the ears only from where the person could have heard of: Possess.knows.hears, D-171)
-    if (!near && !G.Possess.knows.hears(v, e)) return;
+    if (!near && !(G.Possess.knows.hearsNow || G.Possess.knows.hears)(v, e)) return; // (22b: of another town, as the talk brings it)
     // (the same thing happening in several places at once — the games of three cities, the feast of two — is one line,
     // with how many more places: the view stays open)
     const same = news.find(n => alike(n.txt, e.txt));
@@ -613,7 +613,8 @@
       // (20e, D-395: the verbs of this person that lost their key — another part's took it — are buttons here)
       const chosen = best && best.id === 'pessoa' && best.t.o.id === c.id ? best : null; const of = chosen && G.Interact.offer ? G.Interact.offer(chosen) : null;
       const more = of ? of.more.filter(x => x.id !== 'abraco') : []; // (the hug has its own button above)
-      const vb = more.map(x => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${esc(x.label)}</button>`).join('');
+      // (22b: the first five on the number keys — the quick keys, while a person's card is open: IU.cardKey)
+      const vb = more.map((x, i) => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${i < 5 ? `<kbd>${esc(G.Input3D.label('rapido' + (i + 1)) || i + 1)}</kbd> ` : ''}${esc(x.label)}</button>`).join('');
       h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${vb}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;
@@ -759,4 +760,28 @@
     // has none, the Leve, gets the middle size)
     if (t.dataset.g) { const k = t.dataset.g; const P = (G.Realm.QUAL || {})[G.Realm.q] || {}; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (P[k] || (k === 'shadows' ? 1024 : 1)) : 0) : +t.value); }
   }
+  // ------------------------------ 22b: the verbs of a person's card on the number keys (D-628) ------------------------------
+  // (a person's card open: the quick key N is its N-th verb — the bag's quick keys ask here first: inv-ui.js)
+  IU.cardKey = function (i) {
+    if (!G.Modes.panelIs || !G.Modes.panelIs('card') || !card) return false;
+    const b = card.querySelectorAll('button[data-c="verb"]')[i]; if (!b) return false;
+    if (!b.disabled) b.click(); else IU.toast(b.title || 'Agora não dá.', 2);
+    return true;
+  };
+  // ------------------------------ 22b: what is said around (D-623) ------------------------------
+  // the rumours the lived person comes to know — by the talk of the town, by someone who brings them, by what they saw —, in the
+  // version they heard, a line of the news each, once; what they knew when the god came into the body is not news
+  let heard = new Set(), heardFor = 0, heardT = 0;
+  G.worldHooks.push(() => { heard = new Set(); heardFor = 0; heardT = 0; });
+  IU.frames.push(rdt => {
+    if (!G.Modes.inc() || !G.Possess.knows.boatos) return;
+    heardT -= rdt; if (heardT > 0) return; heardT = 1.5;
+    const v = G.Possess.body(); if (!v) return;
+    const ls = G.Possess.knows.boatos(v);
+    if (heardFor !== v.id) { heardFor = v.id; heard = new Set(ls.map(n => n.key)); return; }
+    for (const n of ls) {
+      if (heard.has(n.key)) continue; heard.add(n.key);
+      if (!news.some(q => q.txt === n.txt)) { news.push({ txt: n.txt, far: true, t: 11, more: 0 }); if (news.length > 2) news.shift(); renderNews(); }
+    }
+  });
 })(window.G);

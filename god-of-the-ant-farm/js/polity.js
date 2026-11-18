@@ -172,6 +172,10 @@
     if (f.grpHurt && G.S.day - (f.grpHurt[k] || -99) < 8) t -= 12;
     if (f.golden > 0) t += 12;
     if (c.palace && (k === 'povo' || k === 'artesaos')) t -= 8;
+    // (what the towns say of who rules — the esteem the rumours carried, G.Fama.estimaPovo —, and the hatred of the ones whose kin
+    // the ruler had killed: the marks they keep, G.Lacos.holds; 22b D-627)
+    if (c.est) t += c.est * (k === 'povo' || k === 'artesaos' ? 0.1 : 0.05);
+    if (c.hate && c.hate[k]) t -= c.hate[k] * 30;
     return G.clamp(t, 0, 100);
   }
   function recount(f, dt) {
@@ -179,11 +183,12 @@
     const owners = ownerHouses(f);
     const g = f.grp || (f.grp = {});
     for (const k of GK) { const q = g[k] || (g[k] = { sat: 55, press: 0 }); q.n = 0; q.wealth = 0; q._b = null; q._bs = -1e9; }
-    const houses = new Set();
+    const houses = new Set(); const hate = {}; const Lc = G.Lacos;
     for (const v of S.villagers.values()) {
       if (v.captive || v.age < 16 || G.Fac.idOfV(v) !== f.id) { if (v.grp && v.captive) v.grp = ''; continue; }
       const k = groupOf(v, owners, ruler); v.grp = k;
       const q = g[k]; q.n++;
+      if (ruler && v.marcas && Lc && v !== ruler && Lc.holds(v, ruler.id)) hate[k] = (hate[k] || 0) + 1;
       const h = v.home && S.buildings.get(v.home);
       if (h && !houses.has(h.id)) { houses.add(h.id); q.wealth += (h.coin || 0) + (owners.get(h.id) || 0) * 6; }
       if (v !== ruler) { const s = standing(v, k, h); if (s > q._bs) { q._bs = s; q._b = v; } }
@@ -195,6 +200,8 @@
       w *= pw[k] || 1; q.w = q.n ? w : 0; tot += q.w;
     }
     const c = ctxOf(f);
+    c.est = ruler && G.Fama ? G.Fama.estimaPovo(ruler, f.id) : 0;
+    c.hate = {}; for (const k in hate) if (g[k].n) c.hate[k] = hate[k] / g[k].n;
     for (const k of GK) {
       const q = g[k];
       q.inf = tot ? Math.round(q.w / tot * 100) : 0;
@@ -524,7 +531,16 @@
       if (t && bd < 30 * 30) G.Vg.setTask(v, { type: 'combat', id: t.id, pri: 4.6, guard: true, any: true, kind: 'combat' });
     }
     const gn = groups.map(k => GR[k].pl).join(' e ');
-    log(`Revolução em ${f.name}! ${lead.name} lidera ${rebels.length} revoltosos — ${gn} — contra ${P.styled(f, ruler)}${why ? ', ' + why : ''}. Querem ${G.gen(govNameOf(f, goal)) === 'a' ? 'uma' : 'um'} ${govNameOf(f, goal).toLowerCase()}.`, 'tyrant', ruler.x, ruler.y);
+    // (the faces of the rising: who rose with a dead one of their own to avenge on the ruler, else the leader's dearest friends —
+    // the ties, G.Lacos; 22b D-627)
+    const faces = []; if (G.Lacos) {
+      const owe = rebels.filter(v => v !== lead && G.Lacos.lembra(v, ruler.id).some(m => m[0] === 'matou'));
+      const pals = rebels.filter(v => v !== lead && !owe.includes(v)).map(v => [v, (G.Lacos.sente(lead, v) || { afeto: 0 }).afeto]).filter(x => x[1] >= 30).sort((a, b) => b[1] - a[1] || a[0].id - b[0].id).map(x => x[0]);
+      for (const v of owe.concat(pals)) if (faces.length < 2) faces.push(v);
+    }
+    f.rev.faces = faces.map(v => v.id);
+    const facesTxt = faces.length ? ` Ao lado de ${lead.name}: ${faces.map(v => v.name + (G.Lacos.lembra(v, ruler.id).some(m => m[0] === 'matou') ? `, que tem um morto a vingar` : '')).join('; ')}.` : '';
+    log(`Revolução em ${f.name}! ${lead.name} lidera ${rebels.length} revoltosos — ${gn} — contra ${P.styled(f, ruler)}${why ? ', ' + why : ''}. Querem ${G.gen(govNameOf(f, goal)) === 'a' ? 'uma' : 'um'} ${govNameOf(f, goal).toLowerCase()}.${facesTxt}`, 'tyrant', ruler.x, ruler.y);
     G.UI && G.UI.toast('Revolução!', `${f.name}: ${gn} se levantam${why ? ' ' + why : ''}.`, 'tyrant');
     G.Audio && G.Audio.play('horn');
     G.Stories && G.Stories.signal('uprising', { fac: f.id, lead: lead.id, groups, goal, why: why || '', n: rebels.length });

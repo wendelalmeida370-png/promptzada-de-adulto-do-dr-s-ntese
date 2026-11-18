@@ -53,6 +53,8 @@
     furtou: { re: 8, es: -18, rot: 'ladrao' }, agrediu: { re: 10, es: -22, rot: 'agressor' }, matou: { re: 25, es: -55, rot: 'assassino' },
     heroi: { re: 20, es: 20, rot: 'heroi' }, valente: { re: 8, es: 8, rot: 'valente' }, traiu: { re: 10, es: -25, rot: 'traidor' },
     cruel: { re: 8, es: -15, rot: 'cruel' }, pagou: { re: 1, es: 3 }, caloteiro: { re: 3, es: -8 },
+    // (22b phase 3: the name that a rumour carries to another town; the one who spread a lie that was denied)
+    nome: { re: 15, es: 0 }, mentiu: { re: 3, es: -10 },
   };
   F.FEITOS = () => Object.keys(FEITO);
   F.feito = function (v, tipo, sid) {
@@ -68,6 +70,36 @@
     if (a.length >= 4) { let li = -1, lr = Infinity; for (let i = 0; i < a.length; i++) if (a[i][0] !== v.set && a[i][1] < lr) { lr = a[i][1]; li = i; } if (li < 0) return null; a.splice(li, 1); }
     c = [sid, 0, 0, 0]; a.push(c); return c;
   }
+  // what a rumour said of someone and was denied (the culprit swapped, soc-boatos.js): the esteem back, the label off
+  F.desfeito = function (v, tipo, sid) {
+    if (!G.inSim) { F.fora++; return false; }
+    const d = FEITO[tipo]; const c = d && v && row(v, sid); if (!c) return false;
+    c[2] = clampI(c[2] - d.es, -100, 100); if (d.rot) c[3] &= ~ROT[d.rot];
+    return true;
+  };
+  // the memory of a people (f.memoria = [[tipo, sujeito, dia, peso, extra, palavras], …], up to eight: what went through most of its
+  // towns — the murder, the execution, the ruler gone, the conquest, the rising, the coup, the battle —, in the words its capital
+  // told; a heavy one stays, a light one fades on the capital's day (22b D-626)
+  const TIPOS_POVO = F.TIPOS_POVO = Object.freeze({ assassinato: 60, execucao: 55, governante: 60, golpe: 75, levante: 70, conquista: 85, batalha: 55 });
+  F.lembraPovo = function (f, tipo, sujeito, extra, peso, txt) {
+    if (!G.inSim) { F.fora++; return false; }
+    if (!f || !TIPOS_POVO[tipo]) return false;
+    const S = S_(); const w = clampI(peso || TIPOS_POVO[tipo], 1, 100); const m = f.memoria || (f.memoria = []);
+    // (the same thing again — the executions of one ruler, the same subject — is one memory, heavier and newer)
+    const same = m.find(q => q[0] === tipo && (q[1] === (sujeito || 0) || (tipo === 'execucao' && extra && q[4] === extra)));
+    if (same) { same[2] = S.day; same[3] = Math.min(100, same[3] + 5); if (txt) same[5] = String(txt).slice(0, 200); return true; }
+    if (m.length >= 8) { let li = -1, lw = Infinity; for (let i = 0; i < m.length; i++) if (m[i][3] < lw) { lw = m[i][3]; li = i; } if (lw >= w) return false; m.splice(li, 1); }
+    m.push([tipo, sujeito || 0, S.day, w, extra || 0, String(txt || '').slice(0, 200)]);
+    return true;
+  };
+  F.memoriaPovo = f => ((f && f.memoria) || []).slice();
+  // what the towns of a people think of someone: the mean of the esteem in each (a town without a row, nothing) — the ruler's,
+  // read by the estates (polity.js)
+  F.estimaPovo = function (v, fid) {
+    if (!v || !v.fama) return 0; let n = 0, s = 0;
+    for (const set of G.S.settlements.values()) { if (set.fac !== fid) continue; n++; const c = row(v, set.id); if (c) s += c[2]; }
+    return n ? s / n : 0;
+  };
   // a memory of the whole town (the murder, the execution, the ruler gone, the hero, the day of many dead…)
   F.lembra = function (set, tipo, sujeito, extra, peso) {
     if (!G.inSim) { F.fora++; return false; }
@@ -102,6 +134,9 @@
       if (!a.length) v.fama = undefined;
     }
     const m = set.memoria; if (m) { for (let i = m.length - 1; i >= 0; i--) { const q = m[i]; if (q[3] < 60) { q[3] -= 2; if (q[3] < 5) m.splice(i, 1); } } if (!m.length) set.memoria = undefined; }
+    // (the people's memory fades on its capital's day: the light ones by a little)
+    const pm = f && f.capital === set.id && f.memoria;
+    if (pm) { for (let i = pm.length - 1; i >= 0; i--) { const q = pm[i]; if (q[3] < 60) { q[3] -= 1; if (q[3] < 5) pm.splice(i, 1); } } if (!pm.length) f.memoria = undefined; }
   };
   function place(v, f) {
     let b = 0;
@@ -127,6 +162,12 @@
         if (!Array.isArray(v.fama)) { v.fama = undefined; continue; }
         const out = []; for (const c of v.fama) if (Array.isArray(c) && c.length >= 4 && S.settlements.has(c[0]) && !out.some(q => q[0] === c[0])) out.push([c[0], clampI(+c[1] || 0, 0, 100), clampI(+c[2] || 0, -100, 100), (c[3] | 0) & 4095]);
         v.fama = out.length ? out.slice(0, 4) : undefined;
+      }
+      for (const f of S.factions.values()) {
+        if (f.memoria === undefined) continue;
+        if (!Array.isArray(f.memoria)) { f.memoria = undefined; continue; }
+        const out = f.memoria.filter(q => Array.isArray(q) && TIPOS_POVO[q[0]] && Number.isInteger(q[2])).map(q => [q[0], q[1] | 0, Math.min(q[2], S.day), clampI(+q[3] || 1, 1, 100), q[4] | 0, String(q[5] || '').slice(0, 200)]).slice(-8);
+        f.memoria = out.length ? out : undefined;
       }
       for (const set of S.settlements.values()) {
         if (set.memoria === undefined) continue;

@@ -212,7 +212,13 @@ const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k
       const o = [...G.S.villagers.values()].filter(x => x.id !== v.id && x.age >= 18 && !x.inside && !x.sleeping && !x.aboard && !x.held).sort((a, b) => G.dist2(a.x, a.y, v.x, v.y) - G.dist2(b.x, b.y, v.x, v.y))[0];
       const p = T.open(v.x + 2, v.y + 2, 0); T.clear(p[0], p[1], 3, [v.id, o.id]); T.god(() => { G.Vg.endTask(o); G.Vg.setTask(o, { type: 'idle', wait: 40, pri: 0.3 }); o.x = p[0] + 0.3; o.y = p[1]; o.path = null; });
       T.at(p[0], p[1], o.x, o.y); T.f(8); const b = G.IncUI.best(); out.best = b ? b.label : '-';
-      T.key('f'); T.f(4); out.open = G.GuardUI.isOpen() && (G.GuardUI.spec() || {}).kind === 'dar';
+      // (the F of a grown person awake is the duel's — the fight's challenge, ord 0, regra 141 —, and the giving is the card's: the
+      // person's card (the E) and its «Dar» button, the tap the phone has; the F only when the giving has it. Before the ready worlds
+      // made with the society the one picked could not be challenged — the proof passed by the F —: T-1606)
+      const of = G.Interact.offer(G.Interact.best()); const F = of && of.verbs.find(x => x.k === 'outra'); out.via = F && F.id === 'dar' ? 'F' : 'cartão';
+      if (out.via === 'F') { T.key('f'); T.f(4); }
+      else { T.key('e'); T.f(6); const bt = document.querySelector('#incard button[data-c="verb"][data-v="dar"], .ic button[data-c="verb"][data-v="dar"], button[data-c="verb"][data-v="dar"]'); out.btn = !!bt; if (bt) bt.click(); T.f(4); } // (the card's buttons answer the click — the tap of a phone gives it —, as the number keys do: IU.cardKey)
+      out.open = G.GuardUI.isOpen() && (G.GuardUI.spec() || {}).kind === 'dar';
       const c = document.querySelector(`#guard-panel [data-side="bag"][data-k="${k}"]`); const o0 = G.Inv.count(o, k);
       if (c) T.tap(c); T.f(2); const side = document.querySelector('#guard-panel .gd-side[data-drop="other"]'); if (side) T.tap(side); T.f(6);
       out.given = G.Inv.count(o, k) === o0 + 1; out.who = o.name; T.key('Escape'); T.f(3); T.back();
@@ -220,7 +226,7 @@ const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k
     }, K6.pick);
     await page.setViewportSize({ width: 1280, height: 760 }); await E(() => window.__T.f(4));
     ok('w7 a tela dos guardados no celular: um toque escolhe, outro toque no outro lado faz; e dar a alguém pelo F', r7.open && r7.moved && r7b.open && r7b.given,
-      `aberta ${r7.open}, tocou e pegou: ${r7.moved}; diante de «${r7b.best}»: a tela de dar ${r7b.open}, dado a ${r7b.who}: ${r7b.given}`);
+      `aberta ${r7.open}, tocou e pegou: ${r7.moved}; diante de «${r7b.best}»: a tela de dar ${r7b.open} (pelo ${r7b.via}${r7b.via === 'cartão' ? ', o botão ' + (r7b.btn ? 'achado' : 'NÃO achado') : ''}), dado a ${r7b.who}: ${r7b.given}`);
   }
   // ================================ w8: the screen does not change the world; the checker; the errors
   const r8 = await E(() => {

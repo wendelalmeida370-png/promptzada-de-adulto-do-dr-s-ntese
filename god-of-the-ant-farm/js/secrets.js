@@ -328,9 +328,12 @@
   // ------------------------------ what people say ------------------------------
   function rumor(fac, set, txt, sid, real, heat, o) {
     const S = G.S; const s = st();
-    const dup = s.rumors.find(x => x.txt === txt && S.day - x.day < 12); if (dup) { dup.heat += (heat || 1) * 0.6; return dup; }
+    // (the town's talk is a rumour of the society's — its heat is how many in the town have it, G.Boatos.heat: told again, warmer;
+    // 22b D-624)
+    const dup = s.rumors.find(x => x.txt === txt && S.day - x.day < 12); if (dup) { dup.heat += (heat || 1) * 0.6; if (G.Boatos) G.Boatos.fala(dup); return dup; }
     const r = Object.assign({ id: s.nr++, fac: fac || 0, set: set || 0, txt, soc: sid || 0, t: !!real, day: S.day, heat: heat || 1 }, o || {});
     s.rumors.push(r); if (s.rumors.length > 40) s.rumors.shift();
+    if (G.Boatos) G.Boatos.fofoca(r);
     const sn = S.settlements.get(set);
     if (G.R() < 0.6) log(`Corre um boato${sn ? ' em ' + sn.name : ''}: “${txt}”`, 'rumor', sn ? sn.cx : undefined, sn ? sn.cy : undefined);
     G.Stories && G.Stories.signal('rumor', { id: r.id, fac, set, soc: sid || 0, real: !!real });
@@ -705,11 +708,11 @@
         if (G.R() < 0.35) gossip(f);
         // enough talk reaches the ruler
         const hot = s.rumors.filter(r => r.fac === f.id && S.day - r.day < 6);
-        const heat = hot.reduce((a, r) => a + r.heat, 0); const pe = P.leaderPe(f);
+        const heat = hot.reduce((a, r) => a + (G.Boatos ? G.Boatos.heat(r) : r.heat), 0); const pe = P.leaderPe(f);
         if (heat >= 4 && (pe.pie > 0.5 || pe.cru > 0.5 || pe.amb > 0.65) && G.R() < 0.3) {
           const tr = hot.filter(r => r.soc).sort((a, b) => b.heat - a.heat)[0]; const fk = hot.find(r => r.fake);
           const r = P.ruler(f); const q = tr && soc(tr.soc);
-          if (q && r && r.secret === q.id) { for (const x of hot) x.heat = 0; }
+          if (q && r && r.secret === q.id) { for (const x of hot) { x.heat = 0; if (G.Boatos) G.Boatos.cala(x); } }
           else if (tr) startInquiry(f, tr.soc, '', tr.witness || 0);
           else if (fk) startInquiry(f, 0, fk.fake, 0);
         }

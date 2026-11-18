@@ -1624,6 +1624,39 @@ for (const f of files) { if (!/^soc-.*\.js$/.test(f)) continue; src[f].forEach((
 { const PAIR_OK = [['villagers.js', 'a.partner = b.id; b.partner = a.id; a.widow = 0; b.widow = 0;'], ['villagers.js', "v.partner = 0; if (como === 'morte')"]];
   for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
     if ((/\.partner\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.partner\b|\[['"]partner['"]\]\s*=(?!=)/.test(c)) && !ok(PAIR_OK, f, l)) fails.push(`o casal tem uma porta: ${f}:${k + 1} escreve o par fora do G.Vg.pair / unpair (D-565): ${l.trim().slice(0, 110)}`); }); }
+// 228. "o que se diz é do soc-boatos.js" (D-620): os boatos do mundo (S.boatos) e o que cada um sabe por nome (v.sabe) só o
+// js/soc-boatos.js escreve — pelo G.Boatos.nasce / ensina / leva / porto / fofoca / fala / cala e pelo dia da cidade —, só dentro do
+// passo do mundo
+for (const f of files) { if (f === 'soc-boatos.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.sabe\s*(=(?!=)|\+=)|\.sabe\.(push|splice|shift|pop|unshift|sort|reverse|fill)\(|\.sabe\[[^\]]*\](\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--)|\b(S|G\.S)\.boatos\s*=(?!=)|\.boatos\.(list|n|tot|d0)\s*(=(?!=)|\+=|-=|\+\+|--)|\.boatos\.list\.(push|splice|shift|pop|unshift|sort|reverse|fill)\(/.test(c)) fails.push(`o que se diz é do soc-boatos.js: ${f}:${k + 1} escreve os boatos ou o que alguém sabe por nome (D-620): ${l.trim().slice(0, 110)}`); }); }
+// 229. "as leituras dos boatos são puras" (D-621): o que se pergunta aos boatos — quem sabe (sabe, deQuem), o que se diz numa cidade
+// (versao, texto, frase), a notícia do corpo (doCorpo), o calor da conversa (heat), quem a cidade já tem por suspeito (suspeitos), a
+// vida da conversa (vida) — não sorteia, não escreve numa pessoa nem chama as portas que mudam a sociedade
+{ const RD = ['B.sabe', 'B.deQuem', 'B.versao', 'B.texto', 'B.frase', 'B.doCorpo', 'B.heat', 'B.suspeitos', 'B.vida', 'nm'];
+  for (const nm of RD) { const b = fnBody('soc-boatos.js', nm); if (!b) { fails.push(`as leituras dos boatos são puras: não achei ${nm} no soc-boatos.js (D-621)`); continue; }
+    for (const [k, l, c] of b) if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\b(Lacos|L)\.(ato|marca|desmarca|corte)\(|\b(Fama|F)\.(feito|desfeito|lembra|lembraPovo|respondida)\(|\b(ensina|semeia|carry|desmente|distort|fama|st)\(|\bB\.(nasce|ensina|leva|porto|fofoca|fala|cala)\(|\bsetTask\(|\b(v|o|r|w|e|sr|set)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--|\|=|&=)|\bw\[[^\]]+\]\s*(=(?!=)|\+=|-=|\|=|&=)/.test(c)) fails.push(`as leituras dos boatos são puras: soc-boatos.js:${k + 1} (${nm}) sorteia ou escreve (D-621): ${l.trim().slice(0, 110)}`); } }
+// 230. "o corpo ouve pela porta" (D-623): a tela do corpo sabe dos boatos só pelo G.Possess.knows (boatos, hearsNow) — nem o incui.js
+// nem outra tela leem o G.Boatos ou o S.boatos —, e a faixa de notícia de outra cidade passa pelo hearsNow
+{ const UIF = ['incui.js', 'interact.js', 'diario-ui.js', 'inv-ui.js', 'guardados-ui.js', 'combate-ui.js', 'trabalho-ui.js'];
+  for (const f of UIF) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Boatos\b|\.boatos\b(?!\s*\()/.test(c) && !/knows\.boatos/.test(c)) fails.push(`o corpo ouve pela porta: ${f}:${k + 1} lê os boatos sem o G.Possess.knows (D-623): ${l.trim().slice(0, 110)}`); });
+  const iu = (src['incui.js'] || []).join('\n'); if (!/knows\.hearsNow/.test(iu) || !/knows\.boatos\(/.test(iu)) fails.push('o corpo ouve pela porta: a faixa de notícia do incui.js não pergunta ao knows.hearsNow e ao knows.boatos (D-623)'); }
+// 231. "o boato sem o acaso do mundo" (D-620): o js/soc-boatos.js não sorteia — quem sabe, a versão e o culpado trocado são do
+// G.hash do boato, da cidade e da pessoa: o mesmo em cada carga, e o acaso de ninguém deslocado
+(src['soc-boatos.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`o boato sem o acaso do mundo: soc-boatos.js:${k + 1} sorteia (D-620): ${l.trim().slice(0, 110)}`); });
+if (!(src['soc-boatos.js'] || []).length) fails.push('o que se diz é do soc-boatos.js: falta o js/soc-boatos.js (D-620)');
+// 232. "quem cria um órfão é do soc-tutela.js" (D-632): quem cria uma criança sem pai nem mãe (v.tutor) só o js/soc-tutela.js escreve —
+// pelo G.Tutela.adota e pelo dia da cidade —; a casa, a família que vai junta, as histórias, o corpo e os laços perguntam ao G.Tutela
+for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+  if (/\.tutor\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+[\w.]+\.tutor\b|\[['"]tutor['"]\]\s*=(?!=)/.test(c)) fails.push(`quem cria um órfão é do soc-tutela.js: ${f}:${k + 1} escreve quem cria a criança (D-632): ${l.trim().slice(0, 110)}`); }); }
+// 233. "o corpo trata com as pessoas pelas portas" (D-628): os verbos do corpo (js/soc-verbos.js) mudam o mundo só dentro do
+// G.Possess.apply — o que a mão pede, o passo do mundo faz —, e o que a pessoa responde é lido pela leitura pura (SV.leitura,
+// SV.olhos), sem sortear; os verbos entram na pessoa só pelo registro (G.Interact.verb)
+{ const sv = src['soc-verbos.js'] || []; if (!sv.length) fails.push('o corpo trata com as pessoas pelas portas: falta o js/soc-verbos.js (D-628)');
+  sv.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\.verbs\s*=|\.verbs\.push\(/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: soc-verbos.js:${k + 1} sorteia ou escreve os verbos de outro (D-628): ${l.trim().slice(0, 110)}`); });
+  for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bSocVerbos\.faz\(/.test(c) && !/G\.Possess\.apply\(/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: ${f}:${k + 1} pede um verbo do corpo fora do G.Possess.apply (D-628): ${l.trim().slice(0, 110)}`); });
+  const fz = fnBody('soc-verbos.js', 'SV.faz') || []; if (!fz.some(([, , c]) => /G\.inSim/.test(c))) fails.push('o corpo trata com as pessoas pelas portas: o SV.faz do soc-verbos.js não confere o passo do mundo (D-628)');
+  for (const nm of ['SV.leitura', 'SV.olhos']) { const b = fnBody('soc-verbos.js', nm); if (!b) { fails.push(`o corpo trata com as pessoas pelas portas: não achei ${nm} (D-628)`); continue; }
+    for (const [k, l, c] of b) if (/\b(Lacos|L\(\))\.(ato|marca|desmarca)\(|\b(Fama|F\(\))\.(feito|lembra)\(|\bsetTask\(|\b(v|o|me|p)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o corpo trata com as pessoas pelas portas: soc-verbos.js:${k + 1} (${nm}) escreve (D-628): ${l.trim().slice(0, 110)}`); } }
 // === 22c: a vida que se vê ===
 // 213. "o leitor da vida só lê" (D-590): o js/vida3d.js lê o mundo para o animador e não escreve nada nele — nem numa pessoa, nem
 // na tarefa dela, nem no G.S —, não dá tarefa nem ato, não tira de acaso nenhum (nem o do mundo, nem o do que só se vê: a variedade

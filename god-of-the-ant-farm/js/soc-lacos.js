@@ -33,6 +33,8 @@
     if (v.widow === o.id) return 'viuvo';
     if (v.mother === o.id || v.father === o.id) return 'pai';
     if (o.mother === v.id || o.father === v.id) return 'filho';
+    if (v.tutor && v.tutor === o.id) return 'pai'; // (who raised the other feels as the family does: G.Tutela, D-632)
+    if (o.tutor && o.tutor === v.id) return 'filho';
     if ((v.mother && v.mother === o.mother) || (v.father && v.father === o.father)) return 'irmao';
     return null;
   }
@@ -126,6 +128,12 @@
     furto: { a: [0, 0, 0, 0], b: [-20, -30, -5, 0] }, denunciou: { a: [-4, 0, 0, 0], b: [-25, -25, 0, 0] },
     matou: { a: [-60, -50, 0, -20], b: [0, 0, 0, 0] }, separacao: { a: [-20, -20, -5, -20], b: [-20, -20, -5, -20] },
     reconcilia: { a: [12, 6, 2, 0], b: [12, 6, 2, 0], frente: 1 },
+    // (phase 4: what the body's hands do to someone — soc-verbos.js; a the body, b the other — and the hug of anyone)
+    cumprimento: { a: [2, 1, 0, 0], b: [2, 1, 0, 0], frente: 1 }, elogio: { a: [1, 0, 0, 0], b: [6, 2, 5, 1], frente: 1 },
+    lisonja: { a: [0, 0, 0, 0], b: [-2, -6, -2, 0], frente: 1 }, beijo: { a: [6, 3, 0, 12], b: [6, 3, 0, 12], frente: 1 },
+    ameaca: { a: [-4, 0, 0, 0], b: [-16, -14, 4, -8], frente: 1 }, abraco: { a: [5, 3, 0, 1], b: [6, 3, 0, 1], frente: 1 },
+    convite: { a: [3, 2, 0, 1], b: [6, 3, 1, 1], frente: 1 }, pedido: { a: [0, 0, 0, 0], b: [0, 0, -2, 0], frente: 1 },
+    tutela: { a: [10, 5, 0, 0], b: [15, 10, 5, 0], frente: 1 }, // (4b: one takes an orphan in — a the one who raises, b the child)
   };
   L.TIPOS = () => Object.keys(TIPO);
   L.tipo = (k, def) => { if (!TIPO[k]) TIPO[k] = def; };
@@ -179,7 +187,7 @@
   // kindness in the kind; and a weight that fades, day by day. A debt or a promise does not fade: it is paid, or broken (soc-vida.js)
   const MARCA = L.MARCA = Object.freeze({
     salvou: 1, ajudou: 1, deu: 1, consolou: 1, pagou: 1, ensinou: 1, defendeu: 1,
-    humilhou: -1, insultou: -1, bateu: -1, roubou: -1, traiu: -1, matou: -1, denunciou: -1, recusou: -1,
+    humilhou: -1, insultou: -1, bateu: -1, roubou: -1, traiu: -1, matou: -1, denunciou: -1, recusou: -1, ameacou: -1,
     deve: 0, emprestou: 0, prometeu: 0,
   });
   L.MARCAS = 8;
@@ -290,6 +298,8 @@
     // soc-vida.js, on the same day of the town)
     if (G.Fama && G.Fama.dayOf) G.Fama.dayOf(set);
     if (G.Convivio && G.Convivio.dayOf) G.Convivio.dayOf(set);
+    if (G.Boatos && G.Boatos.dayOf) G.Boatos.dayOf(set); // (what is said: the rumours of the town, soc-boatos.js)
+    if (G.Tutela && G.Tutela.dayOf) G.Tutela.dayOf(set); // (the orphans to who will raise them, soc-tutela.js)
   };
   function cool(x, rate, floor) {
     if (!x) return 0;

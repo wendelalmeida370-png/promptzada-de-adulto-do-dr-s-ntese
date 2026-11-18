@@ -235,7 +235,9 @@ if (on('v3')) {
     const folk = people(v => v.set === vila.id && v.age >= 16 && !v.captive); const qs = U.districtsOf(vila); let badQ = 0, badP = 0, pairs = 0; const why = {};
     for (const a of folk) { for (const q of qs) if (!K.district(a, q)) badQ++; for (const b of folk) if (a !== b) { pairs++; const h = K.how(a, b); why[h.why] = (why[h.why] || 0) + 1; if (!h.n) badP++; } }
     // (and someone of a city of the same people cannot name the vila's fields, nor its people)
-    const out = people(v => v.set !== vila.id && grown(v) && G.Fac.idOfV(v) === vila.fac && (S.settlements.get(v.set).tier || 0) >= 3)[0];
+    // (one with family in the vila knows its fields by the family — the world's own reason, K.district —: the one asked has none
+    // there; the hundred-year ready world made with the society gave Lucrécia of Óstia three of her own in Roma: T-1604)
+    const out = people(v => v.set !== vila.id && grown(v) && G.Fac.idOfV(v) === vila.fac && (S.settlements.get(v.set).tier || 0) >= 3 && !folk.some(b => K.how(v, b).why === 'família'))[0];
     const oq = out ? qs.filter(q => K.district(out, q)).length : -1, op = out ? folk.filter(b => K.person(out, b)).length : -1;
     ok('v3 na vila todos sabem os campos e uns aos outros', folk.length >= 4 && !badQ && !badP && (!out || (oq === 0 && op < folk.length)),
       `${vila.name}${vw !== WORLD ? ' (de ' + vw + ')' : ''} (rank ${vila.tier || 0}, ${folk.length} adultos, ${qs.map(q => q.name).join(', ')}): ${badQ} que não sabem os campos, ${badP} de ${pairs} pares que não se conhecem ${JSON.stringify(why)}; ${out ? `${out.name}, de ${S.settlements.get(out.set).name} (mesmo povo): sabe ${oq} dos ${qs.length} campos e conhece ${op} dos ${folk.length}` : 'ninguém de uma cidade do mesmo povo'}`);
@@ -327,7 +329,10 @@ if (on('p1', 'p2', 'p3', 'p4', 'p5', 'p6')) {
     }
     // ---------------- p5
     if (on('p5')) {
-      if (!Po.is(v)) take(v); if (!v.ken || !v.ken.p.includes(st.id)) meet(st.id);
+      // (lived on its own since p3, the body may have gone down a mine — no one below the ground is taken (Po.can) —: the proof's
+      // hand brings it up first, as the other proofs do; Tonantzin of the ready world made with the society was in a cave: T-1605)
+      if (!Po.is(v)) { if (!Po.can(v).ok) god(() => { G.Vg.endTask(v); if (v.ug && G.Caves) G.Caves.exitNow(v); v.sleeping = false; v.inside = 0; }); take(v); }
+      if (!v.ken || !v.ken.p.includes(st.id)) meet(st.id);
       const name = st.name, id = st.id; god(() => V.kill(st, 'sick')); M.viver(0.5);
       const rec = G.person(id); const how = rec ? K.how(v, rec) : { n: -1 }; const hb = st.home ? S.buildings.get(st.home) : null; const card = hb ? I.buildingCard(hb, v) : null;
       ok('p5 a pessoa conhecida morre: o nome continua sabido, nada quebra', !S.villagers.has(id) && !!rec && how.n === 1 && K.name(v, rec) === name && v.ken.p.includes(id) && (!card || !JSON.stringify(card.rows).includes(name)) && Po.is(v),
