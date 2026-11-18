@@ -26,12 +26,20 @@ numa praia, o sol nasce e você é livre. O que vai ser agora?
 
 ## 3. As galés
 
+**O tamanho pela gente do mundo** (a pergunta do dono, 18/11/2026): cada remador é uma pessoa de verdade do mundo, e um mundo
+pronto tem de 130 (a cidade) a 650 pessoas (a metrópole) — uma trirreme de 170 remadores levaria um quarto de uma metrópole, e
+uma frota delas, a cidade inteira. Então **o navio de guerra comum é pequeno** (a triacôntera de 30 remos, a pentecôntera de
+50), o povo só arma o navio que a sua gente sustenta (os remadores saem da população, como os soldados), e **a trirreme é
+rara**: a nau-capitânia de um império grande, como uma maravilha do mar. O banco pequeno é melhor para o jogo: com 30 remadores,
+o galeote conhece todos pelo nome, e os laços são mais fundos.
+
 | Navio | Remos | O banco | Por povo |
 |---|---|---|---|
-| **Pentecôntera** | 50, um nível | um homem por remo, perto da água | os gregos antigos; o mais simples |
-| **Birreme** | ~100, dois níveis | o de cima e o de baixo | os fenícios, os gregos |
-| **Trirreme** | ~170, três níveis | **os de cima** (o remo mais longo, mais ar), **os do meio**, **os de baixo** (junto da água: o pior lugar — a água que entra, o escuro, o cheiro) | os gregos, os romanos |
-| **Quinquerreme** | ~300, vários homens por remo | o banco de vários: um puxa, os outros acompanham | os romanos, os cartagineses |
+| **Triacôntera** | 30, um nível | um homem por remo | **a galé de guerra comum**: a vila e a cidade |
+| **Pentecôntera** | 50, um nível | um homem por remo, perto da água | a galé grande da cidade |
+| **Birreme** (a metrópole) | ~100, dois níveis | o de cima e o de baixo | os fenícios, os gregos |
+| **Trirreme** (rara: a nau-capitânia de um império) | ~170, três níveis | **os de cima** (o remo mais longo, mais ar), **os do meio**, **os de baixo** (junto da água: o pior lugar — a água que entra, o escuro, o cheiro) | os gregos, os romanos |
+| **Quinquerreme** (só nos maiores impérios, se a gente do mundo crescer) | ~300, vários homens por remo | o banco de vários: um puxa, os outros acompanham | os romanos, os cartagineses |
 | **O barco longo do norte** | 30–60 | os remadores são os guerreiros, livres, nos seus baús | o norte: **não tem galeotes** |
 | **A galé mercante** | poucos remos e a vela | rema-se no porto e na calmaria | todos |
 
