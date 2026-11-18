@@ -15,11 +15,29 @@
 //   so9 o crime entre pessoas: o acerto de contas — a discussão, a briga, a agressão do mundo com a testemunha e a caça —; a testemunha
 //       amiga cala, a inimiga corre ao guarda; o ladrão não rouba a casa do amigo
 //   so10 o mundo de séculos (anos500): dez anos de salto — os tetos seguram (o verificador), o save por pessoa dentro do orçamento
+//   so11 o boato nasce e corre (fase 3): uma agressão do mundo com testemunha vira boato no dia da cidade — a testemunha e a vítima
+//       sabem por nome («viu»), a família «soube» —; a parte da cidade cresce dia a dia, quem sabe pela parte é a amostra do hash; a
+//       cidade aonde ninguém o levou não sabe; a verdade fica no crime (o culpado do boato é o do crime)
+//   so12 os portadores: quem sabe por nome, nas ruas de outra cidade, leva o boato (uma linha nova, menos fiel); o forasteiro ouve a
+//       conversa de lá e a leva para casa; o portador que morre na estrada não leva nada
+//   so13 a distorção e o desmentido: com a fidelidade baixa o culpado vira um dos suspeitos que a cidade já tinha (a fama de quem
+//       furta), nunca um qualquer; a testemunha que mora ali desmente — o nome do inocente limpo, quem espalhou menos acreditado —; o
+//       julgamento traz a versão de volta à verdade
+//   so14 o save no meio de um boato: os boatos e o que cada um sabe iguais depois do load, o mesmo futuro em duas cargas; o save
+//       danificado (boatos tortos, quem sabe um boato que não existe) carrega limpo
+//   so15 a cidade muda de povo com boatos correndo: as linhas ficam com a cidade, nada se quebra
+//   (a faixa do corpo — o que a pessoa vivida ouve — é provada com o corpo: qa/sociedade-corpo.js c1)
+//   so17 a conversa do secrets.js é um boato: o calor é a parte da cidade, contada de novo esquenta, o governante a cala
+//   so18 a lenda e a memória do povo: quem morre com um nome pesado vira lenda nas palavras da cidade; o que passou pela maior parte
+//       das cidades de um povo fica na memória dele
+//   so19 o ódio de quem governa: a estima que os boatos levaram e as marcas de quem perdeu alguém pela mão dele baixam o que os
+//       estados esperam; o levante tem rostos (quem tem um morto a vingar)
 // Erro de módulo ou aviso do jogo é falha.
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/sociedade-inv.js'] });
 const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const on = k => !ONLY.length || ONLY.includes(k);
 // (the parts of the phase 2 — the marks, the crime among people, the fame — only where the game has them: G.Convivio, soc-vida.js)
 const P2 = !!G.Convivio; const on2 = k => on(k) && (P2 || (console.log(`pulado | sociedade ${k} | a fase 2 não está nesta versão`), false));
+const P3 = !!G.Boatos; const on3 = k => on(k) && (P3 || (console.log(`pulado | sociedade ${k} | a fase 3 não está nesta versão`), false));
 const fails = []; const t0 = Date.now ? process.hrtime.bigint() : 0n; const ms = () => Number((process.hrtime.bigint() - t0) / 1000000n);
 const ok = (k, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | sociedade ${k} | ${info}`); if (!c) fails.push(k); };
 const sim = fn => { G.inSim++; try { return fn(); } finally { G.inSim--; } };
@@ -237,6 +255,170 @@ if (on('so10')) {
   ok('so10 os-tetos', mx <= 16, `${process.env.ANOS || 10} anos de salto nos 500 anos: ${o.villagers.length} pessoas, laços ${avg.toFixed(1)} em média, ${mx} no máximo`);
   ok('so10 o-orcamento', b1 - b0 <= 600, `o save por pessoa: ${Math.round(b0)} B antes, ${Math.round(b1)} B depois (+${Math.round(b1 - b0)}, orçamento +600)`);
   const bad = soc(); ok('so10 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+// ============================== the phase 3: the rumours ==============================
+const Bo = () => G.Boatos;
+// (a building of a town whose ground the town's quarters have: where to stand to be in its streets)
+const streetOf = set => { for (const b of G.S.buildings.values()) { if (b.set !== set.id || !b.built) continue; const p = G.Vg.door ? G.Vg.door(b) : [b.x, b.y]; for (const q of [p, [b.x - 1, b.y - 1], [b.x + (b.w || 1), b.y + (b.h || 1)]]) { const u = G.Urban.at(q[0] + 0.5, q[1] + 0.5); if (u && u.set === set.id && G.W.walkableXY(Math.floor(q[0]), Math.floor(q[1]))) return q; } } return null; };
+const put = (v, p) => { G.Vg.endTask(v); v.x = Math.floor(p[0]) + 0.5; v.y = Math.floor(p[1]) + 0.5; v.inside = 0; v.sleeping = false; };
+const sweep = () => { G.mod('boato.t', 0); sim(() => Bo().update()); };
+const townsOf = (n) => [...G.S.settlements.values()].filter(s => G.Village.pop(s.id) >= (n || 8)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id) || a.id - b.id);
+const fpB = () => { const s = JSON.stringify([fp(), G.S.boatos || 0, [...G.S.villagers.values()].map(v => v.sabe || 0)]); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16); };
+
+if (on3('so11')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo();
+  const big = new Set(townsOf(30).map(t => t.id));
+  const pr = pairOf((a, b) => !L().kin(a, b) && G.dist(a.x, a.y, b.x, b.y) < 5 && big.has(a.set)); const [k, vic] = pr; const set = S.settlements.get(vic.set);
+  const c = sim(() => G.Crime.assault(k, vic, false));
+  sim(() => B.dayOf(set)); const r = B.ofCrime(c.id); const w0 = r ? B.row(r, set.id).slice() : null;
+  const fam = r ? G.Stories.kin(vic).filter(o => o.age >= 6).slice(0, 4) : [];
+  ok('so11 nasce', !!r && r.k === 'agressao' && B.sabe(vic, r) === 'viu' && c.seen.every(id => !S.villagers.get(id) || S.villagers.get(id).age < 6 || B.sabe(S.villagers.get(id), r) === 'viu') && fam.every(o => B.sabe(o, r)),
+    r ? `${k.name} bateu em ${vic.name} em ${set.name}: o boato «${B.texto(r, set.id)}», ${c.seen.length} testemunha(s) e a vítima sabem («viu»), a família (${fam.length}) «soube»; a parte ${w0[1]}‰` : 'NENHUM BOATO');
+  const folk = () => [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 8 && !(v.sabe && v.sabe.some(e => e[0] === r.id)));
+  const part = [], frac = [], ext = [];
+  for (let d = 0; d < 6; d++) { sim(() => B.dayOf(set)); const w = B.row(r, set.id); part.push(w[1]); const f = folk(); frac.push(f.filter(v => B.sabe(v, r) === 'boato').length / Math.max(1, f.length)); if (d === 5) for (const v of f) ext.push(0.5 + 0.5 * I().ax(v, 'ext') / 99); }
+  const exp = part[5] / 1000 * ext.reduce((x, y) => x + y, 0) / Math.max(1, ext.length);
+  ok('so11 corre', part.every((p, i) => !i || p >= part[i - 1]) && part[5] > w0[1] * 3 && Math.abs(frac[5] - exp) < 0.1,
+    `seis dias da cidade: a parte ${part.join(' → ')}‰; quem sabe pela conversa ${frac.map(x => Math.round(x * 100) + '%').join(' → ')} (esperado ≈ ${Math.round(exp * 100)}%: a parte vezes o quanto cada um fala)`);
+  const far = [...S.settlements.values()].find(t => t.id !== set.id && !B.row(r, t.id)); const fo = far && [...S.villagers.values()].find(v => v.set === far.id && v.age >= 16);
+  ok('so11 longe-nao-sabe', !!fo && !B.sabe(fo, r), far ? `${far.name}, aonde ninguém o levou: ${fo && B.sabe(fo, r) ? 'SABE' : 'não sabe'}` : 'nenhuma outra cidade');
+  ok('so11 a-verdade-fica', r.q === c.thief && r.c === c.id && B.versao(r, set.id).culpado === k.id, `o boato aponta o crime #${c.id} (a verdade), e o culpado dito é ${B.versao(r, set.id).culpado === k.id ? 'o do crime' : 'OUTRO'}`);
+  const bad = soc(); ok('so11 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so12')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo();
+  const ts = townsOf(20).filter(t => streetOf(t)); const A = ts[0], Bt = ts[1], C = ts[2];
+  const folkA = [...S.villagers.values()].filter(v => v.set === A.id && v.age >= 18 && !v.captive && !v.aboard).sort((a, b) => a.id - b.id);
+  const vic = folkA[0], wit = folkA[1], dies = folkA[2];
+  const r = sim(() => B.nasce('homicidio', { set: A.id, a: vic.id, g: vic.g, q: folkA[3].id, n: { a: vic.name, s: A.name }, viu: [wit.id], p0: 200 }));
+  const r2 = sim(() => B.nasce('agressao', { set: A.id, a: folkA[4].id, q: folkA[5].id, n: { a: folkA[4].name, s: A.name }, viu: [dies.id], p0: 200 }));
+  // the witness walks into the streets of B: the sweep — the rumour reaches B, less true
+  put(wit, streetOf(Bt)); sweep(); const wb = B.row(r, Bt.id);
+  ok('so12 o-portador-leva', !!wb && wb[2] < 100 && wb[6] === wit.id && wb[1] === B.SEED, wb ? `${wit.name}, que viu, nas ruas de ${Bt.name}: o boato chegou (parte ${wb[1]}‰, fidelidade ${wb[2]}, quem trouxe #${wb[6]})` : `${wit.name} em ${Bt.name}: NADA CHEGOU`);
+  // the one who carries the other dies on the road: nothing reaches C
+  put(dies, [C.cx + 9, C.cy + 9]); sim(() => G.Village.kill(dies, 'old')); sweep();
+  ok('so12 o-portador-morre', !B.row(r2, C.id) && !B.row(r2, Bt.id), `${dies.name}, o único que sabia de «${B.texto(r2, A.id)}» fora de ${A.name}, morreu no caminho: ${B.row(r2, C.id) ? 'CHEGOU A ' + C.name : 'não chegou a lugar nenhum'}`);
+  // the stranger hears the talk of B and takes it home to C (one whose hash the talk of B reaches)
+  sim(() => { const w = B.row(r, Bt.id); w[1] = 1000; w[2] = 60; });
+  const st = [...S.villagers.values()].find(v => v.set === C.id && v.age >= 18 && !v.captive && !v.aboard && !v.sabe && G.hash(v.id * 2654 + r.id * 97 + Bt.id * 31 + 7) < 0.5 * (0.5 + 0.5 * I().ax(v, 'ext') / 99));
+  put(st, streetOf(Bt)); sweep(); const e = st.sabe && st.sabe.find(q => q[0] === r.id);
+  put(st, streetOf(C)); sweep(); const wc = B.row(r, C.id);
+  ok('so12 o-forasteiro-ouve', !!e && e[1] === 'ouviu' && e[3] === Bt.id && !!wc && wc[2] === Math.max(0, Math.round(60 * 0.8) - 4) && wc[6] === st.id,
+    `${st.name}, de ${C.name}, nas ruas de ${Bt.name}: ${e ? 'ouviu' : 'NÃO OUVIU'}; em casa, ${C.name} passou a dizer «${wc ? B.texto(r, C.id) : '—'}» (fidelidade ${wc ? wc[2] : '—'})`);
+  const bad = soc(); ok('so12 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so13')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo(); const F = G.Fama;
+  const T = townsOf(40)[0]; const folk = [...S.villagers.values()].filter(v => v.set === T.id && v.age >= 18 && !v.captive).sort((a, b) => a.id - b.id);
+  const sus = folk[0]; sim(() => { F.feito(sus, 'furtou', T.id); F.feito(sus, 'furtou', T.id); });
+  // (only one the town takes for a thief: the others of ill name set apart for the proof)
+  const others = B.suspeitos({ e: [], a: 0, q: 0 }, T).filter(o => o !== sus);
+  const es0 = F.de(sus, T.id).estima;
+  // a theft nobody saw: as the fidelity falls, the town names the one it already had for a thief (by the hash of each rumour: the
+  // first of a few that does)
+  let r = null; const tried = [];
+  for (let n = 0; n < 14 && !r; n++) {
+    const vic = folk[5 + n]; const x = sim(() => B.nasce('furto', { set: T.id, a: vic.id, n: { a: vic.name, s: T.name }, p0: 300 })); tried.push(x);
+    sim(() => { B.row(x, T.id)[2] = 40; B.dayOf(T); });
+    const q = B.row(x, T.id); if (q && q[3] & B.VER.TROCA && q[4] === sus.id) r = x;
+  }
+  const anyOther = tried.some(x => { const q = B.row(x, T.id); return q && q[3] & B.VER.TROCA && !B.suspeitos(x, T).some(o => o.id === q[4]); });
+  ok('so13 o-suspeito', !!r && !anyOther, r ? `«${B.texto(r, T.id)}» — a cidade já tinha ${sus.name} por quem furta (o verdadeiro, ninguém viu; ${others.length} outros de má fama ali)` : `em ${tried.length} furtos, NENHUM CULPADO DITO`);
+  if (r) {
+    // most know: the fame of the one named; then a witness who lives here speaks — the name cleared, the talker less believed
+    sim(() => { B.row(r, T.id)[1] = 600; B.dayOf(T); }); const es1 = F.de(sus, T.id).estima; const tel = S.villagers.get(B.row(r, T.id)[6]); const te0 = tel && F.de(tel, T.id) ? F.de(tel, T.id).estima : 0;
+    const wit = folk.find(v => v !== sus && v !== tel && v.age >= 16 && folk.indexOf(v) > 30) || folk[folk.length - 1]; sim(() => { B.ensina(wit, r, 'viu', 0); B.dayOf(T); });
+    const w2 = B.row(r, T.id); const es2 = F.de(sus, T.id).estima; const te1 = tel && F.de(tel, T.id) ? F.de(tel, T.id).estima : 0;
+    ok('so13 o-desmentido', es1 < es0 && !(w2[3] & B.VER.TROCA) && !!(w2[3] & B.VER.DESM) && es2 > es1 && (!tel || te1 < te0) && B.frase(r, T.id, 'boato').startsWith('Já se sabe'),
+      `quando a cidade toda dizia: a estima de ${sus.name} ${es0} → ${es1}; ${wit.name} viu e mora ali: «${B.frase(r, T.id, 'boato')}» — a estima volta a ${es2}${tel ? `, e ${tel.name}, que espalhou, ${te0} → ${te1}` : ''}`);
+  }
+  // the judgment: the crime answered brings every version back to the truth
+  const c = sim(() => G.Crime.assault(folk[2], folk[3], false)); sim(() => B.dayOf(T)); const rj = B.ofCrime(c.id);
+  sim(() => { const q = B.row(rj, T.id); q[1] = 800; q[3] |= B.VER.EXA; c.dayArrest = S.day; c.st = 'preso'; B.dayOf(T); });
+  const wj = B.row(rj, T.id);
+  ok('so13 o-julgamento', rj.j > 0 && !!(wj[3] & B.VER.DESM) && !(wj[3] & B.VER.EXA), `o crime de ${folk[2].name} julgado: em ${T.name} já se diz «${B.texto(rj, T.id)}» (a versão exagerada voltou à verdade)`);
+  const bad = soc(); ok('so13 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so14')) {
+  M.pronto('metropole'); M.viver(G.DAY_LEN * 2); const S = G.S;
+  const n0 = (S.boatos || { list: [] }).list.length; let named = 0; for (const v of S.villagers.values()) if (v.sabe) named++;
+  const b0 = JSON.stringify([S.boatos, [...S.villagers.values()].filter(v => v.sabe).map(v => [v.id, v.sabe])]);
+  const save = G.Save.serialize();
+  M.abrir(JSON.parse(save)); const b1 = JSON.stringify([G.S.boatos, [...G.S.villagers.values()].filter(v => v.sabe).map(v => [v.id, v.sabe])]);
+  M.reseed(5); M.viver(60); const f1 = fpB();
+  M.abrir(JSON.parse(save)); M.reseed(5); M.viver(60); const f2 = fpB();
+  ok('so14 o-save-guarda', n0 > 0 && named > 0 && b0 === b1, `dois dias da metrópole: ${n0} boatos, ${named} pessoas sabem por nome — ${b0 === b1 ? 'iguais depois do load' : 'DIFERENTES depois do load'}`);
+  ok('so14 o-mesmo-futuro', f1 === f2, `o mesmo save carregado duas vezes, 60 s cada: ${f1} / ${f2}`);
+  const o = JSON.parse(save); o.boatos.list[0].at = 'x'; o.boatos.list.push({ k: 'nada', id: -3 }, null, { k: 'furto', id: 999999, at: [[-5, 9e9, 'a', 0, 0, 0, 0]] }); o.boatos.n = 'z';
+  const vv = o.villagers.find(v => v.sabe) || o.villagers[0]; vv.sabe = [[999998, 'viu', 1, 0], 'lixo', [o.boatos.list[1].id, 'sonhou', 2, 0]];
+  M.abrir(o); const bad0 = soc();
+  ok('so14 o-save-danificado', M.limpo() && !bad0.length && (!G.S.boatos || G.S.boatos.list.every(r => Array.isArray(r.at) && r.at.length)), `um save com boatos tortos e quem sabe o que não existe: ${M.limpo() && !bad0.length ? 'carregou limpo' : 'ERRO: ' + (bad0[0] ? bad0[0].msg : JSON.stringify(M.erros()).slice(0, 200))}`);
+  M.viver(5); const bad = soc(); ok('so14 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so15')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo();
+  let s = null; for (const x of S.settlements.values()) { const f = G.Fac.get(x.fac); if (f && G.Fac.capitalOf(f.id) !== x && G.Village.pop(x.id) >= 6) { s = x; break; } }
+  const folk = [...S.villagers.values()].filter(v => v.set === s.id && v.age >= 16).sort((a, b) => a.id - b.id);
+  const r = sim(() => B.nasce('agressao', { set: s.id, a: folk[0].id, q: folk[1].id, n: { a: folk[0].name, s: s.name }, viu: [folk[2].id], p0: 300 }));
+  const f0 = s.fac; sim(() => G.Politics.secede(s, null)); M.viver(5); sim(() => B.dayOf(s));
+  ok('so15 a-cidade-muda-de-povo', s.fac !== f0 && !!B.row(r, s.id) && B.sabe(folk[2], r) === 'viu', `${s.name} deixou o povo ${f0}: o boato «${B.texto(r, s.id)}» ${B.row(r, s.id) ? 'continua dito ali' : 'SUMIU'}`);
+  const bad = soc(); ok('so15 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so17')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo();
+  const T = townsOf(20)[0]; const txt = 'Há gente importante que se cumprimenta com um sinal na palma da mão.';
+  const sr = sim(() => G.Secrets.rumor(T.fac, T.id, txt, 0, false, 1, {}));
+  const r = S.boatos.list.find(q => q.sec === sr.id); const h0 = B.heat(sr);
+  sim(() => G.Secrets.rumor(T.fac, T.id, txt, 0, false, 1, {})); const h1 = B.heat(sr);
+  sim(() => B.cala(sr)); const h2 = B.heat(sr);
+  ok('so17 a-conversa-e-boato', !!r && r.k === 'fofoca' && Math.abs(h0 - 0.625) < 0.01 && h1 > h0 && h2 === 0, `a conversa de ${T.name} «${r ? B.texto(r, T.id) : '—'}»: calor ${h0.toFixed(2)} (a parte da cidade), contada de novo ${h1.toFixed(2)}, calada ${h2}`);
+  const bad = soc(); ok('so17 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so18')) {
+  M.pronto('metropole'); day(); const S = G.S; const B = Bo(); const F = G.Fama;
+  const ts = townsOf(20); const A = ts[0];
+  const folk = [...S.villagers.values()].filter(v => v.set === A.id && v.age >= 20 && !v.captive).sort((a, b) => a.id - b.id);
+  const hero = folk[0]; sim(() => { for (let k = 0; k < 3; k++) F.feito(hero, 'heroi', A.id); });
+  sim(() => G.Village.kill(hero, 'old'));
+  const leg = () => (S.lore && S.lore.legends) || [];
+  const lo = leg().find(l => l.key === 'boato:' + hero.id);
+  // a killer that many towns spoke of, and who dies: the legend in the words told — the version of the town that told it most
+  const kl = folk[1]; const r = sim(() => B.nasce('homicidio', { set: A.id, a: folk[2].id, q: kl.id, n: { a: folk[2].name, s: A.name }, p0: 500 }));
+  sim(() => { for (const t of ts.slice(1, 4)) r.at.push([t.id, 700, 40, B.VER.EXA, 0, S.day, 0]); });
+  sim(() => G.Village.kill(kl, 'old')); const lk = leg().find(l => l.key === 'boato:' + kl.id);
+  ok('so18 a-lenda', !!lo && !!lk && /a sangue-frio/.test(lk.text[0]), `${hero.name}, herói: «${lo ? lo.text[0] : '—'}»; ${kl.name}: «${lk ? lk.text[0] : '—'}»`);
+  // what went through most towns of a people stays with it (on its capital's day)
+  const f = G.Fac.get(A.fac); const cap = G.Fac.capitalOf(f.id); const mine = [...S.settlements.values()].filter(s => s.fac === f.id);
+  const r2 = sim(() => B.nasce('levante', { set: cap.id, a: folk[3].id, fa: f.id, n: { a: folk[3].name, s: cap.name, fa: f.name }, p0: 900 }));
+  sim(() => { for (const t of mine) if (!B.row(r2, t.id)) r2.at.push([t.id, 800, 70, 0, 0, S.day, 0]); B.dayOf(cap); });
+  const pm = (f.memoria || []).find(q => q[0] === 'levante');
+  ok('so18 a-memoria-do-povo', !!pm && pm[5].includes(folk[3].name), `${f.name} (${mine.length} cidades) lembra: «${pm ? pm[5] : '—'}»`);
+  const bad = soc(); ok('so18 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
+}
+
+if (on3('so19')) {
+  M.pronto('metropole'); day(); const S = G.S; const F = G.Fama; const Po = G.Polity;
+  const f = [...S.factions.values()].filter(x => x.alive !== false && G.Politics.ruler(x) && G.Fac.pop(x.id) >= 40 && !x.rev).sort((a, b) => G.Fac.pop(b.id) - G.Fac.pop(a.id))[0];
+  const ru = G.Politics.ruler(f); const sat = () => { Po.recount(f, 0); for (const k in f.grp) f.grp[k].sat = 50; Po.recount(f, 1000); return Object.fromEntries(Object.keys(f.grp).map(k => [k, Math.round(f.grp[k].sat)])); };
+  const s0 = sat();
+  sim(() => { for (const t of S.settlements.values()) if (t.fac === f.id) for (let k = 0; k < 4; k++) F.feito(ru, 'cruel', t.id); });
+  const s1 = sat();
+  const povo = [...S.villagers.values()].filter(v => G.Fac.idOfV(v) === f.id && v.grp === 'povo' && v.age >= 16 && v !== ru && !v.captive).sort((a, b) => a.id - b.id);
+  sim(() => { for (const v of povo.slice(0, Math.ceil(povo.length / 3))) L().marca(v, 'matou', ru.id, 80, 0); });
+  const s2 = sat();
+  ok('so19 o-odio-de-quem-governa', s1.povo < s0.povo && s2.povo < s1.povo, `${f.name}: o que o povo espera ${s0.povo} → ${s1.povo} (as cidades dizem que ${ru.name} é cruel: estima ${Math.round(F.estimaPovo(ru, f.id))}) → ${s2.povo} (um terço com um morto pela mão del${ru.g === 'f' ? 'a' : 'e'})`);
+  const lead = povo[povo.length - 1]; const said = []; const lg = G.Village.log; G.Village.log = function (t) { said.push(t); return lg.apply(this, arguments); };
+  sim(() => Po.uprising(f, lead, ['povo'], 'republica', '')); G.Village.log = lg;
+  const line = said.find(t => /^Revolução/.test(t)) || '';
+  ok('so19 os-rostos-do-levante', /Ao lado de .*um morto a vingar/.test(line) && !!f.rev && f.rev.faces.length > 0, line.slice(0, 260) || 'NENHUM LEVANTE');
+  const bad = soc(); ok('so19 verificador', !bad.length && M.limpo(), bad.length ? bad.slice(0, 3).map(q => q.msg).join(' · ') : 'limpo');
 }
 
 if (!M.limpo()) console.log('ERROS: ' + JSON.stringify(M.erros()).slice(0, 800));

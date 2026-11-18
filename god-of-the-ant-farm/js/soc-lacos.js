@@ -290,6 +290,7 @@
     // soc-vida.js, on the same day of the town)
     if (G.Fama && G.Fama.dayOf) G.Fama.dayOf(set);
     if (G.Convivio && G.Convivio.dayOf) G.Convivio.dayOf(set);
+    if (G.Boatos && G.Boatos.dayOf) G.Boatos.dayOf(set); // (what is said: the rumours of the town, soc-boatos.js)
   };
   function cool(x, rate, floor) {
     if (!x) return 0;

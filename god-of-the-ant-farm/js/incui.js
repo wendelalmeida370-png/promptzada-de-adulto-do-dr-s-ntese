@@ -225,7 +225,7 @@
     if (!root || !G.Modes.inc()) return;
     const near = v && Number.isFinite(e.x) && G.dist(e.x, e.y, v.x, v.y) < 30;
     // (what happens far away reaches the ears only from where the person could have heard of: Possess.knows.hears, D-171)
-    if (!near && !G.Possess.knows.hears(v, e)) return;
+    if (!near && !(G.Possess.knows.hearsNow || G.Possess.knows.hears)(v, e)) return; // (22b: of another town, as the talk brings it)
     // (the same thing happening in several places at once — the games of three cities, the feast of two — is one line,
     // with how many more places: the view stays open)
     const same = news.find(n => alike(n.txt, e.txt));
@@ -759,4 +759,20 @@
     // has none, the Leve, gets the middle size)
     if (t.dataset.g) { const k = t.dataset.g; const P = (G.Realm.QUAL || {})[G.Realm.q] || {}; G.Realm.setOver(k, t.type === 'checkbox' ? (t.checked ? (P[k] || (k === 'shadows' ? 1024 : 1)) : 0) : +t.value); }
   }
+  // ------------------------------ 22b: what is said around (D-623) ------------------------------
+  // the rumours the lived person comes to know — by the talk of the town, by someone who brings them, by what they saw —, in the
+  // version they heard, a line of the news each, once; what they knew when the god came into the body is not news
+  let heard = new Set(), heardFor = 0, heardT = 0;
+  G.worldHooks.push(() => { heard = new Set(); heardFor = 0; heardT = 0; });
+  IU.frames.push(rdt => {
+    if (!G.Modes.inc() || !G.Possess.knows.boatos) return;
+    heardT -= rdt; if (heardT > 0) return; heardT = 1.5;
+    const v = G.Possess.body(); if (!v) return;
+    const ls = G.Possess.knows.boatos(v);
+    if (heardFor !== v.id) { heardFor = v.id; heard = new Set(ls.map(n => n.key)); return; }
+    for (const n of ls) {
+      if (heard.has(n.key)) continue; heard.add(n.key);
+      if (!news.some(q => q.txt === n.txt)) { news.push({ txt: n.txt, far: true, t: 11, more: 0 }); if (news.length > 2) news.shift(); renderNews(); }
+    }
+  });
 })(window.G);
