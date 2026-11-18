@@ -94,11 +94,14 @@
   };
   // a child's: one allele of each gene from the mother and one from the father — which of each parent's two, by the hash of the
   // child's id and the seed (twins differ: their ids do) — and, in two alleles in a hundred, a small change
+  // (a mutation moves an allele by a normal step of 4, never past STEP: the verifier's own rule, «one of a parent's or a step of a
+  // mutation from it» — a rare big draw made a child the verifier took for a genome written by hand, L-1709)
+  const STEP = Ge.STEP = 16;
   Ge.child = function (id, mg, fg, seed) {
     const M = dec(mg), F = dec(fg), al = new Uint8Array(LEN);
     for (let g = 0; g < NG; g++) {
       al[g * 2] = M[g * 2 + (h32(seed, id, g, 11) < 0.5 ? 0 : 1)]; al[g * 2 + 1] = F[g * 2 + (h32(seed, id, g, 12) < 0.5 ? 0 : 1)];
-      for (let k = 0; k < 2; k++) if (h32(seed, id, g, 13 + k) < 0.02) al[g * 2 + k] = clamp(al[g * 2 + k] + Math.round(normInv(h32(seed, id, g, 15 + k)) * 4), 0, 63);
+      for (let k = 0; k < 2; k++) if (h32(seed, id, g, 13 + k) < 0.02) al[g * 2 + k] = clamp(al[g * 2 + k] + clamp(Math.round(normInv(h32(seed, id, g, 15 + k)) * 4), -STEP, STEP), 0, 63);
     }
     return enc(al);
   };
@@ -108,7 +111,7 @@
   Ge.fromParents = function (cg, mg, fg, skip) {
     const C = Ge.alleles(cg), M = Ge.alleles(mg), F = Ge.alleles(fg); if (!C || !M || !F) return true;
     for (let g = 0; g < NG; g++) { if (skip && skip.includes(g)) continue;
-      const near = (x, P) => Math.min(Math.abs(x - P[g * 2]), Math.abs(x - P[g * 2 + 1])) <= 16;
+      const near = (x, P) => Math.min(Math.abs(x - P[g * 2]), Math.abs(x - P[g * 2 + 1])) <= STEP;
       if (!near(C[g * 2], M) || !near(C[g * 2 + 1], F)) return false;
     }
     return true;
