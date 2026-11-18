@@ -26,8 +26,10 @@ que for feito sai da lista «a fazer» com o commit que fez.
 - [`oficio-pesca.md`](oficio-pesca.md) — a Pesca por inteiro (o primeiro ofício, no Patch 26).
 - [`navios.md`](navios.md) — a vida a bordo e o porto (os barcos e os navios por dentro, o itinerário do porto, a viagem, a
   batalha no mar): a mecânica fundamental que o dono vai pedir, da qual a Pesca e o mar dependem.
-- [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do escravo e o ofício
+- [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do galeote e o ofício
   do remador livre; Patch 29).
+- [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
+  do porto, o contrabando).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -38,6 +40,8 @@ que for feito sai da lista «a fazer» com o commit que fez.
   armar contra o corpo), reações espontâneas, milhares de falas, centenas de animações.
 - **O corpo pode entrar nas histórias:** quem tem laço com ele (ou ouviu a fama dele) pode pedir ajuda; a missão nasce do motor
   de histórias que já existe.
+- **A máxima de cada ofício e de cada condição:** «isso é tão divertido que poderia ser um jogo sozinho — eu jogaria só isso
+  durante horas a fio», pelo conteúdo, pela estrutura, pelo ciclo e pelas recompensas.
 - **Os ofícios são profundos e ligados ao mundo,** nunca um minijogo solto — «só esse ofício poderia ser um jogo». Ofício no
   sentido largo: o que o personagem está vivendo, também as condições (escravo de galé, preso, órfão) e as passagens entre elas.
 - **Os barcos e os navios por dentro** (entrar em canoas, barcos e navios gigantes, o itinerário do porto, a hora em que cada
