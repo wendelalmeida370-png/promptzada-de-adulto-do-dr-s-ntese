@@ -120,7 +120,8 @@
     r.chuva = outdoors && !sheltered && w && w.rain > 0.3 ? G.clamp((w.rain - 0.3) / 0.5, 0, 1) : 0;
     r.doente = v.sick > 0 ? G.clamp(0.55 + v.sick / (DAY() * 0.8) * 0.45, 0, 1) : 0;
     const wd = v.wound && S && S.day - v.wound.d < 3 ? (v.wound.sev === 'grave' ? 1 : 0.5) : 0; r.ferido = Math.max(wd, v.hp < 50 ? G.clamp((50 - v.hp) / 40, 0, 1) : 0);
-    r.manca = v.lost && v.lost.leg ? (G.hash(v.id * 7 + 3) < 0.5 ? -1 : 1) : 0;
+    // (the leg lost is the one the stump is drawn on — by the id, as the god's view and G.Feicao have it —, and the crutch's: L-1775)
+    r.manca = v.lost && v.lost.leg ? ((v.id || 0) % 2 ? 1 : -1) : 0;
     r.gravida = v.preg > 0 ? G.clamp(Math.sqrt(1 - v.preg / (DAY() * 0.55)), 0.25, 1) : 0;
     r.luto = v.mourn > 0 ? G.clamp(v.mourn / (DAY() * 0.3), 0.35, 1) : 0;
     const e = v.emo && v.emo.k; r.medo = Math.max(v.fear > 40 ? G.clamp((v.fear - 40) / 50, 0, 1) : 0, e === 'fear' || e === 'fire' ? 0.6 : 0);

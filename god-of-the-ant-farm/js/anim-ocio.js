@@ -65,6 +65,10 @@
     OUT.k = k; OUT.u = tau / dur; OUT.n = n; OUT.dur = dur; return OUT;
   };
   const WTS = [], OUT = { k: '', u: 0, n: 0, dur: 0 };
+  // the clip a moment's thing is played by, on this figure (L): the arms crossed are the hands on the hips for one person in two —
+  // by the id — of those with nothing over the arms that the open elbows would pierce (no cape, no toga, no long skirt: L.armOut);
+  // the moment and its length stay the agenda's (and the sound's, D-610: the arms are silent either way) — T-1618, D-613
+  Anim.ocioClip = (k, id, L) => (k === 'oc-bracos-cruzados' && L && !(L.armOut > 0) && H(id * 41 + 7) < 0.5 && Anim.CLIPS && Anim.CLIPS['oc-maos-cintura'] ? 'oc-maos-cintura' : k);
   // (for the proofs and the reader: a person's three tics, and the half each thing falls in)
   Anim.ocioTics = id => HABIT.filter(k => ticOf(id, k));
   Anim.ocioHalf = (id, k) => halfOf(id, LIST.indexOf(k));

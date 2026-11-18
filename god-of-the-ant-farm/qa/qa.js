@@ -3143,7 +3143,7 @@
     }
     // (no thing of a material the people never had: the bags, the houses, the stores' metal tools and weapons, the kit drawn)
     const had = (fid, m) => !!(o.had && o.had[fid] && o.had[fid][m]);
-    const needs = m => m === 'bronze' || m === 'ferro' || m === 'couro' || m === 'ouro';
+    const needs = m => m === 'bronze' || m === 'ferro' || m === 'couro' || m === 'ouro' || m === 'barro';
     const facOfSet = id => { const st = s.settlements.get(id); return st ? st.fac : 0; };
     for (const v of s.villagers.values()) {
       const fid = facOfSet(v.set); if (!fid) continue;

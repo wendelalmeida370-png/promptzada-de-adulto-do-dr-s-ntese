@@ -42,7 +42,10 @@
 
   // ------------------------------ the trade's kit ------------------------------
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
-  const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice' };
+  // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
+  const PLACE_TOOL = { caneca: 1, grilhoes: 1 };
+  const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
+    drink: 'caneca', toast: 'caneca', bound: 'grilhoes' };
   // (the acts of the fight: whoever already holds a weapon fights with it — the spearman with his spear, the militia with its club)
   const FIGHT = { stab: 1, fight: 1, brandish: 1 };
   // the trade's own thing and where it rides when the hands are free (the act puts it in the hand while it lasts)
@@ -83,6 +86,26 @@
     const out = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, real: false };
     if (!v || v.age < 2) return out;
     const arts = artsOf(v); const fid = G.Fac.idOfV(v); const mk = kind => made(kind, fid, arts);
+    trade0(v, out, mk); crutch(v, out, mk); return out;
+  };
+  // (a leg lost — the world's cause, v.lost — and the crutch under the arm of that side takes its place, the hand of that side, or
+  // the other if the trade holds it; with both hands the trade's, none: 22c, D-612)
+  function crutch(v, out, mk) {
+    if (!(v.lost && v.lost.leg) || v.age < 5) return; const k = mk('muleta'); if (!k) return;
+    const side = (v.id || 0) % 2 ? 'mao' : 'outra', other = side === 'mao' ? 'outra' : 'mao'; // (the leg's side: as the stump is drawn, G.Feicao)
+    const two = x => !!(x && It.def(x).maos >= 2);
+    if (!out[side] && !two(out[other])) out[side] = k; else if (!out[other] && !two(out[side])) out[other] = k;
+  }
+  Inv.crutchSide = v => ((v && v.id) || 0) % 2 ? 'mao' : 'outra';
+  // (a child at play — the children's game, not the chase — has the ball of the house: one house in two has one, by its id; of
+  // leather where the people has had hides, else of woven withies — 22c, D-612)
+  const playing = v => v.age >= 3 && v.age < 13 && !!v.task && v.task.type === 'play' && !v.task.chase;
+  Inv.playing = playing;
+  function ball(v, out) {
+    if (!playing(v) || out.mao || G.hash(((v.home || v.id) | 0) * 13 + 5) >= 0.5) return;
+    const k = made('bola', G.Fac.idOfV(v), artsOf(v)); if (k) out.mao = k;
+  }
+  function trade0(v, out, mk) {
     const fighter = v.age >= 14 && !v.captive && (v.role === 'guerreiro' || !!v.unit);
     if (fighter) {
       // (the archer: the bow in the bow hand, a knife at the belt; the levy by its company; the warrior by the people's way)
@@ -96,25 +119,24 @@
       // (the helmet of the warriors and the archers, as the god's view draws it — never the militia's — in what the people had: the
       // bronze, the iron, the leather of its hides; with none of them, no helmet: 20h)
       if (v.unit !== 'milicia') out.cabeca = mk('elmo');
-      return out;
+      return;
     }
-    if (v.role === 'arqueiro' && v.age >= 14 && !v.captive) { out.outra = mk('arco'); out.cinto = mk('faca'); out.cabeca = mk('elmo'); return out; }
-    if (v.age < 14) return out;
-    if ((v.role === 'cacador' || v.role === 'vigia') && !v.captive) { if (v.arm === 'arco') out.outra = mk('arco'); else out.mao = mk('lanca'); if (v.role === 'cacador') out.cinto = mk('faca'); return out; }
-    if (v.role === 'anciao' && v.age >= 60) { out.mao = mk('cajado'); return out; }
-    const t = TRADE[v.role]; if (!t) return out;
+    if (v.role === 'arqueiro' && v.age >= 14 && !v.captive) { out.outra = mk('arco'); out.cinto = mk('faca'); out.cabeca = mk('elmo'); return; }
+    if (v.age < 14) return;
+    if ((v.role === 'cacador' || v.role === 'vigia') && !v.captive) { if (v.arm === 'arco') out.outra = mk('arco'); else out.mao = mk('lanca'); if (v.role === 'cacador') out.cinto = mk('faca'); return; }
+    if (v.role === 'anciao' && v.age >= 60) { out.mao = mk('cajado'); return; }
+    const t = TRADE[v.role]; if (!t) return;
     const kind = v.role === 'pescador' ? fishGear(v) : t[0];
     const key = kind ? mk(kind) : null;
     if (key) { const s = It.fits(key, t[1]) ? t[1] : It.guarda(key) || It.mao(key); if (s) out[s] = key; }
-    return out;
-  };
+  }
   // what a person with no things of their own carries by trade and act: a place for each slot (null: nothing there). Pure, as
   // Inv.trade: the act's tool in the hand while the act lasts (the fight keeps the weapon one holds), a load or a gear in the
   // arms puts what the hands held on the back or the belt
   Inv.kit = function (v) {
     const out = Inv.trade(v);
     if (!v || v.age < 2) return out;
-    act(v, out, null);
+    act(v, out, null); ball(v, out);
     if (loaded(v) || v.gear) freeHands(out);
     return out;
   };
@@ -131,6 +153,9 @@
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
+    // (the cup of the tavern and of the feast, the bonds of the one who leads the prisoner: the place's, never the person's own — given
+    // to whoever has things of their own too, the god's body among them; in the material the people has: 22c, D-612)
+    if (!key && own && PLACE_TOOL[t]) key = made(t, G.Fac.idOfV(v), artsOf(v));
     if (!key && !own) key = made(t, G.Fac.idOfV(v), artsOf(v));
     if (!key) return; // (a tool of a material the people never had: the act's hands are empty, 20h)
     out.mao = key;
@@ -163,6 +188,7 @@
       for (const s of SLOTS) if (!out[s] && k[s] && !(HANDS.includes(s) && (twoIn(out) || It.def(k[s]).maos >= 2 && out[s === 'mao' ? 'outra' : 'mao']))) out[s] = k[s];
     }
     act(v, out, bag, !!(e && e.kit) || !!(G.Possess && G.Possess.is && G.Possess.is(v))); // (the god's body: only its own, D-426)
+    if (!(e && e.kit) && !(G.Possess && G.Possess.is && G.Possess.is(v))) ball(v, out); // (the house's ball: 22c, D-612)
     if (loaded(v) || v.gear) freeHands(out);
     return out;
   };
@@ -181,11 +207,11 @@
     const e = v.equip && typeof v.equip === 'object' ? v.equip : null, b = v.mochila && typeof v.mochila === 'object' ? v.mochila : null;
     const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0;
     let same = !!m.out && m.v === v && m.act === v.act && m.role === v.role && m.unit === v.unit && m.arm === v.arm && m.elite === v.elite && m.cap === !!v.captive
-      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit);
+      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg);
     if (same && e) for (let i = 0; i < SLOTS.length; i++) if (m.es[i] !== (e[SLOTS[i]] || null)) { same = false; break; }
     if (same) { let n = 0; if (b) for (const k in b) if (b[k] > EPS) { if (m.bk[n] !== k || m.bn[n] !== b[k]) { same = false; break; } n++; } if (same && n !== m.bl) same = false; }
     if (same) return m.out;
-    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day;
+    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg);
     m.e = !!e; m.kit = !!(e && e.kit); m.es = m.es || new Array(SLOTS.length); for (let i = 0; i < SLOTS.length; i++) m.es[i] = e ? e[SLOTS[i]] || null : null;
     m.bk = m.bk || []; m.bn = m.bn || []; let n = 0; if (b) for (const k in b) if (b[k] > EPS) { m.bk[n] = k; m.bn[n] = b[k]; n++; } m.bl = n;
     m.out = Inv.held(v); return m.out;

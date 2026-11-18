@@ -44,6 +44,11 @@
 // O mundo:
 //  i16 as telas não escrevem: o mesmo mundo com e sem «quadros» (as portas de leitura entre os passos e as portas do mundo pedidas
 //     de fora do passo, recusadas) é idêntico; e o pedido de fora fica contado para o verificador;
+//  i17 as coisas do dia (22c, D-612): a caneca de quem bebe e brinda (de barro onde o povo teve a cerâmica, senão de madeira), os
+//     grilhões de quem é levado (de ferro onde o povo forja o ferro, senão de corda; a outra mão vazia), a bola da criança que
+//     brinca (numa casa em duas, pela casa; de couro onde o povo teve couro, senão de vime; nunca na perseguição), a muleta do
+//     lado da perna perdida (ou na outra mão, se o ofício segura aquela; nenhuma no guerreiro); puras; a cerâmica que chega faz
+//     a caneca de barro; o armazém dá a caneca do que tem; o corpo sem perna ganha a muleta de verdade, uma vez;
 //  x1 os casos ruins: o pedido de um corpo devolvido e o de um corpo morto não acontecem; a casa com coisas que cai; o deus
 //     segura o corpo na mão; e nenhum erro de módulo nem do console.
 const fs = require('fs'), path = require('path');
@@ -143,7 +148,7 @@ if (on('i2')) {
   // (the trades: the lumberjack's axe on the back, the elder's staff in the hand, a child nothing)
   const lj = people(x => grown(x))[0]; const t1 = Inv.kit(Object.assign({}, lj, { role: 'lenhador', act: '', carry: null, unit: null, arm: null, gear: null })); if (kindOf(t1.costas) !== 'machado' || t1.mao) bad.push(`o lenhador: ${JSON.stringify(t1)}`);
   const el = Inv.kit(Object.assign({}, lj, { role: 'anciao', age: 66, act: '', carry: null, unit: null, arm: null, gear: null })); if (el.mao !== 'cajado') bad.push(`o ancião: ${JSON.stringify(el)}`);
-  const kid = people(x => x.age >= 3 && x.age < 12)[0]; if (kid && Object.values(Inv.kit(kid)).some(x => typeof x === 'string')) bad.push('uma criança com coisas');
+  const kid = people(x => x.age >= 3 && x.age < 12)[0]; if (kid && Object.values(Inv.kit(Object.assign({}, kid, { task: null }))).some(x => typeof x === 'string')) bad.push('uma criança com coisas'); // (out of the children's game: the ball is i17's)
   // (pure: a thousand questions change nothing of the world, nor its chance; the same answer for the same person)
   const all = people(() => true); let same = true; for (let r = 0; r < 3; r++) for (const o of all) { const a = JSON.stringify(Inv.kit(o)), b = JSON.stringify(Inv.held(o)); if (a !== b && !Inv.real(o)) same = false; }
   const fp1 = fpOf();
@@ -492,6 +497,59 @@ if (on('i16')) {
   };
   const [a, oa] = run(true), [b, ob] = run(false);
   ok('i16 as telas não escrevem: o mesmo mundo com e sem quadros; o pedido de fora do passo recusado e contado', a === b && oa > 0 && ob === 0, `com quadros ${a}, sem ${b}; pedidos de fora: ${oa} e ${ob}`);
+}
+
+// ================================================================ 22c: the things of daily life (D-612)
+// (the cup of who drinks, the bonds of who is led, the ball of a child at play, the crutch of who lost a leg — each in the material
+// the people has had (G.Origem.matOK): the wood always and the clay of its pottery, the cord always and the iron of its forge, the
+// withies always and the leather of its hides; the crutch on the lost leg's side; nothing of the world changed by asking; the
+// god's body with a lost leg gets its crutch made real once; and the store gives a cup of what it has)
+if (on('i17')) {
+  open(WORLD); const bad = [], said = []; const kindOf = k => (k ? It.parse(k)[0] : null), matOf = k => (k ? It.def(k).mat : null);
+  const fp0 = fpOf(); const O = G.Origem;
+  const o = people(x => grown(x) && !x.lost && plain(x))[0]; const fid = G.Fac.idOfV(o), arts = Inv.artsOf(o);
+  const copy = (x, f) => Object.assign({}, x, { act: '', carry: null, unit: null, arm: null, gear: null, task: null, role: 'agricultor', lost: null }, f);
+  // (the cup: in the hand of who drinks and of who toasts, of clay where the people has had the pottery's ware, else of wood)
+  for (const act of ['drink', 'toast']) { const h = Inv.kit(copy(o, { act })); const want = O.matOK(fid, 'barro', arts) ? 'barro' : 'madeira'; if (kindOf(h.mao) !== 'caneca' || matOf(h.mao) !== want) bad.push(`quem ${act === 'drink' ? 'bebe' : 'brinda'}: ${h.mao} (o povo teria ${want})`); }
+  said.push(`a caneca: ${Inv.kit(copy(o, { act: 'drink' })).mao}`);
+  // (the bonds: in both hands of who is led bound — the other hand empty —, of iron where the people forges iron, else of cord)
+  { const h = Inv.kit(copy(o, { act: 'bound' })); const want = O.matOK(fid, 'ferro', arts) ? 'ferro' : 'corda'; if (kindOf(h.mao) !== 'grilhoes' || matOf(h.mao) !== want || h.outra) bad.push(`quem é levado: ${JSON.stringify({ mao: h.mao, outra: h.outra })} (o povo teria ${want})`); said.push(`os grilhões: ${h.mao}`); }
+  // (the ball: a child at play — not in the chase, nor out of the game — in one house of two, by the house; leather if the people has had hides)
+  { const kids = people(x => x.age >= 3 && x.age < 13); let n = 0, with_ = 0, chase = 0, idle = 0, wrong = 0;
+    for (const k of kids) { n++; const h = Inv.kit(Object.assign({}, k, { task: { type: 'play', st: 1 }, act: '', carry: null })); if (h.mao) { with_++; if (kindOf(h.mao) !== 'bola' || matOf(h.mao) !== (O.matOK(G.Fac.idOfV(k), 'couro', Inv.artsOf(k)) ? 'couro' : 'vime')) wrong++; }
+      if (Inv.kit(Object.assign({}, k, { task: { type: 'play', st: 2, chase: 1 }, act: '', carry: null })).mao) chase++; if (Inv.kit(Object.assign({}, k, { task: null, act: '', carry: null })).mao) idle++;
+      const same = Inv.kit(Object.assign({}, k, { task: { type: 'play', st: 1 }, act: '' })).mao; if (kids.some(j => j !== k && j.home === k.home && !!Inv.kit(Object.assign({}, j, { task: { type: 'play', st: 1 }, act: '', carry: null })).mao !== !!same && !j.carry && !k.carry)) wrong++; }
+    if (!n || with_ < n * 0.2 || with_ > n * 0.8 || chase || idle || wrong) bad.push(`a bola: ${with_} de ${n} crianças brincando com bola, ${chase} na perseguição, ${idle} fora da brincadeira, ${wrong} erradas`);
+    said.push(`a bola: ${with_} de ${n} crianças a brincar (a da casa)`); }
+  // (the crutch: in the hand of the lost leg's side — the right for an odd id, as the stump —, or the other if the trade holds it;
+  // none where the trade holds both)
+  { const odd = people(x => grown(x) && x.id % 2 === 1)[0], even = people(x => grown(x) && x.id % 2 === 0)[0];
+    const leg = { leg: 1 }; const a = Inv.kit(copy(odd, { lost: leg })), b = Inv.kit(copy(even, { lost: leg }));
+    const c = Inv.kit(copy(odd, { lost: leg, role: 'anciao', age: 66 })), w = Inv.kit(copy(odd, { lost: leg, role: 'guerreiro' }));
+    if (kindOf(a.mao) !== 'muleta' || kindOf(b.outra) !== 'muleta' || b.mao) bad.push(`a muleta: id ímpar ${JSON.stringify({ mao: a.mao, outra: a.outra })}, par ${JSON.stringify({ mao: b.mao, outra: b.outra })}`);
+    if (kindOf(c.mao) !== 'cajado' || kindOf(c.outra) !== 'muleta') bad.push(`o ancião sem perna: ${JSON.stringify({ mao: c.mao, outra: c.outra })}`);
+    if ([w.mao, w.outra].some(x => kindOf(x) === 'muleta')) bad.push(`o guerreiro sem perna com a muleta no lugar da arma: ${JSON.stringify({ mao: w.mao, outra: w.outra })}`);
+    said.push(`a muleta: ímpar na mão ${a.mao}, par na outra ${b.outra}, o ancião cajado e muleta`); }
+  // (pure: asking changed nothing of the world)
+  const fp1 = fpOf(); if (fp0 !== fp1) bad.push('O MUNDO MUDOU com as perguntas');
+  // (the clay had: the pottery's ware come into a people that never had it — the cup turns clay; never by the art)
+  { const f2 = [...S.factions.values()].filter(f => f.alive !== false && !O.had(f.id, 'barro')).sort(byId)[0];
+    if (f2) { const v2 = people(x => G.Fac.idOfV(x) === f2.id && grown(x))[0]; const before = v2 ? Inv.kit(copy(v2, { act: 'drink' })).mao : null; give(f2.id, 'ceramica', 2); const after = v2 ? Inv.kit(copy(v2, { act: 'drink' })).mao : null;
+      if (!v2 || matOf(before) !== 'madeira' || matOf(after) !== 'barro' || !O.had(f2.id, 'barro')) bad.push(`o barro tido: ${before} → ${after} (tido ${O.had(f2.id, 'barro')})`); said.push(`${f2.name}: sem cerâmica ${before}, com ela ${after}`); }
+    else said.push('(todo povo já teve cerâmica)'); }
+  // (the store gives a cup of what it has: clay from its ceramica, else wood)
+  { const c = atStore(x => !x.lost); if (c) { const v = c.v; const r1 = Inv.offer(v, 'caneca'); const cer = stock(c.fid, 'ceramica');
+      if (cer >= 0.25 ? r1.k !== 'caneca.barro' || !r1.can : r1.k !== 'caneca.madeira') bad.push(`o armazém dá ${r1.k} (cerâmica ${cer})`); said.push(`o armazém: ${r1.k} (${r1.need.map(x => x.n + ' ' + x.k).join(', ')})`); } }
+  // (the god's body with a lost leg: its crutch made real once, in the hand of its side — the ledger's «kit»)
+  { const v = people(x => grown(x) && Po.can(x).ok && plain(x) && x.id !== o.id)[0];
+    if (v) { god(() => { v.lost = { leg: 1 }; }); const n0 = lastN(); take(v); const kit = lines(n0, e => e[8] === 'kit' && e[4] === 'm:' + v.id); const e = Inv.equipOf(v); const side = Inv.crutchSide(v);
+      if (kit.length !== 1 || kindOf(e[side]) !== 'muleta' || kindOf(Inv.held(v)[side]) !== 'muleta') bad.push(`o corpo sem perna: ${kit.length} linha(s) «kit», ${side} = ${e[side]}`); said.push(`o corpo sem perna: ${e[side]} na ${side}`);
+      // (the cup of the tavern is the place's: the god's body, with things of its own, drinks from it too — and is never given the trade's tool)
+      const hd = Inv.held(Object.assign({}, v, { act: 'drink' })), hc = Inv.held(Object.assign({}, v, { act: 'chop' }));
+      if (kindOf(hd.mao) !== 'caneca' || (kindOf(hc.mao) === 'machado' && !Object.keys(v.mochila || {}).some(k => It.parse(k)[0] === 'machado'))) bad.push(`o corpo bebendo: ${hd.mao}; cortando: ${hc.mao}`); said.push(`o corpo bebe da caneca da casa (${hd.mao})`);
+      Po.release('deus'); M.viver(0.2); } }
+  const nv = novas();
+  ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ the bad cases

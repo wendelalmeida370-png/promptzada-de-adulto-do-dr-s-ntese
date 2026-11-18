@@ -112,6 +112,9 @@
   Anim.drive = function (a, I, out, L, dt) {
     dt = Math.max(0, Math.min(dt || 0, 0.1)); a.t += dt;
     const s = I.s || 1, sp = Math.max(0, I.sp || 0); let st = I.st || 'idle';
+    // (the stride's size is the leg's: a child's short legs step as short legs do — the cadence and the stride of their length, by
+    // the Froude number, and the foot standing still under them; D-639, D-614)
+    const sg = s * (L && L.legK > 0 ? L.legK : 1);
     // (the clip of the state — the left-handed one's twin where it has one: I.lefty, D-596)
     const C = Anim.CLIPS && ((I.lefty && Anim.CLIPS[st + '~m']) || Anim.CLIPS[st]);
     // (the porte the reader gives — eased in the memory — and the stride's options it asks: the legs and the pace go by the stride)
@@ -134,7 +137,7 @@
     // the stride: its gait (the run past its margin, the walk under its own, a crossfade of a third of a second between, phase to
     // phase), its speed (easing out in a stop), its phase at the cadence of that speed
     if (base === 'move') {
-      const goal = I.run ? true : I.walk ? false : Ga.mode(a.run, sp, s); a.run = goal;
+      const goal = I.run ? true : I.walk ? false : Ga.mode(a.run, sp, sg); a.run = goal;
       a.rw += ((goal ? 1 : 0) - a.rw) * (1 - Math.exp(-dt / 0.12)); if (Math.abs(a.rw - (goal ? 1 : 0)) < 1e-3) a.rw = goal ? 1 : 0;
       // (the speed the stride is made for: the body's, eased — a speed that jumps (a road's edge, a sprint let go) is a stride that
       // grows or shortens over a step, never in a frame)
@@ -146,10 +149,10 @@
         const P = L.plant; let k = 1;
         if (P && P[0].on && P[1].on) { const c = Math.cos(I.yaw), n = Math.sin(I.yaw); k = (P[0].x - I.X) * c + (P[0].z - I.Z) * n < (P[1].x - I.X) * c + (P[1].z - I.Z) * n ? 0 : 1; }
         // (and a little on or back by the id: two who set off in the same frame do not walk in step — D-599)
-        a.ph = Ga.startPhase(k, Math.max(v, 0.8), s, a.rw) + 0.12 * (G.hash((I.id || 0) * 59 + 11) - 0.5);
+        a.ph = Ga.startPhase(k, Math.max(v, 0.8), sg, a.rw) + 0.12 * (G.hash((I.id || 0) * 59 + 11) - 0.5);
       }
-      a.ph += Ga.freq(v, s, a.rw) * Ga.cad(go) * dt;
-      stride(out, a, st, v, s, I, go);
+      a.ph += Ga.freq(v, sg, a.rw) * Ga.cad(go) * dt;
+      stride(out, a, st, v, sg, I, go);
     } else {
       // (a posture's own clock — its breath, its weight shifts —, or the clip's base standing)
       posture(out, base, I.t !== undefined ? I.t : a.t, sp);
@@ -161,7 +164,7 @@
     // seated or resting with the hands free and nothing else over it, the little thing of this moment (the idle: anim-ocio.js, its
     // time on the world's clock, I.ctx the reader's weights; D-599)
     let ovk = I.over, ovu = I.overK; a.oc = null;
-    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = o.k; ovu = o.u; a.oc = o.k; a.ocU = o.u; } }
+    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = Anim.ocioClip ? Anim.ocioClip(o.k, I.id || 0, L) : o.k; ovu = o.u; a.oc = ovk; a.ocU = o.u; } }
     const O = ovk && Anim.CLIPS ? (I.lefty && Anim.CLIPS[ovk + '~m']) || Anim.CLIPS[ovk] : null;
     // (the clip over the top on a clock of its own, a.ok: a wave over a seated meal does not start the meal's clip again — L-1771)
     if (O && O !== a.over) { a.over = O; a.ok = 0; }

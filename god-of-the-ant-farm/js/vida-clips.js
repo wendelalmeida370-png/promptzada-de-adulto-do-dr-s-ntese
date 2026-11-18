@@ -12,11 +12,11 @@
   const K = (id, def) => { const Q = G.ANIM_CLIPS = G.ANIM_CLIPS || []; Q.push([id, def]); if (G.Anim3D && G.Anim3D.mirrorDef) Q.push([id + '~m', G.Anim3D.mirrorDef(def)]); };
   const ARMS = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL', 'shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist'];
   // (bound, walking: the hands held together before the belly, as tied — the head bowed — over the stride; the legs walk under
-  // it, led — the act the world gives the prisoner taken to the cell: crime.js, 'bound'. No shackles drawn: the world has none
-  // yet, D-548 — the hands are only joined)
-  K('bound-andar', { dur: 2, mask: ARMS.concat(['neck']), in: 0.3, out: 0.35, events: { contact: 0.5 },
+  // it, led — the act the world gives the prisoner taken to the cell: crime.js, 'bound'. The bonds are the inventory's: the cord
+  // or the iron of the people that binds — G.Inv.held, D-612 —, the left hand on its ring: the thing's other hand, offW)
+  K('bound-andar', { dur: 2, mask: ARMS.concat(['neck', 'offW']), in: 0.3, out: 0.35, events: { contact: 0.5 }, item: { hand: 'mao', two: true },
     keys: { shLp: [[0, -22], [1, -22]], shRp: [[0, -22], [1, -22]], shLr: [[0, -6], [1, -6]], shRr: [[0, 6], [1, 6]], elL: [[0, 64], [1, 64]], elR: [[0, 64], [1, 64]],
-      grip: [[0, 0.6], [1, 0.6]], gripL: [[0, 0.6], [1, 0.6]], neck: [[0, 14], [0.5, 17], [1, 14]] } });
+      grip: [[0, 0.6], [1, 0.6]], gripL: [[0, 0.6], [1, 0.6]], neck: [[0, 14], [0.5, 17], [1, 14]], offW: [[0, 1], [1, 1]] } });
 
   // ============================== the idle: the little things (22c fase 2, D-599) ==============================
   // Each one a clip of the arms, the head or the top, played over the stance as the idle's scheduler says (js/anim-ocio.js: its
@@ -58,10 +58,16 @@
   // go inside a cape and the belly, T-1613; the reach of the side of the belly turned out, less far back and less bent)
   const AK = { shRr: -20, shRp: -25, elR: -10 }, AKL = { shLr: 20, shLp: -15, elL: -10 };
   oc('oc-bracos-cruzados', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.2, mix(at(1, 'ladoBarriga', AK), at(-1, 'ladoBarriga', AKL))], [0.85, mix(at(1, 'ladoBarriga', mix(AK, { elR: AK.elR + 3 })), at(-1, 'ladoBarriga', mix(AKL, { elL: AKL.elL + 3 })))], [1, mix(r0, l0)]]);
+  // (the hands on the hips — of who wears nothing over the arms that the open elbows would pierce, no cape, no toga, no long skirt:
+  // in the arms-crossed moment, one person in two by the id, Anim3D.ocioClip —: the palms at the sides of the waist, the elbows out
+  // and back — the angles the rig's own arm reach finds, P3.armIK: T-1618, D-613)
+  const HIP = { shRp: 55.6, shRr: -11, elR: 112.4, shRy: 42.9 }, HIPL = { shLp: 55.6, shLr: 11, elL: 112.4, shLy: -42.9 };
+  oc('oc-maos-cintura', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.2, mix(HIP, HIPL, { grip: 0.35, gripL: 0.35 })], [0.85, mix(HIP, HIPL, { shRp: 57, shLp: 57, grip: 0.35, gripL: 0.35 })], [1, mix(r0, l0)]]);
   oc('oc-maos-costas', 4, RA.concat(LA), [[0, mix(r0, l0)], [0.22, mix(at(1, 'costas'), at(-1, 'costas'))], [0.85, mix(at(1, 'costas'), at(-1, 'costas'))], [1, mix(r0, l0)]]);
   oc('oc-maos-juntas', 3.6, RA.concat(LA), [[0, mix(r0, l0)], [0.22, mix(at(1, 'juntas'), at(-1, 'juntas'), { grip: 0.5, gripL: 0.5 })], [0.85, mix(at(1, 'juntas'), at(-1, 'juntas'), { grip: 0.5, gripL: 0.5 })], [1, mix(r0, l0)]]);
   // the tired: a stretch, a yawn, a sigh, the breath caught bent over
-  oc('oc-espreguicar', 3, RA.concat(LA, HD, ['lean']), [[0, mix(r0, l0, { lean: 0 })], [0.35, mix(at(1, 'alto'), at(-1, 'alto'), { lean: -4, neck: -12, grip: 0.7, gripL: 0.7 })], [0.62, mix(at(1, 'alto', { shRr: -8 }), at(-1, 'alto', { shLr: 8 }), { lean: -5, neck: -14 })], [1, mix(r0, l0, { lean: 0, neck: 0 })]], { in: 0.3, out: 0.4 });
+  // (the stretch leans back 3 to 4°: at 5 the bronze cuirass's foot rose over the hip by 4 mm — L-1776)
+  oc('oc-espreguicar', 3, RA.concat(LA, HD, ['lean']), [[0, mix(r0, l0, { lean: 0 })], [0.35, mix(at(1, 'alto'), at(-1, 'alto'), { lean: -3, neck: -12, grip: 0.7, gripL: 0.7 })], [0.62, mix(at(1, 'alto', { shRr: -8 }), at(-1, 'alto', { shLr: 8 }), { lean: -4, neck: -14 })], [1, mix(r0, l0, { lean: 0, neck: 0 })]], { in: 0.3, out: 0.4 });
   oc('oc-bocejar', 2.4, RA.concat(HD), [[0, mix(r0, { neck: 0 })], [0.3, mix(at(1, 'boca'), { neck: -10 })], [0.7, mix(at(1, 'boca'), { neck: -8 })], [1, mix(r0, { neck: 0 })]]);
   oc('oc-suspirar', 2.4, ['lean', 'neck', 'breath', 'shLr', 'shRr'], [[0, { lean: 0, neck: 0, breath: 0, shLr: REST.shLr, shRr: REST.shRr }], [0.35, { lean: 3, neck: -4, breath: 0.9 }], [0.65, { lean: 7, neck: 13, breath: -0.6, shLr: 1, shRr: -1 }], [1, { lean: 0, neck: 0, breath: 0, shLr: REST.shLr, shRr: REST.shRr }]]);
   oc('oc-arquejar', 2.6, RA.concat(LA, HD, ['lean', 'breath']), [[0, mix(r0, l0, { lean: 0, breath: 0 })], [0.3, mix({ shRp: -32, shRr: 4, elR: 12, shLp: -32, shLr: -4, elL: 12 }, { lean: 28, neck: -12, breath: 1 })], [0.55, { lean: 29, neck: -12, breath: -1 }], [0.8, mix({ shRp: -30, shRr: 4, elR: 14, shLp: -30, shLr: -4, elL: 14 }, { lean: 27, neck: -10, breath: 1 })], [1, mix(r0, l0, { lean: 0, neck: 0, breath: 0 })]]);

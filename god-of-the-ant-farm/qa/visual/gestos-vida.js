@@ -15,6 +15,8 @@
 //   g8  the mirror: a gesture's left-handed twin (`id~m`) is the same gesture on the other side — the left palm where the right
 //       one was, mirrored, within 1 cm;
 //   g12 the hips of a stride at every speed and cadence within a knee's bend of standing (L-1773)
+//   g13 the hands on the hips only for who wears nothing over the arms (T-1618, D-613)
+//   g14 the child of short legs: the bones by the form's numbers, the stride of a short leg (D-639, D-614)
 //   g11 the pairs (D-605): each part of an act of two with its hands on the other, the two at the act's distance, facing — at the
 //       touch, a hand within 5 cm of where it goes (the other's back, chest, shoulder; where two hands meet), the trunks 4 cm apart
 //       at least, no palm in either trunk or head
@@ -25,7 +27,7 @@
 //   CLIPES=a,b                               only those clips (to try one in seconds)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const L0 = require('./corpo-rig.js');
-const { G, THREE, P3, A, LOOK } = L0; const B = P3.B;
+const { G, THREE, P3, A, LOOK, B3 } = L0; const B = P3.B;
 const ROOT = path.resolve(__dirname, '..', '..');
 // (the clips of the other files the page runs — the interaction, the trades, the fight —, queued to the one registry as they are)
 for (const f of ['js/interacao-clips.js', 'js/trabalho-clips.js', 'js/combate-clips.js']) try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); } catch (e) { console.log('(sem ' + f + ': ' + e.message + ')'); }
@@ -35,7 +37,11 @@ const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js
 const ids = Object.keys(A.CLIPS).filter(id => (process.env.GRUPO !== '22c' || OURS.has(id)) && (!process.env.CLIPES || process.env.CLIPES.split(',').includes(id))).sort();
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
 // the bodies: a man and a woman at three ages — the size of the age (People3D's lookFill: a child of 8 is 1.2 m, an elder of 75 1.68 m)
-const BODIES = [['homem 30', { s: 1, fem: false }], ['mulher 30', { s: 0.95, fem: true }], ['menino 8', { s: (0.75 + 0.5 * 0.9) / 1.75, fem: false, headK: 1.18 }], ['menina 8', { s: (0.75 + 0.5 * 0.9) / 1.75, fem: true, headK: 1.18 }], ['velho 75', { s: 1.68 / 1.75, fem: false }], ['velha 75', { s: 1.68 / 1.75 * 0.95, fem: true }]];
+// (a child's proportions as G.Feicao gives them by the age, D-639 — the head bigger, the legs and the arms shorter, the trunk as long as
+// keeps the height: the numbers of feicao.js's prop, here for the ages the proof draws; the rig poses the bones by them, D-614)
+const SM = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+const PROP = age => { const ch = 1 - SM(0, 15, age), hk = 1 - SM(0, 13, age); const cab = 1 + 0.3 * hk, per = 1 - 0.22 * ch, bra = 1 - 0.12 * ch; return { headK: cab, legK: per, armK: bra, trunkK: (1.75 - 0.92 * per - 0.21 * cab) / 0.62 }; };
+const BODIES = [['homem 30', { s: 1, fem: false }], ['mulher 30', { s: 0.95, fem: true }], ['menino 8', Object.assign({ s: (0.75 + 0.5 * 0.9) / 1.75, fem: false }, PROP(8))], ['menina 8', Object.assign({ s: (0.75 + 0.5 * 0.9) / 1.75, fem: true }, PROP(8))], ['velho 75', { s: 1.68 / 1.75, fem: false }], ['velha 75', { s: 1.68 / 1.75 * 0.95, fem: true }]];
 const pos = (R, b) => { const e = R[b].elements; return [e[12], e[13], e[14]]; };
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const loc = (R, b, x, y, z) => { const e = R[b].elements; return [e[0] * x + e[4] * y + e[8] * z + e[12], e[1] * x + e[5] * y + e[9] * z + e[13], e[2] * x + e[6] * y + e[10] * z + e[14]]; };
@@ -205,5 +211,32 @@ if (on('g12')) {
   let worst = 0, at = ''; for (const g of ['walk', 'run']) for (let n = 0.5; n <= 9; n += 0.5) for (let k = 0.8; k <= 1.301; k += 0.05) for (let u = 0; u < 1; u += 1 / 64) { const h = G.Gait.height(g, n, u, k); if (!(h >= -0.6 - 1e-6 && h <= 1e-6) && Math.abs(h) > worst) { worst = Math.abs(h); at = `${g} ${n} cadência ${r2(k)}`; } }
   ok('g12 a bacia de uma passada em toda velocidade e cadência entre 0 e 60 cm abaixo de em pé', !worst, worst ? `FORA: ${worst.toExponential(1)} (${at})` : 'andar e correr, 0,5 a 9 m/s, cadência 0,8 a 1,3');
 }
+// g13 the hands on the hips (T-1618, D-613): the arms-crossed moment is the hands on the hips for one person in two — by the id — of
+// those with nothing over the arms (no cape, toga, blouse nor long skirt: L.armOut), never for the others, never another clip
+if (on('g13')) { let bare = 0, over = 0, other = 0; const N = 400;
+  for (let id = 1; id <= N; id++) { if (A.ocioClip('oc-bracos-cruzados', id, { armOut: 0 }) === 'oc-maos-cintura') bare++; if (A.ocioClip('oc-bracos-cruzados', id, { armOut: 0.07 }) !== 'oc-bracos-cruzados') over++; for (const k of A.OCIO_LIST) if (k !== 'oc-bracos-cruzados' && A.ocioClip(k, id, { armOut: 0 }) !== k) other++; }
+  ok('g13 as mãos na cintura só de quem não tem nada sobre os braços', bare > N * 0.35 && bare < N * 0.65 && !over && !other && !!A.CLIPS['oc-maos-cintura'], `${bare} de ${N} sem capa, ${over} com capa, toga, blusa ou saia longa; ${other} outros gestos trocados`); }
+// g14 the child of short legs (D-639, D-614): at 3, 8 and 12 years, a boy and a girl, with the proportions of the age — standing the
+// hips at the leg's height, the thigh, the shin, the upper arm, the forearm and the trunk of their numbers (within 1%), the head at
+// the height the age gives; walking at 1 m/s the standing foot still (< 2 cm), the soles on the ground, the steps quicker than a
+// grown one's (the stride of a short leg); the skin's own check quiet
+if (on('g14')) { const bad = [], said = []; const cadOf = {};
+  for (const [age, s0] of [[30, 1], [12, 1.45 / 1.75], [8, 1.2 / 1.75], [3, 0.92 / 1.75]]) for (const fem of [false, true]) { const P = age >= 15 ? { headK: 1, legK: 1, armK: 1, trunkK: 1 } : PROP(age); const s = s0 * (fem ? 0.97 : 1);
+    const L = Object.assign({}, LOOK, { s, fem }, P, { plant: [{ on: 0 }, { on: 0 }], ground: 0, gnd: null, held: null, carry: false, reach: null, pair: null, lod: 0 });
+    const a = A.memory(), pose = A.POSE0(), I = {}; let z = 0; const dt = 1 / 60; let slip = 0, low = 9, strikes = 0, prev = 0; const last = [null, null]; let m = null;
+    for (let i = 0; i < 300; i++) { const sp = i < 30 ? 0 : 1.0; z += sp * dt;
+      Object.assign(I, { st: sp ? 'walk' : 'idle', t: i * dt, sp, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s, run: 0, walk: sp ? 1 : 0, over: null, overK: undefined, clipK: undefined, drunk: 0, tired: 0, id: 7, porte: null, clock: i * dt });
+      A.drive(a, I, pose, L, dt); const R = P3.rig(0, 0, z, Math.PI / 2, pose, L);
+      if (i === 25) m = { hip: pos(R, B.pel)[1] / s, thigh: dist(pos(R, B.thL), pos(R, B.snL)) / s, shin: dist(pos(R, B.snL), pos(R, B.ftL)) / s, upper: dist(pos(R, B.shL), pos(R, B.faL)) / s, fore: dist(pos(R, B.faL), pos(R, B.hdL)) / s, trunk: dist(pos(R, B.pel), pos(R, B.head)) / s };
+      if (i > 90) { for (let k = 0; k < 2; k++) { const ft = L.plant[k], f = pos(R, B.ftL + k); if (ft.on) { if (last[k]) slip = Math.max(slip, Math.hypot(f[0] - last[k][0], f[2] - last[k][2])); last[k] = f; } else last[k] = null; low = Math.min(low, f[1] - 0.044 * s); }
+        if (pose.stL && !prev) strikes++; prev = pose.stL; } }
+    const want = { hip: 0.92 * P.legK, thigh: 0.44 * P.legK, shin: Math.hypot(0.4 * P.legK, 0.02), upper: 0.3 * P.armK, fore: 0.29 * P.armK, trunk: 0.62 * P.trunkK }, nm = `${fem ? 'menina' : 'menino'} ${age}`;
+    for (const k in want) if (Math.abs(m[k] - want[k]) > want[k] * (k === 'hip' ? 0.02 : 0.01)) bad.push(`${nm}: ${k} ${r2(m[k])} (quer ${r2(want[k])})`);
+    if (slip > 0.02) bad.push(`${nm}: o pé de apoio escorrega ${r1(slip * 100)} cm`); if (low < -0.01) bad.push(`${nm}: a sola ${r1(low * 100)} cm debaixo do chão`);
+    const cad = strikes * 2 * 60 / (210 / 60); cadOf[age] = Math.max(cadOf[age] || 0, cad);
+    B3.begin(); P3.body(0, 0, 0, 0, Math.PI / 2, pose, L, null); B3.end(); const ck = B3.check ? B3.check() : []; if (ck && ck.length) bad.push(`${nm}: ${ck[0]}`);
+    if (!fem) said.push(`${nm}: a bacia a ${r2(m.hip)} da altura, a coxa ${r2(m.thigh)}, o tronco ${r2(m.trunk)}, o pé ${r1(slip * 100)} cm, ${Math.round(cad)} passos/min`); }
+  if (!(cadOf[3] > cadOf[30] && cadOf[8] > cadOf[30])) bad.push(`os passos da criança não são mais rápidos que os do grande (${JSON.stringify(cadOf)})`);
+  ok('g14 a criança de pernas curtas: os ossos pela forma, a passada da perna curta', !bad.length, bad.length ? bad.slice(0, 6).join(' · ') : said.join(' · ')); }
 console.log(fails.length ? `GESTOS-VIDA: ${fails.length} falha(s)` : 'GESTOS-VIDA: TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

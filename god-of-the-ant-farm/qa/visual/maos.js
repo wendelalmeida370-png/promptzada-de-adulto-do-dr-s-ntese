@@ -191,6 +191,67 @@ function measure(H, R) {
   ok('de noite, a caixa de duas mãos tira a tocha (o balde numa mão, não); a carga no ombro guarda a lança; trabalhando, a carga espera no chão ao lado', torch0 && !torch2 && torch1 && spear0 && !spear && Lw.held && Lw.held.grip === 'chao' && Math.abs(down) < 0.02,
     `tocha: sem carga ${torch0}, com a caixa ${torch2}, com o balde ${torch1} · lança: ${spear0} → ${spear} · cortando lenha: ${Lw.held ? Lw.held.grip : '-'} com o fundo a ${down === null ? '-' : down.toFixed(3)} m do chão`); }
 
+// ------------------------------ 22c: the things of daily life (D-612) ------------------------------
+// (the cup at the lips, the bonds on both wrists, the crutch from under the arm to where the lost leg's foot stands, the ball clear
+// of the thigh — each thing given in the hand as the inventory would (L.inv), driven by the game's animator in the gesture that
+// holds it; and each one drawn: the bonds in two pieces, one on each wrist)
+if (!G.ItemArt) { run('js/itemforma.js'); run('js/itemarte.js'); }
+{ const IA = G.ItemArt; const bad = [], info = [];
+  const INV0 = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, real: false };
+  // (a body driven by the animator in a state, 60 frames a second, walking at sp along +Z; each frame measured)
+  function drive(st, o, each) {
+    const L = Object.assign(P3.look(person({ age: o.age || 30 })), { plant: [{ on: 0 }, { on: 0 }], ground: 0, gnd: null, held: null, carry: false, reach: null, pair: null, lod: 0, inv: Object.assign({}, INV0, o.inv) });
+    const mem = A.memory(), pose = A.POSE0(), I = {}; const dt = 1 / 60; let z = 0;
+    for (let i = 0; i < Math.round((o.T || 2.6) / dt); i++) {
+      const t = i * dt; z += (o.sp || 0) * dt; const C = A.CLIPS[st];
+      Object.assign(I, { st, t, sp: o.sp || 0, yaw: Math.PI / 2, yawV: 0, acc: 0, X: 0, Z: z, ground: 0, s: L.s, run: 0, walk: o.sp ? 1 : 0, over: o.over || null, overK: o.over ? (t % 2) / 2 : undefined, clipK: C ? (C.loop ? (t / C.dur) % 1 : Math.min(1, t / C.dur)) : undefined, drunk: 0, tired: 0, id: 7, porte: null, clock: t });
+      A.drive(mem, I, pose, L, dt); const R = P3.rig(0, 0, z, Math.PI / 2, pose, L); each(R, pose, L, t);
+    }
+  }
+  const at = (F, p) => V(p[0], p[1], p[2]).applyMatrix4(F);
+  // the cup: at the belly upright; at the sip its rim's near side at the lips, tipped toward the face (the drink, ato-beber)
+  for (const key of ['caneca.madeira', 'caneca.barro']) { const m = IA.marks(key); let near = 9, tilt = 0, upright = 1, tipped = false;
+    drive('ato-beber', { inv: { mao: key } }, (R, pose, L, t) => { if (!pose.tool) return; const F = R[B.tool]; const hi = R[B.head].clone().invert(); const up = V(F.elements[4], F.elements[5], F.elements[6]).normalize();
+      const rim = at(F, m.boca).applyMatrix4(hi), upH = up.clone().transformDirection(hi); const toF = V(0, 0, -1); const inR = toF.sub(upH.clone().multiplyScalar(-upH.z)).normalize(); const lip = rim.add(inR.multiplyScalar(0.042));
+      const d = lip.distanceTo(V(0, 0.075, 0.11)); if (d < near) { near = d; tilt = Math.acos(Math.max(-1, Math.min(1, upH.y))) * 180 / Math.PI; tipped = upH.z < -0.15; }
+      if (t < 0.2 || t > 2.3) upright = Math.min(upright, up.y); });
+    if (near > 0.035) bad.push(`${key}: a borda a ${(near * 100).toFixed(1)} cm dos lábios no gole`); // (3 cm short: the cape over the shoulder, T-1622) if (!(tilt > 30 && tilt < 85) || !tipped) bad.push(`${key}: no gole inclinada ${tilt.toFixed(0)}° (${tipped ? 'para o rosto' : 'não para o rosto'})`);
+    if (upright < 0.9) bad.push(`${key}: segurada na barriga deitada (o eixo para cima ${upright.toFixed(2)})`);
+    info.push(`${key.split('.')[1]}: a borda a ${(near * 100).toFixed(1)} cm dos lábios, ${tilt.toFixed(0)}°`); }
+  // the bonds: the other palm on its place, each ring round its wrist — standing (the posture), walking (the clip over the stride)
+  for (const [st, sp, over] of [['bound', 0, null], ['walk', 1.1, 'bound-andar']]) for (const key of ['grilhoes.corda', 'grilhoes.ferro']) { let wr = 0, wl = 0, lp = 0, n = 0;
+    const C = G.ItemForma.cuffs, off = IA.grip(key).off;
+    drive(st, { sp, over, T: 2, inv: { mao: key } }, (R, pose, L, t) => { if (t < 0.6) return; n++;
+      // (the right ring in the right fist's frame, the left in the left's — as the drawing puts them: G.People3D's RX.alg)
+      const rR = at(R[B.tool], C.WR), wR = V().setFromMatrixPosition(R[B.hdR]); wr = Math.max(wr, rR.distanceTo(wR));
+      const FL = new THREE.Matrix4().copy(R[B.hdL]).multiply(new THREE.Matrix4().makeTranslation(-0.027, -0.076, 0)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2 + (pose.tool ? pose.wristL || 0 : 0))).multiply(new THREE.Matrix4().makeTranslation(-0.051, 0, 0));
+      const rL = at(FL, C.WL), wL = V().setFromMatrixPosition(R[B.hdL]); wl = Math.max(wl, rL.distanceTo(wL)); lp = Math.max(lp, at(R[B.tool], off).distanceTo(P3.palms(R)[0])); });
+    if (!n || wr > 0.03 || wl > 0.03 || lp > 0.015) bad.push(`${key} ${over || st}: a argola direita a ${(wr * 100).toFixed(1)} cm do pulso, a esquerda a ${(wl * 100).toFixed(1)}, a outra palma a ${(lp * 100).toFixed(1)} cm do lugar dela`);
+    else info.push(`${key.split('.')[1]} ${over || st}: argolas a ${(Math.max(wr, wl) * 100).toFixed(1)} cm dos pulsos`); }
+  // the crutch: under that armpit, the palm on it, its foot on the ground where the lost leg's foot stands — never under it, swung low
+  for (const [side, sp] of [['mao', 0], ['mao', 1.1], ['outra', 1.1]]) { let pad = [9, 0], palm = 0, low = 9, high = 0, kY = [9, 0], ok = 0, n = 0, slip = 0; let last = null;
+    drive(sp ? 'walk' : 'idle', { sp, T: 3, inv: { [side]: 'muleta.madeira' } }, (R, pose, L, t) => { if (t < 0.5) return; n++; const CR = P3.CR; if (!CR.ok) return; ok++;
+      const sh = V().setFromMatrixPosition(R[CR.k ? B.shR : B.shL]); const dp = CR.A.distanceTo(sh); pad = [Math.min(pad[0], dp), Math.max(pad[1], dp)];
+      palm = Math.max(palm, P3.palms(R)[CR.k].distanceTo(CR.G)); low = Math.min(low, CR.T.y); high = Math.max(high, CR.T.y); kY = [Math.min(kY[0], CR.kY), Math.max(kY[1], CR.kY)];
+      // (a foot of the crutch down — under a centimetre — keeps its place, as a foot planted does)
+      if (CR.T.y < 0.01 && last && last.y < 0.01) slip = Math.max(slip, Math.hypot(CR.T.x - last.x, CR.T.z - last.z) * (sp ? 1 : 0)); last = { x: CR.T.x, y: CR.T.y, z: CR.T.z }; });
+    const want = side === 'mao' ? 1 : 0;
+    if (ok < n || P3.CR.k !== want) bad.push(`muleta na ${side}: ${ok} de ${n} quadros com ela, do lado ${P3.CR.k}`);
+    if (pad[0] < 0.1 || pad[1] > 0.2) bad.push(`muleta na ${side}: a almofada a ${(pad[0] * 100).toFixed(0)}–${(pad[1] * 100).toFixed(0)} cm do ombro`);
+    if (palm > 0.012) bad.push(`muleta na ${side}: a palma a ${(palm * 100).toFixed(1)} cm dela`); if (low < -0.005 || high > 0.08) bad.push(`muleta na ${side}: o pé dela de ${(low * 100).toFixed(1)} a ${(high * 100).toFixed(1)} cm do chão`);
+    if (kY[0] < 0.9 || kY[1] > 1.1) bad.push(`muleta na ${side}: esticada de ${kY[0].toFixed(2)} a ${kY[1].toFixed(2)}`); if (slip > 0.012) bad.push(`muleta na ${side}: o pé dela escorrega ${(slip * 100).toFixed(1)} cm num quadro`);
+    if (!bad.some(b => b.startsWith('muleta na ' + side))) info.push(`muleta ${side}${sp ? ' andando' : ''}: a palma a ${(palm * 100).toFixed(1)} cm, o pé de ${(low * 100).toFixed(1)} a ${(high * 100).toFixed(1)} cm`); }
+  // the ball: carried by a child walking, clear of the thigh, above the ground
+  { let worst = 9, low = 9; const r = 0.072; const c0 = IA.marks('bola.couro').centro;
+    drive('walk', { sp: 0.9, T: 2, age: 8, inv: { mao: 'bola.couro' } }, (R, pose, L, t) => { if (t < 0.5) return; const c = at(R[B.tool], c0); const th = V().setFromMatrixPosition(R[B.thR]), kn = V().setFromMatrixPosition(R[B.snR]);
+      const ax = kn.clone().sub(th); const u = Math.max(0, Math.min(1, c.clone().sub(th).dot(ax) / ax.lengthSq())); worst = Math.min(worst, c.distanceTo(th.clone().add(ax.multiplyScalar(u)))); low = Math.min(low, c.y - r * L.s); });
+    if (worst < r * 0.75 + 0.07 || low < 0) bad.push(`a bola a ${(worst * 100).toFixed(1)} cm do eixo da coxa, o fundo a ${(low * 100).toFixed(1)} cm do chão`); else info.push(`a bola a ${(worst * 100).toFixed(0)} cm da coxa`); }
+  // and drawn: each thing in the frame of the hand that holds it — the bonds in two pieces
+  { const v = person({ act: 'bound' }); const L = P3.look(v); L.inv = Object.assign({}, INV0, { mao: 'grilhoes.ferro' }); L.ground = 0; L.plant = [{ on: 0 }, { on: 0 }];
+    const pose = Object.assign(A.POSE0(), A.pose('bound', 0, 0)); P3.toolsReset(); G.Body3D.begin(); P3.body(0, 0, 0, 0, Math.PI / 2, pose, L, null); G.Body3D.end();
+    const drawn = P3.tools().filter(x => x[0] === 'grilhoes.ferro'); if (drawn.length !== 2) bad.push(`os grilhões desenhados em ${drawn.length} pedaço(s), não em dois`); }
+  ok('as coisas do dia (22c): a caneca nos lábios, os grilhões nos dois pulsos, a muleta debaixo do braço até o chão, a bola longe da coxa', !bad.length, bad.length ? bad.slice(0, 6).join(' · ') : info.join(' · ')); }
+
 // ------------------------------ 20a: what is worn — the helmet, the cuirass — and the hair under the helmet ------------------------------
 // (the warrior's helmet is the inventory's kit, G.Inv.held(v).cabeca: drawn in its shape on the head, the hat and the hair of the
 // outfit giving way to it; a cuirass the outfit's yoked garments give way to — D-349, D-350. Then the worn and the stowed things

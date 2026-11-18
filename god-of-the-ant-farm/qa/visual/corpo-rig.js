@@ -213,9 +213,12 @@ const inside = (cm, bm) => {
 // their distance from the hips' line and fall from the knees. A blouse: in every state but the deep seats — sitting, on the
 // ground, crouching, lying —, where a skin bent by bones cannot lay it over the belly folded on the thighs: there at most
 // 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
+// (the states the game gives only to a figure with nothing over the arms that open elbows would pierce — the hands on the hips:
+// Anim3D.ocioClip, L.armOut, no cape, no toga, no blouse, no long skirt — are not dressed in those here either: 22c, T-1618)
+const BARE = new Set(['oc-maos-cintura', 'oc-maos-cintura~m']), OVER = new Set(['capa', 'toga', 'bata', 'saiaL']);
 { const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin', ...KNEELERS]); // (20a's gestures: the harvest bent double over the plants as low is; the knife at a carcass on one knee as rise is) // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
-    for (const st of STATES) { let fr = 0, wo = 0;
+    for (const st of STATES) { let fr = 0, wo = 0; if (BARE.has(st) && OVER.has(nm)) continue;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
       const seat = nm === 'bata' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
@@ -261,7 +264,7 @@ const through = (cm, bm, hem) => {
 };
 { const rows = []; let fail = 0; const WET = /swim|tread|drown|sleep|sick/, SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin', ...KNEELERS]); // (the gestures of 20a bent double or on one knee: as low and rise) // (the falls of D-333 and D-334: on the ground, as sleep and cook)
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
-    for (const st of STATES) { let o = 0, sh = 0, wo = 0;
+    for (const st of STATES) { let o = 0, sh = 0, wo = 0; if (BARE.has(st) && OVER.has(nm)) continue;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }
       const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && o > 0));
       if (o) row.push(`${st} ${o}${sh ? ' (' + sh + ' à mostra)' : ''} até ${(wo * 100).toFixed(1)} cm${bad ? ' FALHA' : ''}`); if (bad) fail++; }
