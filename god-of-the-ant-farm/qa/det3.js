@@ -10,7 +10,9 @@ const GAME = process.env.GAME || 'file://' + require('path').resolve(__dirname, 
 async function open(browser, frames, errs) {
   const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
   page.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n').slice(0, 3).join(' | ')));
-  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts/.test(t)) errs.push('console: ' + t.slice(0, 300)); });
+  // (the software 3D's own driver notes are not the game's — the same the 3D proofs set aside: the portrait of the god's panel copies
+  // the 3D's picture into the card, and the driver says «GPU stall due to ReadPixels», T-1630)
+  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver Message|GroupMarkerNotSet|software WebGL/.test(t)) errs.push('console: ' + t.slice(0, 300)); });
   if (!frames) await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto(GAME); await page.waitForTimeout(900);
