@@ -2,9 +2,8 @@
 // ============================================================
 //  The gestures of the scenes (22c onda 2, fase 5, D-607): the
 //  child down on the knees at the house's dog, the hand along its
-//  back; the soldier's drill — the thrust and the guard again, on
-//  the world's clock of the drill (the stroke at 3.6 s of 4: the
-//  'treinar' of act-servicos.js). The scene and its focus are the
+//  back; the soldier's drill — the thrust and the guard again,
+//  each one in their own time (L-1774). The scene and its focus are the
 //  reader's (vida3d.js, Vida3D.scene); only seen (rule 113); the
 //  thing in the soldier's hand is the inventory's, or none.
 // ============================================================
@@ -25,8 +24,10 @@
     keys: { shLp: [[0, -30], [1, -30]], shRp: [[0, -30], [1, -30]], shLr: [[0, -8], [1, -8]], shRr: [[0, 8], [1, 8]], elL: [[0, 74], [1, 74]], elR: [[0, 74], [1, 74]],
       shLy: [[0, -52], [1, -52]], shRy: [[0, 52], [1, 52]], grip: [[0, 0.35], [1, 0.35]], gripL: [[0, 0.35], [1, 0.35]],
       neck: [[0, 24], [0.5, 28], [1, 24]], lean: [[0, 5], [0.5, 6], [1, 5]] } });
-  // the drill: the guard, the step and the thrust at the stroke, back to the guard — on the drill's clock (period 4 s)
-  K('ato-treino', { dur: 4, period: 4, base: 'idle', mask: 'upper', in: 0.3, out: 0.3, events: { contact: 0.9 }, acts: ['drill'],
+  // the drill: the guard, the step and the thrust, back to the guard — each one on their own clock, kept apart from a neighbour's
+  // (the soldiers who copy the master's moves have his clock to a fifth of a second: on the world's they thrust in unison, L-1774;
+  // the drill gives the world nothing at the thrust — the god's body, which learns there, has its own act's clock, avatar.js)
+  K('ato-treino', { dur: 4, base: 'idle', mask: 'upper', in: 0.3, out: 0.3, events: { contact: 0.9 }, acts: ['drill'],
     keys: {
       shRp: [[0, -40], [0.75, -46], [0.88, -84], [0.92, -86], [1, -40]], shRr: [[0, -10], [0.88, -2], [1, -10]], elR: [[0, 84], [0.75, 90], [0.88, 12], [0.92, 10], [1, 84]],
       shLp: [[0, -52], [0.88, -40], [1, -52]], shLr: [[0, 14], [1, 14]], elL: [[0, 92], [0.88, 70], [1, 92]], grip: [[0, 1], [1, 1]], gripL: [[0, 0.8], [1, 0.8]],
