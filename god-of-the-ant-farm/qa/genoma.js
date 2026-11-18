@@ -12,6 +12,7 @@
 //   g6 ninguém decide pela aparência  o mesmo mundo vivido dez dias com os genomas de verdade e com todos trocados por um genoma
 //                   constante dá o mesmo mundo, campo por campo, fora o genoma (a prova forte da regra do dono)
 //   g7 o peso do save  quanto o genoma pesa no save (a metrópole pronta)
+//   g8 a mutação na regra  o passo de uma mutação nunca passa da regra do verificador (Ge.STEP): 200 mil filhos, a cauda contada
 //   e o verificador (qa/feicao-inv.js) limpo, e acusando o genoma escrito à mão
 //   [ONLY=g1,g6] node qa/genoma.js
 const path = require('path');
@@ -98,11 +99,15 @@ if (run('g4')) {
   const people = [...S.villagers.values(), ...S.dead.values()];
   const all = people.filter(p => Ge.valid(p.genoma)).length;
   const g1 = new Map(people.map(p => [p.id, p.genoma]));
+  const born = people.length > 0 && !Number.isFinite(G.mod('genoma.desde')); // (made after the genome: born with them — T-1589)
   // (the save again, with no genome — as the ready worlds are —, opened twice)
   const raw = JSON.parse(G.Save.serialize()); const bare = strip(raw); bare.savedAt = raw.savedAt;
   G.Save.apply(JSON.parse(JSON.stringify(bare))); const g2 = new Map([...G.S.villagers.values(), ...G.S.dead.values()].map(p => [p.id, p.genoma]));
   G.Save.apply(JSON.parse(JSON.stringify(bare))); const g3 = new Map([...G.S.villagers.values(), ...G.S.dead.values()].map(p => [p.id, p.genoma]));
-  let same = 0; for (const [k, g] of g2) if (g3.get(k) === g && g1.get(k) === g) same++;
+  // (the same save opened twice gives the same genomes; and, when the ready world came without them (the ones of before the
+  // genome), the first opening gave those too — a ready world made after the genome brings the ones its people were born with,
+  // and the save stripped of them is filled from the colours instead: T-1589)
+  let same = 0; for (const [k, g] of g2) if (g3.get(k) === g && (born || g1.get(k) === g)) same++;
   let mxS = 0, mxH = 0, who = ''; for (const v of G.S.villagers.values()) { const f = Fe.of(v); const e = dE(f.skin, v.skin); if (e > mxS) { mxS = e; who = `${v.name} ${v.skin}→${f.skin}`; } mxH = Math.max(mxH, dE(f.hair, v.hair)); }
   // (a damaged genome — cut short — is made again at the load, the same as the whole one would be)
   const one = [...G.S.villagers.values()][3]; const want = one.genoma; const dmg = JSON.parse(JSON.stringify(bare)); const ov = dmg.villagers.find(v => v.id === one.id); ov.genoma = 'abc';
@@ -115,7 +120,7 @@ if (run('g4')) {
     A[mi] = Math.abs(Mo[mi] - 0) + Math.abs(Mo[mi + 1] - 0) > Math.abs(Mo[mi] - 63) + Math.abs(Mo[mi + 1] - 63) ? 0 : 63; kid.genoma = Ge.encode(A);
     caughtOld = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.born = G.mod('genoma.desde') + 1; caughtNew = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.genoma = keepG; kid.born = keepB; }
   ok('g4 os saves de antes', all === people.length && same === g2.size && mxS < 3 && mxH < 5 && fixed === want && !after.length && caughtOld === false && caughtNew === true && M.limpo(),
-    `a cidade pronta (sem genoma): ${all} de ${people.length} — vivos e mortos — ganham um ao abrir · aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · o verificador depois: ${after.length ? after[0].msg : 'limpo'}; a cor de um filho fora dos pais: de quem nasceu antes ${caughtOld ? 'ACUSADA' : 'aceita (a cor que tinha)'}, de quem nasceu depois ${caughtNew ? 'acusada' : 'NÃO acusada'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
+    `a cidade pronta (${born ? 'com o genoma de quem nasceu' : 'sem genoma'}): ${all} de ${people.length} — vivos e mortos — com um ao abrir · sem ele, aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · o verificador depois: ${after.length ? after[0].msg : 'limpo'}; a cor de um filho fora dos pais: de quem nasceu antes ${caughtOld ? 'ACUSADA' : 'aceita (a cor que tinha)'}, de quem nasceu depois ${caughtNew ? 'acusada' : 'NÃO acusada'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ------------------------------ g5 o pai morto ------------------------------
@@ -174,6 +179,21 @@ if (run('inv')) {
   if (whole) { const w = F.of(whole).w, X = F.IDX; w[X.cotoBracoE] = 1; stump = QA.check().filter(q => q.sys === 'genoma'); w[X.cotoBracoE] = 0; const k = w[X.gordo]; w[X.gordo] = NaN; box = QA.check().filter(q => q.sys === 'genoma'); w[X.gordo] = k; }
   ok('o verificador (qa/feicao-inv.js)', !now.length && byHand.some(q => /não vem do pai nem da mãe/.test(q.msg)) && gone.some(q => /sem um genoma válido/.test(q.msg)) && stump.some(q => /sem a causa no mundo/.test(q.msg)) && box.some(q => /fora da caixa/.test(q.msg)),
     `agora ${now.length} · o genoma de um filho escrito à mão: «${(byHand[0] || {}).msg || 'NADA'}» · um genoma estragado: «${(gone[0] || {}).msg || 'NADA'}» · um coto sem causa: «${(stump[0] || {}).msg || 'NADA'}» · um peso sem número: «${(box[0] || {}).msg || 'NADA'}»`);
+}
+// ------------------------------ g8 a mutação na regra ------------------------------
+// (a child's allele is one of a parent's or a mutation of at most Ge.STEP from it — the generator and the verifier's rule are the
+// same number: a rare big draw of the normal step made a child the verifier took for a genome written by hand, Valéria #28905 of
+// the hundred years, 17 away from her father's: L-1709). 200 thousand births of two founders, each allele asked; and the births
+// where the step drawn passed the bound, counted, so the proof shows it reached the tail it is about
+if (run('g8')) {
+  const seed = 3404, mg = Ge.founder(1, 'romano', 0, seed), fg = Ge.founder(2, 'romano', 0, seed);
+  let bad = 0, ex = '', tail = 0; const t0 = process.hrtime.bigint();
+  for (let id = 100; id < 200100; id++) {
+    for (let g = 0; g < Ge.NG; g++) for (let k = 0; k < 2; k++) if (Ge.h32(seed, id, g, 13 + k) < 0.02 && Math.abs(Math.round(Ge.normInv(Ge.h32(seed, id, g, 15 + k)) * 4)) > Ge.STEP) tail++;
+    if (!Ge.fromParents(Ge.child(id, mg, fg, seed), mg, fg)) { if (!bad++) ex = '#' + id; }
+  }
+  ok('g8 a mutação na regra do verificador', Number.isFinite(Ge.STEP) && !bad && tail > 0,
+    `200 mil filhos de dois fundadores: ${bad ? bad + ' com um alelo fora da regra (o primeiro ' + ex + ')' : 'todo alelo do pai ou da mãe ou a um passo de no máximo ' + Ge.STEP} · ${tail} sorteios de mutação além do passo, levados ao passo · ${ms(t0).toFixed(0)} ms`);
 }
 // ------------------------------ as regras do guard, sabotadas ------------------------------
 // (each rule of the 22a, 197–203, accuses a violation planted in a copy of the game's js/: the guard run on the copy fails with it)
