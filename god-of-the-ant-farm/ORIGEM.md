@@ -123,16 +123,21 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 
 | Material | É feito de | Quando o povo pode |
 |---|---|---|
-| **bronze**, **ferro** | uma das **ferramentas** (machado, picareta, pá, enxada, foice, martelo, faca, vara, rede, remo) ou das **armas** (espada, lança, flecha — 20 a cada uma —, escudo, elmo, couraça) **daquele metal** do armazém (`of: 'bronze'`) | a arte do metal **e** o metal tido |
+| **bronze**, **ferro** | uma das **ferramentas** (machado, picareta, pá, enxada, foice, martelo, faca, vara, rede, remo; os grilhões de ferro: ½) ou das **armas** (espada, lança, flecha — 20 a cada uma —, escudo, elmo, couraça) **daquele metal** do armazém (`of: 'bronze'`) | a arte do metal **e** o metal tido |
 | **pedra** | a pedra e a madeira do armazém (o machado: ½ + ½; a lança: ¼ de pedra e ¾ de madeira; a faca: ¼ de pedra…) | sempre |
-| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
-| **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼) | sempre |
-| **couro** | o couro do armazém (o elmo: 1; a couraça: 3) | **só quem teve couro** (caçou ou abateu) |
+| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
+| **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼; a bola de vime: 0,1; os grilhões de corda: 0,1) | sempre |
+| **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15) | **só quem teve couro** (caçou ou abateu) |
+| **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
 
 - **O armazém dá o que a divisão dele tem** (`G.Inv.offer` / `Inv.make`): o melhor material de que o armazém tem com que fazer a coisa
   — nunca «o melhor que o povo sabe». **A coisa que volta** (`Inv.unmake`, a casa esvaziada, o que alguém achou no chão) volta ao
   seu bem e à sua parte: um machado de bronze, uma ferramenta de bronze; um de pedra, a sua pedra e a sua madeira.
+- **As coisas do dia** (22c, D-612): a **caneca** de quem bebe ou brinda (o ato), os **grilhões** de quem é levado amarrado (o
+  ato `bound`), a **bola** da criança que brinca (numa casa em duas), a **muleta** de quem perdeu a perna (`v.lost`) — todas pelo
+  kit, no melhor material que o povo teve: a caneca de barro onde houve cerâmica, os grilhões de ferro onde o povo forja o ferro,
+  a bola de couro onde houve couro; senão a madeira, a corda e o vime de sempre. Nenhuma é arma.
 - **O kit** (o que o 3D desenha de cada um, `G.Inv.kit`, puro) e **as coisas do ofício que viram de verdade** (`Inv.realize`) usam o
   melhor material **que o povo teve** (`O.matOK`). Um povo do bronze que nunca teve cobre e estanho desenha os guerreiros de lança de
   pedra e escudo de madeira; sem couro nem metal, sem elmo. O tido é para sempre: a lança de bronze do guerreiro não vira de pedra

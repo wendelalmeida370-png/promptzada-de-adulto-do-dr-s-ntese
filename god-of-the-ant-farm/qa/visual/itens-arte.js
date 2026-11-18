@@ -56,9 +56,21 @@ const centroid = T => { const c = [0, 0, 0]; let n = 0; for (const t of T) for (
 
 // ---------------- 3. the frame (D-337, D-386, D-387) ----------------
 const HANG = new Set(['cesto', 'balde', 'funda']), WORN = new Set(['elmo', 'couraca']);
+// (22c, D-612: the things of daily life, each held its own way — the cup by its handle, its body to the palm's side (+X) and its
+// mouth up; the ball in the palm, toward +X; the bonds round the two wrists behind the palms (−Z), the other palm a hand from its ring)
+const DAILY = {
+  caneca: (k, b, info, cabo, head, hc) => { const o = []; if (!cabo.length || (!inside(cabo, [0, 0, 0]) && dist(cabo, [0, 0, 0]) > 0.004)) o.push(`${k}: a mão não está na asa`); if (!(hc && hc[0] > 0.03)) o.push(`${k}: o corpo da caneca não está do lado da palma (+X)`); if (!(b.marks.boca && hc && b.marks.boca[1] > hc[1] + 0.03)) o.push(`${k}: a boca da caneca não está para cima (+Y)`); return o; },
+  bola: (k, b, info, cabo, head, hc) => { const o = []; const dd = dist(head, [0, 0, 0]); if (!inside(head, [0, 0, 0]) && dd > 0.004) o.push(`${k}: a palma não está na bola (a ${(dd * 100).toFixed(1)} cm)`); else if (inside(head, [0, 0, 0]) && dd > 0.02) o.push(`${k}: a palma dentro da bola (${(dd * 100).toFixed(1)} cm)`); if (!(hc && hc[0] > 0.03)) o.push(`${k}: a bola não está do lado da palma (+X)`); return o; },
+  grilhoes: (k, b, info, cabo, head, hc) => { const o = []; const C = F.cuffs, g = IA.grip(k); if (!C) return [`${k}: sem os pulsos (F.cuffs)`];
+    for (const [nm, w] of [['direita', C.WR], ['esquerda', C.WL]]) { const near = head.filter(t => t.some(p => Math.hypot(p[0] - w[0], p[1] - w[1]) < 0.06 && Math.abs(p[2] - w[2]) < 0.03)); if (near.length < 8) o.push(`${k}: nada em volta do pulso ${nm}`); else { const dd = dist(near, w); if (dd < 0.025) o.push(`${k}: a argola ${nm} aperta o pulso (${(dd * 100).toFixed(1)} cm)`); } }
+    const dR = Math.hypot(C.WR[0], C.WR[1], C.WR[2]); if (!(dR > 0.07 && dR < 0.12 && C.WR[2] < -0.06)) o.push(`${k}: a palma direita não está a um palmo da argola dela, para a frente (${(dR * 100).toFixed(1)} cm)`);
+    if (!g.off) o.push(`${k}: de duas mãos sem o lugar da outra mão`); else { const dL = Math.hypot(g.off[0] - C.WL[0], g.off[1] - C.WL[1], g.off[2] - C.WL[2]); if (!(dL > 0.07 && dL < 0.12 && g.off[2] > C.WL[2] + 0.06)) o.push(`${k}: a outra palma não está a um palmo da argola dela (${(dL * 100).toFixed(1)} cm)`); }
+    return o; },
+};
 { const bad = []; const lines = [];
   for (const k of KEYS) { const kind = k.split('.')[0]; const d = It.def(k); const b = IA.raw(k, 0); const info = IA.info(k);
     const cabo = tris(b, ['cabo']), head = tris(b, ['cabeca']); const hc = centroid(head);
+    if (DAILY[kind]) { bad.push(...DAILY[kind](k, b, info, cabo, kind === 'grilhoes' ? tris(b, ['cabeca', 'outra']) : head, hc)); lines.push(kind); continue; }
     if (!WORN.has(kind)) {
       // (the main hand closes on the thing at the origin: inside its handle, or on it)
       const o = [0, 0, 0]; if (!cabo.length) bad.push(`${k}: sem cabo`); else if (!inside(cabo, o) && dist(cabo, o) > 0.004) bad.push(`${k}: a origem (a mão) não está no cabo (a ${(dist(cabo, o) * 100).toFixed(1)} cm dele)`);
@@ -130,8 +142,10 @@ const bindY = n => BM.bind[n][1];
 // ---------------- 7. the material: its patch finds its six places, with the game's light under it ----------------
 { const bad = []; const sh = () => ({ vertexShader: THREE.ShaderLib.lambert.vertexShader, fragmentShader: THREE.ShaderLib.lambert.fragmentShader });
   const n0 = IA.patch(sh(), THREE); if (n0 !== 6) bad.push(`sem a luz do jogo: ${n0} de 6 lugares`);
-  const realm = fs.readFileSync(path.join(ROOT, 'js/realm3d.js'), 'utf8'); const tm = realm.match(/rep\('lights_lambert_pars_fragment', ('[^']*'), (`[^`]*`)\);/);
-  if (!tm) bad.push('o remendo da luz do realm3d.js não foi achado'); else { const SC = THREE.ShaderChunk; const old = SC.lights_lambert_pars_fragment; SC.lights_lambert_pars_fragment = old.replace(eval(tm[1]), eval(tm[2])); const s = sh(); const n1 = IA.patch(s, THREE); if (n1 !== 6) bad.push(`com a luz do jogo: ${n1} de 6 lugares`); if (!/iaSpec/.test(s.fragmentShader) || !/smoothstep\( -0\.06, 0\.4, nl \)/.test(s.fragmentShader)) bad.push('o brilho e a luz macia do jogo não ficaram juntos'); SC.lights_lambert_pars_fragment = old; }
+  // (the game's soft light: the patch the sky's file makes now — js/ceu3d.js, 21d —, or the realm's of before; T-1620)
+  const lightOf = f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8').match(/rep\('lights_lambert_pars_fragment', ('[^']*'), (`[^`]*`)\);/); } catch (e) { return null; } };
+  const tm = lightOf('js/ceu3d.js') || lightOf('js/realm3d.js');
+  if (!tm) bad.push('o remendo da luz do ceu3d.js (ou do realm3d.js) não foi achado'); else { const SC = THREE.ShaderChunk; const old = SC.lights_lambert_pars_fragment; SC.lights_lambert_pars_fragment = old.replace(eval(tm[1]), eval(tm[2])); const s = sh(); const n1 = IA.patch(s, THREE); if (n1 !== 6) bad.push(`com a luz do jogo: ${n1} de 6 lugares`); if (!/iaSpec/.test(s.fragmentShader) || !/smoothstep\( -0\.06, 0\.4, nl \)/.test(s.fragmentShader)) bad.push('o brilho e a luz macia do jogo não ficaram juntos'); SC.lights_lambert_pars_fragment = old; }
   const m = IA.material(THREE, { key: 'prova' }); if (!m.vertexColors || typeof m.onBeforeCompile !== 'function') bad.push('o material não lê as cores dos pontos');
   ok('material', !bad.length, bad.length ? bad.join('; ') : 'o brilho (metal, polido, tinta) acha os seis lugares do three.js r' + THREE.REVISION + ', com e sem a luz macia do realm3d.js'); }
 

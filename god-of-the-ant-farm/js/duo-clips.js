@@ -41,7 +41,8 @@
   c('duo-colo', 6, 'full', go({ crouch: 0.12, knL: 24, knR: 24, hipL: -18, hipR: -18, lean: 26, neck: 8, shLp: -58, shRp: -58, shLr: 8, shRr: -8, elL: 30, elR: 30, grip: 0.5, gripL: 0.5 }, 0.2, 0.95), { feet: 'plant' });
   c('duo-colo-b', 6, U, go({ shLp: -150, shRp: -150, shLr: 12, shRr: -12, elL: 40, elR: 40, neck: -16, grip: 0.4, gripL: 0.4 }, 0.2, 0.95));
   // the toast: the cup raised forward to the other's, a nod
-  c('duo-brinde', 2, U, go({ shRp: -82, shRr: -4, elR: 58, grip: 1, neck: -4 }, 0.3, 0.6, [[0.45, { shRp: -88, shRr: -4, elR: 54, grip: 1, neck: 4 }]]));
+  // (each one's cup, G.Inv.held — the wrist keeps it upright as it is raised: D-612)
+  c('duo-brinde', 2, U, go({ shRp: -82, shRr: -4, elR: 58, wrist: 50, grip: 1, neck: -4 }, 0.3, 0.6, [[0.45, { shRp: -88, shRr: -4, elR: 54, wrist: 52, grip: 1, neck: 4 }]]), { item: { hand: 'mao' } });
   // the greeting: the hand shaken (a little up and down), the forearm gripped, the bow, the head down
   c('duo-aperto', 1.5, U, go({ shRp: -40, shRr: -2, elR: 36, grip: 0.9, neck: 6 }, 0.25, 0.75, [[0.4, { shRp: -44, shRr: -2, elR: 38, grip: 0.9, neck: 8 }], [0.55, { shRp: -36, shRr: -2, elR: 34, grip: 0.9, neck: 6 }]]));
   c('duo-antebraco', 1.5, U, go({ shRp: -56, shRr: -4, elR: 30, grip: 0.9, lean: 3, neck: 4 }, 0.25, 0.75));

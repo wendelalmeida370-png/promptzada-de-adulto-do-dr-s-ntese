@@ -15,6 +15,7 @@
 //   g8  the mirror: a gesture's left-handed twin (`id~m`) is the same gesture on the other side — the left palm where the right
 //       one was, mirrored, within 1 cm;
 //   g12 the hips of a stride at every speed and cadence within a knee's bend of standing (L-1773)
+//   g13 the hands on the hips only for who wears nothing over the arms (T-1618, D-613)
 //   g11 the pairs (D-605): each part of an act of two with its hands on the other, the two at the act's distance, facing — at the
 //       touch, a hand within 5 cm of where it goes (the other's back, chest, shoulder; where two hands meet), the trunks 4 cm apart
 //       at least, no palm in either trunk or head
@@ -205,5 +206,10 @@ if (on('g12')) {
   let worst = 0, at = ''; for (const g of ['walk', 'run']) for (let n = 0.5; n <= 9; n += 0.5) for (let k = 0.8; k <= 1.301; k += 0.05) for (let u = 0; u < 1; u += 1 / 64) { const h = G.Gait.height(g, n, u, k); if (!(h >= -0.6 - 1e-6 && h <= 1e-6) && Math.abs(h) > worst) { worst = Math.abs(h); at = `${g} ${n} cadência ${r2(k)}`; } }
   ok('g12 a bacia de uma passada em toda velocidade e cadência entre 0 e 60 cm abaixo de em pé', !worst, worst ? `FORA: ${worst.toExponential(1)} (${at})` : 'andar e correr, 0,5 a 9 m/s, cadência 0,8 a 1,3');
 }
+// g13 the hands on the hips (T-1618, D-613): the arms-crossed moment is the hands on the hips for one person in two — by the id — of
+// those with nothing over the arms (no cape, toga, blouse nor long skirt: L.armOut), never for the others, never another clip
+if (on('g13')) { let bare = 0, over = 0, other = 0; const N = 400;
+  for (let id = 1; id <= N; id++) { if (A.ocioClip('oc-bracos-cruzados', id, { armOut: 0 }) === 'oc-maos-cintura') bare++; if (A.ocioClip('oc-bracos-cruzados', id, { armOut: 0.07 }) !== 'oc-bracos-cruzados') over++; for (const k of A.OCIO_LIST) if (k !== 'oc-bracos-cruzados' && A.ocioClip(k, id, { armOut: 0 }) !== k) other++; }
+  ok('g13 as mãos na cintura só de quem não tem nada sobre os braços', bare > N * 0.35 && bare < N * 0.65 && !over && !other && !!A.CLIPS['oc-maos-cintura'], `${bare} de ${N} sem capa, ${over} com capa, toga, blusa ou saia longa; ${other} outros gestos trocados`); }
 console.log(fails.length ? `GESTOS-VIDA: ${fails.length} falha(s)` : 'GESTOS-VIDA: TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

@@ -15,11 +15,11 @@ const fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const OUT = path.resolve(process.argv[2] || '.'); const MODE = process.argv[3] || 'tudo';
 fs.mkdirSync(OUT, { recursive: true });
-// (the game's soft diffuse is a patch the realm lays on three.js's Lambert — read from realm3d.js itself, so the pictures
-// keep the game's light when it changes)
-const realm = fs.readFileSync(path.join(ROOT, 'js/realm3d.js'), 'utf8');
-const tm = realm.match(/rep\('lights_lambert_pars_fragment', ('[^']*'), (`[^`]*`)\);/);
-if (!tm) { console.log('FALHA: o remendo da luz do realm3d.js (lights_lambert_pars_fragment) não foi achado'); process.exit(1); }
+// (the game's soft diffuse is a patch laid on three.js's Lambert — read from the game's own file, so the pictures keep the game's
+// light when it changes: the sky's now, js/ceu3d.js (21d), or the realm's of before — T-1620)
+const lightOf = f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8').match(/rep\('lights_lambert_pars_fragment', ('[^']*'), (`[^`]*`)\);/); } catch (e) { return null; } };
+const tm = lightOf('js/ceu3d.js') || lightOf('js/realm3d.js');
+if (!tm) { console.log('FALHA: o remendo da luz (lights_lambert_pars_fragment) não foi achado no ceu3d.js nem no realm3d.js'); process.exit(1); }
 const TOON = [eval(tm[1]), eval(tm[2])]; // (two string literals of the game's own source)
 
 (async () => {

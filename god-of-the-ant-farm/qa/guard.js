@@ -1791,5 +1791,27 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
 { const p3 = (src['people3d.js'] || []).join('\n');
   if (!/I\.porte = G\.Vida3D\.read\(avFeet, avv, vt, DRAWN\);/.test(p3)) fails.push('o corpo do jogador: o quadro não dá ao corpo vivido o porte do leitor (D-609)');
   if (!/Anim\.faceMix\(avFeet, av\.drive, av\.pose, av\.look\.mood, avFeet\.an, dt\)/.test(p3)) fails.push('o corpo do jogador: o corpo vivido sem o rosto vivo (D-609)'); }
+// 226. "a coisa do gesto tem origem" (D-612, D-440): a caneca de quem bebe e brinda e os grilhões de quem é levado vêm do ato pelo
+// kit do inventário (ACT_TOOL), a bola da criança que brinca e a muleta de quem perdeu a perna pelo material que o povo teve (made /
+// mk, o G.Origem.matOK) — nunca uma coisa sem material —; o barro é tido só da cerâmica (O.MAT_OF, o matOK, a marca do armazém) e uma
+// coisa de barro é feita da cerâmica do armazém (G.Itens.feitoDe); e nenhum clipe das pessoas diz que coisa segura (regra 217)
+{ const iv = (src['inventario.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
+  if (!/drink: 'caneca', toast: 'caneca', bound: 'grilhoes'/.test(iv)) fails.push('a coisa do gesto tem origem: o ACT_TOOL do inventario.js sem a caneca de quem bebe e brinda e os grilhões de quem é levado (D-612)');
+  if (!/const k = made\('bola', G\.Fac\.idOfV\(v\), artsOf\(v\)\)/.test(iv) || !/const k = mk\('muleta'\)/.test(iv)) fails.push('a coisa do gesto tem origem: a bola e a muleta do kit sem o material que o povo teve (made / mk, D-612)');
+  if (!/ceramica: 'barro'/.test(og) || !/m === 'couro' \|\| m === 'ouro' \|\| m === 'barro'\) return !!O\.had\(fid, m\)/.test(og) || !/if \(\(f\.stock\.ceramica \|\| 0\) > EPS\) mark\(f\.id, 'barro'\)/.test(og)) fails.push('a coisa do gesto tem origem: o barro tido sem a cerâmica (O.MAT_OF, O.matOK, a marca do armazém — D-612)');
+  if (!/d\.mat === 'barro' && CLAY\[d\.kind\]\) out = \[\{ k: 'ceramica'/.test(it)) fails.push('a coisa do gesto tem origem: uma coisa de barro que não é feita da cerâmica do armazém (G.Itens.feitoDe, D-612)');
+  for (const f of ['duo-clips.js', 'grupo-clips.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bitem\s*:\s*\{[^}]*\b(key|kind|form|tipo|coisa|mesh)\s*:/.test(c)) fails.push(`a coisa do gesto tem origem: ${f}:${k + 1} um gesto diz que coisa segura — a coisa é a do G.Inv.held (D-612): ${l.trim().slice(0, 110)}`); }); }
+// 227. "a muleta é a perna que falta" (D-612, L-1775): a perna perdida é uma só para todos — pelo id, a direita do ímpar —: o coto
+// (G.Feicao), a manqueira do porte (vida3d.js) e a mão da muleta (G.Inv.crutchSide) dizem o mesmo lado; e o 3D põe a muleta de debaixo
+// do braço até onde o pé daquela perna está (o pé plantado da passada, ou o da pose), nunca numa altura própria
+{ const iv = (src['inventario.js'] || []).join('\n'), v3 = (src['vida3d.js'] || []).join('\n'), fe = (src['feicao.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  if (!/w\[\(v\.id \|\| 0\) % 2 \? X\.cotoPernaD : X\.cotoPernaE\] = 1/.test(fe) || !/r\.manca = v\.lost && v\.lost\.leg \? \(\(v\.id \|\| 0\) % 2 \? 1 : -1\) : 0;/.test(v3) || !/const side = \(v\.id \|\| 0\) % 2 \? 'mao' : 'outra'/.test(iv)) fails.push('a muleta é a perna que falta: o coto, a manqueira e a mão da muleta não dizem o mesmo lado (pelo id: L-1775)');
+  if (!/const wt = want && want\[k\] && want\[k\]\.T \? want\[k\]\.T : null;/.test(p3) || !/else \{ const e = footFK\(R, pose, k, M\.a\)\.elements;/.test(p3)) fails.push('a muleta é a perna que falta: o 3D não põe o pé da muleta onde o pé daquela perna está (D-612)'); }
+// 244. "as mãos na cintura não mudam a agenda" (D-613, T-1618): o momento de cada coisinha é da agenda (o id, o relógio do mundo, o
+// contexto: regra 218, e o som dela, regra 224); a figura só escolhe o clipe com que os braços cruzados se fazem — as mãos na cintura
+// de quem não tem nada sobre os braços (L.armOut), pelo id —, e o animador pergunta por essa porta só
+{ const oc = (src['anim-ocio.js'] || []).join('\n'), ab = (src['anim-body.js'] || []).join('\n');
+  if (!/Anim\.ocioClip = \(k, id, L\) => \(k === 'oc-bracos-cruzados' && L && !\(L\.armOut > 0\) && H\(id \* 41 \+ 7\) < 0\.5/.test(oc)) fails.push('as mãos na cintura: o anim-ocio.js sem a porta que troca só o clipe dos braços cruzados, pela figura e pelo id (Anim.ocioClip, D-613)');
+  if (!/ovk = Anim\.ocioClip \? Anim\.ocioClip\(o\.k, I\.id \|\| 0, L\) : o\.k; ovu = o\.u;/.test(ab)) fails.push('as mãos na cintura: o animador não toca a coisinha da agenda pela porta da figura (Anim.ocioClip, D-613)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

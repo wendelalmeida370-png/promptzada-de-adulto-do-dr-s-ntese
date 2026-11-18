@@ -161,7 +161,7 @@
     // seated or resting with the hands free and nothing else over it, the little thing of this moment (the idle: anim-ocio.js, its
     // time on the world's clock, I.ctx the reader's weights; D-599)
     let ovk = I.over, ovu = I.overK; a.oc = null;
-    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = o.k; ovu = o.u; a.oc = o.k; a.ocU = o.u; } }
+    if (!ovk && I.ctx && Anim.ocioAt && !C && IDLE.has(base)) { const o = Anim.ocioAt(I.id || 0, I.clock || 0, I.ctx, I.lod || 0); if (o) { ovk = Anim.ocioClip ? Anim.ocioClip(o.k, I.id || 0, L) : o.k; ovu = o.u; a.oc = ovk; a.ocU = o.u; } }
     const O = ovk && Anim.CLIPS ? (I.lefty && Anim.CLIPS[ovk + '~m']) || Anim.CLIPS[ovk] : null;
     // (the clip over the top on a clock of its own, a.ok: a wave over a seated meal does not start the meal's clip again — L-1771)
     if (O && O !== a.over) { a.over = O; a.ok = 0; }

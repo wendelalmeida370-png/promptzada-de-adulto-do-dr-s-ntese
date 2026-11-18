@@ -1002,6 +1002,9 @@
     const nR = kR ? itemKind(kR) : null, shaftR = !!kR && !pose.tool && upright(pose) && (gR === 'duas' || gR === 'vara' || SHAFT.has(nR));
     const offW = kR && !hold && !busyL && !kL ? G.clamp(pose.offW || 0, 0, 1) : 0; const off = offW > 0.001 ? offGrip(kR) : null;
     if (off) M.ci.copy(R[B.chest]).invert();
+    // (22c, D-612: the crutch of a leg lost — in the hand of that side, from under that armpit to where the leg's foot stands, a
+    // little out: the leg's stride is the crutch's, planted where the foot plants; the hand on it)
+    const kc = free && upright(pose) ? crutchSide(kR, gR, kL, gL) : -1; CR.ok = kc >= 0 && crutchAt(R, pose, L, kc, want, s, yaw);
     for (let q = 0; q < 2; q++) {
       const k = 1 - q, sd = k ? -1 : 1; // (the right arm first: the thing in it places the other hand on a thing of two hands)
       let sp = k ? pose.shRp : pose.shLp, sr = k ? pose.shRr : pose.shLr, el = k ? pose.elR : pose.elL;
@@ -1010,11 +1013,14 @@
       if (k && shaftR) { sp = 0.05; sr = -0.08; el = 1.05; }
       // (the other hand's thing: a shield before the body on the forearm, the bow at the side, a handle hanging)
       if (!k && kL && upright(pose)) { if (gL === 'escudo') { sp = -0.32; sr = 0.3; el = 1.5; } else if (gL === 'arco') { sp = 0.06; sr = 0.12; el = 0.3; } else if (gL === 'alca') { sp = 0.05; sr = 0.18; el = 0.1; } }
+      // (a ball carried in the hand: the arm a little out, the ball clear of the thigh — 22c)
+      if (k && kR && gR === 'bola' && !pose.tool && upright(pose)) sr -= 0.32;
       let jz = G.clamp(-sp, -1, 1) * 0.03, roll = sr + sd * (0.05 + (L.armOut || 0)), ry = (k ? pose.shRy : pose.shLy) || 0; // (a wide skirt or a cape: the arms a little out; the yaw of the upper arm — across the body —, the pose's: 22c, D-597)
       // (the hand on what it holds: the arm that reaches it, eased in from the pose's own by the hold's weight — or the left hand
       // on the thing of two hands the right holds, where the thing's art says the other hand goes)
       let T = hw > 0.001 ? HP.t[k] : null, w = hw, pole0 = HP.pole;
       if (!k && off) { V3.a.set(off[0], off[1], off[2]).applyMatrix4(R[B.tool]).applyMatrix4(M.ci); OFFT[0] = V3.a.x; OFFT[1] = V3.a.y; OFFT[2] = V3.a.z; T = OFFT; w = offW; pole0 = POLE_TWO; }
+      if (CR.ok && k === CR.k) { T = CR.Tc; w = 1; pole0 = POLE_CRUTCH; } // (the hand on the crutch: 22c)
       if (T) {
         const pole = PL; pole[0] = pole0[0] * sd; pole[1] = pole0[1]; pole[2] = pole0[2]; SH0[0] = sd * 0.235; SH0[1] = 0.46; SH0[2] = jz;
         let o = armIK(sd, SH0, T, pole); const jz2 = G.clamp(-o.rx, -1, 1) * 0.03; if (Math.abs(jz2 - jz) > 0.004) { SH0[2] = jz2; o = armIK(sd, SH0, T, pole); }
@@ -1071,8 +1077,60 @@
   function offGrip(key) { const g = G.ItemArt && G.ItemArt.grip ? G.ItemArt.grip(key) : null; return (g && g.off) || OFF[itemKind(key)] || OFF.machado; }
   P3.offGrip = offGrip;
   const OFFT = [0, 0, 0], POLE_TWO = [0.7, -0.8, -0.25];
+  // ------------------------------ the crutch (22c, D-612) ------------------------------
+  // The crutch is the lost leg's: its pad under the armpit of that side, its foot where that leg's foot is — planted where the
+  // stride plants it, swung with it —, a hand's width out; long as a body's armpit is high, stretched a little to the foot as the
+  // hips rise and sink in the stride. CR: the side (k), the hand's place in the trunk's frame (Tc, for the arm), its frame (F)
+  const CR = { ok: false, k: -1, Tc: [0, 0, 0], F: null, A: null, T: null, G: null, d: 0, kY: 1 };
+  P3.CR = CR; // (for the tests)
+  const POLE_CRUTCH = [0.25, -0.2, -0.95], CRUTCH = { pad: 1.305, grip: 0.445, out: 0.12, A: [0.205, 0.32, 0.01] };
+  P3.CRUTCH = CRUTCH;
+  // (the side whose hand holds a crutch: 1 the right, 0 the left, -1 none)
+  function crutchSide(kR, gR, kL, gL) { return kR && gR === 'muleta' ? 1 : kL && gL === 'muleta' ? 0 : -1; }
+  function crutchAt(R, pose, L, k, want, s, yaw) {
+    if (!CR.F) { CR.F = new THREE.Matrix4(); CR.A = new THREE.Vector3(); CR.T = new THREE.Vector3(); CR.G = new THREE.Vector3(); CR.ci = new THREE.Matrix4(); }
+    const sd = k ? -1 : 1; CR.k = k;
+    CR.A.set(sd * CRUTCH.A[0], CRUTCH.A[1], CRUTCH.A[2]).applyMatrix4(R[B.chest]);
+    // (the foot of that leg: where the stride has it standing, else where the pose puts it — its sole, a hand out)
+    const wt = want && want[k] && want[k].T ? want[k].T : null;
+    if (wt) CR.T.copy(wt); else { const e = footFK(R, pose, k, M.a).elements; CR.T.set(e[12], e[13], e[14]); }
+    const ox = Math.sin(yaw) * sd, oz = -Math.cos(yaw) * sd; // (the body's side of that leg, in the world: its left is +X)
+    CR.T.x += ox * CRUTCH.out * s; CR.T.z += oz * CRUTCH.out * s; CR.T.y -= LEG.sole * s;
+    // (on the ground where it stands; swung, lifted only a little — a crutch is swung low, not lifted as a knee lifts a foot)
+    if (L.ground !== undefined) { const g = groundOf(L, CR.T.x, CR.T.z); if (Number.isFinite(g)) CR.T.y = g + Math.min(0.07 * s, Math.max(0, CR.T.y - g) * 0.4); }
+    const dx = CR.A.x - CR.T.x, dy = CR.A.y - CR.T.y, dz = CR.A.z - CR.T.z; const d = Math.hypot(dx, dy, dz); if (!(d > 0.2 * s) || !(dy > 0.3 * s)) return false;
+    const kY = G.clamp(d / (CRUTCH.pad * s), 0.85, 1.15); CR.d = d; CR.kY = kY;
+    const Yx = dx / d, Yy = dy / d, Yz = dz / d;
+    CR.T.set(CR.A.x - Yx * CRUTCH.pad * s * kY, CR.A.y - Yy * CRUTCH.pad * s * kY, CR.A.z - Yz * CRUTCH.pad * s * kY);
+    CR.G.set(CR.A.x - Yx * CRUTCH.grip * s * kY, CR.A.y - Yy * CRUTCH.grip * s * kY, CR.A.z - Yz * CRUTCH.grip * s * kY);
+    // (its frame: Y up it to the pad, Z the body's way square to it — the crosspiece along the body's way)
+    let Zx = Math.cos(yaw), Zz = Math.sin(yaw); const zd = Zx * Yx + Zz * Yz; let Zx2 = Zx - zd * Yx, Zy2 = -zd * Yy, Zz2 = Zz - zd * Yz; const zl = Math.hypot(Zx2, Zy2, Zz2) || 1; Zx2 /= zl; Zy2 /= zl; Zz2 /= zl;
+    const Xx = Yy * Zz2 - Yz * Zy2, Xy = Yz * Zx2 - Yx * Zz2, Xz = Yx * Zy2 - Yy * Zx2;
+    CR.F.set(Xx * s, Yx * s * kY, Zx2 * s, CR.G.x, Xy * s, Yy * s * kY, Zy2 * s, CR.G.y, Xz * s, Yz * s * kY, Zz2 * s, CR.G.z, 0, 0, 0, 1);
+    CR.ci.copy(R[B.chest]).invert(); V3.a.copy(CR.G).applyMatrix4(CR.ci); CR.Tc[0] = V3.a.x; CR.Tc[1] = V3.a.y; CR.Tc[2] = V3.a.z;
+    return true;
+  }
+  // ------------------------------ the bonds (22c, D-612) ------------------------------
+  // the bonds of two hands are one thing in two pieces: the right wrist's ring in the right fist's frame, the left's in the left
+  // fist's (the thing's part 'outra', moved from where the left wrist is in the right fist's frame to where it is in the left's) —
+  // two hands joined at any angle each wear their own ring. cuffsOf(key, lod) → null, or { r, l } (the two pieces' meshes)
+  const CUFFS = new Map(), CUFF_L = [-0.051, 0, 0]; // (the left wrist: (0.027, 0, -0.096) in the left fist's frame, (0.078, 0, -0.096) in the thing's)
+  function cuffsOf(key, lod) {
+    const id = key + '|' + lod; if (CUFFS.has(id)) return CUFFS.get(id);
+    let out = null; const g = G.ItemArt && G.ItemArt.geo ? G.ItemArt.geo(key, lod) : null; const ud = g && g.userData, pt = ud && ud.parts ? ud.parts.find(p => p.name === 'outra') : null;
+    if (g && pt && toolMat) {
+      const share = (start, count) => { const q = new THREE.BufferGeometry(); for (const k in g.attributes) q.setAttribute(k, g.attributes[k]); q.setIndex(g.index); q.setDrawRange(start, count); q.boundingSphere = g.boundingSphere; q.boundingBox = g.boundingBox; return q; };
+      const mk = (q, tag) => { const m = new THREE.InstancedMesh(q, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = lod < 2; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = key; m.userData.part = tag; scene.add(m); IMN.set(m, 0); return m; };
+      out = { r: mk(share(0, pt.start), 'direita'), l: mk(share(pt.start, g.index.count - pt.start), 'esquerda') };
+    }
+    CUFFS.set(id, out); return out;
+  }
+  function cuffsPut(key, lod) {
+    const T = cuffsOf(key, lod); if (!T) { itemPut(key, lod, RX.mao); return; }
+    for (const [m, F] of [[T.r, RX.mao], [T.l, RX.alg]]) { const n = IMN.get(m); if (n < MAX) { m.setMatrixAt(n, F); IMN.set(m, n + 1); } }
+  }
   // (the frames of this rig's things — reused, the drawing reads them right after the rig: RX.mao, outra, costas, cinto, and the keys)
-  const RX = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, kR: null, kL: null, kB: null, kC: null, kH: null, kT: null, x: null, y: null, z: null, th: [[0, -1, 0], [0, -1, 0], 0.095, -0.095] };
+  const RX = { mao: null, outra: null, costas: null, cinto: null, cabeca: null, corpo: null, alg: null, kR: null, kL: null, kB: null, kC: null, kH: null, kT: null, kA: 0, x: null, y: null, z: null, th: [[0, -1, 0], [0, -1, 0], 0.095, -0.095] };
   P3.RX = RX;
   // (a frame: the parent's (scaled), moved by p in it, turned to the basis whose Y is up the thing and Z its front)
   function frameOn(out, parent, px, py, pz, yx, yy, yz, zx, zy, zz) {
@@ -1101,8 +1159,8 @@
     return frameOn(out, R[B.pel], sd * 0.175, 0.01, 0.03, 0, -0.94, -0.33, 0, -0.33, 0.94);
   }
   function itemFrames(R, L, pose, yaw, s, kR, gR, kL, gL, free) {
-    if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.cabeca = new THREE.Matrix4(); RX.corpo = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
-    RX.kR = RX.kL = RX.kB = RX.kC = RX.kH = RX.kT = null; if (L.bind) return;
+    if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.cabeca = new THREE.Matrix4(); RX.corpo = new THREE.Matrix4(); RX.alg = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
+    RX.kR = RX.kL = RX.kB = RX.kC = RX.kH = RX.kT = null; RX.kA = 0; if (L.bind) return;
     const inv = L.inv || NO_INV;
     // (what is worn: the helmet on the head bone, the cuirass on the chest's — each made in its bone's frame for a body of
     // 1.75 m (D-387): the bone's frame, with the body's size and a child's bigger head in it, is the thing's, D-349)
@@ -1112,14 +1170,18 @@
       M.ic.copy(R[B.chest]).invert();
       for (let k = 0; k < 2; k++) { V3.a.setFromMatrixPosition(R[B.thL + k]).applyMatrix4(M.ic); V3.b.setFromMatrixPosition(R[B.snL + k]).applyMatrix4(M.ic); V3.b.sub(V3.a).normalize();
         RX.th[k][0] = V3.b.x; RX.th[k][1] = V3.b.y; RX.th[k][2] = V3.b.z; RX.th[k + 2] = V3.a.x; } }
-    if (kR) {
+    if (kR && !(gR === 'muleta' && !(CR.ok && CR.k === 1))) {
       RX.kR = kR;
-      if (gR === 'alca' || gR === 'tocha') { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); }
+      // (22c: the cup held upright — tipped to the mouth only as the drinking works it, pose.tool —; the crutch on its line; the bonds' left ring on the left wrist)
+      if (gR === 'alca' || gR === 'tocha' || (gR === 'copo' && !pose.tool)) { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); }
+      else if (gR === 'muleta') RX.mao.copy(CR.F);
       else RX.mao.copy(R[B.tool]);
+      if (gR === 'algema') { RX.kA = 1; fr(RX.alg, R[B.hdL], -0.027, -0.076, 0, Math.PI / 2 + (pose.tool ? pose.wristL || 0 : 0), 0, 0); M.b.makeTranslation(CUFF_L[0], CUFF_L[1], CUFF_L[2]); RX.alg.multiply(M.b); }
     }
-    if (kL && gL !== 'tocha') {
+    if (kL && gL !== 'tocha' && !(gL === 'muleta' && !(CR.ok && CR.k === 0))) {
       RX.kL = kL;
-      if (gL === 'escudo') frameOn(RX.outra, R[B.faL], 0.06, -0.17, 0.01, 0, -1, 0, 1, 0, 0); // (strapped on the forearm, its face out)
+      if (gL === 'muleta') RX.outra.copy(CR.F);
+      else if (gL === 'escudo') frameOn(RX.outra, R[B.faL], 0.06, -0.17, 0.01, 0, -1, 0, 1, 0, 0); // (strapped on the forearm, its face out)
       else if (gL === 'arco' || gL === 'alca') { V3.a.set(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]); uprightAt(RX.outra, V3.a, yaw, s, 0); }
       else fr(RX.outra, R[B.hdL], -0.027, -0.076, 0, Math.PI / 2 + 1.25, 0, 0);
     }
@@ -1166,7 +1228,7 @@
     }
   }
   // the things drawn this frame, by the body's level of detail
-  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) itemPut(RX.kR, lod, RX.mao); if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
+  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) { if (RX.kA) cuffsPut(RX.kR, Math.max(0, Math.min(2, lod))); else itemPut(RX.kR, lod, RX.mao); } if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
     if (RX.kH) itemPut(RX.kH, lod, RX.cabeca); if (RX.kT) cuirPut(RX.kT, Math.max(0, Math.min(2, lod)), RX.corpo); }
   // (the cuirass: whole, or its body and each of its tabs turned as the thighs push it — the lifts the rig left in RX.lift)
   function cuirPut(key, lod, F) {

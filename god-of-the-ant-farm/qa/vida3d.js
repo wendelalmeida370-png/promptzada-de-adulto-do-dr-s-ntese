@@ -84,6 +84,10 @@ if (on('v1') || on('v2')) {
     if (!(f >= 0.3 && dS > 0.08 && dW > 0.04 && !others.length)) bad.push(k);
   }
   blank(v); mild(v);
+  // (the limp is over the leg that is lost — the one the stump is drawn on and the crutch takes the place of, by the id: L-1775)
+  for (const id of [v.id, v.id + 1]) { const w = Object.assign({}, v, { id, lost: { leg: true } }); const sd = Math.sign(V3.porteOf(w, {}).manca), Fe = G.Feicao && G.Feicao.of(w);
+    const stump = Fe ? (Fe.w[G.Feicao.IDX.cotoPernaD] > 0.5 ? 1 : Fe.w[G.Feicao.IDX.cotoPernaE] > 0.5 ? -1 : 0) : (id % 2 ? 1 : -1), crutch = G.Inv && G.Inv.crutchSide ? (G.Inv.crutchSide(w) === 'mao' ? 1 : -1) : stump;
+    if (sd !== stump || crutch !== stump) bad.push(`manca do lado ${sd}, o coto do ${stump}, a muleta do ${crutch} (#${id})`); }
   if (on('v1')) ok('v1 cada causa dá o seu porte e a sua pose', !bad.length, (bad.length ? 'SEM POSE OU MISTURADO: ' + bad.join(', ') + ' · ' : '') + res.join(' · '));
   if (on('v2')) {
     // (nobody shivers in the heat, nobody fans in the cold; a person in health in a mild place carries nothing)

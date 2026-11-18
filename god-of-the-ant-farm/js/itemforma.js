@@ -74,9 +74,13 @@
     chumbo: { c: hex('#6a6c70'), grain: 'metal', m: 0.6, g: 0.3 }, // a net's lead weights
     tinta: { c: hex('#9c3c28'), c2: hex('#7c2e1e'), grain: 'paint', g: 0.2, p: 1 }, // red ochre: a shield's face, a crest
     crina: { c: hex('#9a3022'), c2: hex('#6e1e16'), grain: 'hair', g: 0.1, p: 1 }, // a helmet's dyed horsehair crest
+    // (22c, D-612: the pottery's fired clay, its slip band; the iron of a shackle, rough from the forge, not honed)
+    barro: { c: hex('#a35a37'), c2: hex('#8c4a2c'), grain: 'pebble', g: 0.18 },
+    barroE: { c: hex('#5a3322'), c2: hex('#4a2a1c'), grain: 'pebble', g: 0.3 },
+    ferroB: { c: hex('#47494d'), c2: hex('#3a3b3e'), edge: hex('#7d8288'), grain: 'metal', m: 0.85, g: 0.38 },
   };
   // the material a thing is made in (the catalog's mats) → the palette of its working part; an unknown one reads as iron
-  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro' };
+  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro' };
   const metal = mat => PAL[F.MATS[mat] || 'ferro'] || PAL.ferro;
 
   // ------------------------------ the mesh being built ------------------------------
@@ -811,6 +815,83 @@
         loft(M, pts, () => rrect(0.032, 0.0032, 0.002, 0), me, { ax: sl, cap0: true, cap1: true, f: () => ({ e: 0.3 }) }); }
     }
     M.marks.centro = [0, 0.22, 0]; M.marks.ponta = [0, yS + 0.075, 0]; M.tint = 0;
+  };
+
+  // ------------------------------ the things of daily life (22c, D-612) ------------------------------
+  // the cup: held by its handle (the origin: the fist round the handle's bar, along Y), its body beside the handle toward +X —
+  // the palm's side, where a cup held by its handle sits —, its mouth up (+Y). Of wood: carved from a block, the grain round it;
+  // of fired clay: thrown on the wheel, a dark slip band under the rim
+  R.caneca = (M, mat) => {
+    const q = M.q, clay = mat === 'barro'; const pal = clay ? PAL.barro : PAL.clara;
+    const xc = 0.058, y0 = -0.05, y1 = 0.058, r0 = clay ? 0.036 : 0.04, r1 = clay ? 0.042 : 0.041, w = clay ? 0.005 : 0.007; const C = [xc, 0, 0];
+    part(M, 'cabo');
+    // (the handle: a loop out of the wall toward −X, its bar through the fist)
+    const nh = seg(M, 10, 5, 2); const hp = []; for (let i = 0; i <= nh; i++) { const a = Math.PI * i / nh; hp.push([0.018 - Math.sin(a) * 0.022, 0.038 - (1 - Math.cos(a)) * 0.034, 0]); }
+    tube(M, hp, clay ? 0.0065 : 0.0075, seg(M, 7, 5, 3), pal, { cap0: true, cap1: true, f: () => ({ ao: 0.9 }) });
+    part(M, 'cabeca');
+    const n = seg(M, 16, 9, 5); const rOf = y => lerp(r0, r1, (y - y0) / (y1 - y0));
+    // (the outside, from the foot to the rim; the slip band under a clay cup's rim)
+    const out = q === 0 ? [[r0 * 0.92, y0], [r0, y0 + 0.006], [rOf(-0.01), -0.01], [rOf(0.03), 0.03], [r1, y1 - 0.004], [r1 - 0.002, y1]] : q === 1 ? [[r0 * 0.95, y0], [rOf(0.0), 0.0], [r1, y1]] : [[r0, y0], [r1, y1]];
+    lathe(M, out, n, pal, { at: C, cap0: [xc, y0, 0], m: (k) => (clay && out[k] && out[k][1] > 0.03 ? PAL.barroE : pal), f: (k, t, j, u, v, p) => ({ ao: 0.78 + 0.22 * sstep(y0, y0 + 0.03, p[1]) }) });
+    // (the inside: the wall's thickness in, down to the floor, darker the deeper; the rim's flat ring between)
+    if (q < 2) { const yi = y0 + (clay ? 0.008 : 0.014); lathe(M, [[r1 - w, y1], [rOf(0.0) - w, 0.0], [r0 - w, yi]], n, pal, { at: C, cap1: [xc, yi, 0], dir: c => [xc - c[0], 0, -c[2]], f: (k, t, j, u, v, p) => ({ ao: 0.35 + 0.4 * sstep(yi, y1, p[1]) }) });
+      grid(M, n, 1, (s0, t) => { const a = s0 * TAU, r = lerp(r1 - w, r1 - 0.002, t); return [xc + Math.cos(a) * r, y1, Math.sin(a) * r]; }, clay ? PAL.barroE : pal, { loopU: true, out: [0, 1, 0], f: () => ({ ao: 0.95 }) }); }
+    M.marks.centro = [xc, 0.005, 0]; M.marks.boca = [xc, y1, 0]; M.marks.ponta = [xc, y1, 0];
+  };
+
+  // the ball: held in the palm (the origin: the grip, a little inside the ball), the ball toward +X — the palm's side. Of
+  // wicker: woven withies; of leather: panels sewn over a stuffing, the seams standing out
+  R.bola = (M, mat) => {
+    const q = M.q, hide = mat === 'couro'; const r = 0.072; const C = [r - 0.012, 0, 0];
+    part(M, 'cabeca');
+    const n = seg(M, 16, 10, 6);
+    ball(M, C, r, n, hide ? PAL.couro : PAL.vime, { f: (k, t, j, u, v, p) => {
+      const d = sub(p, C); const la = Math.atan2(d[1], Math.hypot(d[0], d[2])), lo = Math.atan2(d[2], d[0]);
+      if (hide) { const seam = Math.pow(Math.max(0, Math.cos(lo * 3)), 40) + Math.pow(Math.max(0, Math.cos(la * 2)), 60); return { ao: 1 - 0.32 * Math.min(1, seam) }; }
+      return { w: q === 0 ? ((Math.floor((lo + Math.PI) / TAU * 12) + Math.floor((la + 1.6) / 3.2 * 8)) % 2 ? 1 : -1) : 0, wrap: 0.02, ao: 0.85 + 0.15 * Math.cos(la * 6) }; } });
+    M.marks.centro = C.slice(); M.marks.ponta = [C[0] + r, 0, 0];
+  };
+
+  // the bonds of the hands joined: in the right fist's frame (the origin: the right palm; the forearm goes back toward −Z, the
+  // palm's side is +X) the right wrist's ring and the left wrist's beside it, toward the palm, the left palm where the other hand
+  // goes (M.grip). Two pieces — the right ring and its half of what joins them (the parts before 'outra'), the left ring and its
+  // half ('outra') —, each drawn on its own wrist (G.People3D). Of cord: a loop round each wrist, a twisted cord between; of iron:
+  // two cuffs and the chain between them
+  const WR = [-0.027, 0, -0.096], WL = [0.078, 0, -0.096];
+  F.cuffs = { WR, WL }; // (for the proof: where the wrists are, in the thing's frame)
+  R.grilhoes = (M, mat) => {
+    const q = M.q, iron = mat === 'ferro';
+    const ring = (c, rx, rz, np) => { const o = []; for (let i = 0; i < np; i++) { const a = i / np * TAU; o.push([c[0] + Math.cos(a) * rx, c[1] + Math.sin(a) * rz, c[2]]); } return o; };
+    const RX = iron ? 0.039 : 0.039, side = sg => (sg < 0 ? WR : WL);
+    for (const sg of [-1, 1]) { const c = side(sg); part(M, sg < 0 ? 'cabeca' : 'outra');
+      // (the ring round the wrist: an iron band flat and wide along the forearm, or a loop of cord)
+      if (iron) loft(M, ring(c, RX, 0.033, seg(M, 16, 10, 4)), () => rrect(0.012, 0.0045, 0.003, seg(M, 1, 0, 0)), PAL.ferroB, { loop: true, ax: [0, 0, 1], f: () => ({ e: 0.2 }) });
+      else tube(M, ring(c, RX, 0.034, seg(M, 14, 8, 5)), 0.0062, seg(M, 6, 4, 3), PAL.corda, { loop: true, f: () => ({ wrap: 0.011 }) });
+      if (q < 2) { part(M, 'amarra');
+        // (its half of the join, from the ring's near side toward the other: one iron link, or a twist of cord)
+        const x0 = c[0] - sg * RX, xm = (WR[0] + WL[0]) / 2;
+        if (iron) { const cx = lerp(x0, xm, 0.55), np = seg(M, 10, 6); const lk = []; for (let j = 0; j < np; j++) { const a = j / np * TAU; lk.push(sg < 0 ? [cx + Math.cos(a) * 0.011, 0, c[2] + Math.sin(a) * 0.007] : [cx + Math.cos(a) * 0.011, Math.sin(a) * 0.007, c[2]]); }
+          tube(M, lk, 0.0028, seg(M, 5, 3), PAL.ferroB, { loop: true }); }
+        else { const np = seg(M, 6, 3); const pts = []; for (let j = 0; j <= np; j++) { const t = j / np; pts.push([lerp(x0, xm + sg * 0.004, t), 0.004 * Math.sin(t * 9 + sg), c[2] + 0.004 * Math.cos(t * 9)]); }
+          tube(M, pts, 0.0058, seg(M, 6, 4), PAL.corda, { cap0: true, cap1: true, f: () => ({ wrap: 0.011 }) }); }
+      }
+    }
+    M.grip = [WL[0] - 0.027, 0, 0]; M.marks.centro = [(WR[0] + WL[0]) / 2, 0, WR[2]]; M.marks.ponta = M.grip.slice(); M.marks.argolaD = WR.slice(); M.marks.argolaE = WL.slice();
+  };
+
+  // the crutch: a staff gripped by the hand (the origin), its top (+Y) the crosspiece padded with cloth under the armpit, its foot
+  // (−Y) on the ground; the crosspiece along Z, the body's way. For a body of 1.75 m: the pad at the armpit, the foot at the sole
+  R.muleta = (M) => {
+    const q = M.q; part(M, 'cabo');
+    haft(M, -0.86, 0.43, 0.0145, 0.0165, { wood: 'madeira', grip: [-0.05, 0.06] });
+    if (q < 2) collar(M, -0.845, 0.03, 0.0175, PAL.couro); // (the foot shod in leather)
+    part(M, 'cabeca');
+    // (the crosspiece, a little curved to the armpit, and the cloth wound over it)
+    const nb = seg(M, 8, 4, 2); const cp = []; for (let i = 0; i <= nb; i++) { const t = i / nb; cp.push([0, 0.445 + 0.012 * Math.pow(2 * t - 1, 2), lerp(-0.085, 0.085, t)]); }
+    loft(M, cp, () => rrect(0.016, 0.013, 0.008, seg(M, 2, 1, 0)), PAL.madeira, { ax: [1, 0, 0], cap0: true, cap1: true });
+    if (q < 2) { const pp = []; for (let i = 0; i <= nb; i++) { const t = lerp(0.18, 0.82, i / nb); pp.push([0, 0.447 + 0.012 * Math.pow(2 * t - 1, 2) + 0.004, lerp(-0.085, 0.085, t)]); }
+      loft(M, pp, () => rrect(0.02, 0.016, 0.012, seg(M, 2, 1)), PAL.pano, { ax: [1, 0, 0], cap0: true, cap1: true, f: () => ({ ao: 0.9 }) }); }
+    M.marks.centro = [0, 0.45, 0]; M.marks.ponta = [0, -0.86, 0]; M.marks.pe = [0, -0.86, 0]; M.marks.axila = [0, 0.46, 0];
   };
 
   // ------------------------------ building a thing ------------------------------

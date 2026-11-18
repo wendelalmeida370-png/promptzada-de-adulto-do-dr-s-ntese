@@ -129,16 +129,18 @@
   // ------------------------------ what a people has had (the materials) ------------------------------
   // a material entered a people when its good came into a holder of the people — the store, a house, the hands, a bag — from a
   // true source or from another people that had it; the day it first came is kept (the kit and the fight read it)
-  O.MAT_OF = { couro: 'couro', cobre: 'cobre', estanho: 'estanho', ouro: 'ouro', minerio: 'minerio' };
+  // (and the pottery's ware: the fired clay a cup is made of — 22c, D-612)
+  O.MAT_OF = { couro: 'couro', cobre: 'cobre', estanho: 'estanho', ouro: 'ouro', minerio: 'minerio', ceramica: 'barro' };
   const ownerFac = ref => { const o = D.owner(ref); return o && o.fac ? o.fac : 0; };
   function mark(fid, m) { if (!fid || !m || m === '?' || O.PLAIN[m]) return; const o = st(); const h = o.had[fid] || (o.had[fid] = {}); if (!h[m]) h[m] = G.S.day || 1; }
   O.had = (fid, m) => { const o = G.S && G.S.orig; const h = o && o.had[fid]; return h ? h[m] || 0 : 0; };
   // a material a people may make and draw things in: wood, stone, and the fibres of the wood (wicker, cord) always — every people
-  // fells and quarries —; leather once it has had hides; bronze and iron with the art and the metal had (D-442)
+  // fells and quarries —; leather once it has had hides, fired clay once it has had the pottery's ware (22c, D-612); bronze and
+  // iron with the art and the metal had (D-442)
   O.PLAIN = { madeira: 1, pedra: 1, vime: 1, corda: 1 };
   O.matOK = function (fid, m, arts) {
     if (O.PLAIN[m]) return true;
-    if (m === 'couro' || m === 'ouro') return !!O.had(fid, m);
+    if (m === 'couro' || m === 'ouro' || m === 'barro') return !!O.had(fid, m);
     if (m === 'bronze' || m === 'ferro') return !!(arts && arts[m] !== undefined) && !!O.had(fid, m);
     return false;
   };
@@ -265,6 +267,8 @@
     const S = G.S; if (!S) return; const o = st();
     if (pruneSoon) { pruneSoon = false; for (const ref of Object.keys(o.p)) if (!D.exists(ref)) delete o.p[ref]; }
     for (const f of S.factions.values()) for (const k in O.KEPT) { const ref = 'f:' + f.id; if ((f.stock[k] || 0) > EPS || (o.p[ref] && o.p[ref][k])) sync(ref, k, true); }
+    // (the pottery's ware in a store is the clay had — whatever hand put it there, and a save from before the mark: 22c, D-612)
+    for (const f of S.factions.values()) if ((f.stock.ceramica || 0) > EPS) mark(f.id, 'barro');
     if (G.mod('orig.day') !== S.day) {
       G.mod('orig.day', S.day); o.t = {};
       for (const ref of Object.keys(o.p)) { if (!D.exists(ref)) { delete o.p[ref]; continue; } for (const k of Object.keys(o.p[ref])) sync(ref, k, true); }
@@ -308,7 +312,7 @@
       put('f:' + f.id, 'food', f.stock.food || 0, shares.get(f.id));
       const metal = metalOf(f);
       for (const k of ['ferramentas', 'armas']) if ((f.stock[k] || 0) > EPS) { put('f:' + f.id, k, f.stock[k], { [metal]: 1 }); mark(f.id, metal); }
-      for (const g of ['couro', 'cobre', 'estanho', 'ouro', 'minerio']) if ((f.stock[g] || 0) > EPS) mark(f.id, O.MAT_OF[g]);
+      for (const g of ['couro', 'cobre', 'estanho', 'ouro', 'minerio', 'ceramica']) if ((f.stock[g] || 0) > EPS) mark(f.id, O.MAT_OF[g]);
     }
     for (const b of S.buildings.values()) {
       const fid = G.Village.facOfSet(b.set); const sh = shares.get(fid) || { '?': 1 };
