@@ -75,21 +75,21 @@ G.Ready.list({
  },
  "anos100": {
   "day": 101,
-  "pop": 881,
-  "peoples": 3,
+  "pop": 890,
+  "peoples": 2,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
-   "name": "Hedeby",
+   "name": "Roma",
    "tier": 4,
-   "pop": 114
+   "pop": 148
   },
   "wars": 0,
   "ww": null,
   "world": "Ormar",
-  "bytes": 3921152
+  "bytes": 4099550
  },
  "anos500": {
   "day": 501,
