@@ -56,22 +56,22 @@ G.Ready.list({
   "bytes": 4585117
  },
  "mundial": {
-  "day": 65,
-  "pop": 451,
-  "peoples": 9,
-  "towns": 22,
+  "day": 119,
+  "pop": 759,
+  "peoples": 4,
+  "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
    "name": "Roma",
-   "tier": 3,
-   "pop": 91
+   "tier": 4,
+   "pop": 264
   },
-  "wars": 2,
+  "wars": 1,
   "ww": "a Grande Coalizão",
   "world": "Nerheim",
-  "bytes": 3505556
+  "bytes": 6046443
  },
  "anos100": {
   "day": 101,
