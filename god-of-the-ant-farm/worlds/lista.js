@@ -20,76 +20,76 @@ G.Ready.list({
   "bytes": 1160750
  },
  "metropole": {
-  "day": 53,
-  "pop": 575,
+  "day": 56,
+  "pop": 652,
   "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Hedeby",
+   "name": "Tenochtitlan",
    "tier": 4,
-   "pop": 51
+   "pop": 125
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 3191780
+  "bytes": 3475787
  },
  "mega": {
-  "day": 75,
-  "pop": 1076,
-  "peoples": 4,
+  "day": 83,
+  "pop": 1421,
+  "peoples": 7,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Hedeby",
    "tier": 5,
-   "pop": 191
+   "pop": 156
   },
   "wars": 0,
   "ww": null,
   "world": "Corante",
-  "bytes": 4585117
+  "bytes": 5754389
  },
  "mundial": {
-  "day": 119,
-  "pop": 759,
+  "day": 58,
+  "pop": 576,
   "peoples": 4,
-  "towns": 19,
+  "towns": 17,
   "N": 160,
   "map": "continente",
   "seed": 3510,
   "city": {
-   "name": "Roma",
-   "tier": 4,
-   "pop": 264
+   "name": "Mênfis",
+   "tier": 3,
+   "pop": 113
   },
-  "wars": 1,
-  "ww": "a Grande Coalizão",
+  "wars": 3,
+  "ww": "a Guerra dos Deuses",
   "world": "Nerheim",
-  "bytes": 6046443
+  "bytes": 3822295
  },
  "anos100": {
   "day": 101,
-  "pop": 890,
-  "peoples": 2,
+  "pop": 370,
+  "peoples": 3,
   "towns": 14,
   "N": 128,
   "map": "continente",
   "seed": 3404,
   "city": {
    "name": "Roma",
-   "tier": 4,
-   "pop": 148
+   "tier": 3,
+   "pop": 129
   },
-  "wars": 0,
+  "wars": 1,
   "ww": null,
   "world": "Ormar",
-  "bytes": 4099550
+  "bytes": 2883739
  },
  "anos500": {
   "day": 501,
