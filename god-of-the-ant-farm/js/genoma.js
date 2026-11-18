@@ -20,7 +20,8 @@
   // the genes, in the order of the string (each 0..63; 32 the middle of every people)
   const GENES = Ge.GENES = Object.freeze(['melanina', 'subtom', 'cabeloCor', 'cabeloRuivo', 'cabeloTextura', 'olhoCor',
     'cranio', 'rostoLongo', 'mandibula', 'queixo', 'macas', 'arcada', 'narizLongo', 'narizLargo', 'narizPonte', 'labios',
-    'olhosAfast', 'olhoTam', 'palpebra', 'orelhas', 'altura', 'massa', 'musculo', 'ombros', 'barbaDens', 'calvicie', 'sardas', 'sobrancelha']);
+    'olhosAfast', 'olhoTam', 'palpebra', 'orelhas', 'altura', 'massa', 'musculo', 'ombros', 'barbaDens', 'calvicie', 'sardas', 'sobrancelha',
+    'grisalho']); // (the 29th, 22a wave 2, D-635: when the hair greys — last, so a genome of the 28 before keeps every allele it had)
   const NG = Ge.NG = GENES.length, LEN = Ge.LEN = NG * 2;
   const GI = Ge.I = Object.freeze(Object.fromEntries(GENES.map((g, i) => [g, i])));
   Ge.COLOR = Object.freeze([GI.melanina, GI.subtom, GI.cabeloCor, GI.cabeloRuivo]); // (the genes of the colours: what an old save's look sets)
@@ -56,6 +57,8 @@
   const enc = al => { let s = ''; for (let i = 0; i < al.length; i++) s += B64[al[i]]; return s; };
   const dec = s => { const a = new Uint8Array(LEN); for (let i = 0; i < LEN; i++) a[i] = DEC[s.charCodeAt(i)]; return a; };
   Ge.alleles = s => (Ge.valid(s) ? dec(s) : null);
+  // (a genome saved before the 29th gene: two alleles short, every one of them still good — the load gives it the new gene, D-635)
+  Ge.short = s => { if (typeof s !== 'string' || s.length !== LEN - 2) return false; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); if (c > 127 || DEC[c] < 0) return false; } return true; };
   Ge.encode = al => enc(al);
   // the phenotype: each gene the mean of its two alleles (additive: children fall between their parents, siblings differ),
   // 0..1 (0.5 the middle)
@@ -203,16 +206,20 @@
     if (!all.length) return 0;
     const born = p => (Number.isFinite(p.born) ? p.born : Number.isFinite(p.died) && Number.isFinite(p.age) ? p.died - p.age : -1e9);
     all.sort((a, b) => born(a) - born(b) || a.id - b.id);
+    let whole = 0;
     for (const p of all) {
       const m = p.mother ? G.person(p.mother) : null, f = p.father ? G.person(p.father) : null;
       const mg = m && Ge.valid(m.genoma) ? m.genoma : null, fg = f && Ge.valid(f.genoma) ? f.genoma : null;
       const fa = !p.civ && p.fac && G.Fac && G.Fac.get ? G.Fac.get(p.fac) : null; const civ = p.civ || (fa && fa.civ) || null, seed = S.seed | 0;
+      // (a genome of the 28 genes: kept, and the 29th as a child of these parents has it, or as a founder of their people)
+      if (Ge.short(p.genoma)) { p.genoma += (mg && fg ? Ge.child(p.id, mg, fg, seed) : Ge.founder(p.id, civ, 0, seed)).slice(LEN - 2); continue; }
+      whole++;
       const g = mg || fg ? Ge.child(p.id, mg || Ge.founder(-p.id - 1, civ, 0, seed), fg || Ge.founder(-p.id - 1, civ, 0, seed), seed) : Ge.founder(p.id, civ, 0, seed);
       p.genoma = Ge.withLook(g, p.skin, p.hair, mg && fg ? mg : null, mg && fg ? fg : null);
     }
     // (the day the genomes came: who was born by then has the colour the old save gave them, not one from the parents — the
     // verifier asks the colour genes only of who was born after, L-1674)
-    if (G.mod) G.mod('genoma.desde', Math.max(G.mod('genoma.desde') || 0, S.day | 0));
+    if (whole && G.mod) G.mod('genoma.desde', Math.max(G.mod('genoma.desde') || 0, S.day | 0));
     return all.length;
   };
   (G.saveHooks = G.saveHooks || []).push({ save() { }, load() { Ge.fill(); } });

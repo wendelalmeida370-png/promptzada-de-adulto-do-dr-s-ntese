@@ -34,12 +34,14 @@
     const skin0 = Fe ? Fe.skin : v.skin, hair0 = Fe ? Fe.hair : v.hair;
     L.robe = v.role === 'sacerdote' || v.role === 'anciao' || v.role === 'escriba' || (v.g === 'f' && ad >= 12 && (v.id % 3 !== 0));
     // (the colours: made again only when what they are made of changes — the trade's cloth, the hair greying with the years)
-    const grey = ad >= 62 ? Math.floor(ad) : 0;
+    // (the grey: by the genome's age for it — salt and pepper, then white, D-635 —; one with none, as before, from sixty-two)
+    const gT = Fe ? Fe.greyT : ad >= 62 ? G.clamp((Math.floor(ad) - 62) / 18, 0, 0.85) : 0, grey = Math.round(gT * 50);
     if (L._cloth !== cloth || L._hair !== hair0 || L._skin !== skin0 || L._grey !== grey) {
       L._cloth = cloth; L._hair = hair0; L._skin = skin0; L._grey = grey;
-      const hair = grey ? G.lerpColor(G.hex2rgb(hair0 || '#3a2a1a'), [214, 210, 204], G.clamp((ad - 62) / 18, 0, 0.85)) : null;
+      const h0 = G.hex2rgb(hair0 || '#3a2a1a'), salt = G.lerpColor(h0, [150, 146, 140], 0.55);
+      const hair = grey ? (gT < 0.45 ? G.lerpColor(h0, salt, gT / 0.45) : G.lerpColor(salt, [226, 223, 216], (gT - 0.45) / 0.55)) : null;
       L.skin = skin0 || '#d8a888'; L.hair = hair ? '#' + hair.map(q => Math.round(q).toString(16).padStart(2, '0')).join('') : hair0 || '#3a2a1a';
-      L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(hair0 || '#3a2a1a', 0.8); L.nose = darker(skin0 || '#d8a888', 0.88); L.lips = darker(skin0 || '#d8a888', 0.62);
+      L.cloth = cloth; L.pants = darker(cloth, 0.62); L.feet = '#3a2a1e'; L.belt = darker(cloth, 0.38); L.brow = darker(L.hair, 0.8); L.nose = darker(skin0 || '#d8a888', 0.88); L.lips = darker(skin0 || '#d8a888', 0.62);
     }
     L.fem = v.g === 'f' && ad >= 13; L.bun = v.g === 'f' && ad >= 16 && v.id % 3 === 1; L.beard = v.g === 'm' && ad >= 26 && v.id % 3 === 0; L.long = v.g === 'f' && ad >= 8 && v.id % 3 !== 1; L.bald = v.g === 'm' && ad >= 55 && v.id % 4 === 0;
     L.act = v.act; L.lantern = !!v.lantern && !v.inside;
@@ -151,7 +153,7 @@
     o.skirt = null; o.cloakM = null; o.hatM = null; o.beard = null; o.topM = null;
     o.hairM = ad >= 55 && !fem && hh(10) < 0.35 ? 'careca' : HAIRS[fem ? 'f' : 'm'][Math.floor(hh(11) * 5)];
     if (!fem && ad >= 22 && hh(12) < (civ === 'nordico' ? 0.62 : civ === 'grego' ? 0.5 : 0.22)) o.beard = hh(13) < 0.55 ? 'barba' : hh(13) < 0.8 ? 'curta' : 'bigode';
-    o.blush = fem || kid ? 0.25 : 0.06;
+    o.blush = fem || kid ? 0.12 : 0.04; // (the warmth of the cheeks at rest: a little more in the women and the children — never rouge, L-1675)
     if (kid) { o.skirt = fem ? 'saiaL' : 'saiaC'; o.legs = fem ? 0 : 1; o.feetK = hh(14) < 0.45 ? 1 : 0; o.hairM = fem ? (hh(15) < 0.5 ? 'trancas' : 'longo') : 'curto'; o.motif = 0; o.sleeve = 0.45; }
     else if (civ === 'nordico') {
       if (fem) { o.skirt = 'saiaL'; o.over = wool(base); o.cloth = ['#e8e0cc', '#d8cfb8', '#c8b898'][Math.floor(hh(16) * 3)]; o.overK = 1; o.legs = 0; if (hh(17) < 0.38 && ad >= 18) o.hatM = 'lenco', o.hat = ['#e8e2d0', '#c8b898', '#9a3a2a'][Math.floor(hh(18) * 3)]; }

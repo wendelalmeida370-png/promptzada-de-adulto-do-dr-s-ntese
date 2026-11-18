@@ -273,7 +273,7 @@ vec3 b3face(vec3 p, vec3 skin) {
     float nr0 = 1.0 - smoothstep(0.0003, 0.0012, fwidth(p.x)), sf = abs(fract(sx / 0.0011) - 0.5) * 2.0;
     float edge = th * (1.0 + nr0 * (0.35 * h1 - 0.15)); // (the outline broken by the hairs that stick out)
     float br = b3aa(abs(p.y - yc) - edge) * smoothstep(0.012, 0.0165, bx) * smoothstep(0.075, 0.068 - 0.004 * h2 * nr0, bx);
-    vec3 bc = min(hair * 0.5, skin * 0.3);
+    vec3 bc = mix(min(hair * 0.5, skin * 0.3), hair * 0.78, clamp(pp.w * 0.85, 0.0, 1.0)); // (grey with the hair, D-635)
     c = mix(c, bc, br * 0.95 * mix(1.0, (0.62 + 0.38 * h2) * (1.0 - 0.35 * sf * sf) * (1.0 - 0.25 * smoothstep(0.4, 1.0, abs(sy))), nr0));
     // (the lips and the mouth: the corners up in a smile, down in grief and anger; open as it talks, laughs, gasps — the
     // teeth showing in a laugh)
@@ -299,13 +299,28 @@ vec3 b3face(vec3 p, vec3 skin) {
       c = mix(c, mix(lips * 0.35, inside, step(0.001, open)), line * 0.9);
     }
     // (a blush on the cheeks — and the cheeks lifted in a smile catch the light)
-    float ch = length(vec2(ax - 0.054, p.y - 1.652)) / 0.022; c = mix(c, c * vec3(1.06, 0.86, 0.84), (1.0 - smoothstep(0.3, 1.0, ch)) * min(0.2 + m.w, 1.0)); // (22a: a lighter flush at rest — with the cheeks the genes and the light now give, 0.35 read as rouge a few steps off)
+    // (22a wave 2, L-1675: the flush is a warmth over the cheek, not a disc of red — the old tint made the cheek darker and redder
+    // under a sharp round edge, a stain on a dark skin and rouge on a pale one: now wide and soft, the brightness kept, as much as
+    // the skin shows it — the feeling's blush (the face's channel) and the cold's and the drink's come through the same warmth)
+    float ch = length(vec2(ax - 0.052, (p.y - 1.652) * 1.25)) / 0.03; float lum0 = dot(c, vec3(0.3, 0.59, 0.11));
+    vec3 warm = c * vec3(1.1, 0.93, 0.9); warm *= lum0 / max(dot(warm, vec3(0.3, 0.59, 0.11)), 1e-4);
+    c = mix(c, warm, (1.0 - smoothstep(0.0, 1.0, ch)) * min(0.1 + m.w, 1.0) * (0.35 + 0.65 * smoothstep(0.12, 0.5, lum0)));
     float nz = length(vec2(ax / 0.016, (p.y - 1.662) / 0.02)); c = mix(c, c * vec3(1.05, 0.88, 0.86), (1.0 - smoothstep(0.35, 1.0, nz)) * 0.4 * step(0.1, p.z)); // (the nose's tip)
     c *= 1.0 + 0.05 * x.z * (1.0 - smoothstep(0.2, 1.1, ch));
     // (22a, D-555: the years on the face — the lines of the forehead, the crow's feet at the eyes' outer corners, the fold from the
     // nose to the mouth —, as the shape's weights of the years have them; only where they can be seen, never shimmering far off)
     float yrs = clamp(pp.z, 0.0, 1.0);
     float fine = 1.0 - smoothstep(0.0006, 0.002, fwidth(p.y));
+    // (22a wave 2, D-637: and broad and soft, for a few steps off where the fine lines are lost — the fold from the nose to the mouth,
+    // the bags under the eyes, the shade of the jowls —; the old skin a little greyer)
+    if (yrs > 0.01) {
+      float nlb = abs((ax - 0.018) * 0.9 - (1.655 - p.y) * 0.45);
+      float foldB = (1.0 - smoothstep(0.0, 0.0055, nlb)) * smoothstep(1.592, 1.602, p.y) * (1.0 - smoothstep(1.652, 1.66, p.y)) * smoothstep(0.012, 0.018, ax) * (1.0 - smoothstep(0.04, 0.046, ax));
+      float bag = (1.0 - smoothstep(0.0, 1.0, length(vec2((ax - 0.037) / 0.016, (p.y - 1.683) / 0.006)))) * step(0.07, p.z);
+      float jowl = 1.0 - smoothstep(0.0, 1.0, length(vec2((ax - 0.042) / 0.014, (p.y - 1.587) / 0.012)));
+      c *= 1.0 - yrs * (foldB * 0.16 + bag * 0.13 + jowl * 0.1);
+      c = mix(c, vec3(dot(c, vec3(0.3, 0.59, 0.11))), yrs * 0.12);
+    }
     if (yrs > 0.01 && fine > 0.0) {
       float fh = smoothstep(1.742, 1.752, p.y) * smoothstep(1.8, 1.785, p.y) * smoothstep(0.045, 0.0, ax) * step(0.07, p.z);
       float lines = fh * smoothstep(0.55, 0.95, sin(p.y * 1250.0 + sin(p.x * 60.0) * 1.5));
@@ -318,6 +333,12 @@ vec3 b3face(vec3 p, vec3 skin) {
       vec2 q = vec2(p.x, p.y) * 420.0; vec2 cell = floor(q); float rnd = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
       float sp = smoothstep(0.32, 0.18, length(fract(q) - 0.5)) * step(1.0 - pp.x * 0.55, rnd) * smoothstep(0.075, 0.03, length(vec2(ax - 0.03, p.y - 1.67)));
       c = mix(c, c * vec3(0.78, 0.62, 0.5), sp * fine * 0.8);
+    }
+    // (the spots of the age: few and broader than freckles, from the sixties on, near only — D-637)
+    if (yrs > 0.4 && fine > 0.0 && p.y > 1.62 && p.y < 1.79 && ax < 0.075) {
+      vec2 q2 = vec2(p.x, p.y) * 150.0; vec2 c2 = floor(q2); float r2 = fract(sin(dot(c2, vec2(39.346, 11.135))) * 24634.6345);
+      float sp2 = (1.0 - smoothstep(0.25, 0.42, length(fract(q2) - 0.5))) * step(0.93 - (yrs - 0.4) * 0.12, r2);
+      c = mix(c, c * vec3(0.8, 0.68, 0.55), sp2 * fine * 0.55);
     }
   }
   return c;
@@ -504,7 +525,7 @@ vec3 b3paint() {
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
     };
-    mat.customProgramCacheKey = () => 'body3d-v6';
+    mat.customProgramCacheKey = () => 'body3d-v7';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind;
@@ -699,8 +720,10 @@ vec3 b3paint() {
     const bl = cl(ch[RI.blink], 0, 1), sq = cl(ch[RI.squint], 0, 1), wd = cl(ch[RI.wide], 0, 1), sd = cl(ch[RI.browSad], 0, 1), sm = cl(ch[RI.smile], -1, 1), pn = cl(ch[RI.pain], 0, 1);
     // (at rest the eye is calm — the upper lid over the top of the iris, a tenth or so of it, the lower one at its rim: the mesh's
     // own rest, rosto.py LID_REST_*; the white above and below it is the wide channel's, fear and awe, never the rest's: D-557)
+    // (the upper lid that falls with the years — the old one's hooded eye, D-637 —, shut at a blink in the same place)
+    const fe = L && L.fe, FX = G.Feicao && G.Feicao.IDX, dr = fe && fe.w && FX ? fe.w[FX.velho] * 5 + fe.w[FX.anciao] * 4 : 0;
     FV.loA = -cl(bl * 14 + sq * 12 + Math.max(0, sm) * 4 + pn * 8 - wd * 4, -10, 26) * RAD;
-    FV.upA = cl(bl * 56 + sq * 13 + sd * 6 + pn * 14 - wd * 22, -30, 56) * RAD;
+    FV.upA = cl(dr * (1 - bl) * (1 - wd) + bl * 56 + sq * 13 + sd * 6 + pn * 14 - wd * 22, -30, 56) * RAD;
     FV.jawA = cl(ch[RI.jaw], 0, 1) * 24 * RAD;
     return FV;
   }
@@ -712,6 +735,7 @@ vec3 b3paint() {
     if (fe && fe.w) for (let k = 0; k < fe.w.length && k < SW.length; k++) SW[k] = fe.w[k];
     if (fe && fe.paint) { SW[44] = fe.paint[0]; SW[45] = fe.paint[1]; } else SW[45] = 0.5; // (the freckles, the brows' weight: texel WT + 11)
     SW[46] = Math.min(1, SW[X0.maduro] * 0.35 + SW[X0.velho] * 0.8 + SW[X0.anciao] * 0.6); // (the lines of the years)
+    SW[47] = fe ? fe.greyT || 0 : 0; // (the grey of the hair: the brows go with it, D-635)
     const RI = G.Rosto && G.Rosto.IDX; if (!RI) return; const ch = fv.ch, X = Fe.IDX;
     const smi = ch[RI.smile], side = ch[RI.smileSide], pn = ch[RI.pain];
     SW[X.sorrisoE] = Math.max(0, smi) * (1 - 0.6 * side); SW[X.sorrisoD] = Math.max(0, smi) * (1 + 0.6 * side); SW[X.tristeza] = Math.max(0, -smi);

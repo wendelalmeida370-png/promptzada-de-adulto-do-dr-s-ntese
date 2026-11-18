@@ -1567,6 +1567,28 @@ const GENOMA_OK = [
 // o G.Genoma — o corpo, a pele, os alvos e a animação recebem a feição pelo retrato (L.fe), a mesma para todos
 { for (const f of LOOK) { if (f === 'feicao.js' || f === 'look3d.js' || !src[f]) continue;
     src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.genoma\b|\bG\.Genoma\b/.test(c)) fails.push(`o 3D lê a pessoa pela feição: ${f}:${k + 1} lê o genoma de alguém direto (pelo retrato, L.fe, ou pelo G.Feicao: D-552): ${l.trim().slice(0, 110)}`); }); } }
+// 236. "o pedaço de sombreador termina numa linha nova" (L-1248, L-1673; 22a onda 2, D-638): um pedaço de sombreador escrito num
+// texto de JavaScript (um modelo de várias linhas com GLSL) que é juntado a outro por «+» termina em quebra de linha — o pedaço
+// seguinte pode começar por uma diretiva (#define), e o pré-processador só a aceita no começo de uma linha: o chão do 3D não
+// compilou duas vezes por isso. Vale para o modelo seguido de «+» e para o pedaço com nome (a constante, e a porta que a devolve:
+// «X.nome = () => CONST») usado com «+» em qualquer arquivo. Juntar por «'\n'» (ou «join('\n')») também serve.
+{ const GL = /\b(uniform|varying|vec[234]|mat[34]|void|texture2D|gl_FragColor)\b|#(define|ifdef|include)\b/;
+  const tpl = s => { const out = []; let i = 0; while (i < s.length) { const c = s[i];
+    if (c === '/' && s[i + 1] === '/') { const j = s.indexOf('\n', i); i = j < 0 ? s.length : j; continue; }
+    if (c === '/' && s[i + 1] === '*') { const j = s.indexOf('*/', i + 2); i = j < 0 ? s.length : j + 2; continue; }
+    if (c === "'" || c === '"') { let j = i + 1; while (j < s.length && s[j] !== c && s[j] !== '\n') { if (s[j] === '\\') j++; j++; } i = j + 1; continue; }
+    if (c === '`') { let j = i + 1, d = 0; while (j < s.length) { if (s[j] === '\\') { j += 2; continue; } if (s[j] === '$' && s[j + 1] === '{') { d++; j += 2; continue; } if (s[j] === '}' && d > 0) { d--; j++; continue; } if (s[j] === '`' && d === 0) break; j++; }
+      out.push({ a: i, b: j, body: s.slice(i + 1, j) }); i = j + 1; continue; }
+    i++; } return out; };
+  const pieces = new Map(); const whole = Object.fromEntries(files.map(f => [f, src[f].join('\n')]));
+  for (const f of files) { const s = whole[f];
+    for (const t of tpl(s)) { if (!t.body.includes('\n') || !GL.test(t.body) || /\n[ \t]*$/.test(t.body)) continue;
+      const line = s.slice(0, t.a).split('\n').length;
+      if (/^\s*\+/.test(s.slice(t.b + 1))) fails.push(`o pedaço de sombreador termina numa linha nova: ${f}:${line} um modelo de GLSL juntado a outro por «+» sem acabar em quebra de linha (L-1248, L-1673)`);
+      const m = s.slice(Math.max(0, t.a - 80), t.a).match(/(?:const|let)\s+(\w+)\s*=\s*$/); if (m) pieces.set(m[1], `${f}:${line}`); } }
+  for (const [nm, at] of [...pieces]) for (const f of files) for (const a of whole[f].matchAll(new RegExp('\\.(\\w+)\\s*=\\s*\\(\\)\\s*=>\\s*' + nm + '\\s*;', 'g'))) pieces.set(a[1] + '()', at);
+  for (const [nm, at] of pieces) { const re = new RegExp((nm.endsWith('()') ? '\\.' + nm.slice(0, -2) + '\\(\\)' : '(?<![\\w.])' + nm + '(?![\\w(])') + '(?:\\s*:\\s*[^)+]*\\))?\\s*\\+(?!\\s*\'\\\\n\')', 'g'); // (also as one side of «c ? piece : '') +»
+    for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '').replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"/g, "''"); if (re.test(c)) fails.push(`o pedaço de sombreador termina numa linha nova: ${f}:${k + 1} junta por «+» o pedaço «${nm}» (${at}), que não acaba em quebra de linha (L-1248, L-1673): ${l.trim().slice(0, 100)}`); re.lastIndex = 0; }); } }
 // === 22b: a sociedade ===
 // (the body of a function found by its name — `name = function`, `name = (…) =>`, `function name(` —, to its closing brace)
 const fnBody = (f, name) => {
