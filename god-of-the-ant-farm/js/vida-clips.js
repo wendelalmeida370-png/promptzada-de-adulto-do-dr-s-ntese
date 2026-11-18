@@ -72,6 +72,8 @@
   oc('oc-enxugar-testa', 1.8, RA.concat(HD), [[0, r0], [0.35, mix(at(1, 'testa'), { neck: -4 })], [0.62, mix(at(1, 'testa', { shRy: -36, shRr: -10 }), { neck: -2 })], [1, mix(r0, { neck: 0 })]]);
   // the sick: a cough, a hand to the chest; the grieving: the eyes wiped
   oc('oc-tossir', 1.8, RA.concat(HD, ['lean']), [[0, mix(r0, { lean: 0, neck: 0 })], [0.25, mix(at(1, 'boca'), { lean: 4, neck: 6 })], [0.35, { lean: 12, neck: 12 }], [0.45, { lean: 5, neck: 6 }], [0.55, { lean: 12, neck: 12 }], [0.75, mix(at(1, 'boca'), { lean: 4, neck: 6 })], [1, mix(r0, { lean: 0, neck: 0 })]], { in: 0.18 });
+  // (the sneeze: the breath drawn in, the head thrown back, then down hard into the hand — the sound at the throw, 0.45)
+  oc('oc-espirrar', 1.6, RA.concat(HD, ['lean']), [[0, mix(r0, { lean: 0, neck: 0 })], [0.25, mix(at(1, 'boca', { elR: -6 }), { lean: -4, neck: -14 })], [0.42, mix(at(1, 'boca'), { lean: 14, neck: 22 })], [0.55, mix(at(1, 'boca'), { lean: 8, neck: 12 })], [1, mix(r0, { lean: 0, neck: 0 })]]);
   oc('oc-mao-peito', 2.6, RA, [[0, r0], [0.25, mix(at(1, 'peito'), { grip: 0.3 })], [0.8, mix(at(1, 'peito'), { grip: 0.35 })], [1, r0]]);
   oc('oc-enxugar-olhos', 2.2, RA.concat(HD), [[0, mix(r0, { neck: 0 })], [0.35, mix(at(1, 'olhos'), { neck: 12, grip: 0.4 })], [0.6, mix(at(1, 'olhos', { shRy: -8 }), { neck: 13 })], [1, mix(r0, { neck: 0 })]]);
   // the wait: the fingers drummed at the hip; the child to come: the belly stroked

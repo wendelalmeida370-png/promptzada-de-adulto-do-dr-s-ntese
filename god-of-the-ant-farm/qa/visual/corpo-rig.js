@@ -22,7 +22,7 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|duo-clips|grupo-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
@@ -134,7 +134,7 @@ if (process.argv[2] === 'dump') {
 // (22c's gestures on the knees or crouched — the condemned, the one who hides, the weeping and the begging on their knees, the
 // proposal on one knee, the child's prayer —: as the prayer and the knife at the hide are; the story told seated, as sit —, and
 // their left-handed twins)
-const KNEELERS = ['ato-condenado', 'ato-esconder', 'ato-chorar-joelhos', 'ato-implorar', 'ato-propor', 'ato-enforcado', 'ato-contar'].flatMap(k => [k, k + '~m']);
+const KNEELERS = ['ato-condenado', 'ato-esconder', 'ato-chorar-joelhos', 'ato-implorar', 'ato-propor', 'ato-enforcado', 'ato-contar', 'crianca-cao'].flatMap(k => [k, k + '~m']);
 const STATES = process.env.ESTADOS ? A.STATES.filter(st => process.env.ESTADOS.split(',').concat(['idle', 'walk', 'talk', 'carry', 'wave', 'interact', 'turn']).includes(st)) : A.STATES; // (and the stances the feet are measured on)
 // ------------------------------ the proofs ------------------------------
 ok('o corpo contínuo começou', B3.ready && P3.skin(), JSON.stringify({ ready: B3.ready, failed: B3.failed, bindErr: B3.bindErr }));

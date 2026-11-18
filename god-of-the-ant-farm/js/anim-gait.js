@@ -149,7 +149,9 @@
         if (g === 'walk') { const sd = k ? -1 : 1, py = -(0.035 + 0.04 * Math.min(n, 2.2)) * Math.cos(TAU * u); top = Math.min(top, plantedTop(hz0 - n * uu / f + sd * LEG.hipX * Math.sin(py), pit)); continue; }
         fk(hp, kn, pit - hp - kn - pp, pp); const foot = Math.min(FK.hy, FK.by); lo = Math.max(lo, foot);
       }
-      need[i] = !has[i] ? 0 : g === 'walk' ? Math.min(0, top - LEG.pel) : Math.min(0, -(LEG.pel + lo));
+      // (a foot the leg cannot reach — the walk's table asked at a run's speed, or with steps longer than the leg, as a slow cadence
+      // makes them — is no reason to drop the hips a million metres: never lower than a deep knee's bend, L-1773)
+      need[i] = !has[i] ? 0 : g === 'walk' ? Math.max(-0.6, Math.min(0, top - LEG.pel)) : Math.min(0, -(LEG.pel + lo));
     }
     // (no foot on the ground: an arc from the push-off's height to the next strike's, rising over it as a leap does)
     for (let i = 0; i < NH; i++) if (!has[i]) {

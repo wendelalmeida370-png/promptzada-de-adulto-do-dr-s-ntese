@@ -184,6 +184,14 @@
     choir: (t, v) => { for (const f of [110, 164.8, 220]) { const o = ac.createOscillator(), g = ac.createGain(), lp = ac.createBiquadFilter(), lfo = ac.createOscillator(), lg = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f; lfo.frequency.value = 5.2; lg.gain.value = f * 0.012; lfo.connect(lg); lg.connect(o.frequency); lp.type = 'lowpass'; lp.frequency.value = 700; lp.Q.value = 6; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.025 * v, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.6); o.connect(lp); lp.connect(g); g.connect(out(sfx)); g.connect(revIn); o.start(t); lfo.start(t); o.stop(t + 2.7); lfo.stop(t + 2.7); } },
     triumph: (t, v) => { [392, 493.9, 587.3, 783.99, 987.8].forEach((f, k) => { const n = osc('sawtooth', f, t + k * 0.1, 0.9, 0.025 * v, sfx, 0, 0.03); n.g.connect(revIn); }); osc('sine', 98, t, 1.4, 0.18 * v, sfx); },
     sob: (t, v) => { for (let k = 0; k < 3; k++) nz(t + k * 0.32, 0.18, 0.06 * v, 'bandpass', 700 + k * 60, 3, sfx, 420); },
+    // the little things of the idle that sound (22c fase 6, D-610): the cough, the sneeze, the yawn, the sigh, the drunk's hiccup, the
+    // teeth chattering in the cold — a breath shaped by a band, low and short (the tom: the voice of the one)
+    cough: (t, v, o) => { const f = 520 * ((o && o.tom) || 1); nz(t, 0.09, 0.12 * v, 'bandpass', f, 2.5, sfx, 260); nz(t + 0.16, 0.08, 0.09 * v, 'bandpass', f * 0.9, 2.5, sfx, 240); },
+    sneeze: (t, v, o) => { const f = 900 * ((o && o.tom) || 1); nz(t, 0.18, 0.025 * v, 'highpass', 2200); nz(t + 0.2, 0.12, 0.14 * v, 'bandpass', f, 1.6, sfx, 380); },
+    yawn: (t, v, o) => { const f = 210 * ((o && o.tom) || 1); osc('sawtooth', f, t, 0.9, 0.018 * v, sfx, f * 0.75, 0.2); nz(t, 0.9, 0.03 * v, 'bandpass', 600, 1.2, sfx, 400); },
+    sigh: (t, v) => { nz(t, 0.7, 0.04 * v, 'bandpass', 900, 1.1, sfx, 450); },
+    hiccup: (t, v, o) => { const f = 330 * ((o && o.tom) || 1); osc('triangle', f, t, 0.07, 0.06 * v, sfx, f * 1.4); nz(t, 0.05, 0.05 * v, 'bandpass', 1400, 3); },
+    teeth: (t, v) => { for (let k = 0; k < 6; k++) nz(t + k * 0.045, 0.012, 0.03 * v, 'highpass', 3600); },
     // the dragon: a roar from deep in the chest, the rush of its breath
     roar: (t, v) => { const a = osc('sawtooth', 112, t, 1.9, 0.11 * v, sfx, 50, 0.16); a.g.connect(revIn); const b = osc('sawtooth', 167, t + 0.05, 1.6, 0.05 * v, sfx, 72, 0.22); b.g.connect(revIn); nz(t, 1.8, 0.24 * v, 'lowpass', 760, 1, sfx, 170, 0.12); nz(t + 0.1, 1.1, 0.08 * v, 'bandpass', 1500, 2, sfx, 520, 0.1); },
     flame: (t, v) => { nz(t, 1.1, 0.22 * v, 'bandpass', 600, 0.8, sfx, 1900, 0.08); nz(t + 0.12, 0.9, 0.1 * v, 'highpass', 2600, 0, sfx, 0, 0.1); },

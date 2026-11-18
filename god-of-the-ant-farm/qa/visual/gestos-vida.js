@@ -14,6 +14,10 @@
 //       stroke (Anim3D.loopTime at t = period, 2·period…);
 //   g8  the mirror: a gesture's left-handed twin (`id~m`) is the same gesture on the other side — the left palm where the right
 //       one was, mirrored, within 1 cm;
+//   g12 the hips of a stride at every speed and cadence within a knee's bend of standing (L-1773)
+//   g11 the pairs (D-605): each part of an act of two with its hands on the other, the two at the act's distance, facing — at the
+//       touch, a hand within 5 cm of where it goes (the other's back, chest, shoulder; where two hands meet), the trunks 4 cm apart
+//       at least, no palm in either trunk or head
 //   g9  the porte walks by the stride: the elder's, the cold's, the pregnant one's, the frightened one's, the limping one's walk —
 //       the cadence the porte asks, the standing foot still under 2 cm (the legs never added on top, D-595).
 //   node qa/visual/gestos-vida.js            ONLY=g1,g9 for some parts; V=1 lists every clip's numbers
@@ -27,7 +31,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 for (const f of ['js/interacao-clips.js', 'js/trabalho-clips.js', 'js/combate-clips.js']) try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); } catch (e) { console.log('(sem ' + f + ': ' + e.message + ')'); }
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null; const on = k => !ONLY || ONLY.has(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | gestos-vida ${name} | ${info}`); if (!c) fails.push(name); };
-const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
+const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js', 'js/duo-clips.js', 'js/grupo-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
 const ids = Object.keys(A.CLIPS).filter(id => (process.env.GRUPO !== '22c' || OURS.has(id)) && (!process.env.CLIPES || process.env.CLIPES.split(',').includes(id))).sort();
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
 // the bodies: a man and a woman at three ages — the size of the age (People3D's lookFill: a child of 8 is 1.2 m, an elder of 75 1.68 m)
@@ -151,6 +155,55 @@ if (on('g10')) {
         if (d > worst) worst = d; if (d > 0.03) badp.push(`${n} ${st} ${bn}${lefty ? ' canhoto' : ''} ${r1(d * 100)} cm`); low = Math.min(low, p[1]); } }
   }
   ok('g10 as mãos do porte no corpo, nunca dentro dele (3 cm de tolerância), nem no chão', !badp.length && low > -0.01, `${CASES.length} portes × parado, sentado, andando × 3 corpos × as duas mãos; o mais fundo ${r1(worst * 100)} cm; a palma mais baixa ${r1(low * 100)} cm${badp.length ? ' · ' + [...new Set(badp)].slice(0, 8).join(', ') : ''}`);
+}
+if (on('g11')) {
+  // the pairs: the two at the act's distance (the world's: G.SocAtos — the greeting nearer, where the hand can meet: 0.95 m), facing;
+  // each driven through its part on the act's clock, each one's hands taken to the other by the frame's own aim (People3D.duoAim) from
+  // the other's chest of the frame before; at the touch, the measures
+  if (!G.SocAtos) try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'js/soc-atos.js'), 'utf8'), { filename: 'js/soc-atos.js' }); } catch (e) { console.log('(sem soc-atos.js)'); }
+  const CASES = [];
+  for (const act in A.DUO) for (const papel of ['a', 'b']) { const e = A.DUO[act][papel]; if (!e || !e.hands) continue; const sa = G.SocAtos && G.SocAtos.of(act); const rv = sa && sa.rev && A.DUO[sa.rev] ? sa.rev : act;
+    const by = G.SocAtos ? G.SocAtos.LIST.find(k => G.SocAtos.of(k).rev === act && A.DUO[k] && A.DUO[k].a) : null; // (the one held: the part of the one whose act has it as its answer)
+    const other = papel === 'a' ? (A.DUO[rv] && A.DUO[rv].b) || A.DUO[act].b || null : A.DUO[act].a || (by ? A.DUO[by].a : null); const ds = sa && sa.dist ? sa.dist : act === 'carried' ? G.SocAtos.of('carry').dist : 1; // (the one taken up: the act of the one who takes them, its distance)
+    CASES.push([act + ' ' + papel, e, other, ds, act === 'carry' || act === 'carried' ? papel : null]); }
+  for (const k in A.GREET) { const e = A.GREET[k]; if (e.hands) CASES.push(['greet ' + k, e, e, 0.95, null]); }
+  const trunk = (R, p, s) => { const c = inFrame(R, B.chest, p, s); return c[1] > -0.12 && c[1] < 0.5 ? Math.hypot(c[0] / 0.15, c[2] / 0.105) : 9; };
+  const M0 = () => new THREE.Matrix4(); const fails11 = []; let worstHand = 0, worstGap = 9, worstIn = 0, n = 0;
+  for (const [name, e, eo, d0, kid] of CASES) for (const pair of [[BODIES[0], BODIES[1]], [BODIES[1], BODIES[0]]]) {
+    // (the child taken up: the carrier a grown one, the carried a child of eight)
+    const bA = kid === 'b' ? BODIES[2] : pair[0], bB = kid === 'a' ? BODIES[2] : pair[1]; const apart = d0;
+    const mk = (body, Z, yaw) => ({ L: Object.assign({}, LOOK, body[1], { plant: [{ on: 0 }, { on: 0 }], ground: 0, gnd: null, held: null, carry: false, reach: null, pair: null, duo: null, lod: 0 }), a: A.memory(), pose: A.POSE0(), I: {}, Z, yaw, s: { chM: M0() }, ch0: M0() });
+    const P1 = mk(bA, 0, Math.PI / 2), P2 = mk(bB, apart, -Math.PI / 2); const C1 = e.clip && A.CLIPS[e.clip], C2 = eo && eo.clip && A.CLIPS[eo.clip]; const dur = C1 ? C1.dur : 2; const dt = 1 / 60;
+    let bad = '', hand = 0, gap = 9, inn = 0;
+    for (let i = 0; i <= Math.round(dur / dt); i++) {
+      const u = Math.min(1, i * dt / dur);
+      for (const [P, C] of [[P1, C1], [P2, C2]]) { Object.assign(P.I, { st: C ? C.id : 'idle', t: i * dt, sp: 0, yaw: P.yaw, yawV: 0, acc: 0, X: 0, Z: P.Z, ground: 0, s: P.L.s, run: 0, walk: 0, over: null, overK: undefined, clipK: C ? u : undefined, drunk: 0, tired: 0, id: 7 });
+        A.drive(P.a, P.I, P.pose, P.L, dt); P.L.duo = null; P.ch0.copy(P3.rig(0, 0, P.Z, P.yaw, P.pose, P.L)[B.chest]); }
+      // (each one's hands to the other, from the other's chest of this frame — the game's has the frame before: the same, standing)
+      for (const [P, Q, E] of [[P1, P2, e], [P2, P1, eo]]) { P.s.chM.copy(P.ch0); P.s.X = 0; P.s.Z = P.Z; }
+      for (const [P, Q, E] of [[P1, P2, e], [P2, P1, eo]]) { P.L.duo = E && E.hands ? P3.duoAim(P.s, { e: E, o: Q.s, k: A.duoW(E, u) }, 0) : null; }
+      const R1 = P3.rig(0, 0, P1.Z, P1.yaw, P1.pose, P1.L); const R1c = R1.map(m => m.clone()); const palms1 = P3.palms(R1).map(v => [v.x, v.y, v.z]);
+      const R2 = P3.rig(0, 0, P2.Z, P2.yaw, P2.pose, P2.L); const palms2 = P3.palms(R2).map(v => [v.x, v.y, v.z]);
+      const w = A.duoW(e, u); if (w < 0.999) continue; n++;
+      // (the hands where they go: each of the first's hands that has a point, at the point within 5 cm)
+      const T = P1.L.duo; if (T) for (let q = 0; q < 2; q++) if (T.on[q]) { const h = dist(palms1[q], T.T[q]); hand = Math.max(hand, h); if (h > 0.05 && !bad) bad = `a mão ${q ? 'direita' : 'esquerda'} a ${r1(h * 100)} cm de onde vai aos ${r2(u * dur)} s`; }
+      // (the trunks apart: points round the first's trunk, how far outside the second's)
+      for (let y = -0.1; y <= 0.48; y += 0.08) for (let a = 0; a < 6.28; a += 0.4) { const p = loc(R1c, B.chest, 0.15 * Math.cos(a), y, 0.105 * Math.sin(a)); const k = trunk(R2, p, P2.L.s); if (k < 9) gap = Math.min(gap, (k - 1) * 0.105 * P2.L.s); }
+      // (no palm in the other's trunk or head)
+      for (const [palms, R, Lo] of [[palms1, R2, P2.L], [palms2, R1c, P1.L]]) for (const p of palms) { const k = trunk(R, p, Lo.s); if (k < 1) inn = Math.max(inn, (1 - k) * 0.105 * Lo.s); const hd = loc(R, B.head, 0, 0.1, 0.02); const dh = dist(p, hd); if (dh < 0.095 * Lo.s) inn = Math.max(inn, 0.095 * Lo.s - dh); }
+    }
+    if (gap < 0.04 && !bad) bad = `os troncos a ${r1(gap * 100)} cm`; if (inn > 0.01 && !bad) bad = `uma palma ${r1(inn * 100)} cm dentro do outro`;
+    worstHand = Math.max(worstHand, hand); worstGap = Math.min(worstGap, gap); worstIn = Math.max(worstIn, inn);
+    if (bad) fails11.push(`${name} (${bA[0]} e ${bB[0]}): ${bad}`);
+  }
+  ok('g11 os pares: a mão onde vai (< 5 cm), os troncos a 4 cm ou mais, nenhuma palma dentro do outro', !fails11.length && n > 0,
+    `${CASES.length} partes de dois × 2 pares; a mão mais longe de onde vai ${r1(worstHand * 100)} cm, os troncos mais perto ${r1(worstGap * 100)} cm, a palma mais funda no outro ${r1(worstIn * 100)} cm${fails11.length ? ' · ' + fails11.slice(0, 10).join(' · ') : ''}`);
+}
+if (on('g12')) {
+  // the hips' height of a stride at every speed and every cadence the porte and the neighbour ask (0.8 to 1.3): never lower than a
+  // deep knee's bend — the walk's table asked at a run's speed with a slow cadence gave the hips a million metres down (L-1773)
+  let worst = 0, at = ''; for (const g of ['walk', 'run']) for (let n = 0.5; n <= 9; n += 0.5) for (let k = 0.8; k <= 1.301; k += 0.05) for (let u = 0; u < 1; u += 1 / 64) { const h = G.Gait.height(g, n, u, k); if (!(h >= -0.6 - 1e-6 && h <= 1e-6) && Math.abs(h) > worst) { worst = Math.abs(h); at = `${g} ${n} cadência ${r2(k)}`; } }
+  ok('g12 a bacia de uma passada em toda velocidade e cadência entre 0 e 60 cm abaixo de em pé', !worst, worst ? `FORA: ${worst.toExponential(1)} (${at})` : 'andar e correr, 0,5 a 9 m/s, cadência 0,8 a 1,3');
 }
 console.log(fails.length ? `GESTOS-VIDA: ${fails.length} falha(s)` : 'GESTOS-VIDA: TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

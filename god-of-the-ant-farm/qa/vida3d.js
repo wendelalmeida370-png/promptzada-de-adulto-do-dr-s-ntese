@@ -210,6 +210,136 @@ if (on('v7')) {
     `${drawnMax} desenhadas; o par mais tempo no mesmo gesto e na mesma fase: ${r2(worst)} s${worstPair ? ' (' + worstPair + ')' : ''} (na mesma passada, dito e não julgado: ${r2(worstLoco)} s${locoPair ? ', ' + locoPair : ''}) · a micro-ação mais repetida de uma pessoa em 10 min: ${Math.round(topShare * 100)}% (${topWho}), ${people} pessoas, ${ocSeen.size} micro-ações diferentes; repetidas em seguida: ${twice} · ${seen.size} gestos e estados vistos: ${[...seen].slice(0, 40).join(', ')}`);
 }
 
+if (on('v8')) {
+  // two in one gesture (D-605): the world puts two at the act's distance, facing (G.Convivio.place) and holds them in it (the task of
+  // each names the other); the view gives each their part and takes their hands to the other in the act's window — and never moves
+  // anyone. Far apart, each one alone; the god's hand on one, a death and a save in the middle: no error, and the other goes on alone
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = new Map(); // (by day, the beasts set aside in this copy: nobody flees)
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const awake = v => v && !v.inside && !v.sleeping && !v.aboard && !v.captive && !v.jail && v.age >= 18 && v.age < 60 && !v.held;
+  const twoOf = (not) => { const L = [...S.villagers.values()].filter(v => awake(v) && !(not || []).includes(v.id)); for (const a of L) for (const b of L) if (a !== b && a.set === b.set && Math.hypot(a.x - b.x, a.y - b.y) < 6) return [a, b]; return [L[0], L[1]]; };
+  // (what is proven is the view: the proof's hand holds the two for the act's length above the day's work and the meal — the society
+  // holds them at 0,95, in free time, and by day in the metrópole made with the society the potter and the builder went back to work
+  // (1), a hungry one to eat (2,5), and the other wandered off: T-1619)
+  const HOLD = 3;
+  const begin = (a, b, act) => { for (const v of [a, b]) { v.hunger = Math.min(v.hunger || 0, 10); v.energy = Math.max(v.energy || 0, 90); } G.Convivio.place(a, b, act); const d = G.SocAtos.of(act); const rv = d.rev || act;
+    // (both held by the society's own 'duo' for the act's length — st 2: each one past the walk to the other, as the one who begins is
+    // when the society holds the other)
+    G.Vg.setTask(a, { type: 'duo', id: b.id, act, papel: 'a', pri: HOLD, wait: d.dur, kind: 'duo', st: 2 }); G.Vg.setTask(b, { type: 'duo', id: a.id, act: rv, papel: 'b', pri: HOLD, wait: d.dur, kind: 'duo', st: 2 }); };
+  const live = (a, n) => { for (let k = 0; k < n; k++) { G.debug.step(0.1); P3.update(0.1, { X: a.x * TL, Z: a.y * TL }); } };
+  // (where each palm is against where it goes: the frame's rig of the person again, from the view's memory of them)
+  const handErr = id => { const s = P3.visOf(id); if (!s || !s.L || !s.L.duo || !(s.L.duo.w > 0.999)) return null; const R = P3.rig(s.X, s.Y, s.Z, s.yaw, s.pose, s.L); const pm = P3.palms(R); let e = 0;
+    for (let q = 0; q < 2; q++) if (s.L.duo.on[q]) e = Math.max(e, Math.hypot(pm[q].x - s.L.duo.T[q][0], pm[q].y - s.L.duo.T[q][1], pm[q].z - s.L.duo.T[q][2])); return e; };
+  const out = [];
+  // (1) the embrace, in place: each their part, the hands on the other's back within 5 cm in the middle of the act; the world's places
+  // the same after the frames as before them
+  let [a, b] = twoOf(); P3.clear(); live(a, 3); begin(a, b, 'hug'); const xy0 = [a.x, a.y, b.x, b.y].join();
+  let stA = '', stB = '', eA = null, eB = null; tryF('o abraço', () => { live(a, 15); const sa = P3.visOf(a.id), sb = P3.visOf(b.id); stA = sa ? sa.st : '?'; stB = sb ? sb.st : '?'; eA = handErr(a.id); eB = handErr(b.id); });
+  const still = [a.x, a.y, b.x, b.y].join() === xy0;
+  const hugOk = stA === 'duo-abraco' && stB === 'duo-abraco-b' && eA !== null && eB !== null && eA < 0.05 && eB < 0.05 && still;
+  out.push(`o abraço: ${stA} e ${stB}, as mãos a ${eA === null ? '—' : r2(eA * 100)} e ${eB === null ? '—' : r2(eB * 100)} cm de onde vão, os lugares do mundo ${still ? 'os mesmos' : 'MUDADOS'}`);
+  // (2) the world left them far apart (2 m more): each one alone — the act's own gesture, no hands on the other
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'hug'); b.x += (b.x - a.x) > 0 ? 0.5 : -0.5; let farA = '', farHands = true;
+  tryF('longe', () => { live(a, 10); const sa = P3.visOf(a.id); farA = sa ? sa.st : '?'; farHands = !!(sa && sa.L && sa.L.duo); });
+  const farOk = farA !== 'duo-abraco' && !farHands; out.push(`longe: ${farA}, ${farHands ? 'AS MÃOS NO OUTRO' : 'sozinho'}`);
+  // (3) the god's hand takes one in the middle of the embrace: the other alone, no error
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'hug'); live(a, 8); b.held = 1; let godA = '';
+  tryF('a mão do deus', () => { live(a, 6); const sa = P3.visOf(a.id); godA = sa ? sa.st + (sa.L && sa.L.duo ? ' COM AS MÃOS' : '') : '?'; }); b.held = 0;
+  const godOk = !/duo-abraco|MÃOS/.test(godA); out.push(`a mão do deus num dos dois: o outro em «${godA}»`);
+  // (4) one of the two dies in the middle of the kiss: the other alone, no error
+  live(a, 30); [a, b] = twoOf(); begin(a, b, 'kiss'); live(a, 8); let deadA = '';
+  tryF('a morte no meio', () => { G.Village.kill(b, 'god', true); live(a, 6); const sa = P3.visOf(a.id); deadA = sa ? sa.st + (sa.L && sa.L.duo ? ' COM AS MÃOS' : '') : '?'; });
+  const deadOk = !/duo-beijo|MÃOS/.test(deadA); out.push(`a morte de um no meio do beijo: o outro em «${deadA}»`);
+  // (5) a save and a load in the middle of the hand in hand: the frame goes on, no error (the tasks are not saved: after the load
+  // each one is again what the world makes of them)
+  live(a, 30); [a, b] = twoOf([b.id]); begin(a, b, 'handhold'); live(a, 8);
+  tryF('o save no meio', () => { const s0 = G.Save.serialize(); G.Save.apply(JSON.parse(s0)); S = G.S; const a2 = S.villagers.get(a.id) || [...S.villagers.values()][0]; live(a2, 10); });
+  // (6) the greeting by the people and the standing
+  const g = (civ, grp, ogrp) => A.greetOf({ civ, grp, ogrp, captive: false, ocaptive: false });
+  const gr = [['romano', g('romano', 'povo', 'povo'), 'antebraco'], ['egípcio', g('egipcio', 'povo', 'povo'), 'reverencia'], ['nórdico', g('nordico', 'povo', 'povo'), 'aperto'],
+    ['o povo ao nobre', g('romano', 'povo', 'nobreza'), 'baixa'], ['o nobre ao povo', g('egipcio', 'nobreza', 'povo'), 'nobre']];
+  const grOk = gr.every(x => x[1] === x[2]); out.push('o cumprimento: ' + gr.map(x => `${x[0]} ${x[1]}`).join(', '));
+  const chk = P3.check();
+  ok('v8 a dois: cada um o seu papel, as mãos no outro, o lugar do mundo; longe, sozinho; a mão do deus, a morte e o save no meio', !errs.length && hugOk && farOk && godOk && deadOk && grOk && !chk.length && !Object.keys(G.modErr || {}).length,
+    (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
+}
+
+if (on('v9')) {
+  // the scenes (D-607, D-608): the world's — who is in each, the act of each, the focus —; the reader finds the focus and, where the
+  // world gives all the same act, the part by who each one is; the heads turn to the focus; the far crowd keeps the posture
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = S.animals || new Map();
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const out = []; let okAll = true; const say = (c, t) => { out.push(t + (c ? '' : ' ✗')); if (!c) okAll = false; };
+  const awake = v => v && !v.inside && !v.sleeping && !v.aboard && !v.captive && !v.jail && !v.held;
+  const grown = [...S.villagers.values()].filter(v => awake(v) && v.age >= 18 && v.age < 60); const pick = i => grown[i % grown.length];
+  out.push(`${grown.length} crescidos acordados`);
+  // (1) the funeral: six round a grave, the world's act (mourn), the kin among them; the reader's part by kin and heart, the focus the
+  // grave, every head toward it after a few frames, no two in step
+  const cem = [...S.buildings.values()].find(b => b.type === 'cemetery') || [...S.buildings.values()][0]; const ring = grown.slice(0, 6);
+  ring.forEach((v, i) => { const a = i / ring.length * Math.PI * 2; v.x = cem.x + Math.cos(a) * 2.2; v.y = cem.y + Math.sin(a) * 2.2; v.path = null; v.moving = false; G.Vg.setTask(v, { type: 'funeral', id: cem.id, pri: 1.1, kind: 'funeral', st: 2 }); v.act = 'mourn'; v.mourn = i < 2 ? DAY * 0.3 : 0; G.faceTo(v, cem.x - v.x, cem.y - v.y); });
+  const parts = ring.map(v => A.stateOf(v, 0, P3.look(v))); const kin = parts.slice(0, 2), others = parts.slice(2);
+  say(kin.every(p => p === 'mourn' || p === 'ato-chorar-joelhos') && new Set(others).size >= 1 && others.every(p => p === 'mourn' || p === 'ato-luto-roda'), `o enterro: os parentes ${kin.join(', ')}; os outros ${others.join(', ')}`);
+  let looks = []; tryF('o enterro desenhado', () => { for (let k = 0; k < 40; k++) { for (const v of ring) { v.act = 'mourn'; v.moving = false; } P3.update(0.1, { X: cem.x * TL, Z: cem.y * TL }); }
+    looks = ring.map(v => { const s = P3.visOf(v.id); if (!s || !s.sc) return null; const want = V3.lookFar(s.yaw, s.X, s.Z, s.sc); return [s.sc.k, Math.abs((s.pose.lookY || 0) - want)]; }); });
+  say(looks.length && looks.every(l => l && l[0] === 'luto' && l[1] < 0.1), `as cabeças para o túmulo: ${looks.map(l => (l ? l[0] + ' ' + r2(l[1]) : '—')).join(', ')}`);
+  // (2) the crowd at the scaffold: the world's watchers with their stances; the focus the scaffold
+  const ex = { id: 987654, x: cem.x + 6, y: cem.y }; S.execs = (S.execs || []).concat([ex]); const w = pick(7); G.Vg.setTask(w, { type: 'justice', role: 'watch', j: ex.id, x: w.x, y: w.y, pri: 1.95, st: 2, kind: 'justice', stance: 'boo' });
+  const sw = V3.scene(w, null, {}); say(sw.k === 'cadafalso' && Math.abs(sw.X - ex.x * TL) < 1e-6 && Math.abs(sw.Z - ex.y * TL) < 1e-6, `o cadafalso: ${sw.k} no ${r2(sw.X)}, ${r2(sw.Z)}`);
+  for (const [act, want] of [['cheer', 3], ['boo', 3], ['weep', 4]]) { w.act = act; const p = P3.crowdPose(w, P3.look(w)); say(p === want, `a multidão de longe em «${act}»: postura ${p}`); }
+  S.execs = S.execs.filter(e => e !== ex); G.Vg.endTask(w);
+  // (3) the game of tag: the chaser's focus the one chased
+  const kids = [...S.villagers.values()].filter(v => awake(v) && v.age >= 5 && v.age < 12); if (kids.length >= 2) { const [c1, c2] = kids; G.Vg.setTask(c1, { type: 'play', st: 2, chase: c2.id, pri: 0.5, kind: 'play' }); const sc = V3.scene(c1, null, {});
+    say(sc.k === 'pega' && Math.abs(sc.X - c2.x * TL) < 1e-6, `o pega-pega: ${sc.k}, o foco em quem foge`); G.Vg.endTask(c1); } else out.push('o pega-pega: sem crianças neste mundo');
+  // (4) the child and the house's dog: the world has the dog with the child (pets.js: the dog's kid); the child kneels to it
+  const dog = [...S.animals.values()].find(a => a.kind === 'cao' && !a.dead && a.home); const kid = kids[2] || kids[0];
+  if (dog && kid) { kid.home = dog.home; kid.x = dog.x + 0.3; kid.y = dog.y; kid.moving = false; kid.path = null; G.Vg.setTask(kid, { type: 'play', st: 2, pri: 0.5, kind: 'play' }); kid.act = ''; dog.kid = kid.id;
+    const st = A.stateOf(kid, 0, P3.look(kid)), sc = V3.scene(kid, null, {}); say(st === 'crianca-cao' && sc.k === 'cao' && sc.dog === dog.id, `a criança e o cão da casa: ${st}, o foco no cão ${sc.dog === dog.id ? 'certo' : 'ERRADO'}`);
+    dog.kid = 0; const st2 = A.stateOf(kid, 0, P3.look(kid)); say(st2 !== 'crianca-cao', `o cão com outra coisa: a criança em «${st2}»`); } else out.push('a criança e o cão: sem cão de casa neste mundo');
+  // (5) the drill: the act's own gesture on the world's clock
+  const sold = pick(8); sold.act = 'drill'; G.Vg.setTask(sold, { type: 'drill', pri: 1 }); sold.act = 'drill'; const sd = A.stateOf(sold, 0, P3.look(sold)); say(sd === 'ato-treino', `o treino: ${sd}`);
+  // (6) the postures of the far crowd from the fine body's state: seated, kneeling, lying
+  const q = pick(9); for (const [act, want] of [['eat', 1], ['pray', 2], ['', 0]]) { G.Vg.endTask(q); q.act = act; q.sleeping = false; const p = P3.crowdPose(q, P3.look(q)); say(p === want, `de longe em «${act || 'parado'}»: postura ${p}`); }
+  q.sleeping = true; say(P3.crowdPose(q, P3.look(q)) === 5, 'de longe dormindo: deitado'); q.sleeping = false;
+  tryF('a multidão desenhada', () => { for (let k = 0; k < 10; k++) P3.update(0.1, { X: cem.x * TL, Z: cem.y * TL }); });
+  const chk = P3.check();
+  ok('v9 as cenas: o foco do mundo, o papel de cada um, as cabeças para o foco, a criança e o cão, o treino, as posturas da multidão', !errs.length && okAll && !chk.length && !Object.keys(G.modErr || {}).length,
+    (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · ') + (chk.length ? ' · VERIFICADOR: ' + chk.slice(0, 3).join('; ') : ''));
+}
+
+if (on('v10')) {
+  // the little things that sound (D-610): the cough of one sick, standing near the ear, at the moment the 3D draws that little thing —
+  // the scene of the sound has it, on its moment, the same micro-action the view plays; the teeth of one in the cold; nothing for
+  // one well and warm. And the body the player lives carries itself too (D-609): the porte, the little things, the living face
+  M.pronto(key); S = G.S; M.viver(2); S.time = 0.4; S.animals = new Map();
+  const errs = []; const tryF = (what, f) => { try { f(); } catch (e) { errs.push(what + ': ' + e.message); } };
+  const out = []; let okAll = true; const say = (c, t) => { out.push(t + (c ? '' : ' ✗')); if (!c) okAll = false; };
+  const v = adult(); blank(v); mild(v); v.sick = DAY * 0.5; v.act = ''; v.moving = false; G.Vg.setTask(v, { type: 'idle', pri: 0.1 }); v.act = '';
+  const ctx = V3.ctxOf(v, V3.porteOf(v, {}), null, {}); let t0 = -1; for (let t = S.clock; t < S.clock + 600; t += 0.25) { const o = A.ocioAt(v.id, t, ctx, 0); if (o && o.k.replace(/~m$/, '') === 'oc-tossir' && o.u > 0.31 && o.u < 0.4) { t0 = t; break; } }
+  say(t0 >= 0, `a tosse de quem está doente: ${t0 >= 0 ? 'aos ' + r2(t0 - S.clock) + ' s' : 'NUNCA em 10 min'}`);
+  if (t0 >= 0) { S.clock = t0; let src = null, drawn = '';
+    tryF('a cena do som', () => { P3.clear(); for (let k = 0; k < 3; k++) P3.update(1 / 60, { X: v.x * TL, Z: v.y * TL }); const sv = P3.visOf(v.id); drawn = sv && sv.an && sv.an.oc ? sv.an.oc : '';
+      const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); src = sc ? sc.fontes.find(f => f.de && f.de.v === v.id && f.tipo === 'ocio') : null; });
+    say(!!src && src.s === 'cough' && src.q === 'contato' && Math.abs(src.fase - src.contato) < 0.25 && drawn.replace(/~m$/, '') === 'oc-tossir', `a cena do som: ${src ? src.s + ' no ' + src.fase + ' (o momento ' + src.contato + ')' : 'NADA'}, o desenho em «${drawn}»`); }
+  // (the cold: the teeth; one well and warm: nothing)
+  v.sick = 0; S.temp[G.W.idx(v.x, v.y)] = 20; let cold = null; tryF('o frio', () => { const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); cold = sc ? sc.fontes.find(f => f.de && f.de.v === v.id && f.tipo === 'ocio') : null; });
+  say(!cold || cold.s === 'teeth' || A.OCIO[cold.ato] !== undefined, `no frio: ${cold ? cold.s : 'nada agora'}`);
+  mild(v); P3.clear(); let warm = []; tryF('o sossego', () => { // (the view's memory of before let go: the scene reads the view's own context where it draws someone)
+ for (let t = 0; t < 30; t += 1.3) { S.clock += 1.3; const sc = G.Audio.scene(G.Audio.earOf({ x: v.x + 0.5, y: v.y, r: 12 })); const f = sc ? sc.fontes.find(q => q.de && q.de.v === v.id && q.tipo === 'ocio') : null; if (f) warm.push(f.s); } });
+  say(!warm.includes('cough') && !warm.includes('teeth') && !warm.includes('sneeze'), `quem está bem e no ameno: ${warm.length ? warm.join(', ') : 'nenhum som'} em 30 s`);
+  // (the body the player lives: the porte of its life — old and cold —, a little thing when left standing, the living face)
+  let bodyOk = false, bodyInfo = '';
+  tryF('o corpo do jogador', () => { const w = adult(); blank(w); w.age = 78; S.temp[G.W.idx(w.x, w.y)] = 20;
+    // (the body's controller as avatar.js hands it to the frame each frame — its place, its pose, its look, its drive —: here by hand,
+    // standing; the frame's part is what is proved: the reader's porte and the living face on it)
+    const X = w.x * TL, Z = w.y * TL, Y = G.W.groundH(w.x, w.y) * G.Space.HM;
+    P3.avatar = { id: w.id, X, Y, Z, yaw: 0, pose: A.POSE0(), look: Object.assign(P3.look(w), { plant: null }), ground: true, drive: { st: 'idle', t: 0, sp: 0, yaw: 0, yawV: 0, acc: 0, run: 0, walk: 0, clipK: undefined, over: null, overK: undefined } };
+    P3.clear(); for (let k = 0; k < 90; k++) { P3.avatar.drive.t += 0.1; P3.update(0.1, { X, Z }); }
+    const av = P3.avatar; P3.avatar = null; const pz = av && av.drive && av.drive.porte; bodyOk = !!(pz && pz.velho > 0.5 && av.pose && av.pose.face);
+    bodyInfo = av ? `o porte ${pz ? 'velho ' + r2(pz.velho) + ', frio ' + r2(pz.frio) : 'NENHUM'}, o rosto ${av.pose && av.pose.face ? 'vivo' : 'parado'}` : 'sem corpo desenhado (sem o 3D do corpo neste teste)'; });
+  say(bodyOk, 'o corpo do jogador: ' + bodyInfo);
+  ok('v10 o som das coisinhas na hora do desenho; o corpo do jogador com porte e rosto', !errs.length && okAll, (errs.length ? 'ERROS: ' + errs.join('; ') + ' · ' : '') + out.join(' · '));
+}
+
 const E = M.erros(); ok('sem-erros', !Object.keys(E.mod || {}).length && !E.console.length, `módulos ${JSON.stringify(E.mod || {})}; console ${E.console.slice(0, 3).join(' | ') || 'limpo'}`);
 console.log(fails.length ? `VIDA3D: ${fails.length} falha(s): ${fails.join(', ')}` : 'VIDA3D: ok');
 process.exit(fails.length ? 1 : 0);

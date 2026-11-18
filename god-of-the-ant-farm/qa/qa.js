@@ -1929,7 +1929,7 @@
       const c = A.scene(A.earOf({ x: st.cx, y: st.cy, yaw: 0, r: 20 })); if (!c) continue;
       for (const f of c.fontes) {
         const de = f.de || {}; let why = '';
-        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; }
+        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo === 'ocio') { const oc = A.ocioSom ? A.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) why = 'de uma coisinha do ócio que não está acontecendo'; } else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; } // (the little thing of the idle that sounds is its owner's doing: the one the scheduler gives now, 22c D-610)
         if (!why && de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) why = 'de uma operação que não está viva'; }
         if (!why && de.b && !s.buildings.has(de.b)) why = 'de um prédio que não existe';
         if (!why && de.navio !== undefined && !s.ships.some(x => x.id === de.navio && x.moving)) why = 'de um navio parado ou que não existe';

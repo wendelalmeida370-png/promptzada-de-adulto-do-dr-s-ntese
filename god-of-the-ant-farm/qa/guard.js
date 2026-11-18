@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1723,5 +1723,51 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
   for (const f of fams) if (!famClip.has(f)) fails.push(`todo ato do vocabulário tem pose: a família «${f}» sem o seu clipe fam-${f} no social-clips.js (D-603)`);
   for (const [a, f] of acts) if (!shown.has(a) && !famClip.has(f)) fails.push(`todo ato do vocabulário tem pose: o ato «${a}» (família ${f}) sem clipe, sem postura e sem a pose da família (D-603)`);
   if (!(src['vida3d.js'] || []).some(l => /'fam-' \+ sa\.fam/.test(l))) fails.push('todo ato do vocabulário tem pose: o leitor não dá a pose da família ao ato sem gesto próprio (D-603)'); }
+// 220. "todo ato de dois tem as duas partes" (D-605): todo ato do js/soc-atos.js entre dois (o segundo número 1) tem a sua linha na
+// tabela dos dois (Anim.DUO do js/anim-duo.js) — a parte de cada um, ou o gesto de cada um sozinho dito de propósito (P(null)) —, e o
+// cumprimento e a despedida vão pelo povo e pela posição (Anim.greetOf); um ato de dois sem linha cairia sem aviso no gesto de um só
+{ const voc = (src['soc-atos.js'] || []).join('\n'); const d0 = voc.indexOf('const DEF = {'), d1 = voc.indexOf('\n  };', d0);
+  const duo = d0 < 0 ? [] : [...voc.slice(d0, d1).matchAll(/\b([a-z]\w*):\s*\['\w+',\s*1,/g)].map(m => m[1]);
+  const ad = (src['anim-duo.js'] || []).join('\n'); const t0 = ad.indexOf('const DUO = Anim.DUO = {'), t1 = ad.indexOf('\n  };', t0);
+  const has = new Set(t0 < 0 ? [] : [...ad.slice(t0, t1).matchAll(/\b([a-z]\w*):\s*\{/g)].map(m => m[1]));
+  if (!duo.length) fails.push('todo ato de dois tem as duas partes: nenhum ato de dois lido do js/soc-atos.js (D-605)');
+  for (const a of duo) if (!has.has(a) && a !== 'greet' && a !== 'farewell') fails.push(`todo ato de dois tem as duas partes: o ato «${a}» sem a sua linha no Anim.DUO do anim-duo.js (D-605)`);
+  if (!/if \(act === 'greet' \|\| act === 'farewell'\) return GREET\[Anim\.greetOf\(/.test(ad)) fails.push('todo ato de dois tem as duas partes: o cumprimento não vai pelo povo e pela posição (Anim.greetOf, D-606)'); }
+// 221. "a dois, o lugar é do mundo e o relógio também" (D-605): as mãos de um no outro só o quadro do people3d.js as dá (Lv.duo, pelo
+// duoAim) e só o rig as lê; o leitor diz quem está com quem e quando pelo relógio do ato do mundo (o actT de quem é segurado), e nunca
+// escreve onde alguém está — nem o quadro: quem o mundo deixou longe faz o seu papel sozinho
+{ const p3 = (src['people3d.js'] || []).join('\n'), v3 = (src['vida3d.js'] || []).join('\n');
+  if (!/Lv\.duo = du && du\.k > 0\.001 \? duoAim\(s, du, Y\) : null;/.test(p3)) fails.push('a dois: o quadro do people3d.js não dá as mãos no outro pela sua conta (Lv.duo pelo duoAim, D-605)');
+  for (const f of files) { if (f === 'people3d.js') continue; if ((src[f] || []).some(l => /\bL[v]?\.duo\s*=[^=]/.test(l))) fails.push(`a dois: ${f} escreve as mãos de alguém no outro (L.duo) — só o quadro do people3d.js (D-605)`); }
+  if (!/const held = papel === 'b' \? v : w; const T = held\.actT \|\| 0;/.test(v3)) fails.push('a dois: o leitor não anda o gesto de dois no relógio do ato do mundo (o actT de quem é segurado, D-605)');
+  const i = v3.indexOf('V3.duo = function'), j = v3.indexOf('\n  };', i); if (i >= 0 && /\b(?:v|w)\.(?:x|y|fx|fy|task|act)\s*=[^=]/.test(v3.slice(i, j))) fails.push('a dois: o leitor escreve no mundo (D-605)'); }
+// 222. "a cena é do mundo" (D-607, D-608): o foco de uma cena (o túmulo, o cadafalso, a roda da festa, quem foge, o chão do treino)
+// sai do que o mundo tem, lido pelo leitor junto com o porte (Vida3D.scene, no V3.read); a cabeça se vira para ele pelo leitor
+// (V3.lookFar); e a postura da multidão de longe é a do estado que o corpo inteiro teria (o Anim.stateOf), refeita com o retrato
+// dela — nunca um estado inventado só para longe, nem uma conta a cada quadro
+{ const v3 = (src['vida3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  if (!/s\.sc = V3\.scene\(v, near, s\.sc \|\| \{\}\);/.test(v3)) fails.push('a cena é do mundo: o leitor não acha a cena com o porte (Vida3D.scene no V3.read, D-607)');
+  if (!/V3\.lookFar\(s\.yaw, s\.X, s\.Z, s\.sc\)/.test(v3)) fails.push('a cena é do mundo: a cabeça não se vira para o foco da cena pelo leitor (V3.lookFar, D-607)');
+  const i = v3.indexOf('const SCENE = V3.SCENE = {'), j = v3.indexOf('\n  };', i);
+  if (i < 0 || /\b(?:v|t|o|b|e)\.\w+\s*=[^=]/.test(v3.slice(i, j))) fails.push('a cena é do mundo: o foco de uma cena escreve no mundo, ou não há a tabela das cenas (D-607)');
+  if (!/function crowdPose\(v, L\) \{ if \(v\.moving\) return 0; const st = Anim\.stateOf\(v, 0, L\); return POSE_OF\[st\] \|\| 0; \}/.test(p3)) fails.push('a cena é do mundo: a postura da multidão não sai do estado do corpo inteiro (Anim.stateOf, D-608)');
+  if (!/e\.cL = color\(L\.robe \? L\.cloth : L\.pants\); e\.p = crowdPose\(v, L\); \}/.test(p3)) fails.push('a cena é do mundo: a postura da multidão não é refeita com o retrato dela (D-608)'); }
+// 223. "o cão da criança é o do mundo" (D-607): a criança se ajoelha ao cão da casa que o mundo tem brincando com ela (o kid do cão,
+// pets.js) — o leitor só procura e nunca escreve num bicho
+{ const v3 = (src['vida3d.js'] || []).join('\n'); const i = v3.indexOf('V3.dogOf = function'), j = v3.indexOf('\n  };', i); const f = i < 0 ? '' : v3.slice(i, j);
+  if (!/a\.kind === 'cao' && !a\.dead && a\.kid === v\.id && a\.home === v\.home/.test(f)) fails.push('o cão da criança é o do mundo: o leitor não acha o cão pela casa e pelo kid que o mundo dá (pets.js, D-607)');
+  if (/\ba\.\w+\s*=[^=]/.test(f)) fails.push('o cão da criança é o do mundo: o leitor escreve no cão (D-607)'); }
+// 224. "a coisinha que soa é a que se vê" (D-610): o som das coisinhas do ócio (a tosse, o espirro, o bocejo, o suspiro, o soluço)
+// sai da mesma conta pura do ócio (G.Anim3D.ocioAt, pelo id e pelo relógio do mundo, com o contexto do leitor — o da vista onde ela
+// desenha a pessoa), na hora da coisinha — nunca um sorteio do som nem um relógio próprio
+{ const au = (src['audio-src.js'] || []).join('\n'); const i = au.indexOf('A.ocioSom = function'), j = au.indexOf('\n  };', i); const f = i < 0 ? '' : au.slice(i, j);
+  if (!/const o = A3\.ocioAt\(v\.id, G\.S\.clock, ctx, 0\);/.test(f)) fails.push('a coisinha que soa é a que se vê: o som não sai da conta do ócio (G.Anim3D.ocioAt pelo id e pelo relógio do mundo, D-610)');
+  if (!/vs && vs\.ctx \? vs\.ctx : V3\.ctxOf\(v, p, null, OC_C\)/.test(f)) fails.push('a coisinha que soa é a que se vê: o som não lê o contexto do leitor (o da vista onde ela desenha, D-610)');
+  if (/\bG\.(?:R|VR|vrr|rr|chance|vchance)\(|Math\.random|performance\.now|Date\.now/.test(f)) fails.push('a coisinha que soa é a que se vê: o som da coisinha sorteia ou tem relógio próprio (D-610)'); }
+// 225. "o corpo do jogador se leva como a sua vida" (D-609, T-1614): o quadro dá ao corpo que o jogador vive o porte do leitor, o
+// contexto das coisinhas e o rosto vivo da pessoa que ele é — o passo, o giro, o ato e os clipes continuam do avatar.js
+{ const p3 = (src['people3d.js'] || []).join('\n');
+  if (!/I\.porte = G\.Vida3D\.read\(avFeet, avv, vt, DRAWN\);/.test(p3)) fails.push('o corpo do jogador: o quadro não dá ao corpo vivido o porte do leitor (D-609)');
+  if (!/Anim\.faceMix\(avFeet, av\.drive, av\.pose, av\.look\.mood, avFeet\.an, dt\)/.test(p3)) fails.push('o corpo do jogador: o corpo vivido sem o rosto vivo (D-609)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

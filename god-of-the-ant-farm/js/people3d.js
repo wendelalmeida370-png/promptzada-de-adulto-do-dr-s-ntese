@@ -35,9 +35,9 @@
   const SHAPE = { pelvis: 'ball', torso: 'torso', torsoF: 'torsoF', head: 'head', hair: 'cap', hairL: 'limb', uArmL: 'uarm', uArmR: 'uarm', fArmL: 'farm', fArmR: 'farm', thighL: 'thigh', thighR: 'thigh', shinL: 'shin', shinR: 'shin', footL: 'foot', footR: 'foot', neckP: 'cyl', eyeL: 'sph', eyeR: 'sph', nose: 'sph', belt: 'cyl', brow: 'box', earL: 'ball', earR: 'ball', bun: 'ball', beard: 'ball', handL: 'ball', handR: 'ball' };
   const PI = {}; PARTS.forEach((p, k) => { PI[p[0]] = k; });
   let mesh = null; // InstancedMesh per part
-  let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null;
+  let beastMesh = null, crowd = null, crowdHead = null, crowdHair = null, crowdLegs = null, crowdArms = null;
   const vis = new Map(); // id → the view's own memory of someone: where they were, which way they face, their walk, their pose
-  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = 0; } P3.count = 0; P3.crowd = 0; };
+  P3.clear = function () { vis.clear(); if (G.Body3D && G.Body3D.clear) G.Body3D.clear(); if (G.Fauna3D && G.Fauna3D.clear) G.Fauna3D.clear(); for (const sp of emoPool) sp.visible = false; if (held) for (const k in held) for (const m of [held[k].a, held[k].t]) if (m) { m.count = 0; m.visible = false; } if (mesh) for (const m of mesh) { m.count = 0; m.instanceMatrix.needsUpdate = true; } if (beastMesh) for (const m of beastMesh) { m.count = 0; } if (crowd) { crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = crowdArms[0].count = crowdArms[1].count = 0; } P3.count = 0; P3.crowd = 0; };
   let avFeet = null;
   // (a new world draws no body of the last one: the controller's feed goes with its world, L-1112)
   G.worldHooks.push(() => { vis.clear(); avFeet = null; seenAt[0] = seenAt[1] = 0; cLod.clear(); P3.avatar = null; });
@@ -80,7 +80,9 @@
     crowd = new THREE.InstancedMesh(body, mat, MAXC); crowdHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.13, 10, 8), mat, MAXC);
     crowdHair = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat, MAXC);
     crowdLegs = [new THREE.InstancedMesh(leg, mat, MAXC), new THREE.InstancedMesh(leg, mat, MAXC)];
-    for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
+    // (the arms only of those in the crowd whose arms say something — raised, at the face: 22c fase 5, D-608)
+    const arm = new THREE.CapsuleGeometry(0.055, 0.5, 2, 6); arm.translate(0, -0.3, 0); crowdArms = [new THREE.InstancedMesh(arm, mat, MAXC), new THREE.InstancedMesh(arm, mat, MAXC)];
+    for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs, ...crowdArms]) { m.count = 0; m.castShadow = true; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(1, 1, 1)); scene.add(m); }
     // (a feeling over a head: the god's little bubble with its sign — fear, joy, love, anger, a question)
     emoPool = []; for (let k = 0; k < 20; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false })); sp.visible = false; sp.renderOrder = 4; scene.add(sp); emoPool.push(sp); }
 
@@ -930,6 +932,12 @@
     // (the palm on the holder's left to the left arm: in the trunk's frame the left is +x)
     if (HP.t[0][0] < HP.t[1][0]) { const t = HP.tw[0]; HP.tw[0] = HP.tw[1]; HP.tw[1] = t; HP.t[0] = HP.tw[0]; HP.t[1] = HP.tw[1]; }
   }
+  // (the hands of one of two in an act of two on the other: each one's point of the world in the trunk's frame — a hand with no point
+  // keeps the gesture's own)
+  function duoTargets(DU) {
+    HP.mode = 'duo'; HP.pole = DU.pole;
+    for (let q = 0; q < 2; q++) { if (!DU.on[q]) { HP.t[q] = null; continue; } const T = DU.T[q]; V3.a.set(T[0], T[1], T[2]).applyMatrix4(M.ci); HP.t[q] = HP.tw[q]; HP.t[q][0] = V3.a.x; HP.t[q][1] = V3.a.y; HP.t[q][2] = V3.a.z; }
+  }
   // (the empty hands reaching for a point of the world: each palm a hand's width to its side)
   function reachEmpty(R, L, s) {
     const r = L.reach; HP.mode = 'reach'; HP.pole = [0.7, -0.5, -0.45];
@@ -978,10 +986,14 @@
     // (what is held — or the empty hands reaching for a point —: where the thing sits and where the palms must be)
     const H = !lie && !L.bind ? L.held || null : null; const rch = !lie && !L.bind && L.reach && L.reach.w > 0.001 ? L.reach : null;
     const PR = !lie && !L.bind && L.pair ? L.pair : null; // (one of two under one crate)
+    // (one of two in an act of two — L.duo, from P3.update: the hands to the other's body or to where two hands meet, D-605 —, when
+    // the hands hold no load)
+    const DU = !lie && !L.bind && !PR && !H && !rch && L.duo && L.duo.w > 0.001 ? L.duo : null;
     if (PR) { M.ci.copy(R[B.chest]).invert(); pairTargets(L, PR); }
     else if (H || rch) { L.yaw0 = -yaw + Math.PI / 2; M.ci.copy(R[B.chest]).invert(); holdTargets(R, L, s); if (hold && !H) HP.t[0] = null; }
+    else if (DU) { M.ci.copy(R[B.chest]).invert(); duoTargets(DU); if (hold) HP.t[0] = null; }
     else HP.t[0] = HP.t[1] = null;
-    const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : 0;
+    const hw = PR ? 1 : H ? (rch ? 1 : G.clamp(pose.holdW || 0, 0, 1)) : rch ? G.clamp(rch.w, 0, 1) : DU ? G.clamp(DU.w, 0, 1) : 0;
     // (what the hands hold of their own — G.Inv.held, D-336: the thing in the right hand, the other hand's; a hand on a load holds
     // nothing else; and how each is held when no gesture works it: a shaft upright, a tool hanging from the fist, a shield on the
     // forearm, the bow at the side)
@@ -1252,15 +1264,53 @@
   P3.clipClock = clipClock;
   // (the frame's own lists and clocks, kept: the nearest people a frame — reused entries, nothing made each frame —, the frames
   // drawn and the view's seconds, for the beats of the far ones and the crowd's portraits)
+  // (the chest of someone in an act of two, for the other's hands: the rig's own of this frame where the skin drew them, else their
+  // standing chest where the view put them — D-605)
+  let CH0 = null;
+  function keepChest(s, Y, k) {
+    const m = s.chM || (s.chM = new THREE.Matrix4());
+    if (skin && RF) { m.copy(RF[B.chest]); return; }
+    if (!CH0) { const L1 = { s: 1, plant: null, ground: undefined, held: null, reach: null, pair: null, duo: null, inv: NO_INV, lod: 2 }; CH0 = P3.rig(0, 0, 0, Math.PI / 2, POSE0(), L1)[B.chest].clone(); }
+    M.dc = M.dc || new THREE.Matrix4(); m.makeTranslation(s.X, Y, s.Z); M.dc.makeRotationY(-s.yaw + Math.PI / 2); m.multiply(M.dc); M.dc.makeScale(k, k, k); m.multiply(M.dc); m.multiply(CH0);
+  }
+  // (where the hands go on the other, in the world: a point of the other's trunk — their chest's frame —, or a point between the two
+  // where two hands meet — the middle of the two chests, x to my left, y from the lower chest, z toward the other; the rig takes the
+  // hands there by the arms' reach, by the act's weight in its window, du.k)
+  const POLE_DUO = [0.7, -0.6, -0.4];
+  function duoAim(s, du, Y) {
+    const e = du.e, o = du.o; if (!e.hands || !o.chM || !s.chM) return null;
+    const r = s.duT || (s.duT = { T: [[0, 0, 0], [0, 0, 0]], on: [false, false], w: 0, pole: POLE_DUO });
+    r.w = du.k; r.pole = e.pole || POLE_DUO;
+    const me = DV.a || (DV.a = new THREE.Vector3()), ot = DV.b || (DV.b = new THREE.Vector3()), p = DV.c || (DV.c = new THREE.Vector3());
+    me.setFromMatrixPosition(s.chM); ot.setFromMatrixPosition(o.chM);
+    let fx = ot.x - me.x, fz = ot.z - me.z; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl; const lx = fz, lz = -fx; // (my left: the facing turned a quarter)
+    for (let q = 0; q < 2; q++) {
+      const h = e.hands[q]; r.on[q] = !!h; if (!h) continue;
+      if (h[0] === 'b') p.set(h[1], h[2], h[3]).applyMatrix4(o.chM);
+      else p.set((me.x + ot.x) / 2 + lx * h[1] + fx * h[3], Math.min(me.y, ot.y) + h[2], (me.z + ot.z) / 2 + lz * h[1] + fz * h[3]);
+      r.T[q][0] = p.x; r.T[q][1] = p.y; r.T[q][2] = p.z;
+    }
+    return r;
+  }
+  const DV = {};
+  P3.duoAim = duoAim; P3.keepChest = keepChest; // (for the tests)
   const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
   const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
   const visAt = id => vis.get(id);
   // (the crowd's portraits: each one's look kept and made again every ¾ to 1¼ s — each one on their own beat, by their id —, not
   // every frame: the crowd's colours are the clothes of the one they are, and they change in seconds, not frames — D-591)
   const CROWD = new Map(); G.worldHooks.push(() => { CROWD.clear(); NEARP.length = 0; NEAR.length = 0; INS.length = 0; });
+  // (the posture of one of the crowd, made again with their portrait: from the state the fine body would have — standing, seated,
+  // kneeling, the arms raised, the hands at the face, lying —: the cheering crowd at the feast and the scaffold, the mourners on their
+  // knees, the sleepers of a camp read from far off, D-608)
+  const CROWD_DY = [0, -0.62, -0.45, 0, 0, 0.12];
+  const POSE_OF = { sit: 1, rest: 1, eat: 1, eatg: 1, rockg: 1, rock: 1, 'ato-contar': 1, low: 1, cook: 1, pray: 2, 'ato-chorar-joelhos': 2, 'ato-implorar': 2, 'ato-condenado': 2, 'ato-propor': 2,
+    'ato-esconder': 2, 'crianca-cao': 2, 'fam-festa': 3, 'ato-alegria': 3, 'ato-rito': 3, 'ato-motim': 3, 'ato-gritar': 3, 'ato-vaia': 3, mourn: 4, 'ato-luto-roda': 0, 'ato-desmascarar': 4, sleep: 5, sick: 5 };
+  function crowdPose(v, L) { if (v.moving) return 0; const st = Anim.stateOf(v, 0, L); return POSE_OF[st] || 0; }
+  P3.crowdPose = crowdPose;
   function crowdLook(v) {
     let e = CROWD.get(v.id); if (!e) { e = { L: {}, t: -1e9 }; CROWD.set(v.id, e); }
-    if (vt - e.t > 0.75 + (v.id % 17) * 0.03) { const L = P3.lookInto(e.L, v); e.t = vt; e.cF = color(P3.farCol(L)); e.cS = color(L.skin); e.cH = color(L.hair); e.cL = color(L.robe ? L.cloth : L.pants); }
+    if (vt - e.t > 0.75 + (v.id % 17) * 0.03) { const L = P3.lookInto(e.L, v); e.t = vt; e.cF = color(P3.farCol(L)); e.cS = color(L.skin); e.cH = color(L.hair); e.cL = color(L.robe ? L.cloth : L.pants); e.p = crowdPose(v, L); }
     return e;
   }
   P3.update = function (dt, focus) {
@@ -1308,8 +1358,15 @@
       // (the body's pose, made in this frame by the same animator as everyone's, from the motion its controller gives — the
       // frame's own time, interpolated: smooth at 60, 120 or 144 frames a second, 20a; a pose given whole — the fall of a death —
       // is drawn as it is)
-      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s; Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
+      // (the body the player lives carries itself as the people of the world do — the porte of its life, the little things when the
+      // player leaves it standing, the living face —: the reader's numbers of the person it is, T-1614, D-609; the stride, the turn,
+      // the act and the clips are the body's own, avatar.js's)
+      const avv = S.villagers.get(av.id);
+      if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s;
+        if (avv) { avFeet.yaw = av.yaw; avFeet.sp = 0; I.porte = G.Vida3D.read(avFeet, avv, vt, DRAWN); I.clock = S.clock; I.id = av.id; I.tempo = G.Vida3D.tempo(avv); I.ctx = avFeet.ctx; I.lod = 0; I.tired = G.Vida3D.tired(avv); }
+        Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = Anim.blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = Anim.easeMood(avFeet, av.look.mood, dt);
+      if (avv && av.drive && Anim.faceMix) { av.drive.humor = G.Vida3D.humor(avv); Anim.faceMix(avFeet, av.drive, av.pose, av.look.mood, avFeet.an, dt); }
       av.look.lod = 0;
       P3.body(idx++, av.X, av.Y, av.Z, av.yaw, av.pose, av.look, null);
     }
@@ -1364,6 +1421,10 @@
       s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
       const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;
       let st = pl && s.sp < 0.2 ? pl.st : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st;
+      // (two in one gesture — the reader's Vida3D.duo, D-605: each one's part of the act and, in its window on the world's clock, the
+      // hands on the other; the place is the world's — never moved here —, and too far apart each one plays the act alone)
+      const du = pl ? null : fresh ? G.Vida3D.duo(s, v, visAt) : s.duOn ? s.du : null; s.duOn = !!du;
+      if (du && du.clip) st = du.clip;
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
       // of whoever walks: the prisoner's bound hands, the word said walking — the reader's, Vida3D.overOf)
       let over = null;
@@ -1377,14 +1438,14 @@
       Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; if (fresh) reachOf(s, v, Lv, s.X, Y, s.Z, dtA);
       // (and the drink, where the world has them drunk and on their feet: the additive stagger — inside, at their place, they sit)
       const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
-      Lv.lod = s.lod;
+      Lv.lod = s.lod; Lv.duo = du && du.k > 0.001 ? duoAim(s, du, Y) : null;
       if (fresh) {
         // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
         // (v.actT), the drink, the tiredness — the pose made from what they do (anim-body.js; the reader's numbers: vida3d.js)
         const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
-        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
+        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = du && du.clip ? du.u : clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
         // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
         // its breath; the hand one leads with)
         I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);
@@ -1407,6 +1468,7 @@
       s.cull = inField(s.X, Y, s.Z, Lv.s) ? 0 : 1;
       if (s.cull) { culled++; if ((Lv.torch || Lv.lantern) && P3.flames.length < 40) { const c = Math.cos(s.yaw), n = Math.sin(s.yaw), k = Lv.s; P3.flames.push([s.X + (c * 0.28 + n * 0.2) * k, Y + (Lv.lantern ? 0.85 : 1.6) * k, s.Z + (n * 0.28 - c * 0.2) * k, Lv.lantern ? 0.5 : 0.85]); } continue; }
       P3.body(idx++, s.X, Y, s.Z, s.yaw + (dk > 0 && (st === 'walk' || st === 'carryWalk') ? Anim.weave(s.t, v.id, dk) : 0), s.pose, Lv, P3.highlight === v.id ? '#ffd76a' : null);
+      if (v.task && v.task.id && s.sp < 0.25) keepChest(s, Y, Lv.s); // (where their chest is, for the other's hands in an act of two)
       if (v.emo && v.emo.k && emoN < emoPool.length) { const tx = emoMap(v.emo.k); if (tx) { const sp = emoPool[emoN++]; if (sp.material.map !== tx) { sp.material.map = tx; sp.material.needsUpdate = true; } sp.position.set(s.X, Y + 2.2 * Lv.s + Math.sin(s.t * 3) * 0.03, s.Z); sp.scale.set(0.42, 0.45, 1); sp.visible = true; } }
     }
     for (const id of vis.keys()) if (!seen.has(id) && !(av && id === av.id)) vis.delete(id);
@@ -1425,22 +1487,33 @@
     }
     if (cLod.size > 400) cLod.clear();
     // the crowd: everyone else in reach, simply (where the world has them; no animation of their own but a step's bob)
-    mats(); let c = 0; const tnow = performance.now() / 1000;
+    mats(); let c = 0, ca = 0; const tnow = performance.now() / 1000;
     for (let k = n; k < near.length && c < MAXC; k++) {
-      const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
-      const e = crowdLook(v), L = e.L; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const Y = Y0 + Math.abs(st) * 0.04;
+      // (the ground under one of the crowd asked only of those in the eye's field: the field judged first by their last height — a
+      // frame old, a ball a little wider —, D-611)
+      const v = near[k][1]; if (v.inside) continue; const X = v.x * TL, Z = v.y * TL; const e0 = CROWD.get(v.id);
+      if (e0 && e0.Y !== undefined && !inField(X, e0.Y, Z, 1.6)) continue;
+      const Y0 = W.groundH(v.x, v.y) * HM; if (!inField(X, Y0, Z, 1)) continue;
+      const e = crowdLook(v), L = e.L; e.Y = Y0; const s = L.s; const st = Math.sin(tnow * 7 + v.id) * (v.moving ? 1 : 0); const pz = e.p | 0; const Y = Y0 + Math.abs(st) * 0.04 + CROWD_DY[pz] * s;
       const pp = v.path && v.pi < v.path.length ? v.path[v.pi] : null; const yaw = pp ? Math.atan2(pp[1] - v.y, pp[0] - v.x) : (v.face > 0 ? 0 : Math.PI);
       M.root.makeTranslation(X, Y, Z); M.b.makeRotationY(-yaw + Math.PI / 2); M.root.multiply(M.b); M.b.makeScale(s, s, s); M.root.multiply(M.b);
+      if (pz === 5) { M.b.makeRotationX(-Math.PI / 2); M.root.multiply(M.b); } // (lying on the ground: the whole body laid down)
       // (from afar, the colour of what they wear over all: the mantle of their standing, the apron-dress, the undyed fleece —
       // the same clothes the fine body has, so a street of nobles and a street of the plain people read apart from far off)
       // (the colours kept with the portrait: crowdLook)
       M.a.copy(M.root); M.b.makeTranslation(0, 0.72, 0); M.a.multiply(M.b); M.c.makeScale(1, 0.92, 0.72); M.a.multiply(M.c); crowd.setMatrixAt(c, M.a); crowd.setColorAt(c, e.cF);
       M.a.copy(M.root); M.b.makeTranslation(0, 1.62, 0.01); M.a.multiply(M.b); crowdHead.setMatrixAt(c, M.a); crowdHead.setColorAt(c, e.cS);
       M.a.copy(M.root); M.b.makeTranslation(0, 1.64, -0.01); M.a.multiply(M.b); M.c.makeRotationX(-0.6); M.a.multiply(M.c); crowdHair.setMatrixAt(c, M.a); crowdHair.setColorAt(c, e.cH);
-      for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX((sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, e.cL); }
+      // (the legs by the posture: stepping; straight out before the seated; folded back under the kneeling)
+      const lx = pz === 1 ? -1.5 : pz === 2 ? 1.45 : 0;
+      for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.09 : 0.09, 0.86, 0); M.a.multiply(M.b); M.c.makeRotationX(lx + (sd ? -st : st) * 0.45); M.a.multiply(M.c); crowdLegs[sd].setMatrixAt(c, M.a); crowdLegs[sd].setColorAt(c, e.cL); }
+      // (the arms: raised, or bent up to the face)
+      if (pz === 3 || pz === 4) for (let sd = 0; sd < 2; sd++) { M.a.copy(M.root); M.b.makeTranslation(sd ? -0.22 : 0.22, 1.42, 0.02); M.a.multiply(M.b);
+        if (pz === 3) M.c.makeRotationZ((sd ? -1 : 1) * (Math.PI - 0.3 - 0.12 * Math.sin(tnow * 3 + v.id + sd))); else { M.c.makeRotationX(-2.55); M.b.makeRotationZ((sd ? 1 : -1) * 0.45); M.c.premultiply(M.b); }
+        M.a.multiply(M.c); crowdArms[sd].setMatrixAt(ca, M.a); crowdArms[sd].setColorAt(ca, e.cF); if (sd) ca++; }
       c++;
     }
-    crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
+    crowd.count = crowdHead.count = crowdHair.count = crowdLegs[0].count = crowdLegs[1].count = c; crowdArms[0].count = crowdArms[1].count = ca; for (const m of [crowd, crowdHead, crowdHair, ...crowdLegs, ...crowdArms]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.crowd = c; if (CROWD.size > 4 * MAXC) for (const [id, e] of CROWD) if (vt - e.t > 6) CROWD.delete(id); // (the portraits of those gone from the crowd: let go)
     for (const m of mesh) { m.count = idx; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
     P3.count = idx; P3.culled = culled;
