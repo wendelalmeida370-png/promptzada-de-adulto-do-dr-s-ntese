@@ -34,6 +34,8 @@ que for feito sai da lista «a fazer» com o commit que fez.
   volta, a corrupção, a redenção; Patch 29).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
+- [`oficio-mineiro.md`](oficio-mineiro.md) — o mineiro por inteiro (os minerais e as pedras, a prospecção, a picareta, o fogo e
+  a água, a escora, o desabamento, o garimpo, os títulos, os lendários).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.

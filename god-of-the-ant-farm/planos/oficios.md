@@ -118,7 +118,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
   alfaiate e costureira, sapateiro, cordoeiro (a corda), cesteiro (o vime), escultor, arquiteto (as obras grandes)
 
 **Subterrâneo** (os troncos: a Mineração e o Saber; o plano em [`subterraneo.md`](subterraneo.md))
-- **mineiro**
+- **mineiro** ([`oficio-mineiro.md`](oficio-mineiro.md))
 - garimpeiro, escorador, o homem do fogo, aguadeiro da mina, lapidário, explorador de cavernas, coletor de cristais e de
   salitre, arqueólogo, caçador de tesouros, decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos,
   negociante de antiguidades, guia das profundezas, sapador, poceiro, cavador de túneis
