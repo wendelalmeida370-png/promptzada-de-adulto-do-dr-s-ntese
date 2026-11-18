@@ -99,6 +99,20 @@ lendária. **O peso:** o comum e o recorde possível do mundo.
 | Arenque | cardume frio | rede | — | 0,2 kg | comum | comida, isca, salgado |
 | Tubarão | mar aberto, cheiro de sangue | carne | voraz / **luta como fera** (o cérebro dos bichos) | 50–500 kg | rara | a pele, os dentes, o óleo, a fama — e o perigo |
 
+### O que o pescador sabe (a descoberta — a decisão do dono, 18/11/2026)
+
+**Nada é dado de bandeja.** O caderno das espécies começa com silhuetas, e o que o personagem sabe de cada peixe (onde, quando,
+a isca, o jeito de morder e de lutar) **é dele**, aprendido pela vida (como tudo o que o corpo sabe, `G.Possess.knows`):
+- **o que ele vê:** o peixe que pula, as aves que mergulham, o salmão subindo o rio no outono;
+- **o que ele pega:** cada peixe trazido escreve no caderno onde, quando e com que isca;
+- **o que perguntam:** os pescadores velhos sabem muito — contam pela amizade, por uma bebida ou por um favor; alguns mentem para
+  guardar o pesqueiro (pela índole), e o mestre ensina tudo;
+- **o que se lê:** os livros da biblioteca dizem o geral de cada água (para quem sabe ler);
+- **o que se ouve:** os boatos («um bagre enorme na foz do rio»).
+
+Os comuns se descobrem logo; os raros são uma busca. O jogo dá dicas de onde procurar («pergunte a um pescador velho do porto»),
+nunca a resposta. E como o saber é da pessoa, encarnar um pescador velho é encarnar tudo o que ele sabe.
+
 ## 4. Os lendários (cada um uma história de anos)
 
 | Lendário | Onde | As pistas | O que pede | A recompensa |
@@ -107,6 +121,23 @@ lendária. **O peso:** o comum e o recorde possível do mundo.
 | **A Rainha Prateada** — o atum de 500 kg | passa uma vez por ano, longe da costa | as aves, o cardume que foge | o barco, uma tripulação de amigos, a linha mais forte | idem; a tábua dos recordes |
 | **O peixe sagrado do templo** | o lago sagrado | o sacerdote fala dele | pescá-lo é **sacrilégio**: crime, com testemunhas | a desgraça, ou a fama de ímpio |
 | **O axolote dos lagos** | os lagos do povo asteca | as crianças contam | o povo não o pesca: tirá-lo ofende | uma missão de devolvê-lo à água |
+
+**Como os lendários existem** (a regra do dono: nada aparece para o jogador pegar):
+- **Nascem do mundo, pela ecologia, com ou sem o jogador.** Um lendário é um peixe daquela água que ninguém pegou por muitos anos
+  e cresceu além do comum: quando uma água grande fica anos em paz, com o peixe farto (o pesqueiro contado cheio), o mundo faz,
+  no seu passo, **um** ancião daquela espécie, um dos peixes que já estavam ali. Onde se pesca demais, nunca nasce nenhum.
+- **Vivem:** têm idade, crescem com os anos, comem os peixes do pesqueiro (contados), andam pelos seus lugares de cada estação,
+  partem as linhas dos pescadores do mundo (um fato, que vira boato e história).
+- **Qualquer um pode pegá-los:** um pescador do mundo com prática e linha boa pega o Velho do Lago — a lenda é dele, o recorde e a
+  fama também, e o corpo ouve a história na taverna.
+- **Morrem:** pescados (o corpo fica — o esqueleto pendurado na taverna, a tábua dos recordes) ou de velhice (o corpo enorme que
+  a água traz para a margem: outra história).
+- **Voltam só pela mesma regra:** outro ancião nasce, um dia, se aquela água (ou outra) ficar de novo anos em paz.
+- **Devolver à água** (uma técnica de mestre): a lenda continua viva, o pescador ganha a fama se alguém viu — e o lendário fica
+  com a cicatriz do anzol e mais esperto da próxima vez.
+- **O peixe sagrado** nasce do templo junto de uma água sagrada (os sacerdotes o guardam e o alimentam); **o axolote** é uma espécie
+  normal dos lagos do povo asteca, protegida pelo costume — o sagrado vem do povo, não do peixe.
+- Tudo isso fica no save, no mundo; o mesmo mundo faz o mesmo lendário, olhe o jogador ou não.
 
 ## 5. O equipamento (cada coisa muda o jeito de pescar)
 
@@ -150,6 +181,21 @@ invenção que se descobre tarde (§7).
    10 a 30 segundos; a de um grande, alguns minutos; a de um lendário, uma madrugada.
 6. **Trazer:** o puçá para o grande (sem ele, o grande se solta na beira 1 vez em 3); o momento da recompensa (o kit da fundação);
    o peixe nas mãos, o peso medido.
+
+### O peixe nas mãos (o peso e a força — a ideia do dono)
+
+O peixe é desenhado **no tamanho do peso dele** (o comprimento cresce com o peso, no formato de cada espécie), vivo e se
+debatendo, e **o jeito de segurar sai do peso dividido pela força** do personagem (a idade, o músculo, a prática):
+
+| O peso para essa força | O jeito | Para onde vai |
+|---|---|---|
+| Leve | numa mão, mostrando | o cesto ou a mochila |
+| Médio | com as duas mãos, o corpo para trás, aguentando | o cesto, se couber |
+| Pesado | abraçado no peito, o passo curto e torto | nos braços, até o cesto grande, o armazém ou a carroça |
+| Enorme | **arrastado** pelas guelras ou pelo rabo, devagar, deixando o rastro na areia | com ajuda: dois homens com uma vara nos ombros (o ato a dois), ou a carroça |
+
+A mochila já tem limite de peso no jogo (25 kg o adulto): o que não cabe vai nos braços, arrastado, ou com ajuda — e a criança que
+pega um peixe grande precisa chamar alguém.
 
 **Os outros jeitos:** o arpão (andar devagar na água rasa — o barulho espanta —, mirar à frente da sombra); a tarrafa (o arremesso
 em roda, no tempo do cardume); os covos (escolher onde pôr; voltar no outro dia); a rede de arrasto (a equipe e o barco); o
