@@ -43,6 +43,7 @@
   // ------------------------------ the trade's kit ------------------------------
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
+  const PLACE_TOOL = { caneca: 1, grilhoes: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes' };
   // (the acts of the fight: whoever already holds a weapon fights with it — the spearman with his spear, the militia with its club)
@@ -152,6 +153,9 @@
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
+    // (the cup of the tavern and of the feast, the bonds of the one who leads the prisoner: the place's, never the person's own — given
+    // to whoever has things of their own too, the god's body among them; in the material the people has: 22c, D-612)
+    if (!key && own && PLACE_TOOL[t]) key = made(t, G.Fac.idOfV(v), artsOf(v));
     if (!key && !own) key = made(t, G.Fac.idOfV(v), artsOf(v));
     if (!key) return; // (a tool of a material the people never had: the act's hands are empty, 20h)
     out.mao = key;

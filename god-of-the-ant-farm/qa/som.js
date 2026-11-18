@@ -525,7 +525,8 @@ function s12() {
   if (!FakeAC.last) { global.AudioContext = FakeAC; G.Audio.init(); }
   M.pronto('cidade'); const S = G.S; M.viver(1); A.mute = false; A.ambOn = true;
   const xy = i => [i % G.N + 0.5, Math.floor(i / G.N) + 0.5];
-  const trees = []; for (let i = 0; i < G.N * G.N; i++) if (S.treeAt[i] && !G.Nature.fireSet.has(i)) trees.push(i);
+  // (a tree that can burn: a sapling or a stump is no fuel — G.Nature.fuel —, and the «cidade» of 48fec17 had one 68 tiles off: T-1624)
+  const trees = []; for (let i = 0; i < G.N * G.N; i++) if (S.treeAt[i] && !G.Nature.fireSet.has(i) && G.Nature.fuel(i) === 'tree') trees.push(i);
   const near = trees[0]; const [x1, y1] = xy(near); const far = trees.find(i => { const [x, y] = xy(i); return Math.hypot(x - x1, y - y1) > 60; });
   if (near === undefined || far === undefined) return ok('s12 o-fogo-so-estala-perto', false, 'o mundo não tem duas árvores a 60 casas uma da outra');
   // (the ear stands two tiles from the first tree; the player looks: what burns within its reach)

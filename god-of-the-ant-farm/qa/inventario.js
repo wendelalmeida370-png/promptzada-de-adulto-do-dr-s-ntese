@@ -543,7 +543,11 @@ if (on('i17')) {
   // (the god's body with a lost leg: its crutch made real once, in the hand of its side — the ledger's «kit»)
   { const v = people(x => grown(x) && Po.can(x).ok && plain(x) && x.id !== o.id)[0];
     if (v) { god(() => { v.lost = { leg: 1 }; }); const n0 = lastN(); take(v); const kit = lines(n0, e => e[8] === 'kit' && e[4] === 'm:' + v.id); const e = Inv.equipOf(v); const side = Inv.crutchSide(v);
-      if (kit.length !== 1 || kindOf(e[side]) !== 'muleta' || kindOf(Inv.held(v)[side]) !== 'muleta') bad.push(`o corpo sem perna: ${kit.length} linha(s) «kit», ${side} = ${e[side]}`); said.push(`o corpo sem perna: ${e[side]} na ${side}`); Po.release('deus'); M.viver(0.2); } }
+      if (kit.length !== 1 || kindOf(e[side]) !== 'muleta' || kindOf(Inv.held(v)[side]) !== 'muleta') bad.push(`o corpo sem perna: ${kit.length} linha(s) «kit», ${side} = ${e[side]}`); said.push(`o corpo sem perna: ${e[side]} na ${side}`);
+      // (the cup of the tavern is the place's: the god's body, with things of its own, drinks from it too — and is never given the trade's tool)
+      const hd = Inv.held(Object.assign({}, v, { act: 'drink' })), hc = Inv.held(Object.assign({}, v, { act: 'chop' }));
+      if (kindOf(hd.mao) !== 'caneca' || (kindOf(hc.mao) === 'machado' && !Object.keys(v.mochila || {}).some(k => It.parse(k)[0] === 'machado'))) bad.push(`o corpo bebendo: ${hd.mao}; cortando: ${hc.mao}`); said.push(`o corpo bebe da caneca da casa (${hd.mao})`);
+      Po.release('deus'); M.viver(0.2); } }
   const nv = novas();
   ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
 }

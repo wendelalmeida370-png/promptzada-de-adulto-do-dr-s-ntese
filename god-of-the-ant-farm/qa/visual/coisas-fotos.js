@@ -25,7 +25,7 @@ const ROOT = path.resolve(process.argv[3] || path.join(__dirname, '..', '..'));
     const S = G.S, Wd = G.W, N = G.N;
     const s = [...S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
     const byId = (a, b) => a.id - b.id;
-    const pool = [...S.villagers.values()].filter(o => o.set === s.id && !o.inside && !o.aboard && !o.jail && !o.captive).sort(byId);
+    const pool = [...S.villagers.values()].filter(o => o.set === s.id && !o.aboard && !o.jail && !o.captive && !o.ug && !o.held && !(o.carry && o.carry.n > 0)).sort(byId); // (inside too: the proof brings them out; never one with a load in the arms — the hands are the load's)
     const grown = pool.filter(o => o.age >= 18 && o.age < 55);
     const body = grown.find(o => G.Possess.can(o).ok);
     // (open level ground near the town: 7 × 7 tiles with nothing built, no water, road or tree)

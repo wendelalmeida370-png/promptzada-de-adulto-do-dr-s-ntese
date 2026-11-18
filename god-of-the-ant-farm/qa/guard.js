@@ -1794,8 +1794,10 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
 // 226. "a coisa do gesto tem origem" (D-612, D-440): a caneca de quem bebe e brinda e os grilhões de quem é levado vêm do ato pelo
 // kit do inventário (ACT_TOOL), a bola da criança que brinca e a muleta de quem perdeu a perna pelo material que o povo teve (made /
 // mk, o G.Origem.matOK) — nunca uma coisa sem material —; o barro é tido só da cerâmica (O.MAT_OF, o matOK, a marca do armazém) e uma
-// coisa de barro é feita da cerâmica do armazém (G.Itens.feitoDe); e nenhum clipe das pessoas diz que coisa segura (regra 217)
+// coisa de barro é feita da cerâmica do armazém (G.Itens.feitoDe); a caneca e os grilhões são do lugar (a taverna, quem leva o preso) e
+// passam também a quem tem coisas de verdade — o corpo do deus —, nada mais (regra 155); e nenhum clipe das pessoas diz que coisa segura (regra 217)
 { const iv = (src['inventario.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
+  if (!/const PLACE_TOOL = \{ caneca: 1, grilhoes: 1 \};/.test(iv) || !/if \(!key && own && PLACE_TOOL\[t\]\) key = made\(t, /.test(iv)) fails.push('a coisa do gesto tem origem: só a caneca e os grilhões — as coisas do lugar, não da pessoa — passam a quem tem coisas de verdade (PLACE_TOOL, D-612)');
   if (!/drink: 'caneca', toast: 'caneca', bound: 'grilhoes'/.test(iv)) fails.push('a coisa do gesto tem origem: o ACT_TOOL do inventario.js sem a caneca de quem bebe e brinda e os grilhões de quem é levado (D-612)');
   if (!/const k = made\('bola', G\.Fac\.idOfV\(v\), artsOf\(v\)\)/.test(iv) || !/const k = mk\('muleta'\)/.test(iv)) fails.push('a coisa do gesto tem origem: a bola e a muleta do kit sem o material que o povo teve (made / mk, D-612)');
   if (!/ceramica: 'barro'/.test(og) || !/m === 'couro' \|\| m === 'ouro' \|\| m === 'barro'\) return !!O\.had\(fid, m\)/.test(og) || !/if \(\(f\.stock\.ceramica \|\| 0\) > EPS\) mark\(f\.id, 'barro'\)/.test(og)) fails.push('a coisa do gesto tem origem: o barro tido sem a cerâmica (O.MAT_OF, O.matOK, a marca do armazém — D-612)');
