@@ -108,10 +108,14 @@
       blob(o, x, y, z, [0.05, 1.63, 0.07], 0.022, [0.003, 0, 0.005]); swell(o, x, y, z, TIP, 0.02, -0.3); blob(o, x, y, z, CHIN, 0.02, [0, 0.003, -0.005]); }, HEADBOX],
     ['adolescente', 'idade', (o, x, y, z) => { swell(o, x, y, z, TIP, 0.02, 0.1); blob(o, x, y, z, JAWA, 0.03, [-0.002, 0, 0]); }, FACEBOX],
     ['maduro', 'idade', (o, x, y, z) => { blob(o, x, y, z, [0.03, 1.64, 0.1], 0.012, [0, 0, -0.0015]); blob(o, x, y, z, [0.05, 1.64, 0.07], 0.02, [0, -0.002, 0]); blob(o, x, y, z, [EYE[0], 1.716, 0.1], 0.011, [0, -0.0015, 0]); }, FACEBOX],
+    // (22a wave 2, D-637: the skin that gives — the jowls and the chin's fold down, the cheeks down and hollow under the bone, the
+    // temples in, the brows and the lids down, the bags under the eyes —, read a few steps off)
     ['velho', 'idade', (o, x, y, z) => {
-      blob(o, x, y, z, [0.048, 1.58, 0.06], 0.022, [0.002, -0.006, 0]); const w = g2(x * 0.7, y - MY, z - 0.11, 0.016); o[1] -= (y - MY) * 0.3 * w; o[2] -= 0.002 * w;
-      blob(o, x, y, z, TIP, 0.016, [0, -0.003, 0.003]); swell(o, x, y, z, EAR, 0.028, 0.12); blob(o, x, y, z, TEMPLE, 0.02, [-0.003, 0, -0.002]);
-      blob(o, x, y, z, [0.045, 1.726, 0.08], 0.016, [0, -0.003, 0]); blob(o, x, y, z, [0.045, 1.64, 0.075], 0.016, [-0.002, 0, -0.003]); blob(o, x, y, z, [EYE[0], 1.716, 0.1], 0.011, [0, -0.0025, 0]); }, HEADBOX],
+      blob(o, x, y, z, [0.048, 1.58, 0.06], 0.022, [0.0035, -0.006, 0.0015]); const w = g2(x * 0.7, y - MY, z - 0.11, 0.016); o[1] -= (y - MY) * 0.3 * w; o[2] -= 0.002 * w;
+      blob(o, x, y, z, [0, 1.545, 0.035], 0.02, [0, -0.002, 0.006]); blob(o, x, y, z, [0.05, 1.63, 0.07], 0.02, [0, -0.005, 0]);
+      blob(o, x, y, z, TIP, 0.016, [0, -0.004, 0.003]); swell(o, x, y, z, EAR, 0.028, 0.12); blob(o, x, y, z, TEMPLE, 0.02, [-0.0045, 0, -0.003]);
+      blob(o, x, y, z, [0.045, 1.726, 0.08], 0.016, [0, -0.0045, 0]); blob(o, x, y, z, [0.045, 1.64, 0.075], 0.016, [-0.003, 0, -0.0045]); blob(o, x, y, z, [EYE[0], 1.716, 0.1], 0.011, [0, -0.0035, 0]);
+      blob(o, x, y, z, [EYE[0], 1.683, 0.085], 0.009, [0, -0.001, 0.0015]); }, HEADBOX],
     ['anciao', 'idade', (o, x, y, z) => {
       blob(o, x, y, z, [0.048, 1.575, 0.06], 0.024, [0.002, -0.006, 0]); blob(o, x, y, z, CHIN, 0.02, [0, 0.002, -0.003]); const w = g2(x * 0.7, y - MY, z - 0.11, 0.016); o[2] -= 0.003 * w;
       blob(o, x, y, z, TIP, 0.016, [0, -0.002, 0.002]); swell(o, x, y, z, EAR, 0.028, 0.08); blob(o, x, y, z, [0.045, 1.64, 0.075], 0.016, [-0.002, 0, -0.002]); }, HEADBOX],
@@ -155,11 +159,13 @@
   F.at = function (k, x, y, z) { O3[0] = O3[1] = O3[2] = 0; const a = F.ALVOS[k]; const b = a.box; if (x < b[0][0] || y < b[0][1] || z < b[0][2] || x > b[1][0] || y > b[1][1] || z > b[1][2]) return O3; a.field(O3, x, y, z); return O3; };
 
   // ------------------------------ a person's shape ------------------------------
-  const PH = new Float32Array(28);
+  const PH = new Float32Array(G.Genoma ? G.Genoma.NG : 29);
   // a gene as a standard score about the middle of every people (the alleles of a founder spread ±9 about 32: the mean of two, ≈ ±6.4)
   const zs = p => clamp((p - 0.5) / 0.1, -2.5, 2.5);
   // (the amplitude of each gene's target at one spread of the people: what keeps a face a face)
-  const AMP = { cranio: 0.35, rostoLongo: 0.3, mandibula: 0.45, queixo: 0.45, macas: 0.45, arcada: 0.4, narizLongo: 0.45, narizLargo: 0.4, narizPonte: 0.45, labios: 0.45, olhosAfast: 0.4, olhoTam: 0.35, palpebra: 0.45, orelhas: 0.35 };
+  // (22a wave 2, D-636: more of what reads a few steps off — the nose, the chin, the cheekbones, the jaw's width, the face's length,
+  // the skull —, inside the box of the verifier at the edges of a people: a face, never a caricature)
+  const AMP = { cranio: 0.45, rostoLongo: 0.42, mandibula: 0.56, queixo: 0.6, macas: 0.6, arcada: 0.45, narizLongo: 0.6, narizLargo: 0.55, narizPonte: 0.56, labios: 0.45, olhosAfast: 0.4, olhoTam: 0.35, palpebra: 0.45, orelhas: 0.35 };
   F.of = function (v) {
     const Ge = G.Genoma; if (!v || !Ge || !Ge.valid(v.genoma)) return null;
     const age = v.age || 0; const lost = v.lost || null, preg = v.preg > 0 ? v.preg : 0;
@@ -181,7 +187,7 @@
     // (the shape: one weight a target — the face of the genes, firming from a baby's to a grown one's; the years over it)
     const w = o.w = new Float32Array(F.NT), X = F.IDX, idK = clamp(0.4 + aQ / 16 * 0.6, 0.4, 1);
     for (const n in AMP) w[X[n]] = zs(P[I[n]]) * AMP[n] * idK;
-    w[X.bocaLarga] = (zs(P[I.labios]) - zs(P[I.mandibula])) * 0.25 * idK; w[X.testa] = (zs(P[I.cranio]) - zs(P[I.arcada])) * 0.25 * idK;
+    w[X.bocaLarga] = (zs(P[I.labios]) - zs(P[I.mandibula])) * 0.25 * idK; w[X.testa] = (zs(P[I.cranio]) - zs(P[I.arcada])) * 0.32 * idK;
     w[X.narizPonta] = (zs(P[I.narizPonte]) - zs(P[I.narizLongo])) * 0.25 * idK; w[X.olhosFundos] = (zs(P[I.arcada]) - zs(P[I.olhoTam])) * 0.22 * idK;
     w[X.queixoLargo] = (zs(P[I.mandibula]) - zs(P[I.queixo])) * 0.22 * idK; w[X.bochechas] = (zs(P[I.macas]) + zs(P[I.massa])) * 0.2 * idK;
     w[X.infancia] = 1 - sm(0, 14, aQ); w[X.adolescente] = sm(11, 15, aQ) * (1 - sm(17, 22, aQ));
@@ -197,6 +203,14 @@
     // (the hair's kind — 0 straight, 1 wavy, 2 curly, 3 tight curls —, how early it goes from the temples, how thick the beard)
     o.paint = [clamp((P[I.sardas] - 0.45) / 0.35, 0, 1), clamp(P[I.sobrancelha], 0, 1)]; // (the freckles, the brows' weight: the paint of the genes)
     const tx = P[I.cabeloTextura]; o.tex = tx < 0.42 ? 0 : tx < 0.52 ? 1 : tx < 0.62 ? 2 : 3; o.calv = zs(P[I.calvicie]); o.barba = zs(P[I.barbaDens]);
+    // (the grey of the years, D-635: from the age the gene says — a spread either way is eight years —, salt and pepper and then
+    // white over twenty-two years; by whole years, as the look is kept)
+    // (a child's proportions, D-639: against a grown one of the same scale, the head bigger and the legs and arms shorter, the trunk
+    // as long as keeps the height the age gives — the rig (22c) poses the bones by them: the head's frame (headK, as before), the
+    // legs and the arms along their bones, the trunk; the numbers here, the shape's)
+    { const ch = 1 - sm(0, 15, aQ), hk = 1 - sm(0, 13, aQ); const cab = 1 + 0.3 * hk, per = 1 - 0.22 * ch, bra = 1 - 0.12 * ch;
+      o.prop = { cabeca: cab, perna: per, braco: bra, tronco: (1.75 - 0.92 * per - 0.21 * cab) / 0.62 }; }
+    o.cinza = 46 + 8 * zs(P[I.grisalho]); o.greyT = clamp((Math.floor(age) - o.cinza) / 22, 0, 0.92);
     o.girth = 1 + 0.12 * w[X.gordo] - 0.06 * w[X.magro] + 0.05 * Math.max(0, w[X.musculo]) + 0.25 * w[X.gestante]; // (how far a skirt is kept off the body)
     MEMO.set(v.id, o); if (MEMO.size > 4000) MEMO.clear();
     return o;

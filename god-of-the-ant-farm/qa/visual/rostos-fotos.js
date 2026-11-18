@@ -7,6 +7,7 @@
 //   familia   a family's portrait: the parents and three children
 //   humor     one face in its moods (the face's channels, D-556): calm, joy, grief, anger, fear, speech, a blink
 //   custo     what the people cost: the frame with 30, 60 and 90 bodies drawn whole (calls, triangles, milliseconds)
+//   vista     what stands between the studio's camera and the person (each thing of the scene hidden in turn)
 //   bash qa/navegador.sh node qa/visual/rostos-fotos.js PASTA [Q=media|alta] [ONLY=cinco,custo]
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'), fs = require('fs');
@@ -32,6 +33,10 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
     G.Modes.enter(body); until(() => G.Modes.state === 'INC', 300); f(8);
     S.time = 0.42; G.Avatar.state().yaw = 0.3; f(20);
     document.querySelectorAll('#inc-hud, #hud, #inc-label, #inc-root').forEach(e => e.style.visibility = 'hidden');
+    // (a studio, L-1676: the body stands in the metropolis's crowd — whoever stood by the camera, and the mark of the body's target
+    // (G.Mira3D: the glow round the one its hands would act on), came between the lens and the person as a pale pane: the
+    // body's mark off and nobody else drawn; the cost puts the crowd back)
+    if (G.Mira3D) G.Mira3D.on = false; G.Realm.setOver('npcs', 0); f(4);
     // (the studio: a person's look drawn in the body's place, the camera before the face; a pose's face from the channels)
     window.__shot = (v, o) => {
       const P3 = G.People3D, av = P3.avatar; const L = P3.look(v); if (o.mood) L.mood = o.mood; av.look = L; av.drive = null;
@@ -57,6 +62,27 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   const near = { d: 0.85, fov: 26, hy: 1.6 }, mid = { d: 3.4, fov: 40, hy: 0.95 };
   // a person of the metropolis that answers a question (the first by id: always the same)
   const find = q => page.evaluate(q => { const all = [...G.S.villagers.values()].sort((a, b) => a.id - b.id); const fn = new Function('o', 'return ' + q); const v = all.find(o => { try { return fn(o); } catch (e) { return false; } }); return v ? v.id : null; }, q);
+  // (what stands between the studio's camera and the person: each thing of the scene hidden in turn, the part of the frame where
+  // the person is drawn compared — the thing whose hiding changes it most is in the way, or is the person)
+  if (want('vista')) {
+    const id = await find("o.civ === 'nordico' && o.g === 'm' && o.age >= 19 && o.age < 30");
+    const r = await page.evaluate(([id, o]) => {
+      const v = G.S.villagers.get(id); window.__shot(v, o);
+      const R = G.Realm.renderer(), sc = G.Realm.scene(), cam = G.Realm.camera(), W = 180, H = 120, rt = new THREE.WebGLRenderTarget(W, H);
+      const read = () => { R.setRenderTarget(rt); R.render(sc, cam); const px = new Uint8Array(W * H * 4); R.readRenderTargetPixels(rt, 0, 0, W, H, px); R.setRenderTarget(null); return px; };
+      const diff = (a, b) => { let s = 0, n = 0; for (let y = Math.floor(H * 0.1); y < H * 0.9; y++) for (let x = Math.floor(W * 0.5); x < W * 0.64; x++) { const i = (y * W + x) * 4; s += Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]); n++; } return s / n; };
+      const base = read(), out = [];
+      const walk = (obj, depth, pre) => { for (const ch of obj.children) { if (!ch.visible) continue; ch.visible = false; const d = diff(base, read()); ch.visible = true;
+        const m = ch.material, nm = pre + (ch.name || ch.type) + (m ? ' [' + (m.type || '') + (m.transparent ? ' transp' : '') + (m.opacity < 1 ? ' a' + m.opacity.toFixed(2) : '') + ']' : '') + (ch.userData && ch.userData.kind ? ' ' + ch.userData.kind : '');
+        out.push([+d.toFixed(1), nm, ch.children.length]); if (d > 3 && depth < 3 && ch.children.length) walk(ch, depth + 1, nm + ' > '); } };
+      walk(sc, 0, ''); rt.dispose();
+      const P3 = G.People3D, av = P3.avatar; return { cam: [cam.position.x, cam.position.y, cam.position.z].map(x => +x.toFixed(2)), body: [av.X, av.Y, av.Z].map(x => +x.toFixed(2)), top: out.sort((a, b) => b[0] - a[0]).slice(0, 14) };
+    }, [id, mid]);
+    log('vista ' + JSON.stringify(r));
+    const pane = r.top.filter(t => t[0] > 5 && /transp/.test(t[1]));
+    log((pane.length ? 'FALHOU' : 'PASSOU') + ' | rostos-fotos vista: nada transparente entre a câmera do estúdio e a pessoa | ' + (pane.length ? pane.map(t => t[1] + ' ' + t[0]).join(' · ') : 'limpo'));
+    await shoot('vista-meio', id, mid, MID);
+  }
   if (want('cinco')) {
     for (const [n, q] of [['1-nordico-jovem', "o.civ === 'nordico' && o.g === 'm' && o.age >= 19 && o.age < 30"], ['2-egipcia-adulta', "o.civ === 'egipcio' && o.g === 'f' && o.age >= 26 && o.age < 40"],
       ['3-asteca-jovem', "o.civ === 'asteca' && o.g === 'm' && o.age >= 17 && o.age < 24"], ['4-grega-idosa', "o.civ === 'grego' && o.g === 'f' && o.age >= 58"], ['5-romano-idoso', "o.civ === 'romano' && o.g === 'm' && o.age >= 60"]]) {
@@ -73,8 +99,10 @@ const log = m => { console.log(m); fs.appendFileSync(path.join(OUT, 'rostos.txt'
   }
   if (want('anos')) {
     // (one person — their genome — drawn at five ages: the identity stays, the years go over it)
-    const id = await find("o.age >= 25 && o.age < 45 && o.g === 'm' && !o.lost");
-    for (const a of [5, 15, 25, 45, 70]) { await page.evaluate(([id, a]) => { const v = G.S.villagers.get(id); window.__anos = Object.assign({}, v, { age: a, role: a < 16 ? 'crianca' : v.role }); }, [id, a]); await shoot('anos-' + a, '__anos', near, FACE); }
+    // (bareheaded, so the grey and the hair that goes are seen; and a few steps off at 25, 45 and 70: the age read from there, D-637)
+    const id = await find("o.age >= 25 && o.age < 45 && o.g === 'm' && !o.lost && !G.People3D.outfit(o).hatM");
+    for (const a of [5, 15, 25, 45, 70]) { await page.evaluate(([id, a]) => { const v = G.S.villagers.get(id); window.__anos = Object.assign({}, v, { age: a, role: a < 16 ? 'crianca' : v.role }); }, [id, a]); await shoot('anos-' + a, '__anos', near, FACE);
+      if (a >= 25) await shoot('anos-meio-' + a, '__anos', mid, MID); }
     // (and four other men of the people at 25 and at 45: what a face of one person over the years is measured against —
     // the crops compared after, by eye and by their correlation)
     const others = await page.evaluate(id => [...G.S.villagers.values()].sort((a, b) => a.id - b.id).filter(o => o.g === 'm' && o.age >= 20 && o.id !== id && !o.lost).slice(0, 4).map(o => o.id), id);

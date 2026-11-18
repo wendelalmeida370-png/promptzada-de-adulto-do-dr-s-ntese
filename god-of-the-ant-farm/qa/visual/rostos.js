@@ -12,6 +12,9 @@
 //   r6 o coto         a lost arm, a lost leg: what was past the cut is gone into a round end near it
 //   r7 a feição       G.Feicao.of: the same person twice is the same; the colour of the genome; the height in its ±8%; a
 //                     child's face firming into its own; a starving body thinner, a smith's stronger, nobody's by the house
+//   r8 a criança      a child's proportions (D-639): the head bigger, the legs and arms shorter, the height of the age kept, all
+//                     smooth in the years and 1 in a grown one; the look carries them for the rig (L.headK, legK, armK, trunkK);
+//                     and the grey of the years (D-635) from the gene's age, never before it
 //   node qa/visual/rostos.js
 const path = require('path'), fs = require('fs'), vm = require('vm');
 const L0 = require('./corpo-rig.js'); const { G, THREE, P3, B3, A, bend, MESH } = L0;
@@ -202,6 +205,19 @@ if (want('r7')) {
   const noClass = rich.w[X.gordo] === poor.w[X.gordo];
   ok('r7 a feição de uma pessoa', same && skinOk && altOk && firm && thin && strong && noClass,
     `a mesma pessoa duas vezes: ${same ? 'a mesma' : 'OUTRA'} · a pele do genoma: ${skinOk ? 'sim' : 'NÃO'} · a altura de 400 nórdicos nos ±8%: ${altOk ? 'sim' : 'NÃO'} · o rosto da criança firmando no seu (mandíbula ${kid.w[X.mandibula].toFixed(2)} → ${grown.w[X.mandibula].toFixed(2)}, infância ${kid.w[X.infancia].toFixed(2)} → ${grown.w[X.infancia].toFixed(2)}) · quem passa fome mais magro (${starving.w[X.magro].toFixed(2)} contra ${fed.w[X.magro].toFixed(2)}) · o ferreiro mais forte que o escriba (${smith.w[X.musculo].toFixed(2)} contra ${scribe.w[X.musculo].toFixed(2)}) · a casa rica não engorda (${noClass ? 'igual' : 'DIFERENTE'})`);
+}
+// ------------------------------ r8 the child's proportions, the grey of the years ------------------------------
+if (want('r8')) {
+  const Ge = G.Genoma; const g = Ge.founder(88, 'romano', 0, 11); const rows = []; let mono = true, keep = 0, last = null, adult = true;
+  for (let a = 0; a <= 40; a += 0.5) { const p = Fe.of({ id: 88, age: a, g: 'f', genoma: g }).prop; const h = 0.92 * p.perna + 0.62 * p.tronco + 0.21 * p.cabeca; keep = Math.max(keep, Math.abs(h - 1.75));
+    if (last && (p.perna < last.perna - 1e-9 || p.braco < last.braco - 1e-9 || p.cabeca > last.cabeca + 1e-9)) mono = false; last = p;
+    if (a >= 15 && (Math.abs(p.perna - 1) > 1e-6 || Math.abs(p.braco - 1) > 1e-6 || Math.abs(p.cabeca - 1) > 1e-6)) adult = false; if ([1, 5, 10, 15].includes(a)) rows.push(`${a} anos: cabeça ${p.cabeca.toFixed(2)}, perna ${p.perna.toFixed(2)}, braço ${p.braco.toFixed(2)}, tronco ${p.tronco.toFixed(2)}`); }
+  const L = P3.look({ id: 88, age: 3, g: 'f', genoma: g, civ: 'romano', skin: '#d8a888', hair: '#3a2a1a' }); const fp = L.fe && L.fe.prop;
+  const carried = !!fp && L.headK === fp.cabeca && L.legK === fp.perna && L.armK === fp.braco && L.trunkK === fp.tronco;
+  // (the grey: none before the gene's age, then rising to its white; two people of one age greying apart by their genes)
+  let greyOk = true; const ages = []; for (let k = 0; k < 60; k++) { const gg = Ge.founder(9000 + k, 'grego', 0, 5); let prev = -1; for (let a = 20; a <= 90; a++) { const o = Fe.of({ id: 9000 + k, age: a, g: 'm', genoma: gg }); if (o.greyT < prev - 1e-9 || (a < o.cinza && o.greyT > 0)) greyOk = false; prev = o.greyT; } ages.push(Fe.of({ id: 9000 + k, age: 50, g: 'm', genoma: gg }).cinza); }
+  ages.sort((a, b) => a - b); const spread = ages[ages.length - 1] - ages[0];
+  ok('r8 a criança e o grisalho', mono && adult && keep < 1e-6 && carried && greyOk && spread > 15, `${rows.join(' · ')} · a altura guardada: o maior desvio ${keep.toExponential(1)} · liso e crescendo: ${mono ? 'sim' : 'NÃO'} · 1 no crescido: ${adult ? 'sim' : 'NÃO'} · o retrato os leva: ${carried ? 'sim' : 'NÃO'} · o grisalho de 60 gregos começa dos ${ages[0].toFixed(0)} aos ${ages[ages.length - 1].toFixed(0)} anos, nunca antes do gene: ${greyOk ? 'sim' : 'NÃO'}`);
 }
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
 process.exit(fails.length ? 1 : 0);

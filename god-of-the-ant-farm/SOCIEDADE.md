@@ -164,6 +164,17 @@ atravessa o pescoço, cabelo e chapéu sem a cabeça passar, o pano sem o corpo 
 (navegador, pela fila: o alinhamento por idade, sexo, povo e corpo; a mesma pessoa aos 5, 15, 25, 45 e 70; o retrato de família; o
 custo), `qa/feicao-inv.js`; as do corpo de hoje (`corpo-rig`, `roupa`, `andar`, `maos`, `guarda3d`, `ONLY=e11` do `encarna`).
 
+**A criança de pernas curtas — quem faz o quê (22a com a 22c, onda 2; D-639).** A proporção é da forma; o andar, da passada:
+- **22a** dá os números, de uma fonte só: `G.Feicao.of(v).prop` (só se vê, pela idade, liso, 1 no adulto) — `cabeca` (a cabeça
+  maior: 1,3 no bebê, 1 aos 13), `perna` (0,78 no bebê, 1 aos 15), `braco` (0,88 no bebê) e `tronco` (o que guarda a altura que a
+  idade dá: 0,92·perna + 0,62·tronco + 0,21·cabeca = 1,75, as medidas do `P3.rig`) —, e o retrato os leva na pessoa desenhada:
+  `L.headK`, `L.legK`, `L.armK`, `L.trunkK` (o `look3d.js`). A forma do rosto da criança continua nos alvos dos anos (`infancia`).
+- **22c** põe os ossos por eles no `P3.rig` e anda com eles: o quadril na altura da perna curta, a coxa e a canela (e o alcance da
+  IK dos pés) do comprimento dela, o braço e o antebraço, o tronco; a passada da perna curta. O jeito é o do `L.headK` de hoje: o
+  quadro do osso escalado ao longo dele (o `Body3D` pele por `R · inv`, e a malha segue o osso escalado sem nada novo).
+- Até a 22c ler o `L.legK`, `L.armK` e `L.trunkK`, só a cabeça muda (o `L.headK` já posto pelo rig); nenhum dos dois mexe no que
+  é do outro.
+
 ### 22b — A sociedade
 **Onda 1**, nesta ordem (as fases do `estudo-social.md` §6):
 0. **O chão**: a porta do casal `G.Vg.pair` / `unpair` (os sete escritores de `partner` passam por ela, sem mudar o que fazem); os

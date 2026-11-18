@@ -34,6 +34,7 @@
     const X = F.IDX; let wb = 0, wc = 0, ew = '', ec = '';
     for (const v of s.villagers.values()) { const o = F.of(v); if (!o || !o.w) continue; const w = o.w, lo = v.lost || {};
       for (let i = 0; i < w.length; i++) if (!(Math.abs(w[i]) <= 1.6)) { if (!wb++) ew = `${v.name} #${v.id} (${F.ALVOS[i].name} ${w[i]})`; break; }
+      if (!(o.greyT >= 0 && o.greyT <= 0.92) || (o.greyT > 0 && (v.age || 0) < o.cinza)) { if (!wb++) ew = `${v.name} #${v.id} (o grisalho ${o.greyT} aos ${v.age | 0} anos, o gene diz ${o.cinza})`; } // (the grey only from the gene's age, D-635)
       const leg = (v.id || 0) % 2 ? X.cotoPernaD : X.cotoPernaE, other = leg === X.cotoPernaD ? X.cotoPernaE : X.cotoPernaD;
       const bad = (w[X.cotoBracoE] > 0 && !lo.armL) || (w[X.cotoBracoD] > 0 && !lo.armR) || (w[leg] > 0 && !lo.leg) || w[other] > 0 || (w[X.gestante] > 0 && !(v.preg > 0));
       if (bad && !wc++) ec = `${v.name} #${v.id}`; }

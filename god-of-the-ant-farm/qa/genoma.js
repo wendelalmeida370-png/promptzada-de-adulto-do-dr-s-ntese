@@ -119,8 +119,15 @@ if (run('g4')) {
   if (kid) { const keepG = kid.genoma, keepB = kid.born, A = Ge.alleles(keepG), Mo = Ge.alleles(G.person(kid.mother).genoma), mi = Ge.I.melanina * 2;
     A[mi] = Math.abs(Mo[mi] - 0) + Math.abs(Mo[mi + 1] - 0) > Math.abs(Mo[mi] - 63) + Math.abs(Mo[mi + 1] - 63) ? 0 : 63; kid.genoma = Ge.encode(A);
     caughtOld = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.born = G.mod('genoma.desde') + 1; caughtNew = vq().some(q => /não vem do pai nem da mãe/.test(q.msg)); kid.genoma = keepG; kid.born = keepB; }
-  ok('g4 os saves de antes', all === people.length && same === g2.size && mxS < 3 && mxH < 5 && fixed === want && !after.length && caughtOld === false && caughtNew === true && M.limpo(),
-    `a cidade pronta (${born ? 'com o genoma de quem nasceu' : 'sem genoma'}): ${all} de ${people.length} — vivos e mortos — com um ao abrir · sem ele, aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · o verificador depois: ${after.length ? after[0].msg : 'limpo'}; a cor de um filho fora dos pais: de quem nasceu antes ${caughtOld ? 'ACUSADA' : 'aceita (a cor que tinha)'}, de quem nasceu depois ${caughtNew ? 'acusada' : 'NÃO acusada'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
+  // (a save of the 28 genes, before the greying one, D-635: every genome cut two short — opened, each keeps its 56 and gains the
+  // 29th from the parents, the same both times, and the verifier finds every child's alleles in its parents)
+  const full = JSON.parse(G.Save.serialize()); const cut = JSON.parse(JSON.stringify(full)); let cutN = 0;
+  for (const k of ['villagers', 'dead']) for (const p of (Array.isArray(cut[k]) ? cut[k] : [])) { const r = Array.isArray(p) ? p[1] : p; if (r && typeof r.genoma === 'string') { r.genoma = r.genoma.slice(0, Ge.LEN - 2); cutN++; } }
+  G.Save.apply(JSON.parse(JSON.stringify(cut))); const e1 = new Map([...G.S.villagers.values(), ...G.S.dead.values()].map(p => [p.id, p.genoma])); const kinCut = QA.check().filter(q => q.sys === 'genoma');
+  G.Save.apply(JSON.parse(JSON.stringify(cut))); let keep = 0, twice = 0; for (const p of [...G.S.villagers.values(), ...G.S.dead.values()]) { const g0 = (full.villagers.concat(full.dead || []).map(q => (Array.isArray(q) ? q[1] : q)).find(q => q && q.id === p.id) || {}).genoma; if (g0 && Ge.valid(p.genoma) && p.genoma.slice(0, Ge.LEN - 2) === g0.slice(0, Ge.LEN - 2)) keep++; if (e1.get(p.id) === p.genoma) twice++; }
+  const extOk = cutN > 0 && keep === e1.size && twice === e1.size && !kinCut.length;
+  ok('g4 os saves de antes', all === people.length && same === g2.size && mxS < 3 && mxH < 5 && fixed === want && !after.length && caughtOld === false && caughtNew === true && extOk && M.limpo(),
+    `a cidade pronta (${born ? 'com o genoma de quem nasceu' : 'sem genoma'}): ${all} de ${people.length} — vivos e mortos — com um ao abrir · sem ele, aberto duas vezes: ${same} de ${g2.size} iguais · a pele desenhada a ΔE ${mxS.toFixed(2)} do v.skin salvo no pior (${who}), o cabelo ${mxH.toFixed(2)} · um genoma estragado: ${fixed === want ? 'refeito igual' : 'OUTRO'} · o verificador depois: ${after.length ? after[0].msg : 'limpo'}; a cor de um filho fora dos pais: de quem nasceu antes ${caughtOld ? 'ACUSADA' : 'aceita (a cor que tinha)'}, de quem nasceu depois ${caughtNew ? 'acusada' : 'NÃO acusada'} · um save dos 28 genes (${cutN} genomas cortados): ${keep} de ${e1.size} guardam os 56 de antes, ${twice} iguais nas duas vezes, o verificador ${kinCut.length ? kinCut[0].msg : 'limpo'} · ${M.limpo() ? 'sem erro' : JSON.stringify(M.erros()).slice(0, 200)}`);
 }
 
 // ------------------------------ g5 o pai morto ------------------------------
@@ -164,7 +171,8 @@ if (run('g7')) {
   M.pronto('metropole'); const S = G.S;
   const s1 = G.Save.serialize(), s0 = JSON.stringify(strip(JSON.parse(s1))); const n = S.villagers.size + S.dead.size;
   const per = (s1.length - s0.length) / n, pct = (s1.length / s0.length - 1) * 100;
-  ok('g7 o peso do save', per < 70 && pct < 3, `a metrópole pronta: ${S.villagers.size} vivos e ${S.dead.size} mortos — o save de ${(s0.length / 1e6).toFixed(2)} para ${(s1.length / 1e6).toFixed(2)} MB (+${((s1.length - s0.length) / 1024).toFixed(0)} KB, +${pct.toFixed(1)}%), ${per.toFixed(0)} bytes por pessoa`);
+  ok('g7 o peso do save', per < 72 && pct < 3, // (the genome's 58 characters — the 29th gene, D-635 — and its key: ≈ 70 bytes a person)
+    `a metrópole pronta: ${S.villagers.size} vivos e ${S.dead.size} mortos — o save de ${(s0.length / 1e6).toFixed(2)} para ${(s1.length / 1e6).toFixed(2)} MB (+${((s1.length - s0.length) / 1024).toFixed(0)} KB, +${pct.toFixed(1)}%), ${per.toFixed(0)} bytes por pessoa`);
 }
 
 // ------------------------------ o verificador ------------------------------
@@ -218,15 +226,19 @@ if (run('gd')) {
     ['202 o retrato', 'look3d.js', s => s.replace('if (Fe) L.s *= Fe.alt;', ''), /o look3d\.js não desenha a altura/],
     ['202 a conta', 'art.js', s => s + '\nconst tone = () => G.Genoma.skinHex(0.5, 0.5);\n', /a cor e a altura da feição: art\.js/],
     ['203', 'people3d.js', s => s + '\nconst gx = v => v.genoma;\n', /o 3D lê a pessoa pela feição: people3d\.js/],
+    // (236, L-1248 = L-1673 planted again: the water's piece without its last new line, joined to the rock's by «+» as it was)
+    ['236 o pedaço com nome', 'agua3d.js', s => s.replace("}\n`; // (ends in a line of its own", "}`; // (ends in a line of its own"), /junta por «\+» o pedaço «groundGLSL\(\)»/, 'ground3d.js', s => s.replace("[G3.texGLSL(), gMeans(), G.Agua3D ? G.Agua3D.groundGLSL() : '', FRAG()].join('\\n')", "G3.texGLSL() + gMeans() + (G.Agua3D ? G.Agua3D.groundGLSL() : '') + FRAG()")],
+    ['236 o modelo', 'mira3d.js', s => s + '\nconst bad = `uniform float uX;\nvoid main() { }` + `#define Y 1\n`;\n', /um modelo de GLSL juntado a outro por «\+»/],
   ];
   const res = [];
-  for (const [name, f, plant, want] of CASES) {
-    const p = path.join(J, f), s0 = fs.readFileSync(p, 'utf8'); const s1 = plant(s0); if (s1 === s0) { res.push(`${name}: a sabotagem não pegou`); continue; }
-    fs.writeFileSync(p, s1); const out = guard(); fs.writeFileSync(p, s0);
+  for (const [name, f, plant, want, f2, plant2] of CASES) { // (a case may plant in two files: the piece and the place it is joined)
+    const ps = [[f, plant]].concat(f2 ? [[f2, plant2]] : []).map(([ff, pl]) => { const p = path.join(J, ff), s0 = fs.readFileSync(p, 'utf8'); return { p, s0, s1: pl(s0) }; });
+    if (ps.some(q => q.s1 === q.s0)) { res.push(`${name}: a sabotagem não pegou`); continue; }
+    for (const q of ps) fs.writeFileSync(q.p, q.s1); const out = guard(); for (const q of ps) fs.writeFileSync(q.p, q.s0);
     res.push(`${name}: ${want.test(out) ? 'acusada' : 'NÃO ACUSADA'}`);
   }
   fs.rmSync(tmp, { recursive: true, force: true });
-  ok('as regras 197–203 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
+  ok('as regras 197–203 e 236 do guard sabotadas', clean && res.every(r => / acusada$/.test(r)), `a cópia limpa: ${clean ? 'passa' : 'FALHA'} · ${res.join(' · ')}`);
 }
 ok('sem erro de módulo nem aviso no console', M.limpo(), M.limpo() ? 'limpo' : JSON.stringify(M.erros()).slice(0, 300));
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'TUDO PASSOU');
