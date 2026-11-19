@@ -127,6 +127,30 @@ o soldado na escada do cerco, o ladrão no muro, o marinheiro no mastro. **O mes
 - **A pega é do mundo, pura:** sai do relevo, da rocha, da água e do lugar — nunca do 3D. O 3D só a desenha.
 - **O corpo pendurado vai no save:** o load devolve o corpo na mesma pega, com o mesmo fôlego e a mesma corda.
 
+## 10b. Nenhuma montanha sem caminho (as defesas; a pergunta do dono, 19/11/2026)
+
+**A semente e o gerador do mapa não mudam.** As pegas são uma conta pura sobre o que o mundo já tem (o relevo, a rocha, a água,
+o `G.hash` do lugar): a mesma semente faz a mesma montanha e as mesmas pegas, um save de antes ganha as pegas sem migração, e os
+mundos prontos não precisam ser gerados de novo por causa da escalada. **As defesas:**
+
+1. **A via normal, garantida pela própria conta:** toda montanha tem pelo menos um caminho fácil até o cume (a crista que se
+   anda, ou uma linha de fendas de grau baixo, sem ferramenta especial), como as montanhas de verdade têm a sua «via normal».
+   Num paredão sem nenhuma, a conta põe uma linha de fendas — pelo `G.hash`, sempre a mesma. As vias difíceis são escolha; a
+   fácil existe sempre.
+2. **Os graus:** cada trecho de parede tem um grau (de 1 a 5) pela rocha e pela inclinação; a via normal fica no grau 1 ou 2; o
+   grau 5 pede prática e ferramenta.
+3. **O corpo nunca fica preso:** subir e descer usam as mesmas pegas — por onde se sobe, se desce (custa mais fôlego). Só o
+   salto e a queda vão num sentido; **todo lugar onde um salto pousa tem uma saída**, e a conta põe uma fenda onde faltar.
+4. **Quem muda o chão refaz as pegas:** o terremoto do deus, o desabamento, a mina, a obra, a cheia — a conta é refeita pela
+   versão do terreno (o `S.typeVer`, como o mapa de quem anda), com as mesmas garantias para o paredão novo.
+5. **O verificador** (`QA.check`, regra «via»): toda montanha liga-se ao chão da sua terra por uma via de grau baixo; nenhum
+   lugar onde o corpo fica deixa de ter volta; nenhuma pega solta no ar ou dentro da rocha.
+6. **A prova em muitos mundos:** centenas de sementes, todos os tipos de mapa e os mundos prontos — cada cume, cada platô, cada
+   fundo de salto com o seu caminho; a mesma prova depois de terremotos e desabamentos de propósito.
+7. **A foto e a conta batem:** o 3D desenha as pegas onde a conta diz (e o enfeite da rocha não finge pega que não existe), e
+   uma prova olha as fotos contra a conta.
+8. **O mapa de quem anda não muda** (§10): as cidades, a guerra e o comércio não sentem a escalada.
+
 ## 11. A recompensa que se vê e se ouve
 
 A mão que acha a fenda e o corpo que sobe com ela; a respiração que acelera e se acalma no platô; **o vento que aumenta com a
@@ -149,7 +173,7 @@ arenito); o passo na neve dura; frear a escorregada.
 | V4 — O mundo escala | as pessoas do mundo nas mesmas regras: a árvore, o muro, o mastro, a escada do cerco |
 | V5 — As ferramentas | a sola com pregos, o cajado, a cinta, o gancho |
 
-**As provas:** o corpo só sobe onde a rocha tem pega (uma invariante); a pega desenhada é a do mundo (a foto e a conta batem); a
+**As provas:** o corpo só sobe onde a rocha tem pega (uma invariante); toda montanha tem a via normal e nenhum lugar fica sem volta (as defesas do §10b, em centenas de sementes); a pega desenhada é a do mundo (a foto e a conta batem); a
 queda fere só pela porta; a corda e a estaca vêm pelo livro e se gastam; o mapa de quem anda não muda; o mundo sem o corpo é o
 mesmo; os casos ruins (o save pendurado, a chuva no meio da parede, a pega que quebra, o companheiro que larga, a corda que
 arrebenta, o deus que manda o terremoto com o corpo na parede); e **o teste do dono: subir por horas, sem enjoar.**
