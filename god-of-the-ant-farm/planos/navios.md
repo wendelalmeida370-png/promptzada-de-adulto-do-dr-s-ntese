@@ -43,7 +43,7 @@ marinheiro, o pirata e o pescador de alto-mar dependem dele.
 | N4 — A viagem e o mar | os dias no mar, o que acontece neles, as funções a bordo | o alto-mar, o explorador |
 | N5 — A batalha no mar | o abalroamento, a abordagem, o naufrágio com o corpo a bordo | a guerra, a galé, o pirata |
 
-A N1 entra no Patch 26, com a segunda fase da Pesca; a N2 e a N3 no Patch 34; a N4 e a N5 no Patch 35 ([`roteiro.md`](roteiro.md)).
+A N1 entra no Patch 26, com a segunda fase da Pesca; a N2 e a N3 no Patch 36; a N4 e a N5 no Patch 37 ([`roteiro.md`](roteiro.md)).
 
 ## 4. As regras que já valem
 

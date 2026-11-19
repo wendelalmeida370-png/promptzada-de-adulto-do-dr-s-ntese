@@ -5,8 +5,8 @@ que passa com a lanterna, a pá que não pode fazer barulho, o túnel aberto de 
 uma vela escondida na mão, o ouro no saco, o forno do receptador derretendo a coroa de um rei — e, no dia seguinte, a cidade
 inteira falando do sacrilégio, e você ouvindo, calado, na taverna. **Como ele é:** o saqueador rouba os mortos — o ouro que um
 povo deu aos seus para sempre. O jogo o mostra assim, e **o mundo responde**: a lei, a fé, a família do morto, os boatos, a
-fama. Usa a base do passado ([`passado.md`](passado.md)), a sombra (o Patch 33), o subterrâneo ([`subterraneo.md`](subterraneo.md))
-e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 37 ([`roteiro.md`](roteiro.md)). Os
+fama. Usa a base do passado ([`passado.md`](passado.md)), a sombra (o Patch 35), o subterrâneo ([`subterraneo.md`](subterraneo.md))
+e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 39 ([`roteiro.md`](roteiro.md)). Os
 números são propostas.
 
 ## 1. A fantasia

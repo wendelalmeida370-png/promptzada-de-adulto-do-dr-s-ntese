@@ -3,7 +3,7 @@
 **A máxima:** a arena tem de ser tão intensa que poderia ser um jogo sozinho — o túnel, a areia, a multidão, o ferro, o
 sangue, a decisão de quem vive. **Visceral:** as feridas, o sangue que fica na areia, o membro decepado, a decapitação, o
 golpe de misericórdia — com o peso de verdade, nunca de enfeite. Usa a fundação dos ofícios
-([`oficios-fundacao.md`](oficios-fundacao.md)) e o combate do corpo (`G.Combate`). Entra no Patch 32, «A arena e a guerra».
+([`oficios-fundacao.md`](oficios-fundacao.md)) e o combate do corpo (`G.Combate`). Entra no Patch 34, «A arena e a guerra».
 Os números são propostas para começar.
 
 ## 1. A fantasia
@@ -164,7 +164,7 @@ atrás de você).
 
 ## 15. Do que depende, as fases e as provas
 
-**Depende de:** o combate do corpo (a profundidade do Patch 32: as zonas, as feridas, o decepar, a decapitação), a arena com o
+**Depende de:** o combate do corpo (a profundidade do Patch 34: as zonas, as feridas, o decepar, a decapitação), a arena com o
 corpo (lutar dentro do anfiteatro, a multidão), os bichos, a justiça, a fundação dos ofícios, o Patch 23 (as memórias, os laços,
 as falas da multidão), o Patch 24 (a vingança).
 

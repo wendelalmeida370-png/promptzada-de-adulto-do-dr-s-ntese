@@ -4,7 +4,7 @@
 pincel que tira a terra de um rosto de bronze, a camada de cinza que conta o fogo que acabou uma cidade, a escrita que ninguém lê
 e que você vai entendendo símbolo por símbolo, e, no fim, **a história inteira de um povo que sumiu, reconstruída por você**. Usa
 a base do passado ([`passado.md`](passado.md)), o subterrâneo ([`subterraneo.md`](subterraneo.md)) e a fundação dos ofícios
-([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 37 ([`roteiro.md`](roteiro.md)). Os números são propostas.
+([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 39 ([`roteiro.md`](roteiro.md)). Os números são propostas.
 
 ## 1. A fantasia
 

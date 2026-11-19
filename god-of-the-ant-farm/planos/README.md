@@ -6,7 +6,7 @@ que for feito sai da lista «a fazer» com o commit que fez.
 
 ## O roteiro
 
-**A ordem de fazer está em [`roteiro.md`](roteiro.md)** (a linha do brainstorm, a lógica da ordem e os patches de 23 a 39). A
+**A ordem de fazer está em [`roteiro.md`](roteiro.md)** (a linha do brainstorm, a lógica da ordem e os patches de 23 a 41). A
 ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de fazer é a do roteiro.
 
 | Patch | O quê |
@@ -16,9 +16,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
 | 27 | O acabamento e o molde afinado |
-| 28 a 31 | A terra, a mata, o subterrâneo e a mina, a oficina |
-| 32 a 35 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
-| 36 a 39 | O comércio, a fé, o saber e o passado, a arte, o poder |
+| 28 a 33 | A terra, **a escalada**, a mata, o subterrâneo e a mina, **a montanha**, a oficina |
+| 34 a 37 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
+| 38 a 41 | O comércio, a fé, o saber e o passado, a arte, o poder |
 
 ## Os arquivos
 
@@ -33,11 +33,11 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`navios.md`](navios.md) — a vida a bordo e o porto (os barcos e os navios por dentro, o itinerário do porto, a viagem, a
   batalha no mar): a mecânica fundamental que o dono vai pedir, da qual a Pesca e o mar dependem.
 - [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do galeote e o ofício
-  do remador livre; Patches 34 e 35).
+  do remador livre; Patches 36 e 37).
 - [`oficio-gladiador.md`](oficio-gladiador.md) — o gladiador por inteiro (a escola, os tipos, a arena visceral, o favor da
-  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 32).
+  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 34).
 - [`oficio-capataz.md`](oficio-capataz.md) — o capataz por inteiro (o comitre da galé e o feitor: o poder, o medo, o ódio que
-  volta, a corrupção, a redenção; Patch 35).
+  volta, a corrupção, a redenção; Patch 37).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
 - [`oficio-mineiro.md`](oficio-mineiro.md) — o mineiro por inteiro (os minerais e as pedras, a prospecção, a picareta, o fogo e
@@ -50,6 +50,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   defesas dos antigos, a lei do achado, os rivais).
 - [`oficio-saqueador.md`](oficio-saqueador.md) — o saqueador de túmulos por inteiro (a noite, o túnel, o ouro derretido, a
   maldição que é crença, a lei e a família do morto).
+- [`escalada.md`](escalada.md) — a escalada: o corpo na vertical (as pegas, a rocha que diz, a corda, a queda), a base dos
+  ofícios das alturas e de muitos outros.
+- [`montanha.md`](montanha.md) — a montanha como mar: a expedição de dias, a altura, o frio, o tempo, o cume, as lendas e os
+  ofícios das alturas.
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
@@ -72,5 +76,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   breve; o tesouro é sempre o passado de verdade do mundo.
 - **O passado em camadas** (aprovado pelo dono, 19/11/2026): os povos antigos nascem com o mundo, como a geologia, e o passado do
   próprio mundo cresce com os anos e os cobre ([`passado.md`](passado.md)).
+- **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
+  Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).
 - **O alvo é o PC;** o celular continua funcionando, sem pôr teto em nada.

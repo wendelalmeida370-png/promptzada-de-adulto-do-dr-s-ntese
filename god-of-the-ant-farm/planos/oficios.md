@@ -75,7 +75,7 @@ Como na vida: **um ofício principal e quantos o tempo deixar praticar.**
 | A interação e o trabalho das mãos | feito (`G.Interact`, `G.Trabalho`) | os gestos de cada ofício |
 | As coisas, a mochila, a forma das coisas | feito (`G.Inv`, `G.ItemArt`) | as ferramentas novas |
 | A origem das coisas | feito (`G.Origem`) | as receitas novas |
-| O combate do corpo | a base feita (`G.Combate`) | a profundidade (Patch 32) |
+| O combate do corpo | a base feita (`G.Combate`) | a profundidade (Patch 34) |
 | A água, o relevo, o céu, a mata | feito (a natureza, fase A) | — |
 | O mercado do corpo | as bancas existem | comprar e vender com preço que reage, a oficina própria |
 | Mestre e aprendiz | — | ensinar e aprender técnicas, pelos laços |
@@ -122,6 +122,12 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 - garimpeiro, escorador, o homem do fogo, aguadeiro da mina, lapidário, explorador de cavernas, coletor de cristais e de
   salitre, arqueólogo ([`oficio-arqueologo.md`](oficio-arqueologo.md)), caçador de tesouros ([`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md)), decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos ([`oficio-saqueador.md`](oficio-saqueador.md)),
   negociante de antiguidades, guia das profundezas, sapador, poceiro, cavador de túneis
+
+**Alturas** (a escalada e a montanha; os planos em [`escalada.md`](escalada.md) e [`montanha.md`](montanha.md))
+- **guia de montanha**, **caçador das alturas**, **coletor dos penhascos**
+- carregador de montanha, batedor, resgatador, caçador de mel das rochas, ervanário das alturas, cristaleiro, coletor de gelo
+  e neve, mensageiro dos passos, guardião do passo e do abrigo, contrabandista dos passos, pastor de altitude, peregrino dos
+  cumes, eremita, vigia do alto, escalador de muralhas
 
 **Combate** (tronco: o Combate)
 - **guerreiro**, **arqueiro**, **gladiador** ([`oficio-gladiador.md`](oficio-gladiador.md)), **vigia**, **carcereiro**, o capataz — o comitre e o feitor ([`oficio-capataz.md`](oficio-capataz.md))
@@ -187,8 +193,8 @@ a hora da tempestade, a revolta); e a saída — fugir, ser libertado, morrer �
 
 ## 8. A ordem dos patches
 
-A ordem de fazer está no [`roteiro.md`](roteiro.md) (patches 25 a 39): a fundação e a Pesca primeiro; depois quem tira da
-natureza (a terra, a mata, a mina), quem transforma (a oficina), quem luta, rouba e navega (a arena, a sombra, o mar), quem troca
+A ordem de fazer está no [`roteiro.md`](roteiro.md) (patches 25 a 41): a fundação e a Pesca primeiro; depois quem tira da
+natureza (a terra, a escalada e a mata, a mina, a montanha), quem transforma (a oficina), quem luta, rouba e navega (a arena, a sombra, o mar), quem troca
 (o comércio) e, por último, a fé e o saber, a arte e o poder. As condições e as passagens entram com o tronco de cada uma.
 
 ## 9. Como cada patch de ofício se prova
