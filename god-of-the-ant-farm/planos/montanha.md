@@ -193,6 +193,7 @@ morre, a avalanche, o deus que manda a nevasca); e **o teste do dono: uma expedi
 
 ## 17. Quando entra
 
-**No Patch 33**, depois do mundo grande (29), da escalada (30), da mata (31) e do subterrâneo (32) — com a corda, o frio e a expedição prontos
-([`roteiro.md`](roteiro.md)). Os ofícios da montanha podem ganhar, depois, os seus documentos a fundo (o guia de montanha, o
+**No Patch 42**, depois do mundo grande (41) — a montanha só existe em dias —, e da escalada (29), da mata (30) e do subterrâneo (31) — com a corda, o frio e a expedição prontos
+([`roteiro.md`](roteiro.md)). **Os ofícios das alturas que cabem num dia** — o coletor dos penhascos, o caçador de mel das rochas, o falcoeiro no ninho, o
+caçador das alturas, o cristaleiro — entram antes, com a escalada (29) e a mata (30), nos penhascos de hoje. Os ofícios da montanha podem ganhar, depois, os seus documentos a fundo (o guia de montanha, o
 coletor dos penhascos, o cristaleiro).

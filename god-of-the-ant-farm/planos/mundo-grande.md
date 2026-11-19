@@ -17,8 +17,12 @@ ficam. É a maior mecânica fundamental do roteiro, e a base da mata ([`oficios.
 |---|---|---|---|---|
 | Titânico (hoje) | 192 | 0,77 km | menos de um dia | minutos |
 | **Continental** | 512 | 2 km | ~2 dias | ~1 dia |
-| **Mundo** | 1.024 | 4 km | ~4 a 5 dias | ~1,5 dia |
-| **Vastidão** | 2.048 | 8 km | ~8 a 10 dias | ~3 dias |
+| **Mundo** (o maior, decisão do dono) | 1.280 | 5,1 km | ~5 a 6 dias | ~2 a 3 dias |
+
+**Por que 5 km é o ponto doce** (19/11/2026): é 2,7 vezes menos chão que um de 8 km (menos memória, menos tempo para gerar,
+saves e mundos prontos menores) e ainda dá viagens de dias: quase uma semana a pé de ponta a ponta, dois a três dias de navio
+(mais com vento contra, ou na galé a remo). 1.280 casas são dez pedaços de 128, a medida boa para o 3D por pedaços. Se o de 5 km
+rodar folgado, um maior pode ser tentado depois — o motor não pode ter o tamanho escrito em lugar nenhum.
 
 - **A montanha de dias:** subindo em terreno fácil, o corpo ganha ≈ 0,3 m por segundo na vertical — ≈ 200 m num dia do corpo,
   com a caminhada de aproximação, os acampamentos e o ar fino. **Uma montanha de dois a quatro dias tem de 500 a 1.000 m de
@@ -26,7 +30,7 @@ ficam. É a maior mecânica fundamental do roteiro, e a base da mata ([`oficios.
 
 ## 2. A ideia que torna isso possível: o detalhe é uma conta
 
-Um mapa de 2.048 casas tem 4 milhões de casas — 114 vezes o Titânico. Guardar e simular cada casa como hoje não cabe. O jogo já
+Um mapa de 1.280 casas tem 1,6 milhão de casas — 44 vezes o Titânico. Guardar e simular cada casa como hoje não cabe. O jogo já
 tem a peça que resolve: **as fontes puras** (a mata — `G.Mata` —, o relevo — `G.Geo` —, a água, o céu: a mesma conta dá o mesmo
 resultado, sem guardar nada). O mundo grande vai por esse caminho:
 
@@ -45,6 +49,40 @@ resultado, sem guardar nada). O mundo grande vai por esse caminho:
    estradas (o mapa de regiões que o jogo já tem, `W.reachIds`, ganha andares), e o passo a passo só perto de quem anda.
 5. **O mar aberto é barato.** A água é uma conta (`G.Agua`); no mar longe da costa quase nada vive além dos navios, dos peixes em
    contas e do tempo. É ali que a navegação de dias acontece.
+
+## 2b. É viável? (a resposta sincera)
+
+**É viável, e é difícil.** Não é viagem: mundos grandes no navegador, com o chão chegando por pedaços, são uma técnica conhecida, e
+o jogo já tem as peças certas (as fontes puras, a semente que refaz tudo, o mapa de regiões). **O que não dá é só aumentar o
+número do tamanho:** hoje uns **230 lugares do código passam pelo mapa inteiro** — muitos só na criação do mundo (aceitável),
+outros a cada passo ou a cada dia, e esses precisam virar locais. O passo do mundo roda num núcleo só do processador, e o
+navegador dá a uma aba uns poucos gigabytes: o mundo de 5 km tem de caber em um ou dois.
+
+## 2c. O que pode atrapalhar o jogo, e como evitar
+
+| Risco | O que acontece | Como evitar |
+|---|---|---|
+| **O mundo vazio** | muito chão para pouca gente | o vazio é a floresta, a montanha e o mar que você quer atravessar; os povos ficam onde a terra é boa, e o caminho entre eles tem as suas coisas (a caça, as ruínas, os povos antigos, os bichos, o tempo) |
+| **Os povos se encontram tarde** | o primeiro contato, o comércio e a guerra demoram mais; a história de cem anos fica mais calma | mais povos no mundo grande; as estradas e os portos que encurtam |
+| **A notícia anda devagar** | os boatos e as memórias vão com quem viaja, e quem viaja leva dias | é o certo (a fama de alguém chega antes ou depois conforme a distância) e deixa o mundo mais rico |
+| **O andar cansa** | ir a algum lugar leva dias | o ritmo da viagem (§5), **a montaria e a carroça** (uma base nova para o mundo grande), as estradas, o barco |
+| **O deus vê pouco** | o mapa não cabe na tela | os níveis de zoom, o mapa do mundo, os povos marcados |
+| **As provas demoram** | os mundos grandes levam horas para gerar e viver | as provas do mundo grande escolhidas, e cada sistema provado num mapa pequeno e num grande |
+
+**As memórias e as histórias não se perdem:** a memória das pessoas, os laços, as histórias e os boatos não dependem do tamanho do
+mapa — só da gente, que é a mesma.
+
+## 2d. A preparação barata (desde já, em todo patch)
+
+Para o mundo grande não ter de refazer o que vier antes dele:
+
+- **nenhuma conta nova que passe pelo mapa inteiro a cada passo** (uma regra nova no `guard.js`, assim que o primeiro patch a
+  precisar dela começar);
+- **o detalhe novo como conta pura** (as pegas da escalada, as árvores da mata já são);
+- **o que muda no chão guardado como «o que mudou»**, quando der;
+- **nenhum tamanho escrito à mão:** tudo pelo `N` do mapa.
+
+Isso também deixa os mapas de hoje mais leves.
 
 ## 3. A população não cresce com o mapa
 
@@ -83,7 +121,7 @@ igual, só mais rápido.
 - **A vida em contas e a vida de carne e osso têm de concordar** (a manada que ganha corpo tem o mesmo tamanho que tinha em conta):
   é o ponto mais delicado, e tem as suas provas.
 - **Os mundos prontos grandes** levam muito mais tempo para gerar pelo salto do jogo.
-- **Antes de tudo, uma sondagem:** gerar um mapa de 1.024 e medir onde o jogo engasga — o plano do patch sai das medidas.
+- **Antes de tudo, uma sondagem:** gerar um mapa de 1.280 e medir onde o jogo engasga — o plano do patch sai das medidas.
 
 ## 8. As provas
 
@@ -97,6 +135,11 @@ igual, só mais rápido.
 
 ## 9. Quando entra
 
-**No Patch 29**, logo depois da terra e antes da escalada, da mata, do subterrâneo, da montanha e do mar — que dependem dele
-([`roteiro.md`](roteiro.md)). As fundações dele (o detalhe como conta, o save do que mudou, a vida por importância) valem também
-para os mapas pequenos, que ficam mais leves.
+**Quando o PC novo do dono chegar** (decisão do dono, 19/11/2026): é o Patch 41 do roteiro, e pode vir antes no dia em que o
+dono quiser — o que ele pede já existe (as fontes puras). Até lá, cada patch faz a preparação barata (§2d). **A montanha de dias
+vem logo depois dele** (Patch 42); a mata, o mar e a escalada são feitos antes, nos mapas de hoje, e ganham o seu tamanho de dias
+quando o mundo grande chegar ([`roteiro.md`](roteiro.md)).
+
+**Para o PC novo** (o jogo roda no navegador): 16 GB de memória bastam; o passo do mundo usa **um núcleo só**, então pesa mais um
+processador de núcleo rápido do que um de muitos núcleos; a placa de vídeo é a do 3D (a qualidade alta, o longe com as
+montanhas).

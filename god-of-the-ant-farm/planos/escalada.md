@@ -180,5 +180,5 @@ arrebenta, o deus que manda o terremoto com o corpo na parede); e **o teste do d
 
 ## 14. Quando entra
 
-**No Patch 30**, logo depois do mundo grande (as montanhas grandes) e antes da mata, do subterrâneo e da montanha — os primeiros que a usam
+**No Patch 29**, logo depois da terra e antes da mata (nas montanhas de hoje; as grandes chegam com o mundo grande, no Patch 41), do subterrâneo e da montanha — os primeiros que a usam
 ([`roteiro.md`](roteiro.md)).

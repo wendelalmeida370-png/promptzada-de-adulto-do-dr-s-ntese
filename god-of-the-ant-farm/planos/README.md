@@ -16,9 +16,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
 | 27 | O acabamento e o molde afinado |
-| 28 a 34 | A terra, **o mundo grande**, **a escalada**, a mata, o subterrâneo e a mina, **a montanha**, a oficina |
-| 35 a 38 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
-| 39 a 42 | O comércio, a fé, o saber e o passado, a arte, o poder |
+| 28 a 32 | A terra, **a escalada**, a mata, o subterrâneo e a mina, a oficina |
+| 33 a 36 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
+| 37 a 40 | O comércio, a fé, o saber e o passado, a arte, o poder |
+| 41 e 42 | **O mundo grande** (quando o PC novo chegar) e **a montanha** de dias |
 
 ## Os arquivos
 
@@ -33,11 +34,11 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`navios.md`](navios.md) — a vida a bordo e o porto (os barcos e os navios por dentro, o itinerário do porto, a viagem, a
   batalha no mar): a mecânica fundamental que o dono vai pedir, da qual a Pesca e o mar dependem.
 - [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do galeote e o ofício
-  do remador livre; Patches 37 e 38).
+  do remador livre; Patches 35 e 36).
 - [`oficio-gladiador.md`](oficio-gladiador.md) — o gladiador por inteiro (a escola, os tipos, a arena visceral, o favor da
-  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 35).
+  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 33).
 - [`oficio-capataz.md`](oficio-capataz.md) — o capataz por inteiro (o comitre da galé e o feitor: o poder, o medo, o ódio que
-  volta, a corrupção, a redenção; Patch 38).
+  volta, a corrupção, a redenção; Patch 36).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
 - [`oficio-mineiro.md`](oficio-mineiro.md) — o mineiro por inteiro (os minerais e as pedras, a prospecção, a picareta, o fogo e
@@ -50,7 +51,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   defesas dos antigos, a lei do achado, os rivais).
 - [`oficio-saqueador.md`](oficio-saqueador.md) — o saqueador de túmulos por inteiro (a noite, o túnel, o ouro derretido, a
   maldição que é crença, a lei e a família do morto).
-- [`mundo-grande.md`](mundo-grande.md) — o mundo grande: os mapas de dias (2 a 8 km de lado) e as montanhas grandes; o detalhe
+- [`mundo-grande.md`](mundo-grande.md) — o mundo grande: os mapas de dias (2 e 5 km de lado) e as montanhas grandes; o detalhe
   como conta, a vida por importância, o 3D por pedaços.
 - [`escalada.md`](escalada.md) — a escalada: o corpo na vertical (as pegas, a rocha que diz, a corda, a queda), a base dos
   ofícios das alturas e de muitos outros.
@@ -79,7 +80,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - **O passado em camadas** (aprovado pelo dono, 19/11/2026): os povos antigos nascem com o mundo, como a geologia, e o passado do
   próprio mundo cresce com os anos e os cobre ([`passado.md`](passado.md)).
 - **O mundo grande** (19/11/2026): uma modalidade de mapas maiores que o Titânico e montanhas maiores, para a navegação, a
-  floresta e a montanha durarem dias; os tamanhos de hoje ficam ([`mundo-grande.md`](mundo-grande.md)).
+  floresta e a montanha durarem dias; o maior com 5 km de lado; os tamanhos de hoje ficam; **entra quando o PC novo do dono
+  chegar** ([`mundo-grande.md`](mundo-grande.md)).
 - **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
   Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).

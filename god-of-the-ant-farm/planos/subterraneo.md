@@ -59,8 +59,8 @@ calendário: o achado vira boato, o boato traz os caçadores, e o saque do túmu
 **Os sinais:** o monte do túmulo, as pedras alinhadas no mato, a plantação que cresce diferente sobre os muros enterrados, a
 inscrição da caverna, o mito, o mapa velho comprado de um negociante, o achado do arado.
 
-**A ordem (o truque):** o ofício entra no Patch 40, mas **o registro do passado começa antes** — o enxoval dos enterros, o
-tesouro escondido e o tempo que enterra entram cedo e baratos (com o subterrâneo, no 32). Assim, quando o arqueólogo chegar, os
+**A ordem (o truque):** o ofício entra no Patch 38, mas **o registro do passado começa antes** — o enxoval dos enterros, o
+tesouro escondido e o tempo que enterra entram cedo e baratos (com o subterrâneo, no 31). Assim, quando o arqueólogo chegar, os
 mundos prontos de 500 e 1.000 anos já terão séculos de história de verdade debaixo da terra. Os povos antigos mudam a criação
 do mundo: os mundos prontos se geram de novo.
 
@@ -116,5 +116,5 @@ do mundo: os mundos prontos se geram de novo.
 | S4 — Os perigos | o ar, a inundação, o desabamento, perder-se, os bichos de baixo |
 | S5 — Os ofícios | o garimpeiro, o lapidário, o arqueólogo, o caçador de tesouros, o sapador, e os outros |
 
-Os ofícios do subterrâneo entram no Patch 32 («O subterrâneo e a mina») e o passado (a S3, a arqueologia) no Patch 40, com a fé e o saber; os planos de cada
+Os ofícios do subterrâneo entram no Patch 31 («O subterrâneo e a mina») e o passado (a S3, a arqueologia) no Patch 38, com a fé e o saber; os planos de cada
 um seguem o molde dos ofícios ([`oficios.md`](oficios.md)).

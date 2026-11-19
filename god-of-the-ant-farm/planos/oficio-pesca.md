@@ -89,7 +89,7 @@ lendária. **O peso:** o comum e o recorde possível do mundo.
 | Lagosta | toca no recife, noite | covo, mergulho | — | 0,5–8 kg | incomum | o banquete do rico |
 | Ostra de pérola | recife fundo | mergulho | — | — | rara (a pérola, mais ainda) | a pérola para o ourives |
 
-### Mar aberto (o barco; o alto-mar inteiro com o navio, no Patch 38)
+### Mar aberto (o barco; o alto-mar inteiro com o navio, no Patch 36)
 
 | Espécie | Onde e quando | Isca | Morde / luta | Peso | Raridade | Para quê |
 |---|---|---|---|---|---|---|
@@ -281,7 +281,7 @@ coleção, os aprendizes, os lendários).
 
 ## 15. Os derivados e as fases
 
-**Os derivados:** o pescador da costa, o mergulhador, o pescador de alto-mar (Patch 38), o salgador e o defumador; e os que servem
+**Os derivados:** o pescador da costa, o mergulhador, o pescador de alto-mar (Patch 36), o salgador e o defumador; e os que servem
 a pesca: o cordoeiro, o cesteiro, o carpinteiro naval.
 
 | Fase | O quê |
@@ -290,7 +290,7 @@ a pesca: o cordoeiro, o cesteiro, o carpinteiro naval.
 | P2 a P4 (Patch 26) — A costa | a tarrafa, a costa e os do fundo; a canoa e o barco a remo (a N1 do [`navios.md`](navios.md)) |
 | P3 — O mergulho | o recife, a pérola, a moreia, o tubarão |
 | P4 — A conserva e o mercado | a salga, a defumação, o garum, as encomendas, o concurso |
-| Patch 38 | o alto-mar, com o navio |
+| Patch 36 | o alto-mar, com o navio |
 
 ## 16. As provas
 

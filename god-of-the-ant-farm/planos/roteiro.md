@@ -19,9 +19,9 @@ escalada, a montanha e o mundo grande.
 | 5 | **O próximo patch** | o Patch 23, «As Vidas», em duas ondas e cinco frentes; o motor de histórias que já existe (o da cegonha) vira a fonte das missões | [`patch23-as-vidas.md`](patch23-as-vidas.md) |
 | 6 | **A visão dos ofícios** | profundos e ligados ao mundo, nunca minijogos soltos; mecânicas fundamentais → ofícios fundamentais → derivados; **um ofício principal e quantos o tempo deixar praticar**; a prática discreta e as técnicas (o qualitativo); a lista de todos os ofícios e condições | [`oficios.md`](oficios.md) |
 | 7 | **A fundação dos ofícios** | a máquina comum a todos: a prática, as técnicas, os títulos, a coleção, os recordes, mestre e aprendiz, o mercado do corpo, o kit da recompensa | [`oficios-fundacao.md`](oficios-fundacao.md) |
-| 8 | **A Pesca** | as 37 espécies, as ferramentas, o gesto com os números, os títulos; depois, a fundo: o peixe nas mãos pelo peso, **o lugar que se descobre** (nada de bandeja), **os lendários que nascem do mundo** (e não para o jogador) | [`oficio-pesca.md`](oficio-pesca.md) |
+| 8 | **A Pesca** | as 35 espécies, as ferramentas, o gesto com os números, os títulos; depois, a fundo: o peixe nas mãos pelo peso, **o lugar que se descobre** (nada de bandeja), **os lendários que nascem do mundo** (e não para o jogador) | [`oficio-pesca.md`](oficio-pesca.md) |
 | 9 | **Os navios** | entrar em canoas, barcos e navios gigantes; o itinerário do porto; a viagem; a batalha no mar (N1 a N5) | [`navios.md`](navios.md) |
-| 10 | **O remador de galé** | o galeote (a condição) e o remador livre (o ofício); **as galés na medida da gente do mundo** (a de 31 remos é a comum; a trirreme de 170, rara) | [`condicao-escravo-gale.md`](condicao-escravo-gale.md) |
+| 10 | **O remador de galé** | o galeote (a condição) e o remador livre (o ofício); **as galés na medida da gente do mundo** (a de 30 remos é a comum; a trirreme de 170, rara) | [`condicao-escravo-gale.md`](condicao-escravo-gale.md) |
 | 11 | **O estivador** | o homem do porto: a carga, o porão, a turma, a noite, o contrabando | [`oficio-estivador.md`](oficio-estivador.md) |
 | 12 | **A camada do ambiente** | cada ofício com a sua fotografia, o seu som, o seu tremor, a sua tela e a sua mochila — sem mentir sobre o mundo | [`oficios-fundacao.md`](oficios-fundacao.md) §2.13 |
 | 13 | **O gladiador** | a escola, a arena visceral (o decepar, a decapitação), o favor da multidão, as feras, a fama nos muros | [`oficio-gladiador.md`](oficio-gladiador.md) |
@@ -32,7 +32,7 @@ escalada, a montanha e o mundo grande.
 | 18 | **Os ofícios do passado** | o arqueólogo (a sombra rasante, as camadas, a decifração, o livro do povo antigo), o caçador de tesouros (a corrente de pistas, as defesas dos antigos, a lei do achado), o saqueador de túmulos (a noite, o ouro derretido, a maldição que é crença) | [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
 | 19 | **A escalada** | uma base de jogabilidade antes dos ofícios das alturas: a pega que se vê é a que segura, a rocha diz o que dá, a corda de fibra e a estaca de bronze, a queda; serve à mata, à mina, à guerra, à sombra, ao mar | [`escalada.md`](escalada.md) |
 | 20 | **A montanha** | subir como quem navega: a expedição de dias, a equipe, o suprimento, o ar fino, o frio que leva os dedos, a hora de voltar, o primeiro a subir; os ofícios das alturas | [`montanha.md`](montanha.md) |
-| 21 | **O mundo grande** | mapas maiores que o Titânico e montanhas maiores, para a navegação, a floresta e a montanha durarem dias: como o dia do corpo é curto (12,3 min), dias pedem quilômetros, não continentes | [`mundo-grande.md`](mundo-grande.md) |
+| 21 | **O mundo grande** | mapas maiores que o Titânico e montanhas maiores, para a navegação, a floresta e a montanha durarem dias: como o dia do corpo é curto (12,3 min), dias pedem quilômetros, não continentes; **o maior com 5 km de lado**; é viável e difícil; entra quando o PC novo chegar | [`mundo-grande.md`](mundo-grande.md) |
 
 ## 2. A lógica da ordem
 
@@ -44,8 +44,9 @@ escalada, a montanha e o mundo grande.
    bases prontas (a água e os peixes): é o melhor lugar para provar a fundação.
 4. **Afinar o molde antes de copiar.** Depois da Pesca, o dono joga, e a fundação é afinada pelo que ele sentiu — antes de o
    molde ser repetido em dez troncos.
-5. **O chão antes de quem anda nele.** O mundo grande (mapas de dias e montanhas grandes) vem antes de todos os troncos que
-   viajam — a escalada, a mata, a montanha, o mar —, para nenhum ser feito duas vezes.
+5. **O chão grande espera o computador.** O mundo grande (os mapas de dias e as montanhas grandes) entra quando o PC novo do
+   dono chegar; até lá, cada patch se prepara para ele (nenhuma conta nova pelo mapa inteiro, o detalhe como conta), para nada
+   ser feito duas vezes. A montanha, que só existe em dias, vem logo depois dele; a mata e o mar vêm antes e crescem com ele.
 6. **Do que se tira ao que se faz, ao que se troca, ao que se manda.** Primeiro quem tira da natureza (a terra, a mata, a
    mina, a montanha — com a escalada antes, porque a árvore, o poço e o paredão a usam), depois quem transforma (a oficina), depois quem luta, rouba, navega e troca, e por último quem cuida da alma, conta
    as histórias e governa — que dependem de todo o resto.
@@ -64,44 +65,44 @@ load (S4); T-1584 e T-1585.
 | **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **27 — O acabamento e o molde afinado** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
-| **29 — O mundo grande** | a modalidade dos mapas de dias (2 a 8 km de lado) e as montanhas grandes (500 a 1.000 m): o detalhe como conta, o save do que mudou, a vida por importância (nunca pelo olhar), o 3D por pedaços, o caminho por camadas | as fontes puras da v14 (a mata, o relevo, a água, o céu) | a viagem de dias pelo mar, pela floresta e pela montanha | [`mundo-grande.md`](mundo-grande.md) |
-| **30 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, 29 (as montanhas grandes) | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
-| **31 — A mata** | o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore | 25, 29, 30 | a madeira, o couro, a erva e o carvão das oficinas | [`oficios.md`](oficios.md) |
-| **32 — O subterrâneo e a mina** | o corpo debaixo da terra (S1, S2, S4); **o registro do passado começa** (os povos antigos na criação, o enxoval, o tesouro escondido, o tempo que enterra); o mineiro (M1 a M5), o garimpeiro, o escorador, o homem do fogo, o lapidário; o soterrado | 25, 30 (a corda) | o metal e as pedras das oficinas; a base da arqueologia | [`subterraneo.md`](subterraneo.md), [`oficio-mineiro.md`](oficio-mineiro.md), [`passado.md`](passado.md) |
-| **33 — A montanha** | a expedição de dias, a altura, o frio, o tempo da montanha, o cume, as vias e as lendas; o guia, o coletor dos penhascos, o caçador das alturas, o cristaleiro, os passos | 29, 30, 31, 32 | o passo como estrada; a vista que ensina | [`montanha.md`](montanha.md) |
-| **34 — A oficina** | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | 28, 31, 32 (o que a terra, a mata e a mina deram) | as armas, as ferramentas e as coisas de todos os outros | [`oficios.md`](oficios.md) |
-| **35 — A arena e a guerra** | o combate profundo (as zonas, as feridas, o decepar); o gladiador (A1 a A5), o guerreiro, o mercenário, o campeão; a escada no muro do cerco | o combate da v14, 23, 24, 30, 34 (as armas) | a luta que o mar, a sombra e a caça vão usar | [`oficio-gladiador.md`](oficio-gladiador.md) |
-| **36 — A sombra** | o ladrão, o contrabandista, o espião, o assassino; o preso; o muro e o telhado | 24, 30, 35 | esconder, furtar, ouvir escondido — o que a fuga da galé, a revista do capataz e o contrabando do porto usam | [`oficios.md`](oficios.md) |
-| **37 — O porto e o navio por dentro** | as plantas dos navios, o chão que anda, o itinerário do porto (N2, N3); o estivador (E1 a E5), o marinheiro (e o mastro); o remador livre (G1) | 26, 30, 36 | as viagens do corpo | [`navios.md`](navios.md), [`oficio-estivador.md`](oficio-estivador.md) |
-| **38 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar | 29, 35, 36, 37 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
-| **39 — O comércio** | o mercador, o caravaneiro, o taverneiro, o estalajadeiro | 25 (o mercado do corpo), os troncos que fazem as coisas, 33 (os passos), 38 (o mar) | o que liga todos os outros | [`oficios.md`](oficios.md) |
-| **40 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 32 (debaixo da terra e o registro do passado), 36 (a sombra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`passado.md`](passado.md), [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
-| **41 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 39 | — | [`oficios.md`](oficios.md) |
-| **42 — O poder** | jogar como quem governa, o conselheiro, o juiz | tudo o que veio antes | o topo da escada | [`oficios.md`](oficios.md) |
+| **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
+| **30 — A mata** | o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficios.md`](oficios.md) |
+| **31 — O subterrâneo e a mina** | o corpo debaixo da terra (S1, S2, S4); **o registro do passado começa** (os povos antigos na criação, o enxoval, o tesouro escondido, o tempo que enterra); o mineiro (M1 a M5), o garimpeiro, o escorador, o homem do fogo, o lapidário; o soterrado | 25, 29 (a corda) | o metal e as pedras das oficinas; a base da arqueologia | [`subterraneo.md`](subterraneo.md), [`oficio-mineiro.md`](oficio-mineiro.md), [`passado.md`](passado.md) |
+| **32 — A oficina** | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | 28, 30, 31 (o que a terra, a mata e a mina deram) | as armas, as ferramentas e as coisas de todos os outros | [`oficios.md`](oficios.md) |
+| **33 — A arena e a guerra** | o combate profundo (as zonas, as feridas, o decepar); o gladiador (A1 a A5), o guerreiro, o mercenário, o campeão; a escada no muro do cerco | o combate da v14, 23, 24, 29, 32 (as armas) | a luta que o mar, a sombra e a caça vão usar | [`oficio-gladiador.md`](oficio-gladiador.md) |
+| **34 — A sombra** | o ladrão, o contrabandista, o espião, o assassino; o preso; o muro e o telhado | 24, 29, 33 | esconder, furtar, ouvir escondido — o que a fuga da galé, a revista do capataz e o contrabando do porto usam | [`oficios.md`](oficios.md) |
+| **35 — O porto e o navio por dentro** | as plantas dos navios, o chão que anda, o itinerário do porto (N2, N3); o estivador (E1 a E5), o marinheiro (e o mastro); o remador livre (G1) | 26, 29, 34 | as viagens do corpo | [`navios.md`](navios.md), [`oficio-estivador.md`](oficio-estivador.md) |
+| **36 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar (as viagens de dias, quando o mundo grande chegar) | 33, 34, 35 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
+| **37 — O comércio** | o mercador, o caravaneiro, o taverneiro, o estalajadeiro | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
+| **38 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 31 (debaixo da terra e o registro do passado), 34 (a sombra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`passado.md`](passado.md), [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
+| **39 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 37 | — | [`oficios.md`](oficios.md) |
+| **40 — O poder** | jogar como quem governa, o conselheiro, o juiz | tudo o que veio antes | o topo da escada | [`oficios.md`](oficios.md) |
+| **41 — O mundo grande** (quando o PC novo chegar; pode vir antes) | a modalidade dos mapas de dias (2 e 5 km de lado) e as montanhas grandes (500 a 1.000 m): o detalhe como conta, o save do que mudou, a vida por importância (nunca pelo olhar), o 3D por pedaços, o caminho por camadas | o PC novo do dono; as fontes puras da v14 (a mata, o relevo, a água, o céu); a preparação barata de cada patch | a viagem de dias pelo mar, pela floresta e pela montanha | [`mundo-grande.md`](mundo-grande.md) |
+| **42 — A montanha** | a expedição de dias (logo depois do mundo grande: a montanha só existe em dias), a altura, o frio, o tempo da montanha, o cume, as vias e as lendas; o guia, o carregador, o resgatador, os passos e o abrigo | 41, 29, 30, 31 | o passo como estrada; a vista que ensina | [`montanha.md`](montanha.md) |
 
-As condições e as passagens entram com o tronco de cada uma: o gladiador escravo e o liberto no 35, o preso no 36, o
-soterrado no 32, o perdido na montanha e o congelado no 33, o galeote e o escravo da mina no 38.
+As condições e as passagens entram com o tronco de cada uma: o gladiador escravo e o liberto no 33, o preso no 34, o
+soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escravo da mina no 36.
 
 ## 4. A ordem dos PDFs (a do dono) e onde cada um cai
 
 | PDF (na ordem em que o dono pediu) | Entra no patch |
 |---|---|
 | O brainstorm dos NPCs e o Patch 23 | 23, 24 e 27 |
-| Os ofícios (a visão e a lista) | 25 a 42 |
+| Os ofícios (a visão e a lista) | 25 a 40 |
 | A fundação dos ofícios | 25 |
-| A Pesca | 25 e 26 (o alto-mar no 38) |
-| Os navios | 26 (a N1), 37 (a N2 e a N3), 38 (a N4 e a N5) |
-| O remador de galé | 37 (o remador livre) e 38 (o galeote) |
-| O estivador | 37 |
-| O gladiador | 35 |
-| O capataz | 38 |
-| O subterrâneo | 32 (a arqueologia no 40) |
-| O mineiro | 32 |
-| O passado em camadas | 32 (o registro) e 40 (os ofícios) |
-| O arqueólogo, o caçador de tesouros, o saqueador de túmulos | 40 |
-| A escalada | 30 |
-| A montanha | 33 |
-| O mundo grande | 29 |
+| A Pesca | 25 e 26 (o alto-mar no 36) |
+| Os navios | 26 (a N1), 35 (a N2 e a N3), 36 (a N4 e a N5) |
+| O remador de galé | 35 (o remador livre) e 36 (o galeote) |
+| O estivador | 35 |
+| O gladiador | 33 |
+| O capataz | 36 |
+| O subterrâneo | 31 (a arqueologia no 38) |
+| O mineiro | 31 |
+| O passado em camadas | 31 (o registro) e 38 (os ofícios) |
+| O arqueólogo, o caçador de tesouros, o saqueador de túmulos | 38 |
+| A escalada | 29 |
+| A montanha | 42 |
+| O mundo grande | 41 |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro e o pirata, o mercador, o
