@@ -12,6 +12,37 @@ com 4 espécies de 14, o recorde da cidade (um bagre de 11 quilos, do filho do f
 «10 sardinhas até a festa». Você vai, pesca, a cidade reage, a barra anda, um dia o velho Tor aceita te ensinar — e um dia,
 com a peça de mestre, os pescadores do porto te chamam de mestra. Tudo isso, em cada ofício, pela mesma máquina.
 
+## 1b. As quatro camadas (a pergunta do dono, 19/11/2026 — proposta, a decidir)
+
+**A pergunta:** o pirata que comanda o navio também fica sem o mapa no mar aberto, como o navegador? Então o navegador seria uma
+«fundação» que gera outros ofícios? **A proposta:** separar o que hoje está misturado em quatro camadas.
+
+| Camada | O que é | Quem está nela | Exemplos |
+|---|---|---|---|
+| **As bases** (as leis do mundo) | como o mundo funciona para todos; ninguém as tem, todos vivem debaixo delas | **todo mundo**: o corpo e as pessoas do mundo, de qualquer ofício | o mar sem mapa, a mata fechada, o escuro de baixo, a altura e o frio, as estações, a escalada (o corpo na parede), a fome |
+| **As perícias** (o que a pessoa sabe fazer) | o saber das mãos e da cabeça, com **a prática (0–100) e as técnicas**; é o que deixa viver melhor debaixo de uma base | quem aprendeu — de qualquer ofício | navegar, escalar, rastrear, nadar, pescar, cavar, forjar, lutar (por arma), negociar, curar, comandar, ler |
+| **Os ofícios** (quem a pessoa é na sociedade) | o papel: o título, a paga, o lugar, o dia de trabalho, as pessoas em volta, o ciclo, a coleção, a camada do ambiente; **cada ofício usa algumas perícias** | quem o tem (um principal e os praticados) | o navegador (navegar, ler o tempo), o pirata (navegar um pouco, abordar, comandar, intimidar), o pescador (pescar, navegar a costa) |
+| **As condições** (o que se vive sem querer) | a situação que prende; também ensina perícias | quem caiu nela | o galeote (remar, aguentar), o escravo da mina (cavar), o soterrado, o perdido no mar |
+
+**O que isso resolve:**
+
+1. **O mapa some para todos no mar aberto** — é a lei do mar (uma base), não uma regra do navegador. O pirata, o mercador, o
+   pescador, o passageiro, o náufrago: todos sem mapa.
+2. **Quem sabe navegar sabe onde está** — pela perícia de navegar, venha ela de onde vier. O pirata que aprendeu as estrelas navega
+   bem; o que não aprendeu se perde, **ou leva um piloto** (que diz em voz alta «estamos a dois dias do cabo», e a tela do corpo
+   passa a mostrar o que o piloto disse). Isso dá valor ao navegador dentro de qualquer tripulação — e foi assim na história: o
+   pirata precisava de um piloto.
+3. **Nenhuma técnica repetida em dois ofícios:** «a estima» é da perícia de navegar, e vale para o navegador, o pirata e o
+   pescador. A técnica aprendida num ofício serve em todos os outros que usam a mesma perícia.
+4. **O ofício continua sendo o pacote** (o papel, as recompensas, a camada do ambiente, os títulos), e **os títulos pedem as
+   perícias** (o capitão pirata pede navegar 40 e comandar 60) e um feito.
+5. **As pessoas do mundo também têm as perícias,** pelas mesmas regras (o piloto do mundo navega pela sua prática).
+
+**O que muda nos planos:** a prática e o caderno de técnicas (§2.2, §2.3) passam a ser **da perícia**, não do ofício; o registro
+dos ofícios (§2.1) diz **quais perícias cada ofício usa**; as tabelas de técnicas de cada ofício viram as técnicas das perícias
+que ele usa. **O nome:** «fundação» já quer dizer outras duas coisas no projeto (as fundações do código e esta fundação dos
+ofícios); por isso «as bases» (o que o roteiro chama de mecânicas fundamentais) e «as perícias».
+
 ## 2. As peças
 
 ### 2.1 O registro dos ofícios
