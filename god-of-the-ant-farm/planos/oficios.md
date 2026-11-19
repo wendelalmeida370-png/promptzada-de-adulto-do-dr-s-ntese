@@ -120,7 +120,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 **Subterrâneo** (os troncos: a Mineração e o Saber; o plano em [`subterraneo.md`](subterraneo.md))
 - **mineiro** ([`oficio-mineiro.md`](oficio-mineiro.md))
 - garimpeiro, escorador, o homem do fogo, aguadeiro da mina, lapidário, explorador de cavernas, coletor de cristais e de
-  salitre, arqueólogo, caçador de tesouros, decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos,
+  salitre, arqueólogo ([`oficio-arqueologo.md`](oficio-arqueologo.md)), caçador de tesouros ([`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md)), decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos ([`oficio-saqueador.md`](oficio-saqueador.md)),
   negociante de antiguidades, guia das profundezas, sapador, poceiro, cavador de túneis
 
 **Combate** (tronco: o Combate)

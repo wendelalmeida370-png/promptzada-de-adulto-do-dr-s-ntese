@@ -42,6 +42,14 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   do porto, o contrabando).
 - [`oficio-mineiro.md`](oficio-mineiro.md) — o mineiro por inteiro (os minerais e as pedras, a prospecção, a picareta, o fogo e
   a água, a escora, o desabamento, o garimpo, os títulos, os lendários).
+- [`passado.md`](passado.md) — o passado em camadas: os povos antigos que nascem com o mundo, o passado do próprio mundo, o
+  tempo que enterra, quem acha, o valor de uma antiguidade (a base dos três ofícios abaixo).
+- [`oficio-arqueologo.md`](oficio-arqueologo.md) — o arqueólogo por inteiro (a sombra rasante, a quadrícula, as camadas, a
+  restauração, a decifração, o livro do povo antigo).
+- [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md) — o caçador de tesouros por inteiro (as pistas, a expedição, as
+  defesas dos antigos, a lei do achado, os rivais).
+- [`oficio-saqueador.md`](oficio-saqueador.md) — o saqueador de túmulos por inteiro (a noite, o túnel, o ouro derretido, a
+  maldição que é crença, a lei e a família do morto).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
@@ -62,7 +70,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   navio sai e chega): o dono vai pedir mais para frente; todo plano de ofício do mar conta com eles.
 - **O subterrâneo no Modo Encarnado** (as minas, as cavernas, os tesouros, a arqueologia, os aventureiros): o dono vai pedir em
   breve; o tesouro é sempre o passado de verdade do mundo.
-- **O passado em camadas** (proposta, 19/11/2026): os povos antigos nascem com o mundo, como a geologia, e o passado do
-  próprio mundo cresce com os anos e os cobre ([`subterraneo.md`](subterraneo.md) §3).
+- **O passado em camadas** (aprovado pelo dono, 19/11/2026): os povos antigos nascem com o mundo, como a geologia, e o passado do
+  próprio mundo cresce com os anos e os cobre ([`passado.md`](passado.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).
 - **O alvo é o PC;** o celular continua funcionando, sem pôr teto em nada.

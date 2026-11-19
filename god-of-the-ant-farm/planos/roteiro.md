@@ -64,7 +64,7 @@ load (S4); T-1584 e T-1585.
 | **34 — O porto e o navio por dentro** | as plantas dos navios, o chão que anda, o itinerário do porto (N2, N3); o estivador (E1 a E5), o marinheiro; o remador livre (G1) | 26, 33 | as viagens do corpo | [`navios.md`](navios.md), [`oficio-estivador.md`](oficio-estivador.md) |
 | **35 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar | 32, 33, 34 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
 | **36 — O comércio** | o mercador, o caravaneiro, o taverneiro, o estalajadeiro | 25 (o mercado do corpo), os troncos que fazem as coisas, 35 (o mar) | o que liga todos os outros | [`oficios.md`](oficios.md) |
-| **37 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **a arqueologia** (S3: o tesouro do passado de verdade), o decifrador | 30 (debaixo da terra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`subterraneo.md`](subterraneo.md), [`oficios.md`](oficios.md) |
+| **37 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 30 (debaixo da terra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`subterraneo.md`](subterraneo.md), [`oficios.md`](oficios.md) |
 | **38 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 36 | — | [`oficios.md`](oficios.md) |
 | **39 — O poder** | jogar como quem governa, o conselheiro, o juiz | tudo o que veio antes | o topo da escada | [`oficios.md`](oficios.md) |
 
@@ -86,10 +86,12 @@ soterrado no 30, o galeote e o escravo da mina no 35.
 | O capataz | 35 |
 | O subterrâneo | 30 (a arqueologia no 37) |
 | O mineiro | 30 |
+| O passado em camadas | 30 (o registro) e 37 (os ofícios) |
+| O arqueólogo, o caçador de tesouros, o saqueador de túmulos | 37 |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro e o pirata, o mercador, o
-sacerdote e o curandeiro, o arqueólogo, o bardo, quem governa.
+sacerdote e o curandeiro, o bardo, quem governa.
 
 ## 5. Como cada patch anda
 

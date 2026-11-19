@@ -31,10 +31,10 @@ duzentos anos, com o que foi enterrado com ele; as ruínas de uma cidade que aca
 não existe mais; a coisa que alguém escondeu numa caverna numa guerra. A arqueologia cava a história que o próprio mundo viveu (e
 os mundos de quinhentos e mil anos são os mais ricos). Pedras preciosas e cristais têm a sua jazida, como o cobre e o estanho.
 
-### O passado em camadas (a pergunta do dono, 19/11/2026)
+### O passado em camadas (a pergunta do dono, aprovado em 19/11/2026; por inteiro em [`passado.md`](passado.md))
 
 **A pergunta:** como há tesouro de rei antigo e antiguidade no ano 15, se o mundo acabou de nascer? **A proposta:** as duas
-coisas, em camadas — o passado de antes do mundo, que nasce com ele, e o passado do próprio mundo, que cresce com os anos.
+coisas, em camadas (aprovada) — o passado de antes do mundo, que nasce com ele, e o passado do próprio mundo, que cresce com os anos.
 
 1. **O passado de antes (nasce com o mundo, como a geologia).** Ao criar o mundo, pela semente, nascem dois a quatro **povos
    antigos** que viveram ali antes: onde moraram (onde uma cidade moraria — o rio, a terra boa), o que sabiam (a pedra, o
