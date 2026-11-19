@@ -7,7 +7,7 @@ curiosidade também é um deles. **Depende da escalada** ([`escalada.md`](escala
 
 ## As bases e as perícias
 
-**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a altura e o frio; a vertical (a escalada); o tempo (a nevasca, o passo fechado); o mundo grande (a montanha de dias).
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a altura e o frio; a vertical (a escalada); o tempo (a nevasca, o passo fechado); a distância (a montanha de dias, com o mundo grande).
 
 **As perícias que estes ofícios usam:** **Montanhismo** (a principal) — e Escalar, Sobreviver, Orientar-se, Ler o tempo, Comandar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
 

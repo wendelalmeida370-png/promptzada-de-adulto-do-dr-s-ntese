@@ -8,7 +8,7 @@ dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são pr
 
 ## As bases e as perícias
 
-**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; o tempo (as estações, as monções); o mundo grande (as travessias de dias).
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; o tempo (as estações, as monções); a distância (as travessias de dias, maiores com o mundo grande).
 
 **As perícias que o ofício usa:** **Navegar** (a principal) — e Marinharia, Ler o tempo, Letras. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
 

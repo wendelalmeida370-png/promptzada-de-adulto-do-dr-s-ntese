@@ -34,7 +34,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 | **O corpo** | a fome, o cansaço, a ferida, a doença, as marcas que ficam | a vida das pessoas (v14) |
 | **A lei e a gente** | o crime e a testemunha, a fama, os boatos, os laços, a memória | a sociedade (v14, Patch 23) |
 | **A origem das coisas** | nada vem do nada: tudo pelo livro, de uma fonte de verdade | `ORIGEM.md` |
-| **O mundo grande** | as distâncias de dias (quando chegar) | [`mundo-grande.md`](mundo-grande.md) |
+| **A distância** | ir longe custa tempo, comida e cansaço; não há atalho no mundo — e o mundo grande a aumenta | [`mundo-grande.md`](mundo-grande.md) |
 
 ## 3. As perícias
 
@@ -45,15 +45,19 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 - *Quem usa:* o mateiro, os ofícios das alturas, o coletor dos penhascos, o marinheiro (o mastro), o soldado (o muro), o ladrão (o telhado).
 
 **Nadar e mergulhar** — atravessar a água e a corrente; o fôlego debaixo d’água.
-- *As técnicas:* Nadar acorrentado ([o remador de galé](condicao-escravo-gale.md)).
+- *As técnicas:* Nadar acorrentado ([o remador de galé](condicao-escravo-gale.md)); A vau ([o mateiro](oficio-mateiro.md)).
 - *Quem usa:* o pescador, o remador de galé, o mateiro.
 
 **Orientar-se** — achar o caminho por terra — a mata, a montanha, o deserto: o rio, as marcas, o sol, a árvore da vista, o som; abrir passo com o facão.
-- *As técnicas:* Ler a paisagem velha ([o caçador de tesouros](oficio-cacador-tesouros.md)); O facão no ritmo, Ler a mata, As marcas, Rio abaixo, Ouvir a mata, O pântano, Desconfiar do que dizem ([o mateiro](oficio-mateiro.md)).
+- *As técnicas:* Ler a paisagem velha ([o caçador de tesouros](oficio-cacador-tesouros.md)); O facão no ritmo, Ler a mata, As marcas, Rio abaixo, Ouvir a água, O pântano, A carta da mata, Desconfiar do que dizem ([o mateiro](oficio-mateiro.md)).
 - *Quem usa:* o caçador de tesouros, **o mateiro**, os ofícios das alturas, o caçador, o batedor, o mensageiro.
 
+**Rastrear** — ler os bichos e as pessoas pelos sinais: a pegada, as fezes, o território, o alarme, o rastro do fugitivo.
+- *As técnicas:* Ler a pegada, O alarme dos bichos, O território da fera, O jeito de cada bicho, O barreiro ([o mateiro](oficio-mateiro.md)).
+- *Quem usa:* o mateiro, o caçador, o batedor, o guarda (o fugitivo), o rastreador de fugitivos.
+
 **Sobreviver** — o fogo, a água, o abrigo, o que se come, o frio e o calor longe de casa.
-- *As técnicas:* A rede e o acampamento, O fogo na umidade, O que se come, A água do cipó, A vau, A cobra ([o mateiro](oficio-mateiro.md)); Dormir leve ([o capataz](oficio-capataz.md)).
+- *As técnicas:* A rede e o acampamento, O fogo na umidade, O fogo que não foge, O que se come, A água do cipó, A água que não adoece, A cobra, A ponte de cipó ([o mateiro](oficio-mateiro.md)); Dormir leve ([o capataz](oficio-capataz.md)).
 - *Quem usa:* o caçador de tesouros, o mateiro, os ofícios das alturas, o caçador, o batedor, o eremita.
 
 **Montanhismo** — a altura, a neve, o ar fino, a hora de voltar ([`montanha.md`](montanha.md)).
@@ -93,7 +97,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 ### A terra e a mata
 
 **Ervas** — o que cura e o que mata; o unguento, o chá.
-- *As técnicas:* O unguento, O chá da febre ([o mateiro](oficio-mateiro.md)).
+- *As técnicas:* O unguento, O chá da febre, O emplastro ([o mateiro](oficio-mateiro.md)).
 - *Quem usa:* o mateiro, o curandeiro, o ervanário.
 
 **Conservar** — a salga, a defumação, o garum: a comida que dura.
@@ -144,7 +148,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 
 **Comandar** — a voz, o ritmo, a parte justa, a ordem que se cumpre — da turma ao exército.
 - *As técnicas:* O canto de trabalho ([o estivador](oficio-estivador.md)); A parte justa, O inverno bem passado ([o pirata](oficio-pirata.md)); A voz de comando, A ração medida, Parar a briga do banco ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o estivador, **o capataz**, o pirata, os ofícios das alturas, o general, o chefe de turma, o chefe de galeria.
+- *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o general, o chefe de turma, o chefe de galeria.
 
 **Intimidar** — o medo como arma: o grito, o nome, o castigo exemplar.
 - *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
@@ -201,7 +205,7 @@ contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofíci
 | [o arqueólogo](oficio-arqueologo.md) | **Escavar** | Decifrar, Avaliar, Investigar, Letras, Andar no escuro |
 | [o caçador de tesouros](oficio-cacador-tesouros.md) | **Investigar** | Desarmar, Andar no escuro, Orientar-se, Avaliar, Negociar, Ler as pessoas, Contrabando, Escavar, Decifrar, Sobreviver |
 | [o saqueador de túmulos](oficio-saqueador.md) | **Furtividade** | Cavar, Desarmar, Avaliar, Contrabando, Ler as pessoas |
-| [o mateiro](oficio-mateiro.md) | **Orientar-se** | Sobreviver, Ervas, Escalar, Marinharia, Ler o tempo, Nadar e mergulhar |
+| [o mateiro](oficio-mateiro.md) | **Orientar-se** | Rastrear, Sobreviver, Ervas, Escalar, Nadar e mergulhar, Marinharia, Ler o tempo, Comandar |
 | [o pirata](oficio-pirata.md) | **Abordagem** | Comandar, Marinharia, Navegar, Intimidar, Lutar (um jeito por arma), Negociar, Investigar, Contrabando, Furtividade, Ler as pessoas |
 | [os ofícios das alturas](montanha.md) | **Montanhismo** | Escalar, Sobreviver, Orientar-se, Ler o tempo, Comandar |
 | o guarda | **Lutar** | Investigar, Intimidar, Ler as pessoas |
