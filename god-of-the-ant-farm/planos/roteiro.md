@@ -36,6 +36,8 @@ escalada, a montanha e o mundo grande.
 | 22 | **O vento, a corrente e a maré; o navegador** | hoje o vento não empurra o navio pela direção dele: vai empurrar (a vela, a galé contra o vento, as correntes, a maré); o navegador pelas estrelas, pela sonda, pelas aves e pelos marcos (a bússola não existia) | [`navios.md`](navios.md) §2b, §2c |
 | 23 | **O ano de quatro estações** (aprovado) | um ano vira quatro dias, um por estação: as estações para os ofícios e uma vida de ~49 h no corpo; a maior reforma da base desde as três fundações | [`calendario.md`](calendario.md) |
 | 24 | **O navegador** | o mar sem mapa (a tela não mostra onde o navio está), as estrelas e a altura delas medida com a mão, a sonda com sebo, o corvo de bordo, a nuvem da ilha, as monções, o périplo e a rota secreta do estanho | [`oficio-navegador.md`](oficio-navegador.md) |
+| 25 | **O mateiro** | a mata que pesa (a fase B da natureza, combinada antes do brainstorm: o passo, a vista, o rumo), o facão e a trilha que o mato fecha, a febre e os insetos, rio abaixo, a árvore da vista, o saber falso dos velhos, a cidade engolida pela mata | [`oficio-mateiro.md`](oficio-mateiro.md) |
+| 26 | **O pirata** | a tábua dos navios do porto como informação, a perseguição pelo vento, a abordagem, o nome que rende, o saque pelo livro, o resgate pago pela família, o motim, o corsário e o rei do mar | [`oficio-pirata.md`](oficio-pirata.md) |
 
 ## 2. A lógica da ordem
 
@@ -72,7 +74,7 @@ load (S4); T-1584 e T-1585.
 | **27 — O acabamento e o molde afinado** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
 | **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
-| **30 — A mata** | o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficios.md`](oficios.md) |
+| **30 — A mata** | **a mata que pesa** (a fase B da natureza: o passo, a vista, o rumo, a trilha que o mato fecha); o mateiro, o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficio-mateiro.md`](oficio-mateiro.md), [`oficios.md`](oficios.md) |
 | **31 — O subterrâneo e a mina** | o corpo debaixo da terra (S1, S2, S4); **o registro do passado começa** (os povos antigos na criação, o enxoval, o tesouro escondido, o tempo que enterra); o mineiro (M1 a M5), o garimpeiro, o escorador, o homem do fogo, o lapidário; o soterrado | 25, 29 (a corda) | o metal e as pedras das oficinas; a base da arqueologia | [`subterraneo.md`](subterraneo.md), [`oficio-mineiro.md`](oficio-mineiro.md), [`passado.md`](passado.md) |
 | **32 — A oficina** | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | 28, 30, 31 (o que a terra, a mata e a mina deram) | as armas, as ferramentas e as coisas de todos os outros | [`oficios.md`](oficios.md) |
 | **33 — A arena e a guerra** | o combate profundo (as zonas, as feridas, o decepar); o gladiador (A1 a A5), o guerreiro, o mercenário, o campeão; a escada no muro do cerco | o combate da v14, 23, 24, 29, 32 (as armas) | a luta que o mar, a sombra e a caça vão usar | [`oficio-gladiador.md`](oficio-gladiador.md) |
@@ -111,9 +113,11 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O mundo grande | 41 |
 | O ano de quatro estações | C (antes do 23) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
+| O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
+| O pirata | 36 |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
-mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro e o pirata, o mercador, o
+mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro, o mercador, o
 sacerdote e o curandeiro, o bardo, quem governa; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
 cristaleiro).
 

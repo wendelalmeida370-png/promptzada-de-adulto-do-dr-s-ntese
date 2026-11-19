@@ -62,6 +62,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   ofícios das alturas.
 - [`oficio-navegador.md`](oficio-navegador.md) — o navegador por inteiro (o mar sem mapa, as estrelas e a sua altura, a sonda,
   o corvo, a nuvem da ilha, as monções, o périplo, a rota secreta do estanho).
+- [`oficio-mateiro.md`](oficio-mateiro.md) — o mateiro, o desbravador da mata (a mata que pesa — a fase B da natureza —, o facão
+  e a trilha que o mato fecha, a febre, rio abaixo, a árvore da vista, a cidade engolida).
+- [`oficio-pirata.md`](oficio-pirata.md) — o pirata por inteiro (a tábua do porto, a perseguição pelo vento, a abordagem, o nome que
+  rende, o saque pelo livro, o resgate, o motim, o corsário, o rei do mar).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.

@@ -97,7 +97,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 - **pescador** ([`oficio-pesca.md`](oficio-pesca.md)), **mergulhador**, **marinheiro**, **estivador** ([`oficio-estivador.md`](oficio-estivador.md)), **salineiro**, **salgador**
 - pescador de rio e de lago (o anzol), pescador de rede e de arrastão, pescador de alto-mar (o tubarão, a baleia), mergulhador
   de pérolas e de esponjas, carpinteiro naval, **navegador** e piloto ([`oficio-navegador.md`](oficio-navegador.md)), capitão, barqueiro de rio,
-  balseiro, pirata e corsário, remador de galé (a condição do escravo), **contrabandista** do mar
+  balseiro, pirata e corsário ([`oficio-pirata.md`](oficio-pirata.md)), remador de galé (a condição do escravo), **contrabandista** do mar
 
 **Terra** (tronco: a Lavoura)
 - **agricultor**, **lavrador**, **fruticultor**, **vinhateiro**, **apicultor**, **sericultor**, **coletor**
@@ -109,7 +109,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 
 **Mata** (tronco: a caça e a mata)
 - **caçador**, **lenhador**, **explorador**
-- caçador de feras (o leão, o urso), armadilheiro, falcoeiro, ervanário, carvoeiro, mateiro e guia, caçador de monstros
+- caçador de feras (o leão, o urso), armadilheiro, falcoeiro, ervanário, carvoeiro, **mateiro** e guia ([`oficio-mateiro.md`](oficio-mateiro.md)), caçador de monstros
   (o dragão existe)
 
 **Pedra e fogo** (tronco: a Oficina)
