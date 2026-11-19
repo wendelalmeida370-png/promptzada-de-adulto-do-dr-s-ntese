@@ -31,6 +31,39 @@ duzentos anos, com o que foi enterrado com ele; as ruínas de uma cidade que aca
 não existe mais; a coisa que alguém escondeu numa caverna numa guerra. A arqueologia cava a história que o próprio mundo viveu (e
 os mundos de quinhentos e mil anos são os mais ricos). Pedras preciosas e cristais têm a sua jazida, como o cobre e o estanho.
 
+### O passado em camadas (a pergunta do dono, 19/11/2026)
+
+**A pergunta:** como há tesouro de rei antigo e antiguidade no ano 15, se o mundo acabou de nascer? **A proposta:** as duas
+coisas, em camadas — o passado de antes do mundo, que nasce com ele, e o passado do próprio mundo, que cresce com os anos.
+
+1. **O passado de antes (nasce com o mundo, como a geologia).** Ao criar o mundo, pela semente, nascem dois a quatro **povos
+   antigos** que viveram ali antes: onde moraram (onde uma cidade moraria — o rio, a terra boa), o que sabiam (a pedra, o
+   bronze), o estilo, a escrita que ninguém mais lê, e **como acabaram** pelo próprio mapa (a cheia, o vulcão, a guerra, a peste).
+   O que ficou: as ruínas cobertas de mato e terra, os túmulos com o enxoval do rei, a mina antiga que seguiu a parte rasa de um
+   veio de verdade, o tesouro escondido, a pintura da caverna, os ossos. **Nada vem do nada:** o material de cada coisa é o da
+   terra daquele povo (túmulo de ouro só perto de ouro). É finito, vai no save, existe desde o dia 0 e **qualquer um acha** — o
+   arado que bate num pote, a mina que rompe numa galeria velha, a cidade que cava a fundação sobre uma ruína. Os mitos que o
+   mundo já conta (`lore.js`: «os antigos a chamam…») passam a falar desses povos — e às vezes o mito diz a verdade de onde está.
+2. **O passado do próprio mundo (cresce com os anos).** O que a simulação já faz vira arqueologia quando envelhece: a cidade que
+   acabou (o `S.urbPast` já a lembra), o rei enterrado com as coisas dele (o enxoval sai do povo pelo livro), as armas do campo de
+   batalha, o tesouro que alguém enterrou na guerra e morreu sem buscar, o navio afundado com a carga. **O tempo enterra:** o que
+   fica no chão anos a fio é coberto e só se acha cavando. **As camadas:** quanto mais fundo, mais velho — os antigos embaixo, o
+   mundo por cima (o arqueólogo lê as camadas).
+3. **O perdido de agora:** a bolsa que caiu, as economias que o lavrador enterrou.
+
+**Como fica no tempo:** no ano 15, o caçador de tesouros vive dos antigos (raros e fundos) e do perdido de agora; no ano 100, o
+passado do mundo já é maior; no mundo de 500 ou 1.000 anos, os antigos estão quase esgotados e o passado do próprio mundo
+domina — **o túmulo do rei cuja história você viu, ou que você mesmo viveu.** O ofício também nasce por causa, não por
+calendário: o achado vira boato, o boato traz os caçadores, e o saque do túmulo de um rei do mundo é crime e sacrilégio.
+
+**Os sinais:** o monte do túmulo, as pedras alinhadas no mato, a plantação que cresce diferente sobre os muros enterrados, a
+inscrição da caverna, o mito, o mapa velho comprado de um negociante, o achado do arado.
+
+**A ordem (o truque):** o ofício entra no Patch 37, mas **o registro do passado começa antes** — o enxoval dos enterros, o
+tesouro escondido e o tempo que enterra entram cedo e baratos (com o subterrâneo, no 30). Assim, quando o arqueólogo chegar, os
+mundos prontos de 500 e 1.000 anos já terão séculos de história de verdade debaixo da terra. Os povos antigos mudam a criação
+do mundo: os mundos prontos se geram de novo.
+
 ## 4. Os ofícios que o subterrâneo abre
 
 **A mina** (o tronco: a Mineração)

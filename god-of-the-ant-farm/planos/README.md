@@ -62,5 +62,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   navio sai e chega): o dono vai pedir mais para frente; todo plano de ofício do mar conta com eles.
 - **O subterrâneo no Modo Encarnado** (as minas, as cavernas, os tesouros, a arqueologia, os aventureiros): o dono vai pedir em
   breve; o tesouro é sempre o passado de verdade do mundo.
+- **O passado em camadas** (proposta, 19/11/2026): os povos antigos nascem com o mundo, como a geologia, e o passado do
+  próprio mundo cresce com os anos e os cobre ([`subterraneo.md`](subterraneo.md) §3).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).
 - **O alvo é o PC;** o celular continua funcionando, sem pôr teto em nada.
