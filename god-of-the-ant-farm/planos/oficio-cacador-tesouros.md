@@ -4,7 +4,7 @@
 leva a outra pista, a viagem pela mata, a porta selada há quatrocentos anos, a pedra que se move quando você pisa errado, a
 câmara cheia de ouro à luz da tocha, os rivais que chegaram um dia antes, e a volta para casa com o tesouro nas costas e meio
 mundo querendo tirá-lo de você. Usa a base do passado ([`passado.md`](passado.md)), o subterrâneo ([`subterraneo.md`](subterraneo.md)),
-os boatos, as missões do Patch 23 e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 39
+os boatos, as missões do Patch 23 e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 40
 ([`roteiro.md`](roteiro.md)). Os números são propostas.
 
 ## 1. A fantasia

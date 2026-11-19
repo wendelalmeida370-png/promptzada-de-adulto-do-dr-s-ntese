@@ -143,6 +143,6 @@ tesouros): muitas vezes, uma parte é de quem governa — declarar ou esconder.
 
 ## 11. Quando entra
 
-**No Patch 31** (com o subterrâneo): os povos antigos na criação, o enxoval, o tesouro escondido na guerra, o tempo que enterra —
-barato, e assim os mundos de 500 e 1.000 anos já guardam séculos de história quando os ofícios chegarem. **No Patch 39:** os três
+**No Patch 32** (com o subterrâneo): os povos antigos na criação, o enxoval, o tesouro escondido na guerra, o tempo que enterra —
+barato, e assim os mundos de 500 e 1.000 anos já guardam séculos de história quando os ofícios chegarem. **No Patch 40:** os três
 ofícios, a escavação, a decifração, o mercado ([`roteiro.md`](roteiro.md)).

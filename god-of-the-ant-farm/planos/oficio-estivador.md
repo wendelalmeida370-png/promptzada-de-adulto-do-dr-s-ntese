@@ -129,7 +129,7 @@ reto no mar, a gritaria dos dados.
   preço do que vem de longe na cidade.
 - **Os laços:** a turma (a família de trabalho), a turma rival, o mercador que confia, a moça da taverna, o contrabandista, o
   capataz.
-- **O contrabando** (o caminho da sombra, Patch 35): a caixa que não se conta, a ânfora que some, o guarda que se compra — e o
+- **O contrabando** (o caminho da sombra, Patch 36): a caixa que não se conta, a ânfora que some, o guarda que se compra — e o
   vigia que desconfia.
 - **Os acidentes:** as costas, o pé esmagado, a queda na água, o cabo que parte.
 - **A greve:** a turma para o porto — o mercador paga mais, ou chama os soldados (uma história do mundo).

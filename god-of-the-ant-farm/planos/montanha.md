@@ -193,6 +193,6 @@ morre, a avalanche, o deus que manda a nevasca); e **o teste do dono: uma expedi
 
 ## 17. Quando entra
 
-**No Patch 32**, depois da escalada (29), da mata (30) e do subterrâneo (31) — com a corda, o frio e a expedição prontos
+**No Patch 33**, depois do mundo grande (29), da escalada (30), da mata (31) e do subterrâneo (32) — com a corda, o frio e a expedição prontos
 ([`roteiro.md`](roteiro.md)). Os ofícios da montanha podem ganhar, depois, os seus documentos a fundo (o guia de montanha, o
 coletor dos penhascos, o cristaleiro).
