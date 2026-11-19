@@ -84,11 +84,13 @@ Para o mundo grande não ter de refazer o que vier antes dele:
 
 Isso também deixa os mapas de hoje mais leves.
 
-## 3. A população não cresce com o mapa
+## 3. A população cresce um bocado (decisão do dono, 19/11/2026)
 
-O mundo grande não precisa de dez vezes mais gente: precisa de **espaço entre os povos** — a floresta que separa dois reinos, a
-cordilheira que só se passa pelo passo, o mar que leva três dias. As cidades continuam do tamanho que crescerem. O custo de
-simular é o da gente e dos bichos de carne e osso, não o do chão.
+O mundo grande tem **espaço entre os povos** — a floresta que separa dois reinos, a cordilheira que só se passa pelo passo, o mar
+que leva três dias, os pântanos, as falésias, os lagos maiores — **e também mais gente**, sem exagero: as cidades crescem em tamanho
+e em população, e há mais cidades. **Mais gente enche os nichos:** com tantos ofícios, uma cidade pequena não tem um de cada; uma
+maior tem os seus mineiros, os seus pescadores, o seu navegador, o seu escriba. **O limite é o processador:** cada pessoa custa a
+cada passo (o chão vazio quase não custa), então o quanto a gente cresce sai da medida no PC do dono, na sondagem do patch.
 
 ## 4. As montanhas grandes
 

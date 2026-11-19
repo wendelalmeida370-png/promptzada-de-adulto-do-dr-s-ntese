@@ -51,6 +51,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   defesas dos antigos, a lei do achado, os rivais).
 - [`oficio-saqueador.md`](oficio-saqueador.md) — o saqueador de túmulos por inteiro (a noite, o túnel, o ouro derretido, a
   maldição que é crença, a lei e a família do morto).
+- [`calendario.md`](calendario.md) — o ano de quatro estações: a análise (o que muda, o que se ganha, o que custa, como fazer
+  sem quebrar) — a decidir.
 - [`mundo-grande.md`](mundo-grande.md) — o mundo grande: os mapas de dias (2 e 5 km de lado) e as montanhas grandes; o detalhe
   como conta, a vida por importância, o 3D por pedaços.
 - [`escalada.md`](escalada.md) — a escalada: o corpo na vertical (as pegas, a rocha que diz, a corda, a queda), a base dos
@@ -82,6 +84,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - **O mundo grande** (19/11/2026): uma modalidade de mapas maiores que o Titânico e montanhas maiores, para a navegação, a
   floresta e a montanha durarem dias; o maior com 5 km de lado; os tamanhos de hoje ficam; **entra quando o PC novo do dono
   chegar** ([`mundo-grande.md`](mundo-grande.md)).
+- **O vento que empurra o navio** (19/11/2026): a vela pelo ângulo do vento, a galé que rema contra, as correntes e a maré; e o
+  **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
+- **O ano de quatro estações** (19/11/2026, **a decidir pelo dono**): um ano vira quatro dias, um dia por estação
+  ([`calendario.md`](calendario.md)).
 - **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
   Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).

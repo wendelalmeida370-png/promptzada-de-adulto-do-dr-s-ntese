@@ -33,6 +33,8 @@ escalada, a montanha e o mundo grande.
 | 19 | **A escalada** | uma base de jogabilidade antes dos ofícios das alturas: a pega que se vê é a que segura, a rocha diz o que dá, a corda de fibra e a estaca de bronze, a queda; serve à mata, à mina, à guerra, à sombra, ao mar | [`escalada.md`](escalada.md) |
 | 20 | **A montanha** | subir como quem navega: a expedição de dias, a equipe, o suprimento, o ar fino, o frio que leva os dedos, a hora de voltar, o primeiro a subir; os ofícios das alturas | [`montanha.md`](montanha.md) |
 | 21 | **O mundo grande** | mapas maiores que o Titânico e montanhas maiores, para a navegação, a floresta e a montanha durarem dias: como o dia do corpo é curto (12,3 min), dias pedem quilômetros, não continentes; **o maior com 5 km de lado**; é viável e difícil; entra quando o PC novo chegar | [`mundo-grande.md`](mundo-grande.md) |
+| 22 | **O vento, a corrente e a maré; o navegador** | hoje o vento não empurra o navio pela direção dele: vai empurrar (a vela, a galé contra o vento, as correntes, a maré); o navegador pelas estrelas, pela sonda, pelas aves e pelos marcos (a bússola não existia) | [`navios.md`](navios.md) §2b, §2c |
+| 23 | **O ano de quatro estações** (a decidir) | um ano vira quatro dias, um por estação: as estações para os ofícios e uma vida de ~49 h no corpo; a maior reforma da base desde as três fundações | [`calendario.md`](calendario.md) |
 
 ## 2. A lógica da ordem
 
@@ -54,6 +56,9 @@ escalada, a montanha e o mundo grande.
 
 ## 3. A ordem de fazer
 
+**A decidir — o ano de quatro estações** ([`calendario.md`](calendario.md)): se o dono aprovar, entra **antes do Patch 23**
+(quanto antes, menos coisa para rever).
+
 **Antes do Patch 23 — a faxina da v14:** os mundos prontos gerados de novo com a máquina livre; o vento do céu logo depois do
 load (S4); T-1584 e T-1585.
 
@@ -62,7 +67,7 @@ load (S4); T-1584 e T-1585.
 | **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md) |
 | **24 — O conflito** | o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum, a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
-| **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
+| **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); **o vento que empurra a vela, a corrente e a maré**; a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **27 — O acabamento e o molde afinado** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
 | **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
@@ -103,11 +108,12 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | A escalada | 29 |
 | A montanha | 42 |
 | O mundo grande | 41 |
+| O ano de quatro estações | a decidir (se sim, antes do 23) |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro e o pirata, o mercador, o
 sacerdote e o curandeiro, o bardo, quem governa; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
-cristaleiro).
+cristaleiro); o navegador.
 
 ## 5. Como cada patch anda
 
