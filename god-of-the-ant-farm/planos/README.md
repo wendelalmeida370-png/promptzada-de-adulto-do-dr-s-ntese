@@ -11,6 +11,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 
 | Patch | O quê |
 |---|---|
+| antes do 23 | **O calendário** — o ano de quatro estações (aprovado) |
 | 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões) |
 | 24 | O conflito |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
@@ -52,13 +53,15 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`oficio-saqueador.md`](oficio-saqueador.md) — o saqueador de túmulos por inteiro (a noite, o túnel, o ouro derretido, a
   maldição que é crença, a lei e a família do morto).
 - [`calendario.md`](calendario.md) — o ano de quatro estações: a análise (o que muda, o que se ganha, o que custa, como fazer
-  sem quebrar) — a decidir.
+  sem quebrar) — aprovado: o primeiro patch.
 - [`mundo-grande.md`](mundo-grande.md) — o mundo grande: os mapas de dias (2 e 5 km de lado) e as montanhas grandes; o detalhe
   como conta, a vida por importância, o 3D por pedaços.
 - [`escalada.md`](escalada.md) — a escalada: o corpo na vertical (as pegas, a rocha que diz, a corda, a queda), a base dos
   ofícios das alturas e de muitos outros.
 - [`montanha.md`](montanha.md) — a montanha como mar: a expedição de dias, a altura, o frio, o tempo, o cume, as lendas e os
   ofícios das alturas.
+- [`oficio-navegador.md`](oficio-navegador.md) — o navegador por inteiro (o mar sem mapa, as estrelas e a sua altura, a sonda,
+  o corvo, a nuvem da ilha, as monções, o périplo, a rota secreta do estanho).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
@@ -86,8 +89,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   chegar** ([`mundo-grande.md`](mundo-grande.md)).
 - **O vento que empurra o navio** (19/11/2026): a vela pelo ângulo do vento, a galé que rema contra, as correntes e a maré; e o
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
-- **O ano de quatro estações** (19/11/2026, **a decidir pelo dono**): um ano vira quatro dias, um dia por estação
-  ([`calendario.md`](calendario.md)).
+- **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
+  antes do 23 ([`calendario.md`](calendario.md)).
 - **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
   Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).

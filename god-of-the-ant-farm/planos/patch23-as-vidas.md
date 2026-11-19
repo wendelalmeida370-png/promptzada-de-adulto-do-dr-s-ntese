@@ -5,6 +5,9 @@ dentro do jogo; milhares de falas contextuais; centenas de animações que comun
 Relacionamentos no estilo do The Sims. Este arquivo é o plano para pôr em prática quando o limite semanal voltar.
 Os nomes das portas são propostas: a Fase 0 os fixa no `SOCIEDADE.md`.
 
+**Vem depois do calendário** ([`calendario.md`](calendario.md), aprovado em 19/11/2026): todo número de tempo deste patch (o
+esquecer das memórias, a duração dos pedidos, a vida que muda) é contado no ano de quatro estações — em dias ou em anos, dito.
+
 ## 1. O que já existe (a base que este patch usa)
 
 - **Quem a pessoa é:** a índole (`v.indole`: seis eixos e três valores, metade dos pais), a fama (`v.fama`), a memória da

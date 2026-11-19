@@ -34,36 +34,37 @@ escalada, a montanha e o mundo grande.
 | 20 | **A montanha** | subir como quem navega: a expedição de dias, a equipe, o suprimento, o ar fino, o frio que leva os dedos, a hora de voltar, o primeiro a subir; os ofícios das alturas | [`montanha.md`](montanha.md) |
 | 21 | **O mundo grande** | mapas maiores que o Titânico e montanhas maiores, para a navegação, a floresta e a montanha durarem dias: como o dia do corpo é curto (12,3 min), dias pedem quilômetros, não continentes; **o maior com 5 km de lado**; é viável e difícil; entra quando o PC novo chegar | [`mundo-grande.md`](mundo-grande.md) |
 | 22 | **O vento, a corrente e a maré; o navegador** | hoje o vento não empurra o navio pela direção dele: vai empurrar (a vela, a galé contra o vento, as correntes, a maré); o navegador pelas estrelas, pela sonda, pelas aves e pelos marcos (a bússola não existia) | [`navios.md`](navios.md) §2b, §2c |
-| 23 | **O ano de quatro estações** (a decidir) | um ano vira quatro dias, um por estação: as estações para os ofícios e uma vida de ~49 h no corpo; a maior reforma da base desde as três fundações | [`calendario.md`](calendario.md) |
+| 23 | **O ano de quatro estações** (aprovado) | um ano vira quatro dias, um por estação: as estações para os ofícios e uma vida de ~49 h no corpo; a maior reforma da base desde as três fundações | [`calendario.md`](calendario.md) |
+| 24 | **O navegador** | o mar sem mapa (a tela não mostra onde o navio está), as estrelas e a altura delas medida com a mão, a sonda com sebo, o corvo de bordo, a nuvem da ilha, as monções, o périplo e a rota secreta do estanho | [`oficio-navegador.md`](oficio-navegador.md) |
 
 ## 2. A lógica da ordem
 
 1. **A base antes da casa.** Um ofício só entra quando a mecânica de que ele depende existe (não há remador de galé sem o
    navio por dentro, nem mineiro sem o corpo debaixo da terra).
-2. **As pessoas primeiro.** Quase todo ofício vive das pessoas: o mestre que ensina, a multidão da arena, o ódio dos homens
+2. **O tempo antes de tudo.** O calendário (o ano de quatro estações) muda o número que todos os sistemas usam; cada patch
+   feito antes dele aumentaria o que ele tem de rever — por isso é o primeiro.
+3. **As pessoas primeiro.** Quase todo ofício vive das pessoas: o mestre que ensina, a multidão da arena, o ódio dos homens
    do capataz, o freguês, a fama. Por isso os NPCs (23 e 24) vêm antes de tudo.
-3. **O molde provado num ofício curto.** A Pesca é o ciclo mais curto e mais claro (lançar, esperar, fisgar, puxar) e tem as
+4. **O molde provado num ofício curto.** A Pesca é o ciclo mais curto e mais claro (lançar, esperar, fisgar, puxar) e tem as
    bases prontas (a água e os peixes): é o melhor lugar para provar a fundação.
-4. **Afinar o molde antes de copiar.** Depois da Pesca, o dono joga, e a fundação é afinada pelo que ele sentiu — antes de o
+5. **Afinar o molde antes de copiar.** Depois da Pesca, o dono joga, e a fundação é afinada pelo que ele sentiu — antes de o
    molde ser repetido em dez troncos.
-5. **O chão grande espera o computador.** O mundo grande (os mapas de dias e as montanhas grandes) entra quando o PC novo do
+6. **O chão grande espera o computador.** O mundo grande (os mapas de dias e as montanhas grandes) entra quando o PC novo do
    dono chegar; até lá, cada patch se prepara para ele (nenhuma conta nova pelo mapa inteiro, o detalhe como conta), para nada
    ser feito duas vezes. A montanha, que só existe em dias, vem logo depois dele; a mata e o mar vêm antes e crescem com ele.
-6. **Do que se tira ao que se faz, ao que se troca, ao que se manda.** Primeiro quem tira da natureza (a terra, a mata, a
+7. **Do que se tira ao que se faz, ao que se troca, ao que se manda.** Primeiro quem tira da natureza (a terra, a mata, a
    mina, a montanha — com a escalada antes, porque a árvore, o poço e o paredão a usam), depois quem transforma (a oficina), depois quem luta, rouba, navega e troca, e por último quem cuida da alma, conta
    as histórias e governa — que dependem de todo o resto.
-7. **Cada patch abre uma família inteira** e chega com as suas provas — e com o teste do dono: horas sem enjoar.
+8. **Cada patch abre uma família inteira** e chega com as suas provas — e com o teste do dono: horas sem enjoar.
 
 ## 3. A ordem de fazer
-
-**A decidir — o ano de quatro estações** ([`calendario.md`](calendario.md)): se o dono aprovar, entra **antes do Patch 23**
-(quanto antes, menos coisa para rever).
 
 **Antes do Patch 23 — a faxina da v14:** os mundos prontos gerados de novo com a máquina livre; o vento do céu logo depois do
 load (S4); T-1584 e T-1585.
 
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
+| **C — O calendário: o ano de quatro estações** (o primeiro, antes do 23) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, as migrações, o mar fechado) e o que se vê | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md) |
 | **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md) |
 | **24 — O conflito** | o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum, a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
@@ -108,12 +109,13 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | A escalada | 29 |
 | A montanha | 42 |
 | O mundo grande | 41 |
-| O ano de quatro estações | a decidir (se sim, antes do 23) |
+| O ano de quatro estações | C (antes do 23) |
+| O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro e o pirata, o mercador, o
 sacerdote e o curandeiro, o bardo, quem governa; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
-cristaleiro); o navegador.
+cristaleiro).
 
 ## 5. Como cada patch anda
 

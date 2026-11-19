@@ -96,7 +96,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 **Água** (tronco: a Pesca)
 - **pescador** ([`oficio-pesca.md`](oficio-pesca.md)), **mergulhador**, **marinheiro**, **estivador** ([`oficio-estivador.md`](oficio-estivador.md)), **salineiro**, **salgador**
 - pescador de rio e de lago (o anzol), pescador de rede e de arrastão, pescador de alto-mar (o tubarão, a baleia), mergulhador
-  de pérolas e de esponjas, carpinteiro naval, navegador e piloto (as estrelas, as cartas), capitão, barqueiro de rio,
+  de pérolas e de esponjas, carpinteiro naval, **navegador** e piloto ([`oficio-navegador.md`](oficio-navegador.md)), capitão, barqueiro de rio,
   balseiro, pirata e corsário, remador de galé (a condição do escravo), **contrabandista** do mar
 
 **Terra** (tronco: a Lavoura)

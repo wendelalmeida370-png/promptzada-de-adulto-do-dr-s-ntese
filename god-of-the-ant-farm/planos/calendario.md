@@ -1,4 +1,4 @@
-# O ano de quatro estações — a análise (a decidir pelo dono)
+# O ano de quatro estações — a análise (aprovado pelo dono, 19/11/2026)
 
 A ideia do dono (19/11/2026): hoje **um dia é um ano** — o dia é curto para tudo o que o jogo já tem, e sem estações. A
 proposta: **um ano vira quatro dias, cada dia uma estação** (primavera, verão, outono, inverno). O dono pediu a análise antes de
@@ -73,4 +73,5 @@ obrigaria a refazer o tempo de cada um.
 
 ## 7. O estado
 
-**A decidir pelo dono.** Se aprovado, entra no [`roteiro.md`](roteiro.md) antes do Patch 23.
+**Aprovado pelo dono** (19/11/2026: «quanto mais deixar para depois, maior fica»). É o primeiro patch do
+[`roteiro.md`](roteiro.md), **antes do Patch 23**, depois da faxina da v14.
