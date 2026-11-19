@@ -7,6 +7,9 @@ pescar, guerrear, roubar, rezar, e também ser escravo de galé, preso, órfão.
 ofícios fundamentais e os ofícios derivados. Vem depois do Patch 24 (o plano dos NPCs está em
 `planos/patch23-as-vidas.md`); é trabalho de meses, um ofício por vez, cada um até ficar ótimo.
 
+
+**As quatro camadas** (aprovado, 19/11/2026): as bases (as leis do mundo), as perícias (a prática e as técnicas), os ofícios (que
+usam perícias) e as condições — o catálogo em [`pericias.md`](pericias.md).
 ## 1. O princípio: o ofício é um laço do mundo, não um minijogo
 
 O que liga os ofícios já existe no jogo: **nada vem do nada** (D-440). O anzol de ferro vem da forja, o ferro da mina, a lenha

@@ -6,6 +6,12 @@ parada no horizonte, e o grito do vigia lá do mastro: **terra!** — exatamente
 ([`navios.md`](navios.md), com o vento e o mar do §2b), o céu (`G.Ceu`), o calendário ([`calendario.md`](calendario.md)) e a fundação
 dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; o tempo (as estações, as monções); o mundo grande (as travessias de dias).
+
+**As perícias que o ofício usa:** **Navegar** (a principal) — e Marinharia, Ler o tempo, Letras. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O dono do navio quer chegar à ilha do estanho, que ninguém da cidade sabe onde fica — só o velho fenício que morreu no inverno, e
@@ -112,30 +118,32 @@ você esperava; **o corvo que voa reto para o horizonte**; a nuvem parada; o pri
 | **A tripulação** | o medo de estar perdido, o ânimo que cai (o ânimo das expedições) | a confiança no piloto — ou o motim |
 | **O pirata** | a rota conhecida demais | a rota secreta |
 
-## 10. As técnicas (18)
+## 10. As técnicas (18, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| A estima | o rumo e o tempo erram menos | um piloto velho, ou mil horas no leme |
-| A estrela do polo | achar o norte de noite | um piloto, um sacerdote das estrelas |
-| A altura da estrela | saber o quanto se está ao norte | um mestre navegador |
-| As estrelas da rota | as estrelas que nascem no ponto certo de cada caminho | um mestre (e cada rota tem as suas) |
-| O sol do meio-dia | a altura do sol pelo gnômon | um sábio, um livro |
-| O céu das estações | as constelações de cada estação | um sacerdote das estrelas |
-| A sonda | ler a fundura e o fundo | um piloto da costa |
-| O fundo de cada lugar | reconhecer o fundo das águas conhecidas | descoberta (cada sondagem anotada) |
-| A ave de bordo | treinar e soltar o corvo | um homem do norte, um falcoeiro |
-| A ondulação | ler a ilha escondida pelo mar | descoberta (dias no alto-mar) |
-| A nuvem da ilha | ver a ilha antes de vê-la | um piloto velho |
-| A cor da água | o raso e o rio | um piloto da costa |
-| A brisa do dia | sair de manhã, entrar à tarde | um pescador velho |
-| As monções | o caminho longo pela estação | um mestre navegador, ou um périplo raro |
-| O bordejo | subir contra o vento | um marinheiro |
-| Ler o tempo | a tempestade antes dela | um piloto velho |
-| O canal do porto | entrar sem encalhar | o piloto daquele porto |
-| Escrever o périplo | anotar o caminho para outros | um escriba, um mestre |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 11. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| A estima | Navegar | o rumo e o tempo erram menos | um piloto velho, ou mil horas no leme |
+| A estrela do polo | Navegar | achar o norte de noite | um piloto, um sacerdote das estrelas |
+| A altura da estrela | Navegar | saber o quanto se está ao norte | um mestre navegador |
+| As estrelas da rota | Navegar | as estrelas que nascem no ponto certo de cada caminho | um mestre (e cada rota tem as suas) |
+| O sol do meio-dia | Navegar | a altura do sol pelo gnômon | um sábio, um livro |
+| O céu das estações | Navegar | as constelações de cada estação | um sacerdote das estrelas |
+| A sonda | Navegar | ler a fundura e o fundo | um piloto da costa |
+| O fundo de cada lugar | Navegar | reconhecer o fundo das águas conhecidas | descoberta (cada sondagem anotada) |
+| A ave de bordo | Navegar | treinar e soltar o corvo | um homem do norte, um falcoeiro |
+| A ondulação | Navegar | ler a ilha escondida pelo mar | descoberta (dias no alto-mar) |
+| A nuvem da ilha | Navegar | ver a ilha antes de vê-la | um piloto velho |
+| A cor da água | Navegar | o raso e o rio | um piloto da costa |
+| A brisa do dia | Marinharia | sair de manhã, entrar à tarde | um pescador velho |
+| As monções | Navegar | o caminho longo pela estação | um mestre navegador, ou um périplo raro |
+| O bordejo | Marinharia | subir contra o vento | um marinheiro |
+| Ler o tempo | Ler o tempo | a tempestade antes dela | um piloto velho |
+| O canal do porto | Marinharia | entrar sem encalhar | o piloto daquele porto |
+| Escrever o périplo | Letras | anotar o caminho para outros | um escriba, um mestre |
+
+## 11. A prática da perícia principal — Navegar (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -150,9 +158,9 @@ você esperava; **o corvo que voa reto para o horizonte**; a nuvem parada; o pri
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Ajudante de piloto** | entrar num navio | o leme com ordem; o soldo |
-| **Piloto da costa** | prática 30; dez viagens de cabotagem sem perder o navio | o périplo da costa; o soldo de piloto |
-| **Piloto de mar aberto** | prática 55; uma travessia sem costa à vista | os mercadores e os reis o disputam |
-| **Mestre navegador** | prática 75; **um périplo seu** que outros usam | aprendizes; a expedição de quem governa |
+| **Piloto da costa** | navegar 30; dez viagens de cabotagem sem perder o navio | o périplo da costa; o soldo de piloto |
+| **Piloto de mar aberto** | navegar 55; uma travessia sem costa à vista | os mercadores e os reis o disputam |
+| **Mestre navegador** | navegar 75; **um périplo seu** que outros usam | aprendizes; a expedição de quem governa |
 | **Descobridor** | **uma terra ou uma rota nova** | **a terra ou a rota com o seu nome**, na crônica e nas cartas |
 
 ## 13. A coleção, os recordes e as lendas

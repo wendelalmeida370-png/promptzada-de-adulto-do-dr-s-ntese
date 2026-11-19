@@ -5,6 +5,12 @@ taverna, os dados, as brigas, o contrabando que chama baixinho. Usa a fundação
 ([`oficios-fundacao.md`](oficios-fundacao.md)) e **depende da vida a bordo e do porto** ([`navios.md`](navios.md): o porão
 por dentro, a prancha que balança, o itinerário dos navios). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar (o cais e o navio); a origem das coisas (tudo pelo livro); o corpo (as costas, o peso); a lei e a gente.
+
+**As perícias que o ofício usa:** **Estiva** (a principal) — e Avaliar, Comandar, Letras, Lutar (um jeito por arma), Jogo, Contrabando. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 Ainda escuro, o cais cheio de homens esperando. O capataz da estiva olha a fila e chama pelo nome — você entra, o seu vizinho
@@ -96,31 +102,31 @@ reto no mar, a gritaria dos dados.
 | Forte (60–85) | o fardo grande sozinho; **ler a carga** (o peso e o que tem dentro, pelo jeito e pelo som) |
 | Mestre do cais (85–100) | arrumar o porão inteiro de olho; o guindaste sem medo |
 
-**As técnicas:**
+**As técnicas** (cada uma de uma perícia — o catálogo em [`pericias.md`](pericias.md)):
 
-| Técnica | O que faz | Com quem |
-|---|---|---|
-| O jeito de levantar | poupa as costas (a ferida das costas demora a vir) | o velho da turma |
-| A alavanca | mover o que não se ergue | descoberta |
-| Rolar o barril | o barril pela prancha | a turma |
-| O nó de carga | a carga amarrada não cai do guindaste | um marinheiro |
-| O equilíbrio da prancha | a prancha no balanço | descoberta (cair duas vezes na água) |
-| Arrumar o porão | o navio sai reto; o capitão paga mais | o capataz |
-| O guindaste | trabalhar na roda e no gancho | a turma do guindaste |
-| Ler a carga | o peso e o que tem dentro: o vinho bom, a caixa que pesa demais para ser trigo | descoberta |
-| O canto de trabalho | puxar o ritmo da turma | o velho, ou o voga de uma galé |
-| A conta | conferir o escriba (e não ser enganado) | o escriba, ou a escrita |
-| A briga do cais | os golpes sujos | a turma rival (apanhando) |
-| Os dados | ler o jogo — e trapacear | um jogador da taverna |
+| Técnica | Perícia | O que faz | Com quem |
+|---|---|---|---|
+| O jeito de levantar | Estiva | poupa as costas (a ferida das costas demora a vir) | o velho da turma |
+| A alavanca | Estiva | mover o que não se ergue | descoberta |
+| Rolar o barril | Estiva | o barril pela prancha | a turma |
+| O nó de carga | Estiva | a carga amarrada não cai do guindaste | um marinheiro |
+| O equilíbrio da prancha | Estiva | a prancha no balanço | descoberta (cair duas vezes na água) |
+| Arrumar o porão | Estiva | o navio sai reto; o capitão paga mais | o capataz |
+| O guindaste | Estiva | trabalhar na roda e no gancho | a turma do guindaste |
+| Ler a carga | Avaliar | o peso e o que tem dentro: o vinho bom, a caixa que pesa demais para ser trigo | descoberta |
+| O canto de trabalho | Comandar | puxar o ritmo da turma | o velho, ou o voga de uma galé |
+| A conta | Letras | conferir o escriba (e não ser enganado) | o escriba, ou a escrita |
+| A briga do cais | Lutar (um jeito por arma) | os golpes sujos | a turma rival (apanhando) |
+| Os dados | Jogo | ler o jogo — e trapacear | um jogador da taverna |
 
 **Os títulos:**
 
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Carregador** | entrar numa turma | o pagamento por carga |
-| **Estivador** | prática 30; um mês de chamadas; nenhuma ânfora quebrada na semana | a vaga certa na chamada; o pagamento melhor |
-| **Chefe de turma** | prática 55; o respeito da turma (os laços); ter puxado o canto | escolher a turma; um quinto a mais |
-| **Capataz da estiva** | prática 70; a confiança dos mercadores (o porão bem arrumado, nada sumido) | a chamada da manhã é sua: escolher quem trabalha |
+| **Estivador** | estiva 30; um mês de chamadas; nenhuma ânfora quebrada na semana | a vaga certa na chamada; o pagamento melhor |
+| **Chefe de turma** | estiva 55; o respeito da turma (os laços); ter puxado o canto | escolher a turma; um quinto a mais |
+| **Capataz da estiva** | estiva 70; a confiança dos mercadores (o porão bem arrumado, nada sumido) | a chamada da manhã é sua: escolher quem trabalha |
 | **Dono da estiva** | as moedas para pagar uma turma; o contrato com um mercador | contratar, ganhar de cada carga — e ser odiado ou amado pela turma |
 
 ## 9. O mundo

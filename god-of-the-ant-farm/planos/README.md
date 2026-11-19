@@ -30,6 +30,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
+- [`pericias.md`](pericias.md) — o catálogo das bases e das perícias (com as técnicas de todos os ofícios agrupadas por perícia
+  e a matriz ofício × perícias).
 - [`oficios-fundacao.md`](oficios-fundacao.md) — a fundação dos ofícios por inteiro (o Patch 25).
 - [`oficio-pesca.md`](oficio-pesca.md) — a Pesca por inteiro (o primeiro ofício, nos Patches 25 e 26).
 - [`navios.md`](navios.md) — a vida a bordo e o porto (os barcos e os navios por dentro, o itinerário do porto, a viagem, a
@@ -95,9 +97,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
-- **As quatro camadas** (19/11/2026, **proposta, a decidir**): as bases (as leis do mundo, para todos), as perícias (o saber,
-  com a prática e as técnicas, de qualquer ofício), os ofícios (o papel e o pacote) e as condições
-  ([`oficios-fundacao.md`](oficios-fundacao.md) §1b).
+- **As quatro camadas** (**aprovado**, 19/11/2026): as bases (as leis do mundo, para todos), as perícias (o saber, com a
+  prática e as técnicas, de qualquer ofício — a estrutura que todo ofício daquela atividade respeita), os ofícios (o papel e o
+  pacote, que usam perícias) e as condições ([`pericias.md`](pericias.md)).
 - **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
   Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).

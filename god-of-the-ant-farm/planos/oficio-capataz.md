@@ -6,6 +6,12 @@ sistema — chicoteia, corta a ração, castiga, quebra gente para o navio andar
 responde a tudo o que ele faz**. Usa a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)) e é o outro lado
 do remador de galé ([`condicao-escravo-gale.md`](condicao-escravo-gale.md)). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a lei e a gente (o medo, o ódio que volta); o mar (a galé) e a pedra (a mina); a luta (o chicote).
+
+**As perícias que o ofício usa:** **Comandar** (a principal) — e Intimidar, Ler as pessoas, Investigar, Lutar (um jeito por arma). A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 Você anda pela passagem entre os bancos, o chicote enrolado no punho. Trinta homens remam abaixo de você, e nenhum olha nos seus
@@ -88,10 +94,10 @@ revolta — e de capataz vira aliado dos remadores. Uma passagem rara e perigosa
 
 **As técnicas:** o chicote certeiro (o golpe sem matar), a voz de comando, a revista (os esconderijos que os galeotes usam), a
 rede de delatores, ler a mentira, a ração medida, parar a briga do banco, dormir leve (acordar com a faca chegando), o castigo
-exemplar (o medo de todos com um só — e o ódio de todos).
+exemplar (o medo de todos com um só — e o ódio de todos). **As perícias de cada uma:** o chicote certeiro é de Lutar (o chicote); a voz de comando, a ração medida e parar a briga do banco, de Comandar; a revista e a rede de delatores, de Investigar; ler a mentira, de Ler as pessoas; o castigo exemplar, de Intimidar; dormir leve, de Sobreviver.
 
-**Os títulos:** **ajudante** → **capataz** (prática 30; a confiança do capitão) → **comitre** (prática 55; uma campanha sem fuga
-nem revolta) → **comitre-mor** ou **feitor-mor** (prática 75; os capatazes de uma frota ou de uma mina sob você). O soldo pelo
+**Os títulos:** **ajudante** → **capataz** (comandar 30; a confiança do capitão) → **comitre** (comandar 55; uma campanha sem fuga
+nem revolta) → **comitre-mor** ou **feitor-mor** (comandar 75; os capatazes de uma frota ou de uma mina sob você). O soldo pelo
 livro, maior a cada posto.
 
 ## 9. As entradas e as saídas

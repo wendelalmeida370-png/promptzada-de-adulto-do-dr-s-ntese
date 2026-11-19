@@ -6,6 +6,12 @@ febre da terceira noite, a árvore subida para ver por cima das copas, e a cidad
 jogo (`G.Mata`, NATUREZA.md), a água (`G.Agua`), os bichos e o meio deles, a escalada ([`escalada.md`](escalada.md)) e a fundação
 dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a mata fechada; o tempo (a cheia, a seca); a água; o corpo (a febre, a ferida).
+
+**As perícias que o ofício usa:** **Orientar-se** (a principal) — e Sobreviver, Ervas, Escalar, Marinharia, Ler o tempo, Nadar e mergulhar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O rei quer saber de onde vem o grande rio. Ninguém foi além da terceira curva, onde a mata fecha. Você sobe o rio de canoa até onde
@@ -111,30 +117,32 @@ domestica.
 | **Os foragidos** | o acampamento escondido na mata | a vigia, a arma |
 | **O grupo** | o carregador que desiste, o que adoece, o que foge | o líder, os laços, o plano |
 
-## 9. As técnicas (18)
+## 9. As técnicas (18, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| O facão no ritmo | abre mais com menos fôlego | descoberta (mil golpes) |
-| Ler a mata | o passo menos fechado, o caminho dos bichos | um mateiro velho |
-| As marcas | o caminho de volta sempre | um mateiro |
-| Rio abaixo | nunca morrer perdido perto de um rio | um mateiro velho |
-| Ouvir a mata | o rio, a cachoeira, o alarme dos bichos | descoberta |
-| A árvore da vista | subir rápido onde vale | um caçador, um mateiro |
-| A rede e o acampamento | a noite segura | um mateiro |
-| O fogo na umidade | o fogo com a mata molhada | descoberta |
-| O unguento | os insetos longe | o ervanário |
-| O chá da febre | curar a febre da mata | o ervanário, um curandeiro |
-| O que se come | a fruta, a raiz, o palmito, o que mata | o ervanário, um caçador |
-| A água do cipó | a água sem rio | um mateiro velho |
-| A vau | atravessar o rio no lugar certo | um canoeiro |
-| A canoa | o rio como estrada | um canoeiro |
-| O pântano | atravessar sem afundar | descoberta (ou o susto) |
-| A cobra | ver, evitar, curar | um caçador de cobras |
-| A estação | a cheia, a seca, o melhor tempo de entrar | um mateiro velho |
-| Desconfiar do que dizem | separar o saber certo do falso | descoberta |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 10. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| O facão no ritmo | Orientar-se | abre mais com menos fôlego | descoberta (mil golpes) |
+| Ler a mata | Orientar-se | o passo menos fechado, o caminho dos bichos | um mateiro velho |
+| As marcas | Orientar-se | o caminho de volta sempre | um mateiro |
+| Rio abaixo | Orientar-se | nunca morrer perdido perto de um rio | um mateiro velho |
+| Ouvir a mata | Orientar-se | o rio, a cachoeira, o alarme dos bichos | descoberta |
+| A árvore da vista | Escalar | subir rápido onde vale | um caçador, um mateiro |
+| A rede e o acampamento | Sobreviver | a noite segura | um mateiro |
+| O fogo na umidade | Sobreviver | o fogo com a mata molhada | descoberta |
+| O unguento | Ervas | os insetos longe | o ervanário |
+| O chá da febre | Ervas | curar a febre da mata | o ervanário, um curandeiro |
+| O que se come | Sobreviver | a fruta, a raiz, o palmito, o que mata | o ervanário, um caçador |
+| A água do cipó | Sobreviver | a água sem rio | um mateiro velho |
+| A vau | Sobreviver | atravessar o rio no lugar certo | um canoeiro |
+| A canoa | Marinharia | o rio como estrada | um canoeiro |
+| O pântano | Orientar-se | atravessar sem afundar | descoberta (ou o susto) |
+| A cobra | Sobreviver | ver, evitar, curar | um caçador de cobras |
+| A estação | Ler o tempo | a cheia, a seca, o melhor tempo de entrar | um mateiro velho |
+| Desconfiar do que dizem | Orientar-se | separar o saber certo do falso | descoberta |
+
+## 10. A prática da perícia principal — Orientar-se (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -149,10 +157,10 @@ domestica.
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Andarilho da mata** | uma noite na mata | a rede e o facão |
-| **Mateiro** | prática 30; três dias na mata e de volta | quem vai à mata paga para você ir junto |
-| **Guia da mata** | prática 50; um grupo levado e trazido inteiro | as expedições, as caravanas, o exército |
-| **Desbravador** | prática 70; **uma trilha aberta onde ninguém passou** (de uma borda à outra de uma mata grande) | a trilha com o seu nome; o rei quer você |
-| **Senhor da mata** | prática 85; **uma lenda da mata achada** | o nome nas histórias; aprendizes |
+| **Mateiro** | orientar-se 30; três dias na mata e de volta | quem vai à mata paga para você ir junto |
+| **Guia da mata** | orientar-se 50; um grupo levado e trazido inteiro | as expedições, as caravanas, o exército |
+| **Desbravador** | orientar-se 70; **uma trilha aberta onde ninguém passou** (de uma borda à outra de uma mata grande) | a trilha com o seu nome; o rei quer você |
+| **Senhor da mata** | orientar-se 85; **uma lenda da mata achada** | o nome nas histórias; aprendizes |
 
 ## 12. As lendas (nascem do mundo)
 

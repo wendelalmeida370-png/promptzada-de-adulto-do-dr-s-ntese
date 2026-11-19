@@ -6,6 +6,12 @@ e a condição do galeote. Usa a fundação dos ofícios ([`oficios-fundacao.md`
 bordo** ([`navios.md`](navios.md): o navio por dentro, o chão que anda, a batalha no mar). Entra nos Patches 35 (o remador livre) e 36 (o galeote), «O mar». Os
 números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; o corpo (o cansaço, a ferida, a fome); a lei e a gente (a condição, o castigo, a fuga).
+
+**As perícias que a condição ensina:** **Remar** (a principal) — e Ler o tempo, Furtividade, Nadar e mergulhar, Ler as pessoas, Comandar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 A guerra foi perdida e você foi levado. No porto do inimigo, puseram-lhe uma corrente no tornozelo e um remo nas mãos, no banco
@@ -152,20 +158,20 @@ afoga: o clímax do laço com o companheiro.
 **O respeito entre os remadores** (o «nome» no banco, para o galeote): o novato → o que aguenta → o que se respeita → **o que se
 segue** (o líder da revolta). Sobe ajudando, apanhando por outro, aguentando, dividindo.
 
-**As técnicas:**
+**As técnicas** (cada uma de uma perícia — o catálogo em [`pericias.md`](pericias.md)):
 
-| Técnica | O que faz | Com quem |
-|---|---|---|
-| Respirar no ritmo | menos fôlego por golpe | o velho |
-| Poupar o braço | descansar um braço por vez no cruzeiro | o velho |
-| Remar ferido | a ferida pesa menos | descoberta (remar ferido três dias) |
-| Ler a tempestade | saber antes do capataz | o velho |
-| Esconder na boca | carregar uma coisa pequena sem ser achado | um galeote antigo |
-| Abrir a corrente | forçar o elo com o prego | o velho, ou descoberta |
-| Nadar acorrentado | não afundar com o peso da corrente | descoberta |
-| A canção do remo | o banco inteiro acerta o tempo (o ânimo sobe) | o voga |
+| Técnica | Perícia | O que faz | Com quem |
+|---|---|---|---|
+| Respirar no ritmo | Remar | menos fôlego por golpe | o velho |
+| Poupar o braço | Remar | descansar um braço por vez no cruzeiro | o velho |
+| Remar ferido | Remar | a ferida pesa menos | descoberta (remar ferido três dias) |
+| Ler a tempestade | Ler o tempo | saber antes do capataz | o velho |
+| Esconder na boca | Furtividade | carregar uma coisa pequena sem ser achado | um galeote antigo |
+| Abrir a corrente | Furtividade | forçar o elo com o prego | o velho, ou descoberta |
+| Nadar acorrentado | Nadar e mergulhar | não afundar com o peso da corrente | descoberta |
+| A canção do remo | Remar | o banco inteiro acerta o tempo (o ânimo sobe) | o voga |
 
-**O remador livre** tem os títulos: **remador** → **voga** (prática 70 e o respeito do banco) → **chefe dos remos** (a voz:
+**O remador livre** tem os títulos: **remador** → **voga** (remar 70 e o respeito do banco) → **chefe dos remos** (a voz:
 comandar o ritmo de toda a galé) → **mestre da galé**; com o soldo pelo livro, maior a cada posto.
 
 ## 11. As saídas (as passagens)

@@ -4,6 +4,12 @@
 usa a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar; a afinação
 vem jogando.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; a água; o tempo (as estações); a origem das coisas.
+
+**As perícias que o ofício usa:** **Pescar** (a principal) — e Navegar, Marinharia, Nadar e mergulhar, Ler o tempo, Conservar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 Madrugada no lago. A névoa baixa, uma garça parada no junco. Você cavou minhocas na terra úmida atrás de casa, amarrou o anzol
@@ -201,30 +207,32 @@ pega um peixe grande precisa chamar alguém.
 em roda, no tempo do cardume); os covos (escolher onde pôr; voltar no outro dia); a rede de arrasto (a equipe e o barco); o
 mergulho (o fôlego, a profundidade, a pérola, a moreia, o tubarão).
 
-## 7. As técnicas (18)
+## 7. As técnicas (18, das perícias que o ofício usa)
 
-| Técnica | O que faz | Como se aprende | Pede |
-|---|---|---|---|
-| O nó firme | a linha não parte no nó (+10 de limite) | um mestre, ou descoberta (perder 10 peixes no nó) | — |
-| A isca viva | pescar o miúdo e usá-lo nos grandes | um mestre | o nó firme |
-| Mexer a isca | atrai os desconfiados | descoberta (esperar parado 50 vezes) | — |
-| A mosca | fazer moscas de pena e linha: a truta e o salmão | um mestre do norte, ou um livro | a linha de crina |
-| Ler as aves | as aves mostram o cardume no mapa da água | descoberta (ver as aves mergulharem 10 vezes) | — |
-| Ler a maré | a hora boa da costa | um pescador da costa | — |
-| A linha de fundo | várias linhas esperando | um mestre | o nó firme |
-| O espinhel | trinta anzóis numa linha só | um mestre | a linha de fundo |
-| O covo | fazer e pôr covos | o cesteiro, ou um pescador | — |
-| A tarrafa | o arremesso em roda | um pescador da costa | — |
-| Pescar de noite com tocha | o peixe e a lula sobem para a luz | **descoberta** (a primeira noite de pesca com tocha) | — |
-| A fisga | arpão de três pontas, o peixe não escapa | um mestre | o arpão |
-| A rede de arrasto | pescar com gente e barco | a confraria do porto (com o título de pescador) | o barco |
-| Consertar a rede e a linha | o desgaste não acaba com a coisa | um mestre | — |
-| A salga e a defumação | guardar o peixe meses | o salgador | o sal, a lenha |
-| O garum | o molho de peixe fermentado (vale muito no sul) | um livro dos gregos e romanos, ou um mestre do sul | a salga |
-| A pesca no gelo | abrir o buraco no lago gelado | um mestre do norte | o inverno do norte |
-| A carretilha | a linha enrolada numa roda: o lance longo e a luta fácil | **o livro e a descoberta**, tarde | a roda do povo, prática 70 |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 8. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | Como se aprende | Pede |
+|---|---|---|---|---|
+| O nó firme | Pescar | a linha não parte no nó (+10 de limite) | um mestre, ou descoberta (perder 10 peixes no nó) | — |
+| A isca viva | Pescar | pescar o miúdo e usá-lo nos grandes | um mestre | o nó firme |
+| Mexer a isca | Pescar | atrai os desconfiados | descoberta (esperar parado 50 vezes) | — |
+| A mosca | Pescar | fazer moscas de pena e linha: a truta e o salmão | um mestre do norte, ou um livro | a linha de crina |
+| Ler as aves | Pescar | as aves mostram o cardume no mapa da água | descoberta (ver as aves mergulharem 10 vezes) | — |
+| Ler a maré | Pescar | a hora boa da costa | um pescador da costa | — |
+| A linha de fundo | Pescar | várias linhas esperando | um mestre | o nó firme |
+| O espinhel | Pescar | trinta anzóis numa linha só | um mestre | a linha de fundo |
+| O covo | Pescar | fazer e pôr covos | o cesteiro, ou um pescador | — |
+| A tarrafa | Pescar | o arremesso em roda | um pescador da costa | — |
+| Pescar de noite com tocha | Pescar | o peixe e a lula sobem para a luz | **descoberta** (a primeira noite de pesca com tocha) | — |
+| A fisga | Pescar | arpão de três pontas, o peixe não escapa | um mestre | o arpão |
+| A rede de arrasto | Pescar | pescar com gente e barco | a confraria do porto (com o título de pescador) | o barco |
+| Consertar a rede e a linha | Pescar | o desgaste não acaba com a coisa | um mestre | — |
+| A salga e a defumação | Conservar | guardar o peixe meses | o salgador | o sal, a lenha |
+| O garum | Conservar | o molho de peixe fermentado (vale muito no sul) | um livro dos gregos e romanos, ou um mestre do sul | a salga |
+| A pesca no gelo | Pescar | abrir o buraco no lago gelado | um mestre do norte | o inverno do norte |
+| A carretilha | Pescar | a linha enrolada numa roda: o lance longo e a luta fácil | **o livro e a descoberta**, tarde | a roda do povo, pescar 70 |
+
+## 8. A prática da perícia principal — Pescar (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -241,8 +249,8 @@ A prática sobe por peixe trazido, mais pelos difíceis e raros, menos pelos que
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Aprendiz de pescador** | o primeiro peixe | a coleção aberta |
-| **Pescador** | prática 40; 12 espécies na coleção; vender 100 peixes; o aceite dos pescadores do porto (pelo laço e pela fama) | a confraria do porto (a rede de arrasto), as encomendas da taverna, preço melhor (+10%) |
-| **Mestre pescador** | prática 70; 24 espécies; **a peça de mestre** (um peixe raro acima do peso da cidade, ou um lendário à vista); ter ensinado um aprendiz até pescador; o voto dos mestres do porto | as encomendas do templo e dos ricos, os aprendizes, o lugar na festa, voz na assembleia, preço melhor (+25%) |
+| **Pescador** | pescar 40; 12 espécies na coleção; vender 100 peixes; o aceite dos pescadores do porto (pelo laço e pela fama) | a confraria do porto (a rede de arrasto), as encomendas da taverna, preço melhor (+10%) |
+| **Mestre pescador** | pescar 70; 24 espécies; **a peça de mestre** (um peixe raro acima do peso da cidade, ou um lendário à vista); ter ensinado um aprendiz até pescador; o voto dos mestres do porto | as encomendas do templo e dos ricos, os aprendizes, o lugar na festa, voz na assembleia, preço melhor (+25%) |
 | **Lenda** | pegar um lendário | a memória do povo; o nome na tábua dos recordes para sempre |
 
 ## 10. A coleção, os recordes e os prêmios

@@ -9,6 +9,12 @@ guerra que um dia vem limpar o mar. **Como ele é:** o pirata rouba, mata, seque
 ([`condicao-escravo-gale.md`](condicao-escravo-gale.md)), o calendário ([`calendario.md`](calendario.md)) e a fundação dos ofícios
 ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o mar; a luta; a lei e a gente (o crime, a fama, os cativos); o tempo (o mar fechado no inverno).
+
+**As perícias que o ofício usa:** **Abordagem** (a principal) — e Comandar, Marinharia, Navegar, Intimidar, Lutar (um jeito por arma), Negociar, Investigar, Contrabando, Furtividade, Ler as pessoas. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 Do alto do penhasco da ilha, o vigia acena com o espelho: uma vela redonda, pesada, saindo do estreito ao meio-dia — o mercador do
@@ -299,36 +305,38 @@ e todos olhando.
 | **O receptador** | o preço baixo, a entrega |
 | **O inverno** | o refúgio sem comida, a tripulação que se desfaz |
 
-## 23. As técnicas (24)
+## 23. As técnicas (24, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| Ler a presa | carregada, armada, rápida — pelo que se vê | um pirata velho |
-| O informante | a tábua dos navios do porto | a rede do porto |
-| Pesar a informação | a armadilha antes de cair nela | descoberta |
-| A emboscada do estreito | esperar onde as rotas passam | um piloto, um pirata velho |
-| O sol nas costas | atacar vindo do nascente | um pirata velho |
-| A noite sem luz | chegar perto sem ser visto | descoberta |
-| O disfarce | parecer pescador ou mercador | descoberta |
-| A perseguição pelo vento | o ângulo certo para alcançar | um piloto |
-| Contra o vento | caçar a vela onde ela não anda | um capitão de galé |
-| O raso | fugir onde o navio grande encalha | um piloto da costa |
-| Quebrar os remos | parar a presa sem afundá-la | um capitão de guerra |
-| O gancho | prender na primeira | descoberta |
-| A luta no convés | o equilíbrio no chão que balança | um marinheiro, um gladiador |
-| A flecha de fogo | a vela da presa (sem queimar o saque) | um arqueiro |
-| O grito e o nome | a rendição pelo medo | a fama |
-| A revista | o que a presa esconde | um pirata velho |
-| A razia | desembarcar, pegar e sair antes do exército | um pirata do norte |
-| O resgate | a carta, o intermediário, a troca sem armadilha | um pirata velho |
-| A parte justa | a tripulação contente | descoberta (ou o motim) |
-| Ler a tripulação | o motim antes dele | descoberta |
-| Virar o casco | consertar e limpar o navio na praia | um carpinteiro naval |
-| O esconderijo | a enseada que ninguém acha | um piloto, um pescador |
-| O porto que não pergunta | vender sem ser pego | a sombra |
-| O inverno bem passado | a tripulação inteira na primavera | um capitão velho |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 24. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| Ler a presa | Abordagem | carregada, armada, rápida — pelo que se vê | um pirata velho |
+| O informante | Investigar | a tábua dos navios do porto | a rede do porto |
+| Pesar a informação | Investigar | a armadilha antes de cair nela | descoberta |
+| A emboscada do estreito | Abordagem | esperar onde as rotas passam | um piloto, um pirata velho |
+| O sol nas costas | Abordagem | atacar vindo do nascente | um pirata velho |
+| A noite sem luz | Furtividade | chegar perto sem ser visto | descoberta |
+| O disfarce | Abordagem | parecer pescador ou mercador | descoberta |
+| A perseguição pelo vento | Marinharia | o ângulo certo para alcançar | um piloto |
+| Contra o vento | Marinharia | caçar a vela onde ela não anda | um capitão de galé |
+| O raso | Marinharia | fugir onde o navio grande encalha | um piloto da costa |
+| Quebrar os remos | Abordagem | parar a presa sem afundá-la | um capitão de guerra |
+| O gancho | Abordagem | prender na primeira | descoberta |
+| A luta no convés | Lutar (um jeito por arma) | o equilíbrio no chão que balança | um marinheiro, um gladiador |
+| A flecha de fogo | Lutar (um jeito por arma) | a vela da presa (sem queimar o saque) | um arqueiro |
+| O grito e o nome | Intimidar | a rendição pelo medo | a fama |
+| A revista | Investigar | o que a presa esconde | um pirata velho |
+| A razia | Abordagem | desembarcar, pegar e sair antes do exército | um pirata do norte |
+| O resgate | Negociar | a carta, o intermediário, a troca sem armadilha | um pirata velho |
+| A parte justa | Comandar | a tripulação contente | descoberta (ou o motim) |
+| Ler a tripulação | Ler as pessoas | o motim antes dele | descoberta |
+| Virar o casco | Marinharia | consertar e limpar o navio na praia | um carpinteiro naval |
+| O esconderijo | Contrabando | a enseada que ninguém acha | um piloto, um pescador |
+| O porto que não pergunta | Contrabando | vender sem ser pego | a sombra |
+| O inverno bem passado | Comandar | a tripulação inteira na primavera | um capitão velho |
+
+## 24. A prática da perícia principal — Abordagem (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -343,10 +351,10 @@ e todos olhando.
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Grumete pirata** | entrar numa tripulação | meia parte |
-| **Pirata** | prática 25; uma abordagem | a parte inteira |
-| **Mestre de abordagem** | prática 45; três presas | o comando da abordagem; parte e meia |
-| **Capitão pirata** | prática 65; **o seu navio e a sua tripulação** | o navio, a flâmula, **o nome nos portos** |
-| **Rei do mar** | prática 85; **uma frota e uma costa** | os outros pagam a sua parte; um rei pode querer comprar você |
+| **Pirata** | abordagem 25; uma abordagem | a parte inteira |
+| **Mestre de abordagem** | abordagem 45; três presas | o comando da abordagem; parte e meia |
+| **Capitão pirata** | comandar 55 e navegar 30; **o seu navio e a sua tripulação** | o navio, a flâmula, **o nome nos portos** |
+| **Rei do mar** | comandar 80; **uma frota e uma costa** | os outros pagam a sua parte; um rei pode querer comprar você |
 
 ## 26. A coleção, os recordes e as lendas
 

@@ -13,6 +13,9 @@ parede»**: a rocha diz o que dá. Uma parede de granito rachado dá pegas; o ar
 gelo pede ferro. **A pega que se vê é a pega que segura.** É isso que faz cada subida ser uma via (um caminho escolhido) e não um
 elevador.
 
+**A escalada é as duas coisas:** uma **base** (a vertical: todo mundo sobe só onde a rocha deixa, pelas mesmas regras) e uma
+**perícia** (Escalar: a prática e as técnicas do §12, que valem em todo ofício que sobe — [`pericias.md`](pericias.md)).
+
 ## 2. Quem usa a escalada (por que ela vem antes)
 
 | Tronco | Para quê |

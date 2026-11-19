@@ -6,6 +6,12 @@ e que você vai entendendo símbolo por símbolo, e, no fim, **a história intei
 a base do passado ([`passado.md`](passado.md)), o subterrâneo ([`subterraneo.md`](subterraneo.md)) e a fundação dos ofícios
 ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 38 ([`roteiro.md`](roteiro.md)). Os números são propostas.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o passado em camadas; o escuro de baixo; o tempo (a luz rasante, a seca).
+
+**As perícias que o ofício usa:** **Escavar** (a principal) — e Decifrar, Avaliar, Investigar, Letras, Andar no escuro. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O lavrador mostrou o caco que o arado trouxe: barro vermelho com uma faixa preta — nenhum oleiro da cidade pinta assim. Você
@@ -130,28 +136,30 @@ quando a peça vai para o templo; a biblioteca que passa a contar a história qu
 | **O povo que não quer** | cavar o cemitério dos avós de alguém | a crença, os laços; nunca o cemitério de um povo vivo sem licença |
 | **O erro** | a leitura errada, a camada misturada | a prática; o trabalho perdido |
 
-## 12. As técnicas (16)
+## 12. As técnicas (16, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| A sombra rasante | ver os muros com o sol baixo | descoberta (a primeira vez) |
-| Ler a plantação | ver a cidade na seca | um lavrador velho |
-| A vara de sondar | sentir a pedra e o vazio | um mestre |
-| A quadrícula | o contexto de cada achado | um mestre, um livro |
-| Ver a camada | a linha entre duas camadas fica clara | descoberta (cem raspadas) |
-| O colherim leve | menos quebra | descoberta |
-| A cera e o gesso | firmar o que se desfaz | um oleiro, um mestre |
-| A peneira fina | as coisas pequenas | um mestre |
-| Restaurar o pote | encaixar mais cacos | um oleiro |
-| Ler o barro | a era e o povo pelo tipo de cerâmica | um mestre, a coleção |
-| Ler o metal | o bronze, o cobre, a liga de cada povo | um ferreiro |
-| Os ossos | a idade, a ferida, como morreu | um curandeiro |
-| O nome que se repete | o primeiro passo da decifração | descoberta |
-| A pedra de duas escritas | decifrar de vez uma escrita | só com a pedra |
-| Reconhecer o falso | a peça falsificada (a pátina, o desgaste, o metal) | um mestre, ou o prejuízo |
-| Ler o mito | a verdade escondida nas histórias velhas | um bardo velho, um sacerdote |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 13. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| A sombra rasante | Escavar | ver os muros com o sol baixo | descoberta (a primeira vez) |
+| Ler a plantação | Escavar | ver a cidade na seca | um lavrador velho |
+| A vara de sondar | Escavar | sentir a pedra e o vazio | um mestre |
+| A quadrícula | Escavar | o contexto de cada achado | um mestre, um livro |
+| Ver a camada | Escavar | a linha entre duas camadas fica clara | descoberta (cem raspadas) |
+| O colherim leve | Escavar | menos quebra | descoberta |
+| A cera e o gesso | Escavar | firmar o que se desfaz | um oleiro, um mestre |
+| A peneira fina | Escavar | as coisas pequenas | um mestre |
+| Restaurar o pote | Escavar | encaixar mais cacos | um oleiro |
+| Ler o barro | Avaliar | a era e o povo pelo tipo de cerâmica | um mestre, a coleção |
+| Ler o metal | Avaliar | o bronze, o cobre, a liga de cada povo | um ferreiro |
+| Os ossos | Investigar | a idade, a ferida, como morreu | um curandeiro |
+| O nome que se repete | Decifrar | o primeiro passo da decifração | descoberta |
+| A pedra de duas escritas | Decifrar | decifrar de vez uma escrita | só com a pedra |
+| Reconhecer o falso | Avaliar | a peça falsificada (a pátina, o desgaste, o metal) | um mestre, ou o prejuízo |
+| Ler o mito | Investigar | a verdade escondida nas histórias velhas | um bardo velho, um sacerdote |
+
+## 13. A prática da perícia principal — Escavar (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -166,10 +174,10 @@ quando a peça vai para o templo; a biblioteca que passa a contar a história qu
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Curioso** | um achado | o caderno |
-| **Escavador** | prática 25; uma escavação com quadrícula | a licença de cavar terras do povo; ajudantes |
-| **Antiquário** | prática 45; vinte achados com contexto; um pote restaurado | a casa ou a biblioteca compra o que você acha; aprendizes |
-| **Sábio dos antigos** | prática 70; um texto decifrado; um capítulo do livro de um povo antigo | a palavra na corte (identificar as peças de quem governa), a escavação paga pelo palácio |
-| **Guardião do passado** | prática 85; **o livro inteiro de um povo antigo** | a coleção do palácio ou a sala das antiguidades da biblioteca; a fama no povo |
+| **Escavador** | escavar 25; uma escavação com quadrícula | a licença de cavar terras do povo; ajudantes |
+| **Antiquário** | escavar 45; vinte achados com contexto; um pote restaurado | a casa ou a biblioteca compra o que você acha; aprendizes |
+| **Sábio dos antigos** | escavar 70 e decifrar 40; um texto decifrado; um capítulo do livro de um povo antigo | a palavra na corte (identificar as peças de quem governa), a escavação paga pelo palácio |
+| **Guardião do passado** | escavar 85; **o livro inteiro de um povo antigo** | a coleção do palácio ou a sala das antiguidades da biblioteca; a fama no povo |
 
 ## 15. A coleção, os recordes e os lendários
 

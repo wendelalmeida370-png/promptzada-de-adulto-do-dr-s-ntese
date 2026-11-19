@@ -9,6 +9,12 @@ fama. Usa a base do passado ([`passado.md`](passado.md)), a sombra (o Patch 34),
 e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 38 ([`roteiro.md`](roteiro.md)). Os
 números são propostas.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o passado em camadas; o escuro de baixo; a lei e a gente (o crime, o sacrilégio, a família do morto).
+
+**As perícias que o ofício usa:** **Furtividade** (a principal) — e Cavar, Desarmar, Avaliar, Contrabando, Ler as pessoas. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O inverno foi seco, o celeiro está vazio, e o seu filho chora de fome. Todo mundo sabe que o chefe velho foi enterrado com a
@@ -141,26 +147,28 @@ por outro nome, a peça inteira.
 | **Ser reconhecido** | gastar demais de repente; a peça inteira vista na casa de alguém |
 | **A família do morto** | a vingança |
 
-## 14. As técnicas (14)
+## 14. As técnicas (14, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| Ler a ronda | o tempo do vigia aparece | descoberta |
-| A pá muda | cavar sem som | um saqueador velho |
-| O túnel de lado | entrar sem mexer na porta | um saqueador velho, um mineiro |
-| A vela no chapéu | a luz que não vaza | descoberta |
-| A escora curta | o túnel que segura | um mineiro |
-| A laje sem estalo | a alavanca com calços | um pedreiro |
-| Fechar o túmulo | o túmulo parece intacto | um saqueador velho |
-| Os truques dos antigos | as defesas de cada povo antigo | o caderno de outro, ou o susto |
-| Escolher no escuro | o que vale e não se reconhece | descoberta |
-| Derreter limpo | o ouro sem marca | um ourives desonesto |
-| O receptador certo | quem paga e não entrega | a rede |
-| Comprar o vigia | o vigia que olha para o outro lado | a rede |
-| Gastar devagar | o dinheiro que não chama atenção | descoberta (ou a prisão) |
-| Ler o sócio | a traição antes dela | descoberta |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 15. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| Ler a ronda | Furtividade | o tempo do vigia aparece | descoberta |
+| A pá muda | Furtividade | cavar sem som | um saqueador velho |
+| O túnel de lado | Cavar | entrar sem mexer na porta | um saqueador velho, um mineiro |
+| A vela no chapéu | Furtividade | a luz que não vaza | descoberta |
+| A escora curta | Cavar | o túnel que segura | um mineiro |
+| A laje sem estalo | Furtividade | a alavanca com calços | um pedreiro |
+| Fechar o túmulo | Furtividade | o túmulo parece intacto | um saqueador velho |
+| Os truques dos antigos | Desarmar | as defesas de cada povo antigo | o caderno de outro, ou o susto |
+| Escolher no escuro | Avaliar | o que vale e não se reconhece | descoberta |
+| Derreter limpo | Contrabando | o ouro sem marca | um ourives desonesto |
+| O receptador certo | Contrabando | quem paga e não entrega | a rede |
+| Comprar o vigia | Contrabando | o vigia que olha para o outro lado | a rede |
+| Gastar devagar | Contrabando | o dinheiro que não chama atenção | descoberta (ou a prisão) |
+| Ler o sócio | Ler as pessoas | a traição antes dela | descoberta |
+
+## 15. A prática da perícia principal — Furtividade (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -175,9 +183,9 @@ por outro nome, a peça inteira.
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Cavador da noite** | um saque | nada, a não ser o ouro |
-| **Saqueador** | prática 30; um túmulo rico sem ser pego | o receptador confia em você |
-| **Mestre dos túmulos** | prática 55; um túmulo dos antigos com as defesas | aprendizes; a sua turma |
-| **Rei dos ladrões de túmulos** | prática 75; **o túmulo de um rei** | a rede; os outros pagam a sua parte — e a lei inteira atrás do seu nome |
+| **Saqueador** | furtividade 30; um túmulo rico sem ser pego | o receptador confia em você |
+| **Mestre dos túmulos** | furtividade 55; um túmulo dos antigos com as defesas | aprendizes; a sua turma |
+| **Rei dos ladrões de túmulos** | furtividade 75; **o túmulo de um rei** | a rede; os outros pagam a sua parte — e a lei inteira atrás do seu nome |
 
 ## 17. Os lendários
 

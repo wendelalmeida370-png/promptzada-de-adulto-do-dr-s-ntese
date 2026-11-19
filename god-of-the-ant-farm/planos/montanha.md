@@ -5,6 +5,12 @@ acaba, gente que morre se o plano for ruim. Na Antiguidade: ninguém sobe por es
 curiosidade também é um deles. **Depende da escalada** ([`escalada.md`](escalada.md)) e da fundação dos ofícios
 ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a altura e o frio; a vertical (a escalada); o tempo (a nevasca, o passo fechado); o mundo grande (a montanha de dias).
+
+**As perícias que estes ofícios usam:** **Montanhismo** (a principal) — e Escalar, Sobreviver, Orientar-se, Ler o tempo, Comandar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A máxima e a fantasia
 
 Uma expedição à montanha tem de ser tão boa que poderia ser um jogo sozinho. Ninguém nunca subiu ao pico branco que se vê da
@@ -146,8 +152,8 @@ tempestade de neve. **O céu do jogo manda** (`G.Ceu`): a nuvem e o vento são o
 | Guia (60–85) | levar uma equipe; sentir quem está mal antes de dizer |
 | Mestre das montanhas (85–100) | olhar uma montanha e ver a via |
 
-**Os títulos:** **iniciante** → **montanhês** (uma expedição de três dias) → **guia** (prática 55; uma equipe levada e trazida
-inteira) → **mestre das vias** (prática 75; uma via nova aberta) → **o primeiro do pico** (o pico que ninguém subiu — um só no
+**Os títulos:** **iniciante** → **montanhês** (uma expedição de três dias) → **guia** (montanhismo 55; uma equipe levada e trazida
+inteira) → **mestre das vias** (montanhismo 75; uma via nova aberta) → **o primeiro do pico** (o pico que ninguém subiu — um só no
 mundo).
 
 ## 12. A economia

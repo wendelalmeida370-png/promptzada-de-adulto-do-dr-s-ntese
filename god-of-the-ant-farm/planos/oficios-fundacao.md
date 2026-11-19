@@ -12,10 +12,10 @@ com 4 espécies de 14, o recorde da cidade (um bagre de 11 quilos, do filho do f
 «10 sardinhas até a festa». Você vai, pesca, a cidade reage, a barra anda, um dia o velho Tor aceita te ensinar — e um dia,
 com a peça de mestre, os pescadores do porto te chamam de mestra. Tudo isso, em cada ofício, pela mesma máquina.
 
-## 1b. As quatro camadas (a pergunta do dono, 19/11/2026 — proposta, a decidir)
+## 1b. As quatro camadas (a pergunta do dono, 19/11/2026 — aprovado; o catálogo em [`pericias.md`](pericias.md))
 
 **A pergunta:** o pirata que comanda o navio também fica sem o mapa no mar aberto, como o navegador? Então o navegador seria uma
-«fundação» que gera outros ofícios? **A proposta:** separar o que hoje está misturado em quatro camadas.
+«fundação» que gera outros ofícios? **A decisão:** separar o que hoje está misturado em quatro camadas.
 
 | Camada | O que é | Quem está nela | Exemplos |
 |---|---|---|---|
@@ -51,7 +51,7 @@ Cada ofício é uma entrada num registro (`G.Oficios`, nome proposto), com:
 - o nome, o tronco (a família) e os derivados;
 - os gestos (as mecânicas das mãos daquele ofício);
 - as ferramentas e os materiais (pelo catálogo das coisas, `G.Itens`);
-- as técnicas (o caderno do ofício);
+- **as perícias que usa** — a principal e as outras ([`pericias.md`](pericias.md)) —, com as técnicas delas;
 - os títulos e o que cada um pede;
 - as coleções e os recordes;
 - as entradas e as saídas (as receitas, com a origem de cada coisa — o `ORIGEM.md` ganha a linha);
@@ -62,9 +62,9 @@ Cada ofício é uma entrada num registro (`G.Oficios`, nome proposto), com:
 
 Um derivado herda do tronco e acrescenta o que é seu.
 
-### 2.2 A prática (o que o corpo aprende fazendo)
+### 2.2 A prática (das perícias: o que o corpo aprende fazendo)
 
-- Cada pessoa tem uma prática por ofício (de 0 a 100), guardada nela e no save.
+- Cada pessoa tem uma prática **por perícia** (de 0 a 100), guardada nela e no save; cada ofício usa algumas perícias (§1b).
 - **Sobe só fazendo,** e cada vez mais devagar: o primeiro peixe ensina muito, o milésimo pouco. Fazer bem ensina mais que
   fazer mal; fazer o difícil, mais que o fácil.
 - **Não cai** com o tempo (o jogo não pune quem varia de ofício).
@@ -86,13 +86,14 @@ Um derivado herda do tronco e acrescenta o que é seu.
   - **num livro** — na biblioteca, para quem sabe ler (a escrita do povo);
   - **descobrindo** — fazendo uma coisa numa condição (a primeira pesca de noite com tocha mostra os peixes subindo à luz): o
     momento da descoberta é comemorado.
-- **O caderno de técnicas** na aba: as aprendidas, as de que se ouviu falar (por boato, de quem ensina), e o que cada uma pede.
+- **Cada técnica é de uma perícia** ([`pericias.md`](pericias.md)) e vale em todo ofício que usa a mesma perícia.
+- **O caderno de técnicas** na aba (por perícia): as aprendidas, as de que se ouviu falar (por boato, de quem ensina), e o que cada uma pede.
 - Algumas pedem outras antes; algumas pedem uma arte do povo (a carretilha pede a roda).
 
 ### 2.4 Os títulos e o reconhecimento
 
 - **Aprendiz → oficial → mestre** em cada ofício.
-- O título pede a prática **e um feito**: a **peça de mestre** (o peixe raro, a espada perfeita, a colheita de um ano), julgada
+- O título pede **as perícias** (o nível de cada uma) **e um feito**: a **peça de mestre** (o peixe raro, a espada perfeita, a colheita de um ano), julgada
   por quem já é mestre ou pela confraria do ofício na cidade.
 - **O que o título dá:** um preço melhor, as encomendas dos ricos, os aprendizes, a voz na assembleia, a fama; as pessoas
   tratam diferente (as falas e os laços do Patch 23).

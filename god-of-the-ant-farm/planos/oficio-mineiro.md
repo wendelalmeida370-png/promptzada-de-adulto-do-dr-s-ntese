@@ -5,6 +5,12 @@ quando acha o veio, a escora que range, a água que mina, o brilho verde do cobr
 resgate. Usa a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)) e **depende do subterrâneo no corpo**
 ([`subterraneo.md`](subterraneo.md): descer, a luz, o desabamento). Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o escuro de baixo; a origem das coisas (o veio que acaba); o corpo (a poeira, os anos).
+
+**As perícias que o ofício usa:** **Cavar** (a principal) — e Andar no escuro, Avaliar, Forjar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 Você desce pela escada de tronco com a lamparina de barro presa no peito. Lá em cima ficou o sol; aqui, só a chama pequena e o
@@ -131,28 +137,30 @@ da mão; a vila que comemora o veio novo.
 | **A tosse do mineiro** | os anos de poeira | a vida marca o corpo: o velho mineiro tosse |
 | **O roubo e a disputa** | o ouro que some; o vizinho que cava na sua galeria | o vigia; a lei; a briga |
 
-## 10. As técnicas (16)
+## 10. As técnicas (16, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| Ler a rocha | as fendas se acendem; o rumo do veio | um mineiro velho |
-| O golpe certo | menos fôlego, o fio dura mais | descoberta (cem golpes na fenda) |
-| Ouvir o teto | o aviso do desabamento chega antes | um mineiro velho |
-| Escorar | a escora no lugar certo, com menos madeira | o escorador |
-| O fogo e a água | rachar a rocha inteira | um mestre, ou um livro |
-| A cunha molhada | o bloco inteiro da pedreira | o pedreiro |
-| Ler a chama | o ar ruim antes de faltar | descoberta (a primeira vez que a chama azula) |
-| O poço de ar | ventilar a galeria funda | um mestre |
-| A roda d'água | tirar a água com a roda | um livro, um engenheiro (pede a arte da roda) |
-| A bateia | o garimpo de rio | um garimpeiro |
-| A pedra de toque | ler a pureza do ouro | o ensaiador, o ourives |
-| Moer e lavar | o minério limpo vale mais | um mestre |
-| Achar o geodo | ver a geode oca na rocha | descoberta |
-| Seguir o veio | não perder o veio quando ele vira | um mestre |
-| O resgate | tirar o soterrado sem derrubar mais | o mestre da mina |
-| O fogo de pátio | queimar o minério para o forno (o começo da fundição) | o fundidor |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 11. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| Ler a rocha | Cavar | as fendas se acendem; o rumo do veio | um mineiro velho |
+| O golpe certo | Cavar | menos fôlego, o fio dura mais | descoberta (cem golpes na fenda) |
+| Ouvir o teto | Cavar | o aviso do desabamento chega antes | um mineiro velho |
+| Escorar | Cavar | a escora no lugar certo, com menos madeira | o escorador |
+| O fogo e a água | Cavar | rachar a rocha inteira | um mestre, ou um livro |
+| A cunha molhada | Cavar | o bloco inteiro da pedreira | o pedreiro |
+| Ler a chama | Andar no escuro | o ar ruim antes de faltar | descoberta (a primeira vez que a chama azula) |
+| O poço de ar | Cavar | ventilar a galeria funda | um mestre |
+| A roda d'água | Cavar | tirar a água com a roda | um livro, um engenheiro (pede a arte da roda) |
+| A bateia | Cavar | o garimpo de rio | um garimpeiro |
+| A pedra de toque | Avaliar | ler a pureza do ouro | o ensaiador, o ourives |
+| Moer e lavar | Cavar | o minério limpo vale mais | um mestre |
+| Achar o geodo | Cavar | ver a geode oca na rocha | descoberta |
+| Seguir o veio | Cavar | não perder o veio quando ele vira | um mestre |
+| O resgate | Cavar | tirar o soterrado sem derrubar mais | o mestre da mina |
+| O fogo de pátio | Forjar | queimar o minério para o forno (o começo da fundição) | o fundidor |
+
+## 11. A prática da perícia principal — Cavar (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -167,9 +175,9 @@ da mão; a vila que comemora o veio novo.
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Aprendiz de mina** | entrar numa turma | a picareta da mina, a paga do turno |
-| **Mineiro** | prática 30; um mês de turnos; nenhum desabamento por descuido | a galeria própria, a paga melhor |
-| **Chefe de galeria** | prática 55; a confiança da turma; ter escorado uma galeria inteira | comandar a turma da galeria |
-| **Mestre mineiro** | prática 75; **a peça de mestre**: achar e abrir um veio novo; o voto dos mestres da vila | abrir poço, falar com quem governa, aprendizes |
+| **Mineiro** | cavar 30; um mês de turnos; nenhum desabamento por descuido | a galeria própria, a paga melhor |
+| **Chefe de galeria** | cavar 55; a confiança da turma; ter escorado uma galeria inteira | comandar a turma da galeria |
+| **Mestre mineiro** | cavar 75; **a peça de mestre**: achar e abrir um veio novo; o voto dos mestres da vila | abrir poço, falar com quem governa, aprendizes |
 | **Dono de mina** | a licença de quem governa (paga) e as moedas para a turma | o que sai da mina (menos o quinto), a vila que depende de você |
 
 ## 13. A coleção, os recordes e os lendários

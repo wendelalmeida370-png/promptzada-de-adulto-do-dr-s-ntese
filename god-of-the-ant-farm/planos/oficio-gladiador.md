@@ -6,6 +6,12 @@ golpe de misericórdia — com o peso de verdade, nunca de enfeite. Usa a funda�
 ([`oficios-fundacao.md`](oficios-fundacao.md)) e o combate do corpo (`G.Combate`). Entra no Patch 33, «A arena e a guerra».
 Os números são propostas para começar.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): a luta (o golpe pelo corpo, as feridas por zona); o corpo (as marcas que ficam); a lei e a gente (a fama, a multidão).
+
+**As perícias que o ofício usa:** **Lutar (um jeito por arma)** (a principal) — e Espetáculo, Intimidar. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O túnel cheira a areia molhada e sangue velho. Do outro lado da grade, a multidão ruge um nome que não é o seu. Você ajusta o
@@ -139,7 +145,7 @@ da arena vem do confronto de dois jeitos diferentes.**
 
 **As técnicas** (do mestre, ou descobertas): a rede que se joga e se recolhe, o empurrão do escudo, o golpe por cima do escudo,
 o passo do reciário, a guarda do secutor contra a rede, o golpe que decepa (o pesado), o golpe de misericórdia limpo, o gesto
-para a multidão, cair e se levantar, lutar ferido, ler o adversário (o próximo golpe dele).
+para a multidão, cair e se levantar, lutar ferido, ler o adversário (o próximo golpe dele). **As perícias de cada uma:** todas são de Lutar, no jeito da arma de cada tipo (a rede e o tridente, o escudo, a espada curta), menos o gesto para a multidão, que é de Espetáculo.
 
 **As marcas:** as cicatrizes ficam no corpo (a vida marca o corpo com causa), o coto de quem perdeu um membro, o nome nos muros.
 

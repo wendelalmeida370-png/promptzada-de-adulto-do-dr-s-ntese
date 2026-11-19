@@ -7,6 +7,12 @@ mundo querendo tirá-lo de você. Usa a base do passado ([`passado.md`](passado.
 os boatos, as missões do Patch 23 e a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Entra no Patch 38
 ([`roteiro.md`](roteiro.md)). Os números são propostas.
 
+## As bases e as perícias
+
+**As bases** (as leis do mundo que valem para todos, de qualquer ofício — [`pericias.md`](pericias.md)): o passado em camadas; o escuro de baixo; a mata e a vertical (o caminho até lá); a lei e a gente (de quem é o achado).
+
+**As perícias que o ofício usa:** **Investigar** (a principal) — e Desarmar, Andar no escuro, Orientar-se, Avaliar, Negociar, Ler as pessoas, Contrabando, Escavar, Decifrar, Sobreviver. A prática e as técnicas são das perícias: o que se aprende aqui vale em todo ofício que usa a mesma perícia, e os títulos pedem o nível delas.
+
 ## 1. A fantasia
 
 O velho bêbado da taverna do porto jura que o avô dele ajudou a enterrar o ouro do chefe na guerra de setenta anos atrás, «entre
@@ -129,26 +135,28 @@ volta à cidade com o tesouro, e o boato que corre antes de você chegar; o nome
 | **A lei** | o achado escondido descoberto |
 | **A pista falsa** | a viagem perdida, o mapa falsificado |
 
-## 12. As técnicas (14)
+## 12. As técnicas (14, das perícias que o ofício usa)
 
-| Técnica | O que faz | De quem se aprende |
-|---|---|---|
-| Pesar a pista | saber se um boato bate com outro | descoberta |
-| Ler a paisagem velha | achar o lugar do mapa no mundo que mudou | um guia velho |
-| Os sinais das defesas | ver a pedra lisa, a fenda, a areia | um caçador velho, ou o susto |
-| Travar a pedra | desarmar com a cunha | um caçador velho |
-| O passo leve | andar no corredor sem disparar | descoberta |
-| O fio | nunca se perder | um explorador de cavernas |
-| A tocha que dura | gastar menos luz | descoberta |
-| A sonda | o vazio atrás da parede | um arqueólogo |
-| Copiar os símbolos | trazer a inscrição para quem decifra | um escriba |
-| Ler o boato | quem espalhou, por quê | um taverneiro |
-| A escolha da carga | levar o que vale mais pelo peso | descoberta |
-| Esconder o achado | a volta sem ser roubado | um contrabandista |
-| A negociação | a parte do governante, do sócio, da família | um mercador |
-| Ler o sócio | a traição antes de acontecer | descoberta (ou a facada) |
+Cada técnica é de uma perícia (o catálogo em [`pericias.md`](pericias.md)): aprendida aqui, vale em todo ofício que usa a mesma perícia.
 
-## 13. A prática (o que cada faixa abre)
+| Técnica | Perícia | O que faz | De quem se aprende |
+|---|---|---|---|
+| Pesar a pista | Investigar | saber se um boato bate com outro | descoberta |
+| Ler a paisagem velha | Orientar-se | achar o lugar do mapa no mundo que mudou | um guia velho |
+| Os sinais das defesas | Desarmar | ver a pedra lisa, a fenda, a areia | um caçador velho, ou o susto |
+| Travar a pedra | Desarmar | desarmar com a cunha | um caçador velho |
+| O passo leve | Desarmar | andar no corredor sem disparar | descoberta |
+| O fio | Andar no escuro | nunca se perder | um explorador de cavernas |
+| A tocha que dura | Andar no escuro | gastar menos luz | descoberta |
+| A sonda | Escavar | o vazio atrás da parede | um arqueólogo |
+| Copiar os símbolos | Decifrar | trazer a inscrição para quem decifra | um escriba |
+| Ler o boato | Investigar | quem espalhou, por quê | um taverneiro |
+| A escolha da carga | Avaliar | levar o que vale mais pelo peso | descoberta |
+| Esconder o achado | Contrabando | a volta sem ser roubado | um contrabandista |
+| A negociação | Negociar | a parte do governante, do sócio, da família | um mercador |
+| Ler o sócio | Ler as pessoas | a traição antes de acontecer | descoberta (ou a facada) |
+
+## 13. A prática da perícia principal — Investigar (o que cada faixa abre)
 
 | Faixa | O que abre |
 |---|---|
@@ -163,10 +171,10 @@ volta à cidade com o tesouro, e o boato que corre antes de você chegar; o nome
 | Título | O que pede | O que dá |
 |---|---|---|
 | **Aventureiro** | uma pista seguida até o fim | o caderno das pistas |
-| **Caçador de tesouros** | prática 30; um tesouro achado | quem tem uma pista vem vender a você |
-| **Explorador** | prática 50; uma câmara dos antigos aberta | a turma, o patrocínio de uma casa rica |
-| **Caçador famoso** | prática 70; três grandes achados | o governante contrata as suas expedições |
-| **Lenda** | prática 85; **um grande sítio** | o nome nas canções; os boatos sobre você |
+| **Caçador de tesouros** | investigar 30; um tesouro achado | quem tem uma pista vem vender a você |
+| **Explorador** | investigar 50; uma câmara dos antigos aberta | a turma, o patrocínio de uma casa rica |
+| **Caçador famoso** | investigar 70; três grandes achados | o governante contrata as suas expedições |
+| **Lenda** | investigar 85; **um grande sítio** | o nome nas canções; os boatos sobre você |
 
 ## 15. Os lendários
 
