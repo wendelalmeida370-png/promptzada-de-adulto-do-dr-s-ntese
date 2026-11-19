@@ -83,5 +83,5 @@ os mundos de quinhentos e mil anos são os mais ricos). Pedras preciosas e crist
 | S4 — Os perigos | o ar, a inundação, o desabamento, perder-se, os bichos de baixo |
 | S5 — Os ofícios | o garimpeiro, o lapidário, o arqueólogo, o caçador de tesouros, o sapador, e os outros |
 
-Os ofícios do subterrâneo entram com o tronco da Mineração (a oficina, o Patch 31) e com o do Saber e da Aventura; os planos de cada
+Os ofícios do subterrâneo entram no Patch 30 («O subterrâneo e a mina») e o passado (a S3, a arqueologia) no Patch 37, com a fé e o saber; os planos de cada
 um seguem o molde dos ofícios ([`oficios.md`](oficios.md)).

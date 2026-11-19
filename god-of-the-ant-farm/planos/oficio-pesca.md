@@ -1,4 +1,4 @@
-# A Pesca — o documento completo (Patch 26, parte 2: o primeiro ofício)
+# A Pesca — o documento completo (Patches 25 e 26: o primeiro ofício)
 
 **A máxima:** pescar tem de ser tão bom que poderia ser um jogo sozinho — horas a fio, só pescando, sem enjoar. Este documento
 usa a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)). Os números são propostas para começar; a afinação
@@ -89,7 +89,7 @@ lendária. **O peso:** o comum e o recorde possível do mundo.
 | Lagosta | toca no recife, noite | covo, mergulho | — | 0,5–8 kg | incomum | o banquete do rico |
 | Ostra de pérola | recife fundo | mergulho | — | — | rara (a pérola, mais ainda) | a pérola para o ourives |
 
-### Mar aberto (o barco; o alto-mar inteiro com o navio, no Patch 29)
+### Mar aberto (o barco; o alto-mar inteiro com o navio, no Patch 35)
 
 | Espécie | Onde e quando | Isca | Morde / luta | Peso | Raridade | Para quê |
 |---|---|---|---|---|---|---|
@@ -281,16 +281,16 @@ coleção, os aprendizes, os lendários).
 
 ## 15. Os derivados e as fases
 
-**Os derivados:** o pescador da costa, o mergulhador, o pescador de alto-mar (Patch 29), o salgador e o defumador; e os que servem
+**Os derivados:** o pescador da costa, o mergulhador, o pescador de alto-mar (Patch 35), o salgador e o defumador; e os que servem
 a pesca: o cordoeiro, o cesteiro, o carpinteiro naval.
 
 | Fase | O quê |
 |---|---|
-| P1 — O rio e o lago | a vara, a linha de mão, o arpão, o covo; as 12 espécies de água doce; o Velho do Lago; a tábua dos recordes |
-| P2 — A costa | a tarrafa, a costa e os do fundo; a canoa e o barco a remo (a N1 do [`navios.md`](navios.md)) |
+| P1 — O rio e o lago (Patch 25) | a vara, a linha de mão, o arpão, o covo; as 12 espécies de água doce; o Velho do Lago; a tábua dos recordes |
+| P2 a P4 (Patch 26) — A costa | a tarrafa, a costa e os do fundo; a canoa e o barco a remo (a N1 do [`navios.md`](navios.md)) |
 | P3 — O mergulho | o recife, a pérola, a moreia, o tubarão |
 | P4 — A conserva e o mercado | a salga, a defumação, o garum, as encomendas, o concurso |
-| Patch 29 | o alto-mar, com o navio |
+| Patch 35 | o alto-mar, com o navio |
 
 ## 16. As provas
 

@@ -241,7 +241,7 @@ das portas do mundo; o medidor da sociedade (a gente, os nascimentos e os casais
   mentira, o segredo e a chantagem (quem sabe o quê sobre quem); os grupos (panelinhas, confrarias, gangues, seitas); mais
   esqueletos de missão (15 a 20: a herança, o amor proibido, a falsa acusação, o monstro que não é, a peregrinação à
   caverna, a caça ao bicho raro, o sobrevivente da expedição…); falas passando de 5.000; clipes passando de 300.
-- **Patch 25 — O acabamento:** os murmúrios de voz por povo, os lábios com a fala, os sonhos e os pesadelos contados; a
+- **O acabamento (agora o Patch 27, depois da Pesca; veja o [`roteiro.md`](roteiro.md)):** os murmúrios de voz por povo, os lábios com a fala, os sonhos e os pesadelos contados; a
   captura de movimento gratuita, se a licença permitir.
 
 ## 8. Como rodar com o limite semanal

@@ -1,10 +1,10 @@
-# Os Ofícios — o plano (do Patch 26 em diante)
+# Os Ofícios — o plano (do Patch 25 em diante)
 
 O pedido do dono (a conversa depois do plano do Patch 23): cada ofício com uma mecânica própria, **profunda e ligada ao
 mundo** — nunca um minijogo solto. Gostoso de fazer (a recompensa que se vê e se ouve), com progressão, recompensas e um
 ciclo que prende: «só esse ofício poderia ser um jogo». Ofício no sentido largo: **o que o personagem está vivendo** —
 pescar, guerrear, roubar, rezar, e também ser escravo de galé, preso, órfão. Uma escada: as mecânicas fundamentais, os
-ofícios fundamentais e os ofícios derivados. Vem depois do Patch 25 (o plano dos NPCs está em
+ofícios fundamentais e os ofícios derivados. Vem depois do Patch 24 (o plano dos NPCs está em
 `planos/patch23-as-vidas.md`); é trabalho de meses, um ofício por vez, cada um até ficar ótimo.
 
 ## 1. O princípio: o ofício é um laço do mundo, não um minijogo
@@ -75,7 +75,7 @@ Como na vida: **um ofício principal e quantos o tempo deixar praticar.**
 | A interação e o trabalho das mãos | feito (`G.Interact`, `G.Trabalho`) | os gestos de cada ofício |
 | As coisas, a mochila, a forma das coisas | feito (`G.Inv`, `G.ItemArt`) | as ferramentas novas |
 | A origem das coisas | feito (`G.Origem`) | as receitas novas |
-| O combate do corpo | a base feita (`G.Combate`) | a profundidade (Patch 28) |
+| O combate do corpo | a base feita (`G.Combate`) | a profundidade (Patch 32) |
 | A água, o relevo, o céu, a mata | feito (a natureza, fase A) | — |
 | O mercado do corpo | as bancas existem | comprar e vender com preço que reage, a oficina própria |
 | Mestre e aprendiz | — | ensinar e aprender técnicas, pelos laços |
@@ -185,23 +185,11 @@ fato do mundo, nunca de um menu.
 correntes, o chicote, a fome; os laços com os outros remadores; o plano de fuga (uma missão com eles: a ferramenta escondida,
 a hora da tempestade, a revolta); e a saída — fugir, ser libertado, morrer — para o próximo ofício.
 
-## 8. A ordem dos patches (um tronco por vez, quando as bases dele estiverem prontas)
+## 8. A ordem dos patches
 
-| Patch | O que entra | Por quê agora |
-|---|---|---|
-| 26 — A fundação dos ofícios | a máquina comum a todos (o registro dos ofícios, a prática, as técnicas, os títulos, a coleção, os recordes, a aba do ofício no painel), o kit da recompensa audiovisual (a câmera, a câmera lenta, o som que sobe, o cartão da coisa, a reação das pessoas), o mercado do corpo, mestre e aprendiz; e **a Pesca** inteira | as bases da água e do peixe existem |
-| 27 — A terra | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | o campo, as estações e os bichos existem |
-| 28 — A arena e a guerra | o combate profundo; o guerreiro, o gladiador (a arena com o corpo), o mercenário, o campeão | depende do combate |
-| 29 — O mar | a vida a bordo e o porto ([`navios.md`](navios.md)); o marinheiro, o navegador, o remador de galé ([`condicao-escravo-gale.md`](condicao-escravo-gale.md)), o pirata, o pescador de alto-mar | depende do navio por dentro |
-| 30 — A mata | o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro | a mata e os bichos existem |
-| 31 — A oficina | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | a origem das coisas existe |
-| 32 — A sombra | o ladrão, o contrabandista, o espião, o assassino | depende do conflito (Patch 24) |
-| 33 — O comércio | o mercador, o caravaneiro, o taverneiro | o mercado do corpo (26) |
-| 34 — A fé e o saber | o sacerdote, o curandeiro, o escriba, o oráculo | o templo e a biblioteca existem |
-| 35 — A arte | o bardo (as histórias do mundo), o músico, o ator, o auriga | as histórias e o teatro existem |
-| 36 — O poder | jogar como quem governa, o conselheiro, o juiz | a política existe |
-
-As condições e as passagens entram com o tronco de cada uma (o remador de galé no 29, o preso no 32, o gladiador liberto no 28).
+A ordem de fazer está no [`roteiro.md`](roteiro.md) (patches 25 a 39): a fundação e a Pesca primeiro; depois quem tira da
+natureza (a terra, a mata, a mina), quem transforma (a oficina), quem luta, rouba e navega (a arena, a sombra, o mar), quem troca
+(o comércio) e, por último, a fé e o saber, a arte e o poder. As condições e as passagens entram com o tronco de cada uma.
 
 ## 9. Como cada patch de ofício se prova
 

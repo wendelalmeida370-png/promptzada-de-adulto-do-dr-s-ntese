@@ -6,32 +6,38 @@ que for feito sai da lista «a fazer» com o commit que fez.
 
 ## O roteiro
 
-| Ordem | O quê | Onde está o plano | Estado |
-|---|---|---|---|
-| 1 | **Patch 23 — «As Vidas»** (a memória e os laços, a aba de Relacionamentos, a voz, a fábrica de animações, os pedidos que viram missão, a vida que muda) | [`patch23-as-vidas.md`](patch23-as-vidas.md) | planejado |
-| 2 | **Patch 24 — O conflito** (o inimigo que age, os planos de vários passos, a mentira e a chantagem, os grupos, mais missões, mais falas e animações) | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 | ideia |
-| 3 | **Patch 25 — O acabamento** (os murmúrios de voz, os lábios com a fala, os sonhos) | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 | ideia |
-| 4 | **Patch 26 — A fundação dos ofícios** (a máquina comum a todos os ofícios) **e a Pesca inteira** | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) | planejado |
-| 5 | **Os barcos pequenos** (a canoa, a jangada, o barco a remo: a N1 da vida a bordo, antes da Pesca da costa) | [`navios.md`](navios.md) | ideia do dono |
-| 6 | **Patches 27 a 36 — um tronco de ofícios por vez** (a terra, a arena e a guerra, **o mar com a vida a bordo e o porto**, a mata, a oficina, a sombra, o comércio, a fé e o saber, a arte, o poder) | [`oficios.md`](oficios.md) §8, [`navios.md`](navios.md), [`condicao-escravo-gale.md`](condicao-escravo-gale.md) | ideia |
+**A ordem de fazer está em [`roteiro.md`](roteiro.md)** (a linha do brainstorm, a lógica da ordem e os patches de 23 a 39). A
+ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de fazer é a do roteiro.
+
+| Patch | O quê |
+|---|---|
+| 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões) |
+| 24 | O conflito |
+| 25 | A fundação dos ofícios e a Pesca de água doce |
+| 26 | Os barcos pequenos e a Pesca inteira |
+| 27 | O acabamento e o molde afinado |
+| 28 a 31 | A terra, a mata, o subterrâneo e a mina, a oficina |
+| 32 a 35 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
+| 36 a 39 | O comércio, a fé, o saber e o passado, a arte, o poder |
 
 ## Os arquivos
 
+- [`roteiro.md`](roteiro.md) — o roteiro: a linha do brainstorm e a ordem de fazer.
 - [`npcs-brainstorm.md`](npcs-brainstorm.md) — o brainstorm dos NPCs: a matriz de impacto e dificuldade, as falas
   contextuais, as animações e o teto delas, as missões geradas e os truques para chegarem perto das melhores.
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
-- [`oficios-fundacao.md`](oficios-fundacao.md) — a fundação dos ofícios por inteiro (o Patch 26).
-- [`oficio-pesca.md`](oficio-pesca.md) — a Pesca por inteiro (o primeiro ofício, no Patch 26).
+- [`oficios-fundacao.md`](oficios-fundacao.md) — a fundação dos ofícios por inteiro (o Patch 25).
+- [`oficio-pesca.md`](oficio-pesca.md) — a Pesca por inteiro (o primeiro ofício, nos Patches 25 e 26).
 - [`navios.md`](navios.md) — a vida a bordo e o porto (os barcos e os navios por dentro, o itinerário do porto, a viagem, a
   batalha no mar): a mecânica fundamental que o dono vai pedir, da qual a Pesca e o mar dependem.
 - [`condicao-escravo-gale.md`](condicao-escravo-gale.md) — o remador de galé por inteiro (a condição do galeote e o ofício
-  do remador livre; Patch 29).
+  do remador livre; Patches 34 e 35).
 - [`oficio-gladiador.md`](oficio-gladiador.md) — o gladiador por inteiro (a escola, os tipos, a arena visceral, o favor da
-  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 28).
+  multidão, as feras e as execuções, os jogos, a fama nos muros; Patch 32).
 - [`oficio-capataz.md`](oficio-capataz.md) — o capataz por inteiro (o comitre da galé e o feitor: o poder, o medo, o ódio que
-  volta, a corrupção, a redenção; Patch 29).
+  volta, a corrupção, a redenção; Patch 35).
 - [`oficio-estivador.md`](oficio-estivador.md) — o estivador por inteiro (o homem do porto: a carga, o porão, a turma, a noite
   do porto, o contrabando).
 - [`oficio-mineiro.md`](oficio-mineiro.md) — o mineiro por inteiro (os minerais e as pedras, a prospecção, a picareta, o fogo e

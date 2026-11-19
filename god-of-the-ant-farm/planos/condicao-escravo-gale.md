@@ -3,7 +3,7 @@
 **A máxima:** viver no banco de uma galé tem de ser tão intenso que poderia ser um jogo sozinho. **O nome:** o remador forçado
 era o **galeote** («condenado às galés»); o que rema por soldo é o **remador**. O jogo tem os dois: o ofício do remador livre
 e a condição do galeote. Usa a fundação dos ofícios ([`oficios-fundacao.md`](oficios-fundacao.md)) e **depende da vida a
-bordo** ([`navios.md`](navios.md): o navio por dentro, o chão que anda, a batalha no mar). Entra no Patch 29, «O mar». Os
+bordo** ([`navios.md`](navios.md): o navio por dentro, o chão que anda, a batalha no mar). Entra nos Patches 34 (o remador livre) e 35 (o galeote), «O mar». Os
 números são propostas para começar.
 
 ## 1. A fantasia

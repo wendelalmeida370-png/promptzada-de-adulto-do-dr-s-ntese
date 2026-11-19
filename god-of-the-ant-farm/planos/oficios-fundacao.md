@@ -1,4 +1,4 @@
-# A fundação dos ofícios (Patch 26, parte 1)
+# A fundação dos ofícios (Patch 25)
 
 A máquina comum a todos os ofícios. Feita uma vez, cada ofício novo passa a ser **os seus dados e o seu gesto próprio** — a
 prática, as técnicas, os títulos, a coleção, a recompensa que se vê, o mercado, o mestre e o aprendiz já vêm prontos. A visão
