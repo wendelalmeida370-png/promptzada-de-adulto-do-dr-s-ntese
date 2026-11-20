@@ -17,6 +17,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
 | 27 | O acabamento, o molde afinado, a cozinha e o taverneiro (o segundo ofício) |
+| Sa | **O saber** (proposta: a base da descoberta, antes da terra) |
 | 28 a 32 | A terra, **a escalada**, a mata, o subterrâneo e a mina, a oficina |
 | 33 a 36 | A arena e a guerra, a sombra e a lei (o juiz), o porto e o navio por dentro, a viagem e a batalha no mar |
 | 37 a 40 | O comércio, a fé, o saber e o passado, a arte, o poder |
@@ -98,6 +99,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   e na primeira vida, as escolhas do dono e o teste do novato (rascunho).
 - [`vozes.md`](vozes.md) — as vozes e o rosto que fala: as vozes de IA nas falas curtas e fixas, os murmúrios por povo, a boca que
   acompanha, e a captura do rosto (a decidir).
+- [`saber.md`](saber.md) — o saber: a base da descoberta, da pesquisa e da técnica (quem descobriu, por que causa, onde mora, como
+  se perde), os ramos da época, as oito perícias novas, como o corpo descobre e os ofícios que nascem dele (proposta).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -145,6 +148,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - **As vozes** (**aprovado**, 20/11/2026): **vozes de verdade, feitas por IA, nas falas curtas e fixas** e **os murmúrios por povo**
   nas outras, no Patch 27 — tudo feito sem trabalho do dono, que só joga e diz se gostou; a captura do rosto fica a decidir
   ([`vozes.md`](vozes.md)).
+- **O saber** (proposta, 20/11/2026, a ideia do dono): uma base da tecnologia, da pesquisa e da ciência — todo saber com quem o
+  descobriu, a causa, onde mora e como se perde —, com oito perícias novas e os ofícios que nascem dela; espera a aprovação
+  ([`saber.md`](saber.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 78 ofícios (com o carrasco) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

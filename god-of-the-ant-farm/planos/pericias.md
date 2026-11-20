@@ -37,6 +37,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 | **A lei e a gente** | o crime e a testemunha, a fama, os boatos, os laços, a memória | a sociedade (v14, Patch 23) |
 | **A origem das coisas** | nada vem do nada: tudo pelo livro, de uma fonte de verdade | `ORIGEM.md` |
 | **A distância** | ir longe custa tempo, comida e cansaço; não há atalho no mundo — e o mundo grande a aumenta | [`mundo-grande.md`](mundo-grande.md) |
+| **O saber** | todo saber tem quem o descobriu, por que causa, onde mora — e pode se perder; nunca da contagem de gente | [`saber.md`](saber.md) (proposta) |
 
 ## 3. As perícias
 
@@ -234,8 +235,42 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 - *As técnicas:* O osso no lugar ([o carrasco](oficio-carrasco.md)); A pele inteira, O abate no campo ([o caçador](oficio-cacador.md)).
 - *Quem usa:* o carrasco, o caçador, o açougueiro, o pescador (limpar o peixe).
 
-**As que virão com os seus ofícios:** lavrar e criar (a terra), olaria, tecer, carpintaria, curar, montar a cavalo, cantar e
-contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofício ganhar o documento a fundo.
+### O saber
+
+**Observar** — o olho paciente: o céu, a natureza, o que se repete; a anotação de cada noite ([`saber.md`](saber.md)).
+- *As técnicas:* A noite inteira, O gnômon, As fases da lua, A estrela antes do sol, O caderno do céu, O bicho que volta ([o saber](saber.md)).
+- *Quem usa:* o astrônomo (proposto), o naturalista (proposto), o navegador, o caçador, o lavrador.
+
+**Medir** — o tamanho, o peso e o tempo das coisas: a corda, a vara, a sombra, a balança, o relógio de água.
+- *As técnicas:* A corda de doze nós, A altura pela sombra, A balança de dois pratos, O relógio de água, A groma (as retas do campo), O passo contado ([o saber](saber.md)).
+- *Quem usa:* o engenheiro (proposto), o astrônomo (proposto), o construtor e o arquiteto, o mercador (a balança), o cobrador.
+
+**Calcular** — os números e a forma: da tábua de contas à demonstração.
+- *As técnicas:* A tábua de contas, A regra de três, O triângulo e o círculo, A demonstração, A tabela pronta, O número grande ([o saber](saber.md)).
+- *Quem usa:* o engenheiro (proposto), o astrônomo (proposto), o construtor e o arquiteto, o mercador, o cobrador.
+
+**Ensaiar** — o experimento: tentar, variar uma coisa de cada vez, anotar, repetir; a máquina e a mistura.
+- *As técnicas:* Uma coisa de cada vez, O caderno do ensaio, O modelo pequeno, A repetição, O fracasso que ensina ([o saber](saber.md)).
+- *Quem usa:* o alquimista (proposto), o engenheiro (proposto), o ferreiro, o vidreiro.
+
+**Engenhar** — projetar a máquina e a obra antes da madeira e da pedra: a alavanca, a polia, o arco, a roda d'água.
+- *As técnicas:* A alavanca e o apoio, A polia e o guindaste, O parafuso de água, O arco e a cimbra, A roda d'água, O plano desenhado ([o saber](saber.md)).
+- *Quem usa:* o engenheiro (proposto), o construtor, o estivador (o guindaste), o soldado do cerco.
+
+**Argumentar** — a lógica, a pergunta, a prova, a refutação e a fala que convence — do filósofo ao advogado.
+- *As técnicas:* A pergunta que desmonta, O argumento em passos, A refutação, O exemplo que convence, Falar à assembleia ([o saber](saber.md)).
+- *Quem usa:* o filósofo (proposto), quem governa, o juiz, o advogado.
+
+**Ensinar** — passar o saber: a lição, o discípulo, a escola — quanto do que se sabe chega ao outro.
+- *As técnicas:* A lição pelo exemplo, O discípulo certo, A escola, O livro que ensina sozinho ([o saber](saber.md)).
+- *Quem usa:* o filósofo (proposto), todo mestre de todo ofício, o mestre-escola.
+
+**Curar** — o corpo e a cura: olhar o doente, a ferida, o osso, a febre, o parto, a quarentena.
+- *As técnicas:* Olhar o doente, O osso no lugar, Fechar a ferida, A febre e o repouso, O parto difícil, A quarentena ([o saber](saber.md)).
+- *Quem usa:* o médico (proposto), o curandeiro, a parteira, o barbeiro.
+
+**As que virão com os seus ofícios:** lavrar e criar (a terra), olaria, tecer, carpintaria, montar a cavalo — cada uma entra
+aqui quando o seu ofício ganhar o documento a fundo.
 
 ## 4. Os ofícios e as perícias (a matriz)
 
@@ -265,4 +300,10 @@ contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofíci
 | o conselheiro | **Ler as pessoas** | Governar, Negociar, Investigar, Letras |
 | o soldado de infantaria | **Lutar** (a formação, a lança, o escudo) | Comandar (o graduado) |
 | o cavaleiro | **Lutar** (a montaria, a lança) | Comandar |
+| o filósofo (proposto, [o saber](saber.md)) | **Argumentar** | Ensinar, Letras, Ler as pessoas, Espetáculo |
+| o astrônomo (proposto) | **Observar** | Calcular, Medir, Letras, Ler o tempo |
+| o engenheiro (proposto) | **Engenhar** | Medir, Calcular, Ensaiar, Comandar |
+| o médico (proposto) | **Curar** | Ervas, Observar, Letras, Ler as pessoas |
+| o naturalista (proposto) | **Observar** | Orientar-se, Sobreviver, Rastrear, Letras |
+| o alquimista (proposto) | **Ensaiar** | Avaliar, Forjar, Fermentar, Letras |
 
