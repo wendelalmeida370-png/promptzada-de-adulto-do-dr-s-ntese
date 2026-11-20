@@ -84,6 +84,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   pressões, o erro, o júri, o preço do sangue; com a sombra, no Patch 34).
 - [`oficio-carrasco.md`](oficio-carrasco.md) — o carrasco por inteiro (o cadafalso, o golpe, a mão que treme, a vida à parte, a
   consciência; com o juiz, no Patch 34).
+- [`oficio-cacador.md`](oficio-cacador.md) — o caçador por inteiro (a espreita contra o vento, o tiro, o rastro de sangue, a fera
+  que caça gente, a caçada em turma, o equilíbrio da mata).
+- [`oficio-bardo.md`](oficio-bardo.md) — o bardo por inteiro (as histórias verdadeiras do mundo, a versão escolhida, a canção que muda
+  a fama e vira lenda, a canção como marca).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.

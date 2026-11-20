@@ -109,7 +109,7 @@ capitão é título) · **construtor naval** (o estaleiro, o casco) · ★ [esti
 **A cozinha (3)** ([`cozinha.md`](cozinha.md)): **cozinheiro** (inclui o doceiro, o cozinheiro de bordo, o provador) · **padeiro**
 (inclui o moleiro) · **açougueiro** (inclui o salgador e o defumador)
 
-**A mata (5):** ★ [mateiro](oficio-mateiro.md) (inclui o guia da mata, o batedor) · **caçador** (inclui o armadilheiro, o caçador
+**A mata (5):** ★ [mateiro](oficio-mateiro.md) (inclui o guia da mata, o batedor) · ★ [caçador](oficio-cacador.md) (inclui o armadilheiro, o caçador
 de feras) · **falcoeiro** · **ervanário** (o remédio e o veneno) · **lenhador** (inclui o carvoeiro)
 
 **As alturas (2)** ([`montanha.md`](montanha.md)): **guia de montanha** (inclui o resgatador) · **coletor das alturas** (os
@@ -142,7 +142,7 @@ feirante, o especieiro) · **caravaneiro** · **banqueiro** (inclui o cambista)
 o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola) · **sábio** (o filósofo, o astrólogo, o cartógrafo) ·
 **curandeiro** (inclui o médico, a parteira, o barbeiro)
 
-**A arte (7):** **bardo** (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
+**A arte (7):** ★ [bardo](oficio-bardo.md) (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
 **auriga** · **atleta**
 
 **O poder (6):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·

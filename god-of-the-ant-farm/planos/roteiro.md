@@ -48,6 +48,8 @@ escalada, a montanha e o mundo grande.
 | 34 | **As marcas do mundo** (aprovado; uma máquina do mundo, não dos ofícios — os ofícios têm um pé nela) | a continuidade: quinhentos anos depois, achar a marca de uma vida sua; um registro só para a pintura, a inscrição, a estátua com o rosto, o nome dos lugares, o livro, a canção, o túmulo, o tesouro; a matéria e o cuidado que fazem durar; **o livro das vidas** do jogador | [`marcas.md`](marcas.md) |
 | 35 | **O juiz** | a verdade existe no mundo, o juiz não a vê: o caso, as testemunhas que mentem pela índole, a audiência, a sentença dentro da moldura da lei, as pressões (o poderoso, o suborno, a multidão), o erro que a cidade lembra; com a sombra, no Patch 34 | [`oficio-juiz.md`](oficio-juiz.md) |
 | 36 | **O carrasco** | de papel de um dia a ofício: o golpe que tem de ser um só, a mão que treme (o medo, o laço, o vinho), a vida à parte fora dos muros, o perdão que chega correndo, a recusa; com o juiz, no Patch 34 | [`oficio-carrasco.md`](oficio-carrasco.md) |
+| 37 | **O caçador** | a espreita contra o vento, o tiro, o rastro de sangue, a fera que caça gente e lê você — contra o cérebro e o meio dos bichos que o jogo já tem; a caça que esvazia a mata; com a mata, no Patch 30 | [`oficio-cacador.md`](oficio-cacador.md) |
+| 38 | **O bardo** | juntar as histórias verdadeiras do mundo, escolher a versão (a verdade, o enfeite, a propaganda, a sátira), cantar e ver o mundo mudar; a canção como marca; com a arte, no Patch 39 | [`oficio-bardo.md`](oficio-bardo.md) |
 
 ## 2. A lógica da ordem
 
@@ -85,7 +87,7 @@ load (S4); T-1584 e T-1585.
 | **27 — O acabamento, o molde afinado, a cozinha e o taverneiro** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca; **a base da comida e da cozinha** (os ingredientes finos, o preparo, as receitas de cada povo, a qualidade, a mesa); **o segundo ofício, o taverneiro** — o primeiro cozinheiro, todo de gente, sobre a taverna que o jogo já tem: dois ofícios opostos afinam o molde | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7, [`oficio-taverneiro.md`](oficio-taverneiro.md), [`cozinha.md`](cozinha.md) |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação); os ofícios da cozinha (o padeiro, o moleiro, o açougueiro, o queijeiro) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
 | **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
-| **30 — A mata** | **a mata que pesa** (a fase B da natureza: o passo, a vista, o rumo, a trilha que o mato fecha); o mateiro, o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficio-mateiro.md`](oficio-mateiro.md), [`oficios.md`](oficios.md) |
+| **30 — A mata** | **a mata que pesa** (a fase B da natureza: o passo, a vista, o rumo, a trilha que o mato fecha); o mateiro, o caçador ([`oficio-cacador.md`](oficio-cacador.md)), o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficio-mateiro.md`](oficio-mateiro.md), [`oficios.md`](oficios.md) |
 | **31 — O subterrâneo e a mina** | o corpo debaixo da terra (S1, S2, S4); **o registro do passado começa** (os povos antigos na criação, o enxoval, o tesouro escondido, o tempo que enterra); o mineiro (M1 a M5), o garimpeiro, o escorador, o homem do fogo, o lapidário; o soterrado | 25, 29 (a corda) | o metal e as pedras das oficinas; a base da arqueologia | [`subterraneo.md`](subterraneo.md), [`oficio-mineiro.md`](oficio-mineiro.md), [`passado.md`](passado.md) |
 | **32 — A oficina** | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | 28, 30, 31 (o que a terra, a mata e a mina deram) | as armas, as ferramentas e as coisas de todos os outros | [`oficios.md`](oficios.md) |
 | **33 — A arena e a guerra** | o combate profundo (as zonas, as feridas, o decepar); o gladiador (A1 a A5), o guerreiro, o mercenário, o campeão; a escada no muro do cerco | o combate da v14, 23, 24, 29, 32 (as armas) | a luta que o mar, a sombra e a caça vão usar | [`oficio-gladiador.md`](oficio-gladiador.md) |
@@ -94,7 +96,7 @@ load (S4); T-1584 e T-1585.
 | **36 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar (as viagens de dias, quando o mundo grande chegar) | 33, 34, 35 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
 | **37 — O comércio** | o mercador, o caravaneiro (o taverneiro já veio no 27) | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
 | **38 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 31 (debaixo da terra e o registro do passado), 34 (a sombra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`passado.md`](passado.md), [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
-| **39 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 37 | — | [`oficios.md`](oficios.md) |
+| **39 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o pintor, o escultor, o auriga, o atleta | 23 (as histórias e as marcas), 37 | — | [`oficio-bardo.md`](oficio-bardo.md), [`oficios.md`](oficios.md) |
 | **40 — O poder** | jogar como quem governa (o rei, o cônsul, o imperador, o porta-voz — em cada regime), o conselheiro, o embaixador, o agitador (o juiz já veio no 34) | tudo o que veio antes (o grupo é a corte) | o topo da escada | [`oficio-governante.md`](oficio-governante.md) |
 | **41 — O mundo grande** (quando o PC novo chegar; pode vir antes) | a modalidade dos mapas de dias (2 e 5 km de lado) e as montanhas grandes (500 a 1.000 m): o detalhe como conta, o save do que mudou, a vida por importância (nunca pelo olhar), o 3D por pedaços, o caminho por camadas | o PC novo do dono; as fontes puras da v14 (a mata, o relevo, a água, o céu); a preparação barata de cada patch | a viagem de dias pelo mar, pela floresta e pela montanha | [`mundo-grande.md`](mundo-grande.md) |
 | **42 — A montanha** | a expedição de dias (logo depois do mundo grande: a montanha só existe em dias), a altura, o frio, o tempo da montanha, o cume, as vias e as lendas; o guia, o carregador, o resgatador, os passos e o abrigo | 41, 29, 30, 31 | o passo como estrada; a vista que ensina | [`montanha.md`](montanha.md) |
@@ -130,14 +132,16 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | Quem governa | 40 |
 | O juiz | 34 |
 | O carrasco | 34 |
+| O caçador | 30 |
+| O bardo | 39 |
 | As marcas do mundo | 23 (a frente 23f: o registro, os nomes, o livro das vidas), 31 e 39 (o tempo, o ver e ler) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
-mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro, o mercador, o
-sacerdote e o curandeiro, o bardo; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
+mata (o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro, o mercador, o
+sacerdote e o curandeiro; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
 cristaleiro).
 
 ## 5. Como cada patch anda
