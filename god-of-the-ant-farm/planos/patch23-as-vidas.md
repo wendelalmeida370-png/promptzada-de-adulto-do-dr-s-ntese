@@ -51,7 +51,7 @@ esquecer das memórias, a duração dos pedidos, a vida que muda) é contado no 
 Fase 0  (o coordenador)        o contrato, os números, os mundos prontos refeitos
 Onda 1  (três frentes juntas)  23a A memória e os laços (+ a aba)   23b A voz   23c O corpo que fala
             → junta, provas, publicação v15
-Onda 2  (sobre a onda 1)       23d Os pedidos   23e A vida que muda   23b e 23c: a segunda leva
+Onda 2  (sobre a onda 1)       23d Os pedidos   23e A vida que muda   23f A memória do mundo   23b e 23c: a segunda leva
             → junta, provas, publicação v16
 ```
 
@@ -73,6 +73,7 @@ não têm o que contar. A fábrica de animações e a máquina de falas não dep
 | 23b | 680–699 | 1840–1869 | 1650–1659 | 260–269 |
 | 23c | 700–719 | 1870–1899 | 1660–1669 | 270–279 |
 | 23d | 720–739 | 1900–1929 | 1670–1679 | 280–289 |
+| 23f | 760–779 | 1960–1989 | 1690–1699 | 300–309 |
 | 23e | 740–759 | 1930–1959 | 1680–1689 | 290–299 |
 
 ## 5. Onda 1
@@ -236,6 +237,17 @@ das portas do mundo; o medidor da sociedade (a gente, os nascimentos e os casais
 +80 clipes (o pedido de ajuda, a briga de casal, o namoro, o luto, a festa, a cobrança).
 
 **Fecho da onda 2:** a junta, as provas, os mundos prontos, a publicação da v16.
+
+### 23f — A memória do mundo (as marcas e o livro das vidas)
+
+A memória das pessoas (a 23a) e **a memória do mundo**, juntas no patch que se chama As Vidas ([`marcas.md`](marcas.md)):
+**o registro das marcas** (quem fez, de quem fala, onde está, de que é feita, quando, como está), **o nome dos lugares** (quem nomeia o
+quê e quando; o nome que muda e o velho que fica), **as marcas que o mundo escreve sozinho** (a batalha, a cheia, a peste, o milagre do
+deus, a fundação, a pedra gasta pelos pés), **os pedaços de hoje dentro dele** (as pinturas e os túmulos das cavernas, as lendas, as
+memórias da cidade e do povo, os recordes), e **o livro das vidas** — as vidas que o jogador viveu, o que cada uma deixou e como está
+hoje, e o registro dos mortos que nunca esquece quem o deus viveu. **Provas:** toda marca tem o ato que a fez; a destruída fica no
+registro com a causa; o mundo sem o corpo é o mesmo; um mundo de mil anos com o registro dentro do custo. **Pronto quando:** num mundo
+de quinhentos anos, o jogador acha uma marca de uma vida sua — e o livro das vidas diz o que aconteceu com ela.
 
 ## 7. Fica para depois
 

@@ -45,7 +45,7 @@ escalada, a montanha e o mundo grande.
 | 31 | **A comida e a cozinha** (aprovado; o retorno pelo mundo e os estados que a comida dá) | o jogo já tem a metade de baixo (a comida com origem: a despensa sabe de que é feita); falta a de cima: os ingredientes finos (o bicho, a espécie, o sal com fonte, os temperos, as especiarias de longe), o preparo, as receitas de cada povo e a combinação livre, a qualidade pelas causas, o que a comida faz, a mesa; uma base nova e os ofícios da cozinha | [`cozinha.md`](cozinha.md) |
 | 32 | **A lista dos ofícios** (aprovada) | 77 ofícios e 13 condições, sem redundância (especialidades, papéis, títulos e funções do mundo) | [`oficios.md`](oficios.md) §6 |
 | 33 | **Quem governa** | o poder em cada regime (do imperador ao porta-voz), as alavancas (a lei, o tesouro, as obras, as pessoas, a justiça, a guerra, a fé, a imagem), os estamentos, a corte, governar com o que se sabe, o legado — sobre a política que o jogo já tem | [`oficio-governante.md`](oficio-governante.md) |
-| 34 | **As marcas do mundo** (a decidir) | a continuidade: quinhentos anos depois, achar a marca de uma vida sua; um registro só para a pintura, a inscrição, a estátua com o rosto, o nome dos lugares, o livro, a canção, o túmulo, o tesouro; a matéria e o cuidado que fazem durar; **o livro das vidas** do jogador | [`marcas.md`](marcas.md) |
+| 34 | **As marcas do mundo** (aprovado; uma máquina do mundo, não dos ofícios — os ofícios têm um pé nela) | a continuidade: quinhentos anos depois, achar a marca de uma vida sua; um registro só para a pintura, a inscrição, a estátua com o rosto, o nome dos lugares, o livro, a canção, o túmulo, o tesouro; a matéria e o cuidado que fazem durar; **o livro das vidas** do jogador | [`marcas.md`](marcas.md) |
 
 ## 2. A lógica da ordem
 
@@ -76,9 +76,9 @@ load (S4); T-1584 e T-1585.
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
 | **C — O calendário: o ano de quatro estações** (o primeiro, antes do 23) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, as migrações, o mar fechado) e o que se vê | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md) |
-| **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md) |
+| **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda; **a memória do mundo** (as marcas e o livro das vidas, a frente 23f) | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md), [`marcas.md`](marcas.md) |
 | **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
-| **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), **as marcas do mundo** (o registro, o nome dos lugares, o livro das vidas), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md), [`marcas.md`](marcas.md) |
+| **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); **o vento que empurra a vela, a corrente e a maré**; a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **27 — O acabamento, o molde afinado, a cozinha e o taverneiro** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca; **a base da comida e da cozinha** (os ingredientes finos, o preparo, as receitas de cada povo, a qualidade, a mesa); **o segundo ofício, o taverneiro** — o primeiro cozinheiro, todo de gente, sobre a taverna que o jogo já tem: dois ofícios opostos afinam o molde | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7, [`oficio-taverneiro.md`](oficio-taverneiro.md), [`cozinha.md`](cozinha.md) |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação); os ofícios da cozinha (o padeiro, o moleiro, o açougueiro, o queijeiro) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
@@ -126,7 +126,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O taverneiro | 27 |
 | A comida e a cozinha | 27 (a base), 28 (os ofícios da cozinha) |
 | Quem governa | 40 |
-| As marcas do mundo | 25 (o registro, os nomes, o livro das vidas), 31 e 39 (o tempo, o ver e ler) |
+| As marcas do mundo | 23 (a frente 23f: o registro, os nomes, o livro das vidas), 31 e 39 (o tempo, o ver e ler) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |
@@ -138,8 +138,8 @@ cristaleiro).
 
 ## 5. Como cada patch anda
 
-**Todo patch de ofício traz a sua parte das cinco máquinas:** as falas, as animações, as interações, o grupo e as marcas daquele
-ofício (a seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+**Todo patch de ofício alimenta as cinco máquinas do mundo** (que servem a tudo, não só aos ofícios): as falas, as animações, as
+interações, o grupo e as marcas daquele ofício (a seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 
 Cada patch segue o protocolo de qualidade do `CLAUDE.md`: o plano com os números de cada frente, o contrato, as frentes em
 paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar. **E o teste

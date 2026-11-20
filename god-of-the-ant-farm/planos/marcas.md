@@ -1,4 +1,4 @@
-# As marcas do mundo — a memória que fica (proposta, 20/11/2026)
+# As marcas do mundo — a memória que fica (aprovado pelo dono, 20/11/2026)
 
 O pedido do dono: **a sensação de continuidade** — quinhentos anos depois, vivendo outra pessoa, passar por um lugar e ver uma marca
 que você mesmo deixou: a pintura, a escrita, a rua com o seu nome, a estátua, o livro em sua honra, a escultura que você fez quando
@@ -14,9 +14,11 @@ foi escultor, o tesouro que um rei escondeu ao fugir e que você acha seiscentos
   pessoa.
 - **Falta um sistema só:** **o registro das marcas** — onde toda marca do mundo tem quem a fez, de quem ela fala, onde está, de que é
   feita, quando nasceu e como está hoje.
-- **A semântica:** é **uma base** — *a memória do mundo*: tudo o que se faz pode deixar marca, e a marca dura pelo que é feita e pelo
-  cuidado que recebe ([`pericias.md`](pericias.md)). A máquina é o registro. **E cada ofício registra os tipos de marca que deixa** —
-  a quinta máquina dos ofícios, ao lado das falas, das animações, das interações e do grupo.
+- **A semântica (a correção do dono, 20/11/2026):** é **uma base** — *a memória do mundo*: tudo o que acontece pode deixar marca, e a
+  marca dura pelo que é feita e pelo cuidado que recebe ([`pericias.md`](pericias.md)). **O registro é uma máquina do mundo, não dos
+  ofícios:** a batalha, a cheia, a peste, o milagre do deus, a fundação de uma cidade, o amor, o nascimento e a morte deixam marcas
+  sem ofício nenhum. **Os ofícios têm um pé nela:** cada um alimenta o registro com os tipos de marca que deixa, lê ou apaga — como
+  alimenta as outras máquinas do mundo (as falas, as animações, as interações e o grupo, que também servem a tudo, não só aos ofícios).
 - **Com o passado em camadas** ([`passado.md`](passado.md)), as duas coisas se completam: o passado diz **o que o tempo enterra**; as
   marcas dizem **o que cada coisa significa** — de quem é, quem fez, o que lembra.
 
@@ -69,6 +71,21 @@ Cada marca nasce **de um ato de verdade**, pelas mesmas regras para o corpo e pa
 - **o ferreiro e o ourives** dão nome à espada e gravam a taça; **o construtor** grava a dedicatória;
 - **o mateiro** talha a árvore; **o montanhês** põe a pedra no monte do cume e crava a estaca; **o navegador** dá nome à ilha;
 - **qualquer um** risca a parede da taverna, grava o nome do amor no tronco, deixa a mão no barro.
+
+## 4b. As marcas que não são de ofício (o mundo também escreve)
+
+| O que acontece | A marca que fica |
+|---|---|
+| **A batalha** | o campo de ossos e de armas, os muros queimados, as covas dos soldados, **o troféu** erguido pelo vencedor, o nome do campo |
+| **A cheia, o terremoto, o vulcão, o fogo** | **a linha da água na parede**, a camada de cinza, a ponte caída, a cidade nova sobre a velha |
+| **A peste e a fome** | a cova de muitos, a capela dos mortos, a canção da fome, o lugar que o povo evita |
+| **O deus** (no Modo Deus) | **a cratera da pedra que caiu do céu**, a árvore que o raio partiu, a fonte que brotou, o lugar sagrado onde o deus agiu — **os atos do deus também ficam no livro das vidas** |
+| **A fundação de uma cidade** | a primeira pedra, o nome |
+| **O crime** | **o lugar que o povo evita** («a casa onde mataram a família») — a marca que é só crença |
+| **O amor, o nascimento, a morte** | os nomes no tronco, a mão da criança no tijolo, a lápide |
+| **O costume** | **a pedra gasta pelos pés**: os degraus do templo afundados por séculos de peregrinos, o caminho que os pés abriram no capim, a soleira gasta da taverna mais velha |
+| **A festa** | a tradição que dura séculos (a festa do herói que ninguém mais lembra quem foi) |
+| **Os bichos e a natureza** | a árvore mais velha do mundo, a toca queimada do dragão, as garras do urso no tronco, a cachoeira com nome |
 
 ## 5. O nome dos lugares (uma parte das marcas)
 
@@ -177,7 +194,8 @@ da inauguração, o deus que derruba a estátua); e **o teste do dono: quinhento
 
 ## 13. Quando entra
 
-**A base (Mc1, Mc2, Mc5) com a fundação dos ofícios, no Patch 25** — o registro, o nome dos lugares e o livro das vidas, com os pedaços de
-hoje dentro: **quanto antes, mais história os mundos guardam** quando os ofícios chegarem (a mesma ideia do passado em camadas). **Cada
-ofício registra os tipos de marca que deixa no seu patch** (a quinta máquina); o tempo e o cuidado (Mc3) e o ver e ler (Mc4) crescem
-com o passado (Patch 31) e com a arte (Patch 39) ([`roteiro.md`](roteiro.md)).
+**A base (Mc1, Mc2, Mc5) no Patch 23, «As Vidas», como a frente 23f** — a memória do mundo ao lado da memória das pessoas (a 23a),
+e o livro das vidas no patch que se chama As Vidas: o registro, o nome dos lugares, as marcas do mundo que não são de ofício (a
+batalha, a cheia, o milagre) e os pedaços de hoje dentro. **Quanto antes, mais história os mundos guardam** (a mesma ideia do passado em
+camadas). **Cada ofício alimenta o registro no seu patch**; o tempo e o cuidado (Mc3) e o ver e ler (Mc4) crescem com o passado (Patch
+31) e com a arte (Patch 39) ([`roteiro.md`](roteiro.md)).

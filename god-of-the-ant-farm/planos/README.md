@@ -12,7 +12,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | Patch | O quê |
 |---|---|
 | antes do 23 | **O calendário** — o ano de quatro estações (aprovado) |
-| 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões) |
+| 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões; a memória do mundo e o livro das vidas) |
 | 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
@@ -109,8 +109,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
-- **As marcas do mundo** (20/11/2026, **proposta, a decidir**): uma base — a memória do mundo — e um registro só das marcas,
-  para a continuidade de séculos; cada ofício registra os tipos de marca que deixa (a quinta máquina) ([`marcas.md`](marcas.md)).
+- **As marcas do mundo** (**aprovado**, 20/11/2026): uma base — a memória do mundo — e um registro só das marcas, para a
+  continuidade de séculos. **É uma máquina do mundo, não dos ofícios** (a batalha, a cheia, o milagre também deixam marca); os
+  ofícios têm um pé nela. **As cinco máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas) servem a tudo, e
+  cada ofício as alimenta ([`marcas.md`](marcas.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 77 ofícios e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

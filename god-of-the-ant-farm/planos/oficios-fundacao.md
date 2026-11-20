@@ -202,9 +202,11 @@ do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
 | **A galé** | baixa e larga no banco, a fila dos remos; o escuro do porão | a flauta, as vozes do chefe dos remos, o remo na água, o chicote | o choque do abalroamento, a onda que entra | o tempo do remo, o fôlego, o ânimo | quase nada: o galeote não tem mochila (o esconderijo) |
 | **O estivador** | perto e de lado na prancha, alta no porão | o canto da turma, o ranger da prancha, o guindaste, o cais | a carga que cai, a prancha que balança | o peso e o equilíbrio da carga | a vista do carregador (o que se leva nos braços) |
 
-### 2.14 As falas, as animações, as interações, o grupo e as marcas de cada ofício (a ideia do dono, 20/11/2026)
+### 2.14 O que cada ofício traz às máquinas do mundo (a ideia do dono, 20/11/2026)
 
-**Todo patch de ofício traz a sua parte das três máquinas**, como traz as perícias e a camada do ambiente:
+**As falas, as animações, as interações, o grupo e as marcas são máquinas do mundo, não dos ofícios** — servem a tudo: às pessoas,
+às condições, à natureza, ao deus. **Todo patch de ofício alimenta as cinco** com o que é dele, como traz as perícias e a camada do
+ambiente:
 
 - **As falas** (a máquina da 23b): os **assuntos novos** que o ofício cria no mundo (o peixe recorde, a trilha nova, o túmulo
   violado), as falas do trabalho (dos colegas, do mestre, de quem compra), as reações curtas da hora (o «pegou!», o «os macacos
