@@ -151,6 +151,9 @@ cristaleiro).
 **Todo patch de ofício alimenta as cinco máquinas do mundo** (que servem a tudo, não só aos ofícios): as falas, as animações, as
 interações, o grupo e as marcas daquele ofício (a seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 
+**Todo patch vem com o arcabouço inteiro** (a regra do dono, 20/11/2026): nenhuma coisa nova chega sem **as animações, o cérebro, os
+sons, as interações, o desenho e as provas** de que precisa — e com a melhoria do que já existe onde ela pedir.
+
 Cada patch segue o protocolo de qualidade do `CLAUDE.md`: o plano com os números de cada frente, o contrato, as frentes em
 paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar. **E o teste
 do dono no fim de cada ofício: horas a fio, sem enjoar** — se enjoar, o ofício volta para a mesa antes do próximo tronco.

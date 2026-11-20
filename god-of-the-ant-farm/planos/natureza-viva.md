@@ -162,6 +162,25 @@ da coruja no oco · **o urso saindo da caverna com os filhotes na primavera** ·
 do sol · **a represa do castor** · a ave que leva ao mel · a garça atrás do arado · **as pegadas na neve** · a nuvem de vaga-lumes na
 beira do rio.
 
+## 12b. O que vem junto (o arcabouço inteiro — o pedido do dono)
+
+**Este patch não entrega comportamento sem o que o sustenta.** Cada coisa nova chega com **as animações, o cérebro, os sons, as
+interações, o desenho e as provas** de que precisa — e com a melhoria do que já existe onde ela pedir:
+
+| Parte | O que vem junto |
+|---|---|
+| **As animações** | **um gesto para cada comportamento novo**, com a sua pose em cada família de bicho: o namoro (o bramido, **os chifres que se chocam**, a dança dos flamingos, o canto), **fazer o ninho, chocar, alimentar os filhotes**, carregar a cria, **cavar a toca e entrar e sair dela**, **subir na árvore, pular de copa em copa**, arrastar a presa para o galho, **o urso que pega o salmão no ar**, **o salmão que salta a queda**, **a baleia que salta**, o voo em V e o pouso do bando, nadar na travessia, **entrar na hibernação e acordar dela**, o castor que carrega o galho, a ave que bica o carrapato nas costas do búfalo, **a ave que chama e voa à frente** (o indicador), o bicho que se coça; **e os ajustes** das animações que já existem onde a estação ou a altura pedirem (o passo na neve funda, o andar no galho, o nado da manada) |
+| **O cérebro** | **o fortalecimento da mente dos bichos**: as vontades da estação (o cio, a engorda, a migração, a hibernação, o ninho) como opções do cérebro com causa; **a memória do caminho, do ninho e da toca** (o bicho volta ao mesmo lugar); **o relógio do dia** no peso de cada opção; **o meio da estação** (o frio pela estação e pela altura, a cobertura que cai com as folhas, a neve, **o mapa da comida de cada estação** — o capim, o fruto, a flor —, a água do mar que esquenta e esfria, o ponto do mar que ferve); **a disputa na carcaça** e **as relações entre as espécies** pelas portas da fauna (as opções, os ganchos da vida e dos sentidos) |
+| **Os sons** | **todo comportamento novo com o seu som e o seu dono** (as tabelas de gesto e de ato do som): o bramido do cio, **o estalo dos chifres**, **o coro do amanhecer**, **o coro das rãs**, a coruja, o morcego, **o canto da baleia**, os gritos do bando que passa, o mergulho das aves no cardume, o salmão na queda, o urso na água, o zumbido das abelhas no pomar, o castor batendo o rabo; **o fundo de cada lugar muda com a hora e a estação** (a mata do dia, a da noite, o silêncio do inverno) |
+| **As interações com o mundo** | **o castor e o elefante mudam o mapa** (pelas portas de quem muda o chão); **a cegonha faz o ninho no telhado** das casas da cidade; **a abelha poliniza o pomar** (e a colheita do agricultor sente); **a garça segue o arado**; **o lobo do inverno chega às casas** (o medo das pessoas que já existe); **a ave do mel guia a pessoa** até a colmeia; **o cardume leva o pescador**; **a estação de caçar e de pescar** de cada espécie |
+| **As interações do corpo** | **observar** (o bicho que se deixa ver de longe), **seguir a ave do mel**, **achar o chifre caído** (uma coisa do mundo), **achar o ninho** (os ovos — o coletor das alturas), **chegar perto da toca** e **do urso que hiberna** (o perigo de acordá-lo), **ler as pegadas na neve**, esperar a travessia, **o olho da natureza** |
+| **O desenho** | **os bichos da copa nas árvores de verdade** (os pousos que as árvores já dão), **as bocas das tocas**, **os ninhos** (no penhasco, na copa, no telhado), **o pelo que muda com a estação**, **o bando e o cardume desenhados em quantidade** (muitos, leves, presos ao bando de verdade do mundo — o que só se vê não muda o mundo), os vaga-lumes e o mar que brilha, a neve no pelo, **e a qualidade alta de PC** em cada cena |
+| **O custo** | muitos bichos ao mesmo tempo no orçamento do PC: o desenho em quantidade, o longe mais simples, o bando e o cardume como um todo onde ninguém está perto (sem mudar o mundo) |
+| **As provas** | **todas as provas dos bichos que o jogo já tem** (as espécies como pele, as poses contra o chão, os olhos, o bicho que não pisca, os gestos de cada família, o dragão, a luta, a mente, o equilíbrio da fauna, o meio, o som, o medo, o corpo diante das feras) **rodadas de novo**, e **as novas**: cada comportamento com a sua causa, cada gesto com a sua receita em cada família (a regra do guard), cada som com o seu dono, as cenas da lista em fotos, o equilíbrio por décadas de quatro estações |
+
+**Espécie nova** chega com tudo: a malha (pelo gerador dos bichos), a pintura, os gestos da família, o jeito diante de uma pessoa, o
+lugar no calendário, o som — ou o jogo acusa (as regras que já existem para espécie nova).
+
 ## 13. As regras (a natureza é do mundo, não do jogador)
 
 1. **Tudo tem causa:** a estação, a hora, a comida, a água, o frio, a cria, a lua — **nada é encenado**.

@@ -119,6 +119,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **Todo patch vem com o arcabouço inteiro** (20/11/2026): nenhuma coisa nova chega sem as animações, o cérebro, os sons, as
+  interações, o desenho e as provas de que precisa — e com a melhoria do que já existe onde ela pedir.
 - **A natureza viva** (20/11/2026, o pedido do dono): os bichos ainda melhores junto com as estações — as migrações, o relógio do
   dia, os nichos em cada altura, as relações entre as espécies, a hibernação, o mar que muda, tudo de verdade e lindo como um
   documentário; o calendário vira três ondas ([`natureza-viva.md`](natureza-viva.md)).
