@@ -1,4 +1,4 @@
-# A comida e a cozinha — a base dos ofícios da comida (proposta, 20/11/2026)
+# A comida e a cozinha — a base dos ofícios da comida (aprovado pelo dono, 20/11/2026)
 
 A pergunta do dono: o jogo tem um sistema de culinária — pratos, ingredientes comuns e raros, combinações — que sustente os ofícios
 da cozinha? Se não tem, que seja criado, muito bem feito e completo. **A resposta curta:** o jogo já tem **a metade de baixo** (a
@@ -123,9 +123,46 @@ o recheado, o doce, a conserva:
 | **O utensílio** | a panela boa, o forno de pedra |
 | **A raridade** | o ingrediente raro sobe o prato (e o preço) |
 
-**A qualidade aparece em palavras** («um caldo raso», «um bom caldo», «um caldo que lembra o da mãe»), nunca em estrelas na tela.
+**A qualidade aparece em palavras**, nunca em estrelas — mas em palavras **sempre as mesmas**, uma escada que o jogador aprende:
+
+| Degrau | Como se diz |
+|---|---|
+| 1 | **estragado** — não se come |
+| 2 | **queimado** ou **cru** — come-se por fome |
+| 3 | **raso** — mata a fome e só |
+| 4 | **honesto** — a comida de todo dia, bem feita |
+| 5 | **bom** — pede-se de novo |
+| 6 | **de festa** — o que se serve no casamento |
+| 7 | **de lembrar a vida inteira** — o prato de que se fala por anos |
+
+## 7b. Como se sabe que ficou bom (o retorno, sem estrelas — o pedido do dono)
+
+O retorno vem **do mundo**, por muitos caminhos ao mesmo tempo, para o jogador sentir o nível da comida sem um número:
+
+1. **O próprio prato:** a cor, a casca dourada ou queimada, o vapor, o brilho do molho, o arranjo — **o prato desenhado é o prato
+   feito** (o queimado se vê queimado).
+2. **A prova do cozinheiro:** ao provar, o personagem diz o que sente, **mais preciso quanto maior a perícia** — o aprendiz diz «tá
+   bom, eu acho»; o mestre diz «o caldo encorpou, mas o sal sumiu, e o peixe passou do ponto».
+3. **O rosto de quem come** (os canais do rosto que o jogo já tem): os olhos que fecham na primeira colherada, o sorriso, a pausa de
+   quem saboreia, a careta, o prato empurrado, **o pão passado no fundo do prato**, a criança que recusa ou que pede mais.
+4. **O que volta da mesa:** o prato vazio ou pela metade — **o resto se vê**.
+5. **O que se diz à mesa** (a máquina de falas): «tem mais?», «quem fez isso?», o silêncio de quem só come, a conversa que anima com a
+   comida boa — a mesa alegre ou calada.
+6. **O cheiro que chama:** quem passa na rua vira a cabeça, para, chega perto da porta (o cheiro desenhado no vapor e nas pessoas que
+   reagem a ele).
+7. **O boato:** «a comida da taverna do cais tá boa» — e **a casa enche**; o preço que as pessoas aceitam pagar sobe; **o freguês volta**.
+8. **O pedido:** chamam você para cozinhar no casamento, no funeral, no banquete do palácio — a encomenda é a prova de que a comida é
+   boa.
+9. **O nome:** o prato que fica famoso ganha o nome de quem o faz («o caldo da Lívia»), e o nome corre a cidade.
+10. **O mestre e o concurso:** o mestre-cuca do mundo prova e diz o que falta; **o concurso da festa** da estação, julgado pela cidade
+    — o vencedor anunciado em voz alta.
+11. **O cartão do prato** (o cartão da coisa do kit da recompensa): o nome do prato, **o degrau em palavras**, os ingredientes e o
+    frescor deles, o que ele faz no corpo, **o melhor que você já fez** daquele prato.
+12. **O caderno de receitas:** cada receita com o melhor degrau alcançado e o que se aprendeu nela.
 
 ## 8. O que a comida faz (com causa, sem mágica)
+
+Primeiro, o que toda comida faz:
 
 - **Mata a fome** (o sustento) — o mingau mata pouco e barato; o assado, muito e caro.
 - **Esquenta e refresca:** o caldo quente no inverno ajuda contra o frio (o frio do mundo); a fruta e a água no calor.
@@ -135,6 +172,43 @@ o recheado, o doce, a conserva:
 - **Adoece:** a comida estragada, o peixe velho, a água ruim — a doença do mundo; a dieta só de pão duro no mar longo.
 - **Marca o corpo com causa:** a fome emagrece (já existe); a fartura de anos engorda o rico.
 - **Junta as pessoas:** comer junto faz laço (a mesa da família, o banquete, a mesa da taverna).
+
+## 8b. Os estados que a comida dá (os bônus, com medida — o pedido do dono)
+
+Além de matar a fome, **cada comida pode deixar o corpo num estado** por algumas horas — **pequeno, com causa que a época acreditava ou
+conhecia, e quase sempre com um preço**. O estado mexe um pouco no corpo (o fôlego, o cansaço, o frio, a dor, o medo, o sono) e em
+algumas perícias.
+
+| Comida ou bebida | O estado | O que faz | O preço |
+|---|---|---|---|
+| **O cacau batido** (astecas — a bebida dos nobres e dos guerreiros) | **desperto** | o cansaço cai mais devagar; a vigília da noite (o piloto, o decifrador, o vigia) fica mais firme | o sono demora a vir; caro |
+| **O mel** | **com fôlego** | o fôlego volta mais depressa por um tempo | caro |
+| **O alho** (a comida dos soldados e dos atletas gregos e romanos) | **forte** | a marcha cansa menos; um pouco mais de força no golpe | **o hálito**: quem chega perto torce o nariz (o beijo recusado) |
+| **O caldo quente, o cozido** | **aquecido** | o frio pesa menos (o frio do mundo); repõe o cansaço | pesado: um pouco mais devagar por um tempo |
+| **A pimenta** (astecas) e as especiarias quentes | **aquecido** | o frio pesa menos | a boca que arde; demais, a barriga |
+| **A carne assada** | **saciado e forte** | a fome demora; força no trabalho pesado | **a sonolência** depois |
+| **O mingau da manhã** | **sustentado** | o dia de trabalho cansa um pouco menos | sem graça |
+| **A fruta seca, o pão duro, a carne salgada** | **sustentado** | a fome cresce mais devagar na marcha e no mar | a sede (o salgado) |
+| **A água com vinagre** (a bebida do soldado romano) | **refrescado** | o calor pesa menos | azeda |
+| **O vinho** (com água) | **animado**, com um pouco de **coragem** | o medo pesa menos; a dor também | **a mira e o equilíbrio pioram**; demais, bêbado (o estado que já existe) |
+| **A cerveja, o pulque** | **animado** | o humor sobe; o descanso rende | mais devagar; demais, bêbado (e a lei do pulque) |
+| **O hidromel** (o norte, antes da luta) | **corajoso** | o medo pesa menos | como o vinho |
+| **A hortelã com mel quente** | **com voz** | a voz do bardo, do arauto e do gladiador que fala à multidão (Espetáculo) | nada |
+| **O leite morno** | **sonolento** | o sono vem rápido e fundo | — |
+| **O prato preferido** de alguém | **feliz** | o humor sobe muito; o laço com quem cozinhou | às vezes, a saudade e a lágrima |
+| **A comida estragada** | **enjoado** | a doença (que já existe) | — |
+
+**As regras dos estados:**
+
+1. **Pequenos:** entre 5 e 15 por cento no que mexem; **o prato bom faz um pouco mais** que o raso (a qualidade conta), nunca muito.
+2. **Temporários:** algumas horas do dia; o estado passa.
+3. **Um de cada tipo:** dois cacaus não fazem duas vezes «desperto» — **não se empilha**; e o excesso cobra (o bêbado, o enjoado).
+4. **Com causa e com preço:** cada estado vem de uma comida que a época acreditava ou conhecia, e quase todos têm o seu lado ruim.
+5. **Vistos, não marcados:** o estado aparece no corpo — **as bochechas coradas de quem está aquecido, o passo firme de quem comeu
+   bem, os olhos pesados de quem está sonolento** (o porte e o rosto que o jogo já lê pelas causas) — e, em palavras, no painel do
+   corpo («aquecido», «desperto»); nunca uma aura brilhando.
+6. **Para todos:** as pessoas do mundo ficam nos mesmos estados — **o exército que come carne e bebe vinho antes da batalha luta com
+   menos medo**; a tripulação que só come pão duro, sem ânimo. **A comida que um líder dá ao seu grupo pesa no grupo.**
 
 ## 9. O gesto (cozinhar com as mãos)
 

@@ -105,8 +105,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
-- **A comida e a cozinha** (20/11/2026, **proposta, a decidir**): uma base nova sobre a origem da comida que já existe —
-  os ingredientes finos, as receitas de cada povo, a combinação livre, a qualidade, a mesa ([`cozinha.md`](cozinha.md)).
+- **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes
+  finos, as receitas de cada povo, a combinação livre, a qualidade em sete degraus de palavras, **o retorno pelo mundo** (o rosto
+  de quem come, o prato que volta, o boato, a casa que enche) e **os estados que a comida dá**, pequenos e com preço
+  ([`cozinha.md`](cozinha.md)).
 - **O grupo** (**aprovado**, 20/11/2026): uma máquina só para os companheiros, as equipes, as tripulações, as gangues e
   as tropas; cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito»; **obedecer nunca é automático** —
   cada um responde pela índole, pelo laço, pelo jeito de dizer e pelo contexto ([`grupos.md`](grupos.md) §5).
