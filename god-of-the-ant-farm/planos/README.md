@@ -76,6 +76,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   rende, o saque pelo livro, o resgate, o motim, o corsário, o rei do mar).
 - [`oficio-taverneiro.md`](oficio-taverneiro.md) — o taverneiro por inteiro (a cuba e a adega, ler a sala, o fiado, a briga, ouvir e
   vender o que se ouve, a hospedaria, a lei da bebida de cada povo; o segundo ofício, no Patch 27).
+- [`oficio-governante.md`](oficio-governante.md) — quem governa por inteiro (o poder em cada regime, as alavancas, os estamentos,
+  a corte, governar com o que se sabe, o golpe e a revolução, o legado).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
@@ -105,6 +107,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **A lista dos ofícios** (**aprovada**, 20/11/2026): 77 ofícios e 13 condições, sem redundância — o que não aguentava horas
+  virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes
   finos, as receitas de cada povo, a combinação livre, a qualidade em sete degraus de palavras, **o retorno pelo mundo** (o rosto
   de quem come, o prato que volta, o boato, a casa que enche) e **os estados que a comida dá**, pequenos e com preço

@@ -43,6 +43,8 @@ escalada, a montanha e o mundo grande.
 | 29 | **O grupo** (aprovado; a obediência que não é automática) | os patches dos NPCs não tinham companheiros; uma máquina só para o companheiro, a equipe, a tripulação, a gangue e a tropa (o grupo de grupos do general), e cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito» | [`grupos.md`](grupos.md) |
 | 30 | **O taverneiro** | a casa onde a cidade se encontra: a cuba e a adega, ler a sala, o fiado, a briga, ouvir e vender o que se ouve, a hospedaria; o segundo ofício, no Patch 27 (a taverna do jogo já é a base) | [`oficio-taverneiro.md`](oficio-taverneiro.md) |
 | 31 | **A comida e a cozinha** (aprovado; o retorno pelo mundo e os estados que a comida dá) | o jogo já tem a metade de baixo (a comida com origem: a despensa sabe de que é feita); falta a de cima: os ingredientes finos (o bicho, a espécie, o sal com fonte, os temperos, as especiarias de longe), o preparo, as receitas de cada povo e a combinação livre, a qualidade pelas causas, o que a comida faz, a mesa; uma base nova e os ofícios da cozinha | [`cozinha.md`](cozinha.md) |
+| 32 | **A lista dos ofícios** (aprovada) | 77 ofícios e 13 condições, sem redundância (especialidades, papéis, títulos e funções do mundo) | [`oficios.md`](oficios.md) §6 |
+| 33 | **Quem governa** | o poder em cada regime (do imperador ao porta-voz), as alavancas (a lei, o tesouro, as obras, as pessoas, a justiça, a guerra, a fé, a imagem), os estamentos, a corte, governar com o que se sabe, o legado — sobre a política que o jogo já tem | [`oficio-governante.md`](oficio-governante.md) |
 
 ## 2. A lógica da ordem
 
@@ -90,7 +92,7 @@ load (S4); T-1584 e T-1585.
 | **37 — O comércio** | o mercador, o caravaneiro (o taverneiro já veio no 27) | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
 | **38 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 31 (debaixo da terra e o registro do passado), 34 (a sombra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`passado.md`](passado.md), [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
 | **39 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 37 | — | [`oficios.md`](oficios.md) |
-| **40 — O poder** | jogar como quem governa, o conselheiro, o juiz | tudo o que veio antes | o topo da escada | [`oficios.md`](oficios.md) |
+| **40 — O poder** | jogar como quem governa (o rei, o cônsul, o imperador, o porta-voz — em cada regime), o conselheiro, o juiz, o embaixador, o agitador | tudo o que veio antes (o grupo é a corte) | o topo da escada | [`oficio-governante.md`](oficio-governante.md) |
 | **41 — O mundo grande** (quando o PC novo chegar; pode vir antes) | a modalidade dos mapas de dias (2 e 5 km de lado) e as montanhas grandes (500 a 1.000 m): o detalhe como conta, o save do que mudou, a vida por importância (nunca pelo olhar), o 3D por pedaços, o caminho por camadas | o PC novo do dono; as fontes puras da v14 (a mata, o relevo, a água, o céu); a preparação barata de cada patch | a viagem de dias pelo mar, pela floresta e pela montanha | [`mundo-grande.md`](mundo-grande.md) |
 | **42 — A montanha** | a expedição de dias (logo depois do mundo grande: a montanha só existe em dias), a altura, o frio, o tempo da montanha, o cume, as vias e as lendas; o guia, o carregador, o resgatador, os passos e o abrigo | 41, 29, 30, 31 | o passo como estrada; a vista que ensina | [`montanha.md`](montanha.md) |
 
@@ -122,13 +124,14 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O grupo | 24 (onda 1) |
 | O taverneiro | 27 |
 | A comida e a cozinha | 27 (a base), 28 (os ofícios da cozinha) |
+| Quem governa | 40 |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o caçador e o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro, o mercador, o
-sacerdote e o curandeiro, o bardo, quem governa; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
+sacerdote e o curandeiro, o bardo; e os das alturas a fundo (o guia de montanha, o coletor dos penhascos, o
 cristaleiro).
 
 ## 5. Como cada patch anda

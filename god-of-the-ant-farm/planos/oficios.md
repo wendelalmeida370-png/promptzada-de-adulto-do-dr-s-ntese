@@ -92,77 +92,67 @@ Como na vida: **um ofício principal e quantos o tempo deixar praticar.**
 o Combate, o Mar, a Sombra, o Comércio, a Fé e o saber, a Arte, o Poder. **Os derivados** nascem de cada tronco (a lista a
 seguir).
 
-## 6. Todos os ofícios (os que o mundo já tem e os que vislumbramos)
+## 6. Todos os ofícios (a lista aprovada pelo dono, 20/11/2026)
 
-Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no código); os outros são novos.
+**77 ofícios e 13 condições.** Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
+ramo do mesmo jogo), **papel** ou **título** (um lugar no grupo, um degrau da carreira) ou **função do mundo** (o que se faz por um
+dia). ★ = já tem o seu documento a fundo.
 
-**Água** (tronco: a Pesca)
-- **pescador** ([`oficio-pesca.md`](oficio-pesca.md)), **mergulhador**, **marinheiro**, **estivador** ([`oficio-estivador.md`](oficio-estivador.md)), **salineiro**, **salgador**
-- pescador de rio e de lago (o anzol), pescador de rede e de arrastão, pescador de alto-mar (o tubarão, a baleia), mergulhador
-  de pérolas e de esponjas, carpinteiro naval, **navegador** e piloto ([`oficio-navegador.md`](oficio-navegador.md)), capitão, barqueiro de rio,
-  balseiro, pirata e corsário ([`oficio-pirata.md`](oficio-pirata.md)), remador de galé (a condição do escravo), **contrabandista** do mar
+**O mar (8):** ★ [pescador](oficio-pesca.md) (inclui o pescador de rede) · **mergulhador** (o recife, as pérolas, o naufrágio) ·
+★ [navegador](oficio-navegador.md) (inclui o piloto do porto, o cartógrafo do mar) · **marinheiro** (inclui o barqueiro, o canoeiro;
+capitão é título) · **construtor naval** (o estaleiro, o casco) · ★ [estivador](oficio-estivador.md) (inclui o guindasteiro) ·
+★ [remador de galé](condicao-escravo-gale.md) (voga é título) · ★ [pirata](oficio-pirata.md) (inclui o corsário, o naufragador)
 
-**Terra** (tronco: a Lavoura)
-- **agricultor**, **lavrador**, **fruticultor**, **vinhateiro**, **apicultor**, **sericultor**, **coletor**
-- horticultor (a horta da casa), arrozeiro, oliveiro e lagareiro (o azeite), moleiro, padeiro, cervejeiro, adegueiro (os
-  da cozinha em [`cozinha.md`](cozinha.md): o cozinheiro, o açougueiro, o queijeiro, o salgador, o doceiro, o provador)
+**A terra (5):** **agricultor** (o campo, a horta, o pomar, o arrozal) · **vinhateiro e lagareiro** (o vinho e o azeite) ·
+**apicultor** · **pastor** (inclui o queijeiro, a transumância) · **criador de cavalos** (inclui o domador)
 
-**Criação** (tronco: o pastoreio)
-- **pastor**, **cavalariço**, **açougueiro**
-- vaqueiro, criador de cavalos, domador, queijeiro, tropeiro, curtidor (o couro)
+**A cozinha (3)** ([`cozinha.md`](cozinha.md)): **cozinheiro** (inclui o doceiro, o cozinheiro de bordo, o provador) · **padeiro**
+(inclui o moleiro) · **açougueiro** (inclui o salgador e o defumador)
 
-**Mata** (tronco: a caça e a mata)
-- **caçador**, **lenhador**, **explorador**
-- caçador de feras (o leão, o urso), armadilheiro, falcoeiro, ervanário, carvoeiro, **mateiro** e guia ([`oficio-mateiro.md`](oficio-mateiro.md)), caçador de monstros
-  (o dragão existe)
+**A mata (5):** ★ [mateiro](oficio-mateiro.md) (inclui o guia da mata, o batedor) · **caçador** (inclui o armadilheiro, o caçador
+de feras) · **falcoeiro** · **ervanário** (o remédio e o veneno) · **lenhador** (inclui o carvoeiro)
 
-**Pedra e fogo** (tronco: a Oficina)
-- **mineiro**, **ferreiro**, **oleiro**, **ourives**, **tecelão**, **construtor**
-- armeiro, fundidor do bronze, pedreiro e canteiro, carpinteiro, marceneiro (os móveis das casas), vidreiro, tintureiro,
-  alfaiate e costureira, sapateiro, cordoeiro (a corda), cesteiro (o vime), escultor, arquiteto (as obras grandes)
+**As alturas (2)** ([`montanha.md`](montanha.md)): **guia de montanha** (inclui o resgatador) · **coletor das alturas** (os
+penhascos, o mel das rochas, o cristal, o gelo)
 
-**Subterrâneo** (os troncos: a Mineração e o Saber; o plano em [`subterraneo.md`](subterraneo.md))
-- **mineiro** ([`oficio-mineiro.md`](oficio-mineiro.md))
-- garimpeiro, escorador, o homem do fogo, aguadeiro da mina, lapidário, explorador de cavernas, coletor de cristais e de
-  salitre, arqueólogo ([`oficio-arqueologo.md`](oficio-arqueologo.md)), caçador de tesouros ([`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md)), decifrador de inscrições, cartógrafo das profundezas, saqueador de túmulos ([`oficio-saqueador.md`](oficio-saqueador.md)),
-  negociante de antiguidades, guia das profundezas, sapador, poceiro, cavador de túneis
+**O subterrâneo (3):** ★ [mineiro](oficio-mineiro.md) (inclui o sapador, o poceiro) · **garimpeiro** (o rio, a bateia, a corrida do
+ouro) · **explorador de cavernas**
 
-**Alturas** (a escalada e a montanha; os planos em [`escalada.md`](escalada.md) e [`montanha.md`](montanha.md))
-- **guia de montanha**, **caçador das alturas**, **coletor dos penhascos**
-- carregador de montanha, batedor, resgatador, caçador de mel das rochas, ervanário das alturas, cristaleiro, coletor de gelo
-  e neve, mensageiro dos passos, guardião do passo e do abrigo, contrabandista dos passos, pastor de altitude, peregrino dos
-  cumes, eremita, vigia do alto, escalador de muralhas
+**A descoberta (1):** **explorador** (as terras sem mapa, o primeiro encontro com outro povo)
 
-**Combate** (tronco: o Combate)
-- **guerreiro**, **arqueiro**, **gladiador** ([`oficio-gladiador.md`](oficio-gladiador.md)), **vigia**, **carcereiro**, o capataz — o comitre e o feitor ([`oficio-capataz.md`](oficio-capataz.md))
-- mercenário, cavaleiro, lanceiro, campeão de duelos, caçador de recompensas, guarda-costas, mestre de armas, comandante
+**O passado (3)** ([`passado.md`](passado.md)): ★ [arqueólogo](oficio-arqueologo.md) (inclui o decifrador, o restaurador) ·
+★ [caçador de tesouros](oficio-cacador-tesouros.md) · ★ [saqueador de túmulos](oficio-saqueador.md)
 
-**Sombra** (tronco: o crime)
-- **contrabandista**, o ladrão (o furto já existe no mundo)
-- batedor de carteira, arrombador, salteador de estrada, receptador, falsificador de moedas, espião, chantagista, assassino
-  de aluguel
+**A oficina (11):** **ferreiro** (inclui o fundidor) · **armeiro** · **ourives** (inclui o lapidário) · **oleiro** · **tecelão**
+(inclui o tintureiro, a seda) · **alfaiate** · **coureiro** (o couro, o sapato, a sela) · **carpinteiro** (inclui o marceneiro) ·
+**cordoeiro** (a corda, a rede, o cesto) · **vidreiro** · **construtor** (inclui o pedreiro; arquiteto é título)
 
-**Comércio e serviço** (tronco: o Comércio)
-- **mercador**, **feirante**, **taverneiro** ([`oficio-taverneiro.md`](oficio-taverneiro.md)), **foguista**, **cobrador**
-- caravaneiro, cambista e banqueiro, estalajadeiro, cozinheiro, barbeiro, aguadeiro, carregador, mensageiro
+**A luta (8):** **soldado** (inclui o arqueiro, o fundeiro, o escalador de muralhas) · **cavaleiro** · **mercenário** ·
+**comandante** (general é título) · ★ [gladiador](oficio-gladiador.md) (inclui o bestiário; lanista é título) · **guarda** (inclui o
+carcereiro, o guarda-costas) · **caçador de recompensas** (inclui o rastreador de fugitivos) · ★ [capataz](oficio-capataz.md) (o
+comitre e o feitor)
 
-**Fé e saber** (tronco: o templo e a biblioteca)
-- **sacerdote**, **escriba**, **copista**, **curandeiro**, o profeta e o oráculo (existem nas histórias)
-- monge, peregrino, astrólogo, mestre-escola, médico e cirurgião, parteira, cartógrafo, cronista (escreve a crônica do mundo),
-  filósofo
+**A sombra (6):** **ladrão** (inclui o batedor de carteira, o arrombador) · **salteador** (o pirata da terra) · **contrabandista**
+(inclui o receptador) · **falsificador** · **espião** (inclui o informante, o chantagista) · **assassino** (inclui o envenenador)
 
-**Arte** (tronco: o espetáculo)
-- **ator**, o atleta e o coro (existem nas festas e no teatro)
-- bardo e contador de histórias (conta as histórias do próprio mundo), músico, dançarino, pintor, poeta, auriga (a corrida de
-  carros), acrobata
+**O comércio (4):** ★ [taverneiro](oficio-taverneiro.md) (inclui o cervejeiro; estalajadeiro é título) · **mercador** (inclui o
+feirante, o especieiro) · **caravaneiro** · **banqueiro** (inclui o cambista)
 
-**Poder** (tronco: a política)
-- quem governa, o emissário, a nobreza (existem)
-- conselheiro, juiz, embaixador, cortesão, agitador e rebelde, general
+**A fé e o saber (6):** **sacerdote** · **oráculo** (os presságios, a profecia que um rei vem ouvir) · **monge** (inclui o eremita,
+o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola) · **sábio** (o filósofo, o astrólogo, o cartógrafo) ·
+**curandeiro** (inclui o médico, a parteira, o barbeiro)
 
-**As condições** (o que não se escolhe, e de onde se pode sair)
-- **cativo**, preso, acorrentado, **criança**, órfão, **ancião** (existem)
-- escravo de galé, escravo da mina, servo, mendigo, exilado, foragido, náufrago, viúvo, herdeiro
+**A arte (7):** **bardo** (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
+**auriga** · **atleta**
+
+**O poder (5):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
+**conselheiro** (inclui o cortesão) · **juiz** · **embaixador** · **agitador**
+
+**As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·
+mendigo · exilado · foragido · náufrago · perdido (inclui o soterrado) · órfão, criança, ancião · viúvo · herdeiro
+
+**As funções do mundo** (fazem-se por um dia, sem ser ofício inteiro): aguadeiro, carregador, mensageiro, foguista, servente,
+faroleiro, salineiro, cobrador.
 
 **As passagens** (uma vida que muda de ofício pela história): o escravo de galé que se revolta ou foge, vira liberto, e depois
 gladiador, mercenário, marinheiro ou pirata; o preso que sai e vira contrabandista; o órfão que um mestre adota e vira
