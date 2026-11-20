@@ -16,7 +16,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
-| 27 | O acabamento, o molde afinado e o taverneiro (o segundo ofício) |
+| 27 | O acabamento, o molde afinado, a cozinha e o taverneiro (o segundo ofício) |
 | 28 a 32 | A terra, **a escalada**, a mata, o subterrâneo e a mina, a oficina |
 | 33 a 36 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
 | 37 a 40 | O comércio, a fé, o saber e o passado, a arte, o poder |
@@ -30,6 +30,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
+- [`cozinha.md`](cozinha.md) — a comida e a cozinha: a base dos ofícios da comida (os ingredientes comuns e raros, o preparo, as
+  receitas de cada povo e a combinação livre, a qualidade, o que a comida faz, a mesa, os ofícios).
 - [`grupos.md`](grupos.md) — o grupo: a máquina dos companheiros, das equipes, das tripulações e das tropas (os membros, o líder,
   os papéis, as ordens, o ânimo, a carga comum; as portas onde cada ofício entra).
 - [`economia-oficios.md`](economia-oficios.md) — a economia dos ofícios: os nove jeitos de ganhar, o jeito de cada ofício, juntar
@@ -103,6 +105,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **A comida e a cozinha** (20/11/2026, **proposta, a decidir**): uma base nova sobre a origem da comida que já existe —
+  os ingredientes finos, as receitas de cada povo, a combinação livre, a qualidade, a mesa ([`cozinha.md`](cozinha.md)).
 - **O grupo** (**aprovado**, 20/11/2026): uma máquina só para os companheiros, as equipes, as tripulações, as gangues e
   as tropas; cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito»; **obedecer nunca é automático** —
   cada um responde pela índole, pelo laço, pelo jeito de dizer e pelo contexto ([`grupos.md`](grupos.md) §5).

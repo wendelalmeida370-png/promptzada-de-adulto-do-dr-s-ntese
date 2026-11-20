@@ -75,7 +75,8 @@ boêmio). **O corpo do deus já pede, paga, bebe, serve, abre e fecha pelas mesm
 | **O prato do dia** | o que a cidade tem (o peixe só onde se pesca, a carne onde há criação) | **Cozinhar**: o caldo que rende, o assado, o pão |
 | **A bebida estrangeira** | a receita aprendida de um viajante de outro povo | Fermentar — uma descoberta |
 
-**A qualidade conta:** a cerveja boa enche a casa e traz o freguês fiel; a azeda espanta; **a que adoece** (o lote ruim) vira boato e
+**A cozinha por inteiro** (os ingredientes, as receitas, a qualidade, a mesa) está em [`cozinha.md`](cozinha.md) — o taverneiro
+é o primeiro cozinheiro do jogo. **A qualidade conta:** a cerveja boa enche a casa e traz o freguês fiel; a azeda espanta; **a que adoece** (o lote ruim) vira boato e
 pode fechar a casa.
 
 ## 6. A adega e o dinheiro

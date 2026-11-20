@@ -29,6 +29,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 | **O escuro de baixo** | a luz que acaba, o ar, a água que mina, o desabamento | [`subterraneo.md`](subterraneo.md) |
 | **A altura e o frio** | o ar fino, o frio que leva os dedos, a neve | [`montanha.md`](montanha.md) |
 | **O tempo** | o dia e a noite, as quatro estações, o tempo que vira | [`calendario.md`](calendario.md) |
+| **A comida** | tudo o que se come veio de algum lugar, estraga com o tempo, tem estação, sustenta, esquenta, alegra e adoece | [`cozinha.md`](cozinha.md) |
 | **O passado em camadas** | os povos antigos, o passado do mundo, o tempo que enterra | [`passado.md`](passado.md) |
 | **A luta** | o golpe pelo corpo, a guarda, as feridas por zona | o combate do corpo (`G.Combate`) |
 | **O corpo** | a fome, o cansaço, a ferida, a doença, as marcas que ficam | a vida das pessoas (v14) |
@@ -194,11 +195,19 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 
 **Fermentar** — a cerveja, o pulque, o hidromel: o grão, a água, o tempo e o calor (a cuba).
 - *As técnicas:* A cerveja boa, O pulque, O hidromel, A bebida estrangeira ([o taverneiro](oficio-taverneiro.md)).
-- *Quem usa:* o taverneiro, o cervejeiro.
+- *Quem usa:* o taverneiro, o cervejeiro, o padeiro (a massa).
 
-**Cozinhar** — o prato, o caldo, o pão, o vinho quente — do que a cidade tem.
+**Cozinhar** — o fogo, a panela, o forno, os temperos, o ponto: o prato do que a cidade tem ([`cozinha.md`](cozinha.md)).
 - *As técnicas:* O caldo que rende, O prato do dia, O vinho quente ([o taverneiro](oficio-taverneiro.md)).
 - *Quem usa:* o taverneiro, a cozinheira, o cozinheiro do navio.
+
+**Panificar** — moer o grão, amassar, fermentar a massa e assar o pão (o moleiro e o padeiro — [`cozinha.md`](cozinha.md)).
+- *As técnicas:* virão com o documento a fundo do ofício que mais a usa.
+- *Quem usa:* o padeiro, o moleiro.
+
+**Abater** — o abate e o corte: a carne de cada bicho, o peixe limpo, o couro que se tira.
+- *As técnicas:* virão com o documento a fundo do ofício que mais a usa.
+- *Quem usa:* o açougueiro, o caçador, o pescador (limpar o peixe).
 
 **As que virão com os seus ofícios:** lavrar e criar (a terra), olaria, tecer, carpintaria, curar, montar a cavalo, cantar e
 contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofício ganhar o documento a fundo.

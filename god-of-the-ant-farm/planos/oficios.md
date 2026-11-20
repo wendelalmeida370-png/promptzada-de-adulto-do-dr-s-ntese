@@ -104,7 +104,8 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
 
 **Terra** (tronco: a Lavoura)
 - **agricultor**, **lavrador**, **fruticultor**, **vinhateiro**, **apicultor**, **sericultor**, **coletor**
-- horticultor (a horta da casa), arrozeiro, oliveiro e lagareiro (o azeite), moleiro, padeiro, cervejeiro, adegueiro
+- horticultor (a horta da casa), arrozeiro, oliveiro e lagareiro (o azeite), moleiro, padeiro, cervejeiro, adegueiro (os
+  da cozinha em [`cozinha.md`](cozinha.md): o cozinheiro, o açougueiro, o queijeiro, o salgador, o doceiro, o provador)
 
 **Criação** (tronco: o pastoreio)
 - **pastor**, **cavalariço**, **açougueiro**
