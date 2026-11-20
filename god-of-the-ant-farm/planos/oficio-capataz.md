@@ -121,7 +121,7 @@ O capataz é a figura de um sistema de violência, e jogar com ele é sentir o p
 crueldade em pontos (não há prêmio por chicotada); simula o que ela faz: homens que quebram, morrem, odeiam, lembram e planejam.
 Visceral, sem demorar na tortura: a violência aparece pelo que causa.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -143,6 +143,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** dar a ordem do ritmo; escolher o castigo (a decisão com peso); dar ou cortar a ração; revistar o banco; ouvir o delator (e pagar); proteger em segredo (o outro caminho); relatar ao capitão.
 
 **O grupo** ([`grupos.md`](grupos.md)): o banco visto de cima (o grupo que se manda pelo medo ou pela confiança): **os papéis** — o delator, o ajudante, o voga; **as ordens** — o ritmo, a revista; **as situações** — o castigo exemplar, o motim, a faca de noite.
+
+**As marcas** ([`marcas.md`](marcas.md)): o nome que os galeotes amaldiçoam nas canções, o ódio guardado na memória de cada homem.
 
 
 ## 12. Do que depende, as fases e as provas

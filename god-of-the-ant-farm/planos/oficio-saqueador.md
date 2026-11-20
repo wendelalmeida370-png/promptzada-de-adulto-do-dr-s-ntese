@@ -224,7 +224,7 @@ lembra.
 O **receptador**, o **ourives desonesto** (o forno da noite), o **vigia de cemitério** (o outro lado: o ofício de guardar os
 mortos), o **falsificador de antiguidades**, o **negociante de antiguidades**.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -246,6 +246,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** observar a ronda (E segurado: a leitura); cavar o túnel; comprar o vigia (com moedas); levantar a laje; tirar (escolher no escuro); fechar o túmulo; vender ao receptador; derreter com o ourives; esconder em casa.
 
 **O grupo** ([`grupos.md`](grupos.md)): a turma da noite: **os papéis** — o vigia de fora, o que cava, o que carrega; **as ordens** — sinais sem voz (o assobio, o gesto); **as situações** — o vigia que chega, o sócio pego que fala.
+
+**As marcas** ([`marcas.md`](marcas.md)): o túnel (o dos antigos ladrões é uma lenda) — e **apaga marcas**: o túmulo vazio, a coroa derretida.
 
 
 ## 23. As fases e as provas

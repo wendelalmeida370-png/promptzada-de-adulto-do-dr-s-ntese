@@ -141,6 +141,9 @@ tesouros): muitas vezes, uma parte é de quem governa — declarar ou esconder.
   onde o mundo ainda não construiu;
 - os mundos prontos se geram de novo.
 
+**As marcas do mundo** ([`marcas.md`](marcas.md)) são o registro do que cada coisa significa — de quem é, quem fez, o que lembra; o
+passado em camadas é o que o tempo enterra. Os dois se completam.
+
 ## 11. Quando entra
 
 **No Patch 31** (com o subterrâneo): os povos antigos na criação, o enxoval, o tesouro escondido na guerra, o tempo que enterra —

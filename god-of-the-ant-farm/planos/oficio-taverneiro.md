@@ -226,7 +226,7 @@ conhece. A taverna que pega fogo, a que a guerra fecha, a que a lei fecha; a que
 |---|---|---|---|---|
 | a luz quente do fogo e das lamparinas, a fumaça, o quadro apertado da sala cheia, a madrugada vazia | **as vozes em camadas**, as risadas, as canecas, a música, o fogo — e **o silêncio quando o guarda entra** | a briga, a mesa que cai | **a sala lida nos rostos** (quem espera, quem bebeu demais, quem cochicha); a tábua do fiado; a caixa | a vista do taverneiro: as chaves, a tábua, a bolsa, a lista da adega |
 
-## 18. As falas, as animações, as interações e o grupo
+## 18. As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas**, da **fábrica de animações**, das **interações** e do **grupo**
 ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14). Sugestões para começar:
@@ -257,6 +257,8 @@ quarto; pagar ou recusar a proteção; abrir e fechar.
 
 **O grupo** ([`grupos.md`](grupos.md)): a casa — **os papéis**: o servente, a cozinheira, o leão de chácara, o músico; **as ordens**:
 «mesa três», «mais cerveja», «põe ele pra fora», «fecha a porta»; **as situações**: a noite cheia, a briga, a batida do guarda, a festa.
+
+**As marcas** ([`marcas.md`](marcas.md)): **a parede dos rabiscos** (os nomes, as contas, os amores dos fregueses, que duram enquanto a taverna dura), a mesa do rei, o nome da casa.
 
 ## 19. Os derivados
 

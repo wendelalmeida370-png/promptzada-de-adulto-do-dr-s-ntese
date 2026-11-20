@@ -193,7 +193,7 @@ remadores pagos); a ração do armazém do povo; o soldo do tesouro; a pena do r
 se revoltam pelas mesmas regras (a revolta dos remadores é uma história do motor de histórias); o capataz é uma pessoa do mundo,
 e nada premia a crueldade.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -215,6 +215,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** o ritmo do remo (as teclas do gesto); cochichar ao vizinho (baixo — o capataz pode ouvir); dividir a ração; esconder a peça na fenda do banco (F); forçar a corrente; puxar a canção como voga; remar por dois pelo vizinho ferido; denunciar (o caminho escuro).
 
 **O grupo** ([`grupos.md`](grupos.md)): o banco (os remadores do mesmo banco) e os do plano de fuga: **os papéis** — o voga, o velho, o novato, o que guarda a peça; **as ordens** — o ritmo do voga, os sinais do plano; **as situações** — o castigo de um, a batalha, a hora da fuga.
+
+**As marcas** ([`marcas.md`](marcas.md)): o nome riscado na madeira do banco, a canção do remo que continua sendo cantada, a revolta lembrada pelo povo.
 
 
 ## 13. Do que depende, as fases e as provas

@@ -209,7 +209,7 @@ a Ursa Maior, as colônias por todo o mar); os **romanos** (a rota do grão, os 
 O **piloto do porto** (o prático que leva os navios para dentro), o **cartógrafo do mar**, o **observador das estrelas** (o sacerdote
 do céu), o **faroleiro**, o **timoneiro**, o **vigia do mastro** (o alto do mastro: a escalada), o **mestre de vela**.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -231,6 +231,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** o prumo (E na amurada); medir a estrela (E segurado olhando o céu); soltar a ave (F na gaiola); marcar na carta; dar o rumo ao timoneiro; comprar, vender e copiar o périplo; ensinar uma técnica a um aprendiz; perguntar ao pescador velho sobre os fundos; oferecer-se como piloto a um capitão.
 
 **O grupo** ([`grupos.md`](grupos.md)): a tripulação, com o piloto no seu posto: **os papéis** — o piloto, o timoneiro, o vigia do mastro; **as ordens** — «rumo», «vira», «sonda», «recolhe a vela»; **as situações** — perdidos no mar, a calmaria, a tempestade, a terra à vista.
+
+**As marcas** ([`marcas.md`](marcas.md)): o nome da ilha, da rota e do cabo descobertos, o périplo copiado na biblioteca, a carta do mar, o farol com o nome de quem o ergueu.
 
 
 ## 19. As fases e as provas

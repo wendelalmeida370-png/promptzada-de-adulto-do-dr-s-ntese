@@ -291,7 +291,7 @@ escolhido pelo conselho dos nobres, o império do tributo, as guerras para fazer
 |---|---|---|---|---|
 | a sala do trono, a varanda sobre a multidão, a tenda de guerra com o mapa, a câmara do conselho à luz das lamparinas | o arauto, **o rugido da multidão**, o murmúrio do conselho, **o silêncio quando você entra** | a multidão, a batalha | **o livro do reino** (as cartas, os relatórios, os pedidos, o que os espiões contam) e os rostos da corte; nunca o reino inteiro à vista | a vista de quem governa: o selo, a coroa, as chaves do tesouro, as cartas |
 
-## 20. As falas, as animações, as interações e o grupo
+## 20. As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte das quatro máquinas ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14). Sugestões para começar:
 
@@ -320,6 +320,8 @@ uma cidade; andar disfarçado; abdicar.
 **O grupo** ([`grupos.md`](grupos.md)): **o conselho e a corte** — **os papéis**: o general, o tesoureiro, o sumo-sacerdote, o chefe da
 guarda, o espião-mor, o conselheiro, o herdeiro; **as ordens**: os decretos e as missões dadas a cada um (cumpridas, discutidas,
 sabotadas, pela índole de cada um); **as situações**: a crise do tesouro, a guerra, o golpe, a sucessão.
+
+**As marcas** ([`marcas.md`](marcas.md)): tudo: a estátua com o rosto, a rua e o bairro com o nome, a moeda com o rosto, a lei gravada, a crônica, o palácio, o túmulo — e **o nome do antecessor raspado**.
 
 ## 21. Os derivados (os outros ofícios do poder)
 

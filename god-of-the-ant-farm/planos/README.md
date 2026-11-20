@@ -30,6 +30,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
+- [`marcas.md`](marcas.md) — as marcas do mundo: o registro da memória que fica (a pintura, a inscrição, a estátua com o rosto,
+  o nome dos lugares, o livro, a canção, o túmulo, o tesouro), como duram e se apagam, e o livro das vidas do jogador.
 - [`cozinha.md`](cozinha.md) — a comida e a cozinha: a base dos ofícios da comida (os ingredientes comuns e raros, o preparo, as
   receitas de cada povo e a combinação livre, a qualidade, o que a comida faz, a mesa, os ofícios).
 - [`grupos.md`](grupos.md) — o grupo: a máquina dos companheiros, das equipes, das tripulações e das tropas (os membros, o líder,
@@ -107,6 +109,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **As marcas do mundo** (20/11/2026, **proposta, a decidir**): uma base — a memória do mundo — e um registro só das marcas,
+  para a continuidade de séculos; cada ofício registra os tipos de marca que deixa (a quinta máquina) ([`marcas.md`](marcas.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 77 ofícios e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

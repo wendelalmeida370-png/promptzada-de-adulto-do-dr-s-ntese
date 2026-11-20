@@ -287,7 +287,7 @@ O lance (minutos) → a manhã de pesca (preparar, ir, pescar, voltar) → o dia
 estações (o salmão no outono, o atum na primavera, o gelo no inverno) → o longo prazo (as ferramentas, o barco, os títulos, a
 coleção, os aprendizes, os lendários).
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -309,6 +309,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** lançar (E com a vara); trocar a isca (F); ler a água (E segurado); oferecer o peixe a alguém (dar); vender na banca; comparar com a tábua dos recordes do cais; pedir ao velho para ensinar; consertar a rede de outro; **contar vantagem** (o verbo social que vira boato — e o peixe cresce na boca do povo).
 
 **O grupo** ([`grupos.md`](grupos.md)): o barco de pesca (2 a 6, pela parte): **os papéis** — o do leme, o da rede, o da isca; **as ordens** — «puxa!», «solta a rede», «rema»; **as situações** — o cardume que passa, o barco que vira, a partilha do pescado.
+
+**As marcas** ([`marcas.md`](marcas.md)): o recorde na tábua do cais (o nome e o peixe), o peixe lendário pendurado na taverna, o barco com nome, o pesqueiro que leva o nome de quem o achou.
 
 
 ## 15. Os derivados e as fases

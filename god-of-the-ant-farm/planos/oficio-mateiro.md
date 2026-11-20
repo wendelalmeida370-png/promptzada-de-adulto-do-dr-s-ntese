@@ -288,7 +288,7 @@ O **guia da mata**, o **abridor de trilhas** (a estrada do povo), o **coletor** 
 onças**, o **batedor do exército** na mata, o **rastreador de fugitivos** (com a lei), o **canoeiro dos rios da mata**, o **lenhador** e
 o **carvoeiro** (a mata que se corta), o **guarda do bosque sagrado**.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -311,6 +311,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** cortar o cipó (E); marcar a árvore (F); ler a pegada (E segurado); subir na árvore da vista; pendurar a rede entre duas árvores; acender o fogo; beber do cipó; trançar a ponte entre duas árvores na margem; desenhar a carta da mata; **os comandos do grupo** (silêncio, sigam, esperem); contratar um guia ou ser contratado; perguntar o caminho a um morador.
 
 **O grupo** ([`grupos.md`](grupos.md)): a expedição: **os papéis** — o guia, os carregadores, o caçador, quem conhece as ervas, o canoeiro; **as ordens** — «silêncio», «sigam», «esperem», «em fila», «acampar»; **as situações** — perdidos, a febre de um, a fera perto, o grupo que quer voltar, o rio que subiu.
+
+**As marcas** ([`marcas.md`](marcas.md)): os talhos nas árvores, a trilha com o seu nome, a carta da mata.
 
 
 ## 24. As fases e as provas

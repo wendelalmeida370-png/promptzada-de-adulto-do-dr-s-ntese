@@ -166,7 +166,7 @@ Ler a parede; os pés antes das mãos (gastar menos braço); a fenda e a chamin�
 corda; a ancoragem firme; dar a corda ao companheiro; o nó que não solta; cravar a estaca; testar a pega antes de pesar nela (o
 arenito); o passo na neve dura; frear a escorregada.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -186,6 +186,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** agarrar a pega (o movimento); ancorar a corda (F na fenda ou na árvore); cravar a estaca; dar a corda ao companheiro (o par); descer pela corda (E na ancoragem); lançar o gancho no alto do muro.
 
 **O grupo** ([`grupos.md`](grupos.md)): a cordada (o grupo mais simples: dois): **os papéis** — o que sobe e o que segura; **as ordens** — «corda!», «segura!», «solta»; **as situações** — a queda segurada, a pedra que cai em quem está embaixo.
+
+**As marcas** ([`marcas.md`](marcas.md)): as estacas que ficam na rocha, a via nomeada por quem a abriu.
 
 
 ## 13. As fases e as provas

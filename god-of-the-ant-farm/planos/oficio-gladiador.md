@@ -168,7 +168,7 @@ apostas; os laços (o companheiro de escola, o rival, o admirador, a família do
 o amigo contra o amigo, a revolta); as missões (o lanista que manda perder; a fera que fugiu da jaula; o filho do morto que vem
 atrás de você).
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -190,6 +190,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** treinar com outro (o par); desafiar no treino; saudar a tribuna (F); pedir o favor da multidão (o gesto); **poupar ou matar** quando o outro cai (a escolha); ler o próprio nome nos muros; receber o presente do admirador; negociar com o lanista o contrato do liberto.
 
 **O grupo** ([`grupos.md`](grupos.md)): a escola e o combate de equipe dos jogos: **os papéis** — os colegas de cela, o mais velho, o novato; **as ordens** (na luta em equipe) — «fecha o escudo», «cerca»; **as situações** — a véspera dos jogos, a morte de um colega, a revolta da escola.
+
+**As marcas** ([`marcas.md`](marcas.md)): o nome pintado nos muros, a estátua do campeão, a espada de madeira guardada, a lápide do gladiador.
 
 
 ## 15. Do que depende, as fases e as provas

@@ -30,6 +30,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 | **A altura e o frio** | o ar fino, o frio que leva os dedos, a neve | [`montanha.md`](montanha.md) |
 | **O tempo** | o dia e a noite, as quatro estações, o tempo que vira | [`calendario.md`](calendario.md) |
 | **A comida** | tudo o que se come veio de algum lugar, estraga com o tempo, tem estação, sustenta, esquenta, alegra e adoece | [`cozinha.md`](cozinha.md) |
+| **A memória do mundo** | o que se faz pode deixar marca, e a marca dura pelo que é feita e pelo cuidado que recebe | [`marcas.md`](marcas.md) |
 | **O passado em camadas** | os povos antigos, o passado do mundo, o tempo que enterra | [`passado.md`](passado.md) |
 | **A luta** | o golpe pelo corpo, a guarda, as feridas por zona | o combate do corpo (`G.Combate`) |
 | **O corpo** | a fome, o cansaço, a ferida, a doença, as marcas que ficam | a vida das pessoas (v14) |

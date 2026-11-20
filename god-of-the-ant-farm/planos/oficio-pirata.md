@@ -411,7 +411,7 @@ O **corsário**, o **naufragador** (as luzes falsas na costa), o **informante do
 **contrabandista** do mar, o **carpinteiro do refúgio**, o **intermediário de resgates**, o **caçador de piratas** (o capitão da frota que
 limpa o mar).
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -434,6 +434,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** lançar o gancho (a mira e o tempo); gritar a rendição (o verbo pesa a fama); revistar o porão; **a partilha** (o conselho da tripulação); pedir o resgate (a carta e o intermediário); vender no porto que não pergunta; enterrar o tesouro; chamar o conselho; oferecer-se como corsário a um rei.
 
 **O grupo** ([`grupos.md`](grupos.md)): a tripulação: **os papéis** — o capitão, o imediato, o piloto, o mestre de abordagem, os remadores-guerreiros, os arqueiros, o carpinteiro, o curandeiro; **as ordens** — «remos!», «ganchos!», «abordar!», «recuar»; **as situações** — a caça, a abordagem, a partilha, o motim, o inverno no refúgio.
+
+**As marcas** ([`marcas.md`](marcas.md)): o tesouro enterrado, o nome do navio e da flâmula, a enseada que leva o seu nome, as canções.
 
 
 ## 33. As fases e as provas

@@ -218,7 +218,7 @@ O **guia das profundezas**, o **explorador de cavernas** (mapear onde ninguém f
 expedição, o **mergulhador de naufrágios**, o **negociante de mapas** (e o falsificador de mapas), o **patrocinador** (a casa rica
 que paga as expedições).
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -240,6 +240,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** comprar a pista (a banca, a taverna); ouvir o velho («Contar uma história»); juntar e contratar a turma; estudar o mapa; sondar; desarmar a defesa (E segurado); abrir a porta pela ordem decifrada; declarar ou esconder o achado; devolver à família.
 
 **O grupo** ([`grupos.md`](grupos.md)): a expedição: **os papéis** — o guia, o carregador, o decifrador, o sócio; **as ordens** — «espera», «ninguém toca», «pra trás»; **as situações** — a câmara aberta, a divisão do achado, o sócio que trai, o rival.
+
+**As marcas** ([`marcas.md`](marcas.md)): o mapa (verdadeiro ou falso), o nome nas canções do achado — e **acha as marcas escondidas**.
 
 
 ## 21. As fases e as provas

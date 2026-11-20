@@ -224,7 +224,7 @@ O garimpeiro, o escorador, o homem do fogo, o aguadeiro da mina, o lapidário (c
 fundidor e o carvoeiro (o fogo do metal), o pedreiro e o canteiro (a pedreira), o salineiro da mina de sal, o feitor da mina e o
 escravo da mina (as condições), o arqueólogo da mina perdida.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -246,6 +246,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** golpear a face (E); escorar (F com a madeira); ler a rocha (E segurado); encher o cesto; a bateia no rio; ensaiar a amostra; bater para chamar o soterrado; pedir a licença a quem governa; entrar numa turma.
 
 **O grupo** ([`grupos.md`](grupos.md)): a turma da galeria: **os papéis** — o chefe de galeria, o escorador, o do cesto, o aguadeiro; **as ordens** — «escora!», «sai!», «balde!»; **as situações** — o desabamento, o soterrado (o resgate em turma), o veio achado.
+
+**As marcas** ([`marcas.md`](marcas.md)): a galeria e a mina com o nome de quem as abriu, a assinatura riscada na rocha, a pedra com o nome dos mortos do desabamento.
 
 
 ## 19. As fases e as provas

@@ -147,7 +147,7 @@ reto no mar, a gritaria dos dados.
 O chefe de turma, o capataz, o dono da estiva; o **contrabandista** (a sombra); o **marinheiro** (subir no navio de vez); o
 **mercador** (de dono da estiva a dono de carga); o ladrão do cais; o brigador de taverna que vira **gladiador**.
 
-## As falas, as animações, as interações e o grupo
+## As falas, as animações, as interações, o grupo e as marcas
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -169,6 +169,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As interações com o mundo:** pegar a carga (E); passar a carga ao colega (o par); ir à chamada de manhã; conferir com o escriba; entrar numa turma; puxar o canto; aceitar o «favor» do marinheiro (o contrabando); jogar os dados; tirar da água quem caiu.
 
 **O grupo** ([`grupos.md`](grupos.md)): a turma: **os papéis** — o chefe de turma, o puxador do canto, os carregadores, o do guindaste; **as ordens** — «levanta», «passa», «segura»; **as situações** — a prancha que cai, a turma rival, a greve.
+
+**As marcas** ([`marcas.md`](marcas.md)): o canto de trabalho que as turmas cantam depois de você, o nome riscado na pilastra do cais, a greve lembrada.
 
 
 ## 11. Do que depende, as fases e as provas
