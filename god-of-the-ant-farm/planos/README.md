@@ -101,9 +101,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
-- **O grupo** (20/11/2026, **proposta, a decidir**): uma máquina só para os companheiros, as equipes, as tripulações, as gangues e
-  as tropas; cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito»
-  ([`grupos.md`](grupos.md)).
+- **O grupo** (**aprovado**, 20/11/2026): uma máquina só para os companheiros, as equipes, as tripulações, as gangues e
+  as tropas; cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito»; **obedecer nunca é automático** —
+  cada um responde pela índole, pelo laço, pelo jeito de dizer e pelo contexto ([`grupos.md`](grupos.md) §5).
 - **A economia dos ofícios** (**aprovado**, 20/11/2026): nove jeitos de ganhar, do soldo ao achado; quanto mais
   seguro, menor o teto; o tempo é o que se divide entre os ofícios ([`economia-oficios.md`](economia-oficios.md)).
 - **Cada ofício traz as suas falas, animações e interações** (20/11/2026): todo patch de ofício alimenta a máquina de falas,

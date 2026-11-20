@@ -40,7 +40,7 @@ escalada, a montanha e o mundo grande.
 | 26 | **O pirata** | a tábua dos navios do porto como informação, a perseguição pelo vento, a abordagem, o nome que rende, o saque pelo livro, o resgate pago pela família, o motim, o corsário e o rei do mar | [`oficio-pirata.md`](oficio-pirata.md) |
 | 27 | **As quatro camadas** (aprovado) | as bases (as leis do mundo, para todos), as perícias (a prática e as técnicas, de qualquer ofício), os ofícios (que usam perícias) e as condições; o pirata no comando do navio vive debaixo da lei do mar como o navegador | [`pericias.md`](pericias.md) |
 | 28 | **A economia dos ofícios** (aprovado) | os nove jeitos de ganhar (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente); juntar o ofício de soldo com o de risco pelo tempo, o posto e a licença; a família come da panela da casa | [`economia-oficios.md`](economia-oficios.md) |
-| 29 | **O grupo** (a decidir) | os patches dos NPCs não tinham companheiros; uma máquina só para o companheiro, a equipe, a tripulação, a gangue e a tropa (o grupo de grupos do general), e cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito» | [`grupos.md`](grupos.md) |
+| 29 | **O grupo** (aprovado; a obediência que não é automática) | os patches dos NPCs não tinham companheiros; uma máquina só para o companheiro, a equipe, a tripulação, a gangue e a tropa (o grupo de grupos do general), e cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito» | [`grupos.md`](grupos.md) |
 
 ## 2. A lógica da ordem
 
