@@ -214,7 +214,7 @@ duros, a bebedeira como crime, a pena para o juiz que se vende).
 |---|---|---|---|---|
 | a sala do tribunal, a praça cheia no dia da sentença, o rosto da testemunha de perto, o beco do crime | o murmúrio do tribunal, **o silêncio antes da sentença**, a multidão, a voz que treme | o tumulto | **o caderno do caso**: o que cada um disse, as provas, as contradições marcadas por você — nunca a verdade à vista | a vista do juiz: o caderno, o livro da lei, o selo |
 
-## 19. As falas, as animações, as interações, o grupo e as marcas
+## 19. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 **Os assuntos novos:** o julgamento do dia, a sentença justa ou injusta, o inocente solto, o culpado que fugiu, o juiz vendido, o nobre
 absolvido, o cadafalso de amanhã.
@@ -246,6 +246,10 @@ réu poderoso, a testemunha que some, a multidão na porta.
 **As marcas** ([`marcas.md`](marcas.md)): **o livro das sentenças** (as sentenças escritas que viram precedente), a lei gravada que
 nasceu de um caso, **a colina do cadafalso** (o lugar que o povo evita), a pedra que devolve a honra ao inocente, o nome do juiz justo
 no livro da lei.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que a testemunha mente** (o laço com o réu, o medo de quem manda, o suborno) — o olhar que foge, a história que muda na segunda vez —, e **por que a cidade não aceitou a sentença** (o réu querido, a pena dura demais ou mole demais). O juiz experiente lê mais (a perícia Julgar); a verdade em si, ele nunca vê.
+
+**O deus** (a vista de cima e os poderes): **o deus sabe a verdade; o juiz não** — de cima, o deus viu o crime acontecer. Nos regimes que o pedem, **o juízo de deus** (a ordália: o ferro quente, a água): **o jogador-deus decide de verdade** — a mão que sara (a Cura) ou o raio que acusa —, a cidade lê a sentença do céu, e o deus que inocenta o culpado também fica na memória do povo.
 
 ## 20. Os derivados
 

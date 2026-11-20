@@ -287,7 +287,7 @@ O lance (minutos) → a manhã de pesca (preparar, ir, pescar, voltar) → o dia
 estações (o salmão no outono, o atum na primavera, o gelo no inverno) → o longo prazo (as ferramentas, o barco, os títulos, a
 coleção, os aprendizes, os lendários).
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -312,6 +312,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o recorde na tábua do cais (o nome e o peixe), o peixe lendário pendurado na taverna, o barco com nome, o pesqueiro que leva o nome de quem o achou.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que não morde** — a hora errada, a isca de outra espécie, a água fria, o barulho do barco — e **por que a linha arrebentou** (o peso do peixe contra a linha fina). Lê-se na linha que fica parada, no velho do cais («com essa água fria o robalo desce») e na linha do diário; a mestra lê sozinha o que o aprendiz só ouve: a corrente que virou, o cardume que desceu.
+
+**O deus** (a vista de cima e os poderes): de cima o deus vê o que o pescador não vê — **o cardume que passa ao largo** e o lendário no fundo do poço (que ele não pode pôr: os lendários nascem do mundo). **O Cardume** (o poder que já existe) ganha um laço: **o pescador que reza antes de sair** e a vila que volta com os barcos cheios contam o milagre, e a fé de quem pesca cresce; **a Tempestade** prende os barcos no cais.
 
 ## 15. Os derivados e as fases
 

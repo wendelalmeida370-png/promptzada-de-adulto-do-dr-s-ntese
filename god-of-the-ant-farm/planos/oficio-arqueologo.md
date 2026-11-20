@@ -223,7 +223,7 @@ O **decifrador** (só a escrita: vive na biblioteca), o **restaurador** (os caco
 e das cavernas**, o **colecionador** (quem governa, as casas ricas), o **guia** que leva às ruínas, o **guardião** da sala das
 antiguidades; e, do lado escuro, o **falsificador** (faz antiguidades falsas — a pátina, o desgaste; o arqueólogo bom o desmascara).
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -248,6 +248,7 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o livro do povo antigo na biblioteca, o nome dado ao povo achado, a sala das antiguidades — e **lê todas as marcas enterradas**.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que a peça se perdeu** (a pressa, a escavação sem respeitar a camada), **o que a camada diz** (a cinza de um incêndio, o vaso de outro povo, o chão de terra batida sobre o de pedra). O arqueólogo novo vê terra; o mestre lê séculos na parede do corte.
 
 ## 21. As fases e as provas
 

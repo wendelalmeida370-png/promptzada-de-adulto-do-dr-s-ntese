@@ -121,7 +121,7 @@ O capataz é a figura de um sistema de violência, e jogar com ele é sentir o p
 crueldade em pontos (não há prêmio por chicotada); simula o que ela faz: homens que quebram, morrem, odeiam, lembram e planejam.
 Visceral, sem demorar na tortura: a violência aparece pelo que causa.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -146,6 +146,7 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o nome que os galeotes amaldiçoam nas canções, o ódio guardado na memória de cada homem.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que os homens remam mal** (a fome, o chicote demais, o ódio, o companheiro morto ontem) e **por que a revolta vem** — os olhares que não abaixam mais, o silêncio no banco, o remo que para um instante antes dos outros. O capataz velho lê o banco antes de ele explodir; o novo só vê quando é tarde.
 
 ## 12. Do que depende, as fases e as provas
 

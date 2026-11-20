@@ -51,6 +51,7 @@ escalada, a montanha e o mundo grande.
 | 37 | **O caçador** | a espreita contra o vento, o tiro, o rastro de sangue, a fera que caça gente e lê você — contra o cérebro e o meio dos bichos que o jogo já tem; a caça que esvazia a mata; com a mata, no Patch 30 | [`oficio-cacador.md`](oficio-cacador.md) |
 | 38 | **O bardo** | juntar as histórias verdadeiras do mundo, escolher a versão (a verdade, o enfeite, a propaganda, a sátira), cantar e ver o mundo mudar; a canção como marca; com a arte, no Patch 39 | [`oficio-bardo.md`](oficio-bardo.md) |
 | 39 | **A natureza viva** | os bichos ainda melhores com as estações: as migrações (a chuva, o frio, as aves, o mar, o salmão), o relógio do dia, um nicho em cada altura (a copa, o oco, a toca, o penhasco, o céu), as relações (o mutualismo, o comensalismo, a carniça, os engenheiros), a hibernação, os ninhos raros, o mar que muda; o olho da natureza — tudo de verdade, como um documentário | [`natureza-viva.md`](natureza-viva.md) |
+| 40 | **A análise de game design** (aprovada) | a meta alta dos ofícios com o cuidado do tamanho; **a leitura**, a sexta máquina (o porquê de cada «não» dentro do mundo); **a prova da diversão** em todo patch e **a primeira hora**; **o deus conferido em cada ofício** (posto só quando pertinente); **a tabela dos ofícios** feita pelo código | [`leitura.md`](leitura.md), [`primeira-hora.md`](primeira-hora.md), [`oficios-fundacao.md`](oficios-fundacao.md) §2.14–2.15 |
 
 ## 2. A lógica da ordem
 
@@ -76,16 +77,17 @@ escalada, a montanha e o mundo grande.
 ## 3. A ordem de fazer
 
 **Antes do Patch 23 — a faxina da v14:** os mundos prontos gerados de novo com a máquina livre; o vento do céu logo depois do
-load (S4); T-1584 e T-1585.
+load (S4); T-1584 e T-1585; **e a primeira medição da primeira hora** — o dono joga o jogo de hoje como novato e anota o que
+travou ([`primeira-hora.md`](primeira-hora.md)).
 
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
 | **C — O calendário: o ano de quatro estações e a natureza viva** (o primeiro, antes do 23; três ondas) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, o mar fechado **e os bichos**: o calendário de cada espécie, as migrações, a hibernação, o mar com as estações), o que se vê, e **a natureza viva** (o relógio do dia, os nichos da copa à toca, os bichos novos, as relações entre as espécies, o olho da natureza) | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md), [`natureza-viva.md`](natureza-viva.md) |
-| **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda; **a memória do mundo** (as marcas e o livro das vidas, a frente 23f) | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md), [`marcas.md`](marcas.md) |
+| **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda; **a memória do mundo** (as marcas e o livro das vidas, a frente 23f); **a leitura** (a sexta máquina: o porquê de cada «não» dentro do mundo, [`leitura.md`](leitura.md)) | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md), [`marcas.md`](marcas.md) |
 | **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
-| **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
+| **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz, **a tabela dos ofícios** (feita pelo código); a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); **o vento que empurra a vela, a corrente e a maré**; a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
-| **27 — O acabamento, o molde afinado, a cozinha e o taverneiro** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca; **a base da comida e da cozinha** (os ingredientes finos, o preparo, as receitas de cada povo, a qualidade, a mesa); **o segundo ofício, o taverneiro** — o primeiro cozinheiro, todo de gente, sobre a taverna que o jogo já tem: dois ofícios opostos afinam o molde | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7, [`oficio-taverneiro.md`](oficio-taverneiro.md), [`cozinha.md`](cozinha.md) |
+| **27 — O acabamento, o molde afinado, a cozinha e o taverneiro** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca; **a primeira hora refeita** (pelas escolhas do dono, [`primeira-hora.md`](primeira-hora.md)); **a base da comida e da cozinha** (os ingredientes finos, o preparo, as receitas de cada povo, a qualidade, a mesa); **o segundo ofício, o taverneiro** — o primeiro cozinheiro, todo de gente, sobre a taverna que o jogo já tem: dois ofícios opostos afinam o molde | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7, [`oficio-taverneiro.md`](oficio-taverneiro.md), [`cozinha.md`](cozinha.md) |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação); os ofícios da cozinha (o padeiro, o moleiro, o açougueiro, o queijeiro) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
 | **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
 | **30 — A mata** | **a mata que pesa** (a fase B da natureza: o passo, a vista, o rumo, a trilha que o mato fecha); o mateiro, o caçador ([`oficio-cacador.md`](oficio-cacador.md)), o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficio-mateiro.md`](oficio-mateiro.md), [`oficios.md`](oficios.md) |
@@ -140,6 +142,8 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |
+| A leitura (a sexta máquina) | 23 (a base, com a voz), 24 (o grupo, o primeiro freguês) e cada patch depois |
+| A primeira hora | a faxina (a primeira medição), 27 (o começo refeito) e cada patch que mexer no começo |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a
 mata (o lenhador), o ferreiro, o oleiro, o ladrão e o assassino, o marinheiro, o mercador, o
@@ -148,12 +152,30 @@ cristaleiro).
 
 ## 5. Como cada patch anda
 
-**Todo patch de ofício alimenta as cinco máquinas do mundo** (que servem a tudo, não só aos ofícios): as falas, as animações, as
-interações, o grupo e as marcas daquele ofício (a seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+**Todo patch de ofício alimenta as seis máquinas do mundo** (que servem a tudo, não só aos ofícios): as falas, as animações, as
+interações, o grupo, as marcas e a leitura daquele ofício (a seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+
+**O deus, conferido sempre** (a decisão do dono, 20/11/2026): em todo ofício se confere se há uma mecânica divertida que use a vista
+de cima ou os poderes do deus; **se há, entra; se não há, nada entra** — nenhuma mecânica para encher linguiça
+([`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+
+**A tabela dos ofícios** (aprovada, 20/11/2026): de pé desde o Patch 25, feita pelo código; cada patch de ofício acrescenta as suas
+linhas — as bases, as perícias, as seis máquinas, o deus, as provas, o equilíbrio e o custo — e **cada ofício novo sai mais barato que
+o anterior** ([`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
 
 **Todo patch vem com o arcabouço inteiro** (a regra do dono, 20/11/2026): nenhuma coisa nova chega sem **as animações, o cérebro, os
 sons, as interações, o desenho e as provas** de que precisa — e com a melhoria do que já existe onde ela pedir.
 
 Cada patch segue o protocolo de qualidade do `CLAUDE.md`: o plano com os números de cada frente, o contrato, as frentes em
-paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar. **E o teste
-do dono no fim de cada ofício: horas a fio, sem enjoar** — se enjoar, o ofício volta para a mesa antes do próximo tronco.
+paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar.
+
+**A prova da diversão, em todo patch** (aprovada, 20/11/2026): o protocolo prova que não há bug; **o teste do dono prova que é bom de
+jogar.** No fim de cada patch o dono joga a versão e responde às quatro perguntas:
+1. **Soube o que fazer?**
+2. **Quis continuar?**
+3. **Entendeu por que deu certo ou errado?** (a prova humana da leitura)
+4. **O que foi chato?**
+
+As respostas ficam no plano do patch, e **o que foi chato vira tarefa antes da versão.** No fim de cada ofício, também **horas a fio
+sem enjoar** — se enjoar, o ofício volta para a mesa antes do próximo tronco. Mexeu no começo do jogo? **O teste do novato**
+([`primeira-hora.md`](primeira-hora.md)).

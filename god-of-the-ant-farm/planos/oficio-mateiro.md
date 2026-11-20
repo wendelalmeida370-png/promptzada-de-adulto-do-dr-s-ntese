@@ -288,7 +288,7 @@ O **guia da mata**, o **abridor de trilhas** (a estrada do povo), o **coletor** 
 onças**, o **batedor do exército** na mata, o **rastreador de fugitivos** (com a lei), o **canoeiro dos rios da mata**, o **lenhador** e
 o **carvoeiro** (a mata que se corta), o **guarda do bosque sagrado**.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -314,6 +314,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): os talhos nas árvores, a trilha com o seu nome, a carta da mata.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que se perdeu** (a trilha apagada pela chuva, o rio que mudou de leito), **por que o grupo quer voltar** (o medo, a fome, a febre de um), **o que a mata diz** (os macacos que calam, o rastro fresco, a água que corre para o vale). O mateiro novo ouve o guia; o velho lê a mata sozinho.
+
+**O deus** (a vista de cima e os poderes): **a Floresta Sagrada** (que já existe) **é mata nova por desbravar** — o trabalho do mateiro nasce da mão do deus; de cima, o deus vê **as trilhas abertas** desenhadas no mapa e **a expedição perdida** que não acha a saída.
 
 ## 24. As fases e as provas
 

@@ -181,7 +181,7 @@ oferendas no alto, o enxofre da cratera).
 |---|---|---|---|---|
 | a vista que se abre, o vazio debaixo dos pés, a névoa que apaga tudo, a luz dura do alto | o vento que cresce com a altura, a respiração, a neve sob os pés, a pedra que cai longe, o silêncio do cume | a queda, a avalanche, o vento forte | **o corpo é a tela**: a respiração, o tremor do frio, o passo trôpego do ar fino; o céu que se lê; nada mais | a vista da expedição: a corda, as estacas, a comida que resta, a lenha que resta, o peso |
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -206,6 +206,7 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o monte de pedras do cume, as estacas da via, o nome da montanha (o primeiro a subir), a via com o seu nome.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que o tempo virou** (as nuvens que encostam no cume, o vento que muda, o frio que cai de repente), **por que o corpo não sobe mais** (o ar fino, o frio nos pés, a fome), **por que o guia quer voltar**. Lê-se no céu, no próprio corpo (o fôlego curto, os dedos que não fecham) e na fala do guia — que lê a montanha antes de todos.
 
 ## 16. As fases e as provas
 

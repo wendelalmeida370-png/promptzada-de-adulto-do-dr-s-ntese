@@ -92,6 +92,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   a fama e vira lenda, a canção como marca).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
+- [`leitura.md`](leitura.md) — a leitura, a sexta máquina do mundo (o porquê de cada «não» chega ao jogador dentro do mundo: o
+  gesto, a fala, o diário, o olho de quem sabe).
+- [`primeira-hora.md`](primeira-hora.md) — a primeira hora: o que um jogador novo vive nos primeiros dez minutos, na primeira hora
+  e na primeira vida, as escolhas do dono e o teste do novato (rascunho).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -126,8 +130,14 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   documentário; o calendário vira três ondas ([`natureza-viva.md`](natureza-viva.md)).
 - **As marcas do mundo** (**aprovado**, 20/11/2026): uma base — a memória do mundo — e um registro só das marcas, para a
   continuidade de séculos. **É uma máquina do mundo, não dos ofícios** (a batalha, a cheia, o milagre também deixam marca); os
-  ofícios têm um pé nela. **As cinco máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas) servem a tudo, e
+  ofícios têm um pé nela. **As seis máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas, a leitura) servem a tudo, e
   cada ofício as alimenta ([`marcas.md`](marcas.md)).
+- **A análise de game design** (**aprovada**, 20/11/2026): **a meta alta** — a máxima de cada ofício é para manter o nível lá em
+  cima, e a profundidade mora nas bases e nas perícias, com cada ofício novo mais barato que o anterior; **a leitura**, a sexta
+  máquina do mundo ([`leitura.md`](leitura.md)); **a prova da diversão em todo patch** (as quatro perguntas do teste do dono) e **a
+  primeira hora** ([`primeira-hora.md`](primeira-hora.md)); **o deus conferido em cada ofício** — entra só a mecânica pertinente e
+  divertida, nunca para encher linguiça; **a tabela dos ofícios**, feita pelo código ([`oficios-fundacao.md`](oficios-fundacao.md)
+  §2.14–2.15).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 78 ofícios (com o carrasco) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

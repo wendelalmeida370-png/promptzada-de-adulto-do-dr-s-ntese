@@ -168,7 +168,7 @@ apostas; os laços (o companheiro de escola, o rival, o admirador, a família do
 o amigo contra o amigo, a revolta); as missões (o lanista que manda perder; a fera que fugiu da jaula; o filho do morto que vem
 atrás de você).
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -193,6 +193,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o nome pintado nos muros, a estátua do campeão, a espada de madeira guardada, a lápide do gladiador.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que a multidão vaiou** (a luta sem graça, o golpe sujo, o favorito dela caído), **por que o editor poupou** (a fama, a luta bonita), **por que o golpe não entrou** (o escudo, o cansaço, o passo errado). Lê-se no grito da arquibancada, no gesto do outro e na fala do lanista depois.
+
+**O deus** (a vista de cima e os poderes): **os jogos são para os deuses**, como na Antiguidade: de cima o deus assiste à arena, e **um sinal dele no meio da luta** — o raio no céu limpo, o Sinal nos Céus na hora do polegar — **a multidão e o editor leem como o juízo do deus** (poupa o caído, condena o trapaceiro); **o Herói** (que já existe) faz de um gladiador o campeão escolhido, e a arena inteira sabe.
 
 ## 15. Do que depende, as fases e as provas
 

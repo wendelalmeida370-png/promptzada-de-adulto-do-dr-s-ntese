@@ -39,6 +39,12 @@ Um ofício só está pronto quando tem as dez coisas:
 
 E **o dia completo** de cada ofício: preparar, ir, fazer, voltar, vender ou guardar, consertar, descansar.
 
+**A meta alta** (o dono, 20/11/2026): a máxima «poderia ser um jogo sozinho» é **para manter o nível lá em cima** — mirando no jogo
+inteiro, mesmo sem chegar lá, **até o ofício de menos potencial fica bom de jogar**, com estrutura e jogabilidade de verdade. Há
+ofícios com mais potencial que outros, e tudo bem. **O cuidado, para a meta não travar o projeto:** a profundidade mora nas bases e
+nas perícias (que todos dividem), um ofício não precisa nascer com a profundidade toda (cresce com as perícias dele), e cada ofício
+novo sai mais barato que o anterior — a tabela dos ofícios mede ([`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
+
 ## 3. A progressão: o que cresce
 
 Um misto, com o peso no que muda o jeito de jogar:

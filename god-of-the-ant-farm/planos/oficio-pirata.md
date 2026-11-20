@@ -411,7 +411,7 @@ O **corsário**, o **naufragador** (as luzes falsas na costa), o **informante do
 **contrabandista** do mar, o **carpinteiro do refúgio**, o **intermediário de resgates**, o **caçador de piratas** (o capitão da frota que
 limpa o mar).
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -437,6 +437,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o tesouro enterrado, o nome do navio e da flâmula, a enseada que leva o seu nome, as canções.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que a tripulação resmunga** (o saque pouco, a divisão injusta, a fome a bordo, o capitão que fugiu da briga), **por que o mercante escapou** (o vento a favor dele, a vela mal posta), **por que o porto fecha** (a fama que chegou antes). Lê-se no convés — a roda que se forma, o silêncio quando o capitão passa —, no contramestre que avisa, e no diário.
+
+**O deus** (a vista de cima e os poderes): de cima o deus **segue a razia** (o navio que caça, o porto que foge) e vê **onde o tesouro foi enterrado** — o que nenhum mapa do mundo diz; **o Kraken e a Tempestade** contra o pirata (o porto que reza para se livrar dele), **os Ventos Favoráveis** a favor (o deus que torce pelo pirata); a lenda do pirata «que o mar não quis» nasce do que o deus fez.
 
 ## 33. As fases e as provas
 

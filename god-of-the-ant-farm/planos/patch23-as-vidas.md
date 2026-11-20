@@ -149,6 +149,11 @@ quadros; uma **folha de falas** (duzentas tiradas de um mundo vivido) para o don
 **Pronto quando:** num mundo pronto, cada pessoa tem o que dizer sobre o bairro, a cidade, o tempo, o corpo, os outros e
 quem governa, no jeito dela, e a crítica ouvida pelo guarda dá cadeia.
 
+**A leitura nasce aqui** (a sexta máquina do mundo, [`leitura.md`](leitura.md); aprovada em 20/11/2026): a voz é o canal principal
+do porquê. Quem responde ao corpo (os verbos sociais, o pedido, a venda) guarda a causa com nome junto da resposta, e a `G.Leitura`
+a faz chegar ao jogador pelo gesto (a 23c), pela fala (esta frente) ou pela linha do diário (a 23a) — só o que a pessoa pode
+saber, sem número. **Provas:** toda recusa diante do corpo tem a sua causa com nome, e a causa dita é a que decidiu.
+
 ### 23c — O corpo que fala (a fábrica de animações)
 
 **A fábrica:**

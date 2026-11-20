@@ -224,7 +224,7 @@ O garimpeiro, o escorador, o homem do fogo, o aguadeiro da mina, o lapidário (c
 fundidor e o carvoeiro (o fogo do metal), o pedreiro e o canteiro (a pedreira), o salineiro da mina de sal, o feitor da mina e o
 escravo da mina (as condições), o arqueólogo da mina perdida.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -249,6 +249,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): a galeria e a mina com o nome de quem as abriu, a assinatura riscada na rocha, a pedra com o nome dos mortos do desabamento.
 
+**A leitura** ([`leitura.md`](leitura.md)): **o ar ruim** (a chama da lamparina que encolhe), **a escora que range** antes de ceder, **o veio que acaba** (a pedra que muda de cor e de som sob a picareta); o colega diz, e o mineiro velho ouve na pedra o que o novato não ouve. Por que a galeria caiu: a escora poupada, a água que minou — dito no diário e na boca da turma.
+
+**O deus** (a vista de cima e os poderes): **o Veio de Pedra** (que já existe) abre a pedra boa onde o povo precisa — o trabalho do mineiro nasce da mão do deus; **o Terremoto** derruba as escoras, e **os mineiros presos lá embaixo viram uma história**: a turma que cava para chegar a eles (o grupo), a família na boca da mina, e o deus que decide se ajuda.
 
 ## 19. As fases e as provas
 

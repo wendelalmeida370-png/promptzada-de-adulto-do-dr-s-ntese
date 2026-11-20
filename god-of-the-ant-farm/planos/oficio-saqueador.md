@@ -224,7 +224,7 @@ lembra.
 O **receptador**, o **ourives desonesto** (o forno da noite), o **vigia de cemitério** (o outro lado: o ofício de guardar os
 mortos), o **falsificador de antiguidades**, o **negociante de antiguidades**.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -249,6 +249,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o túnel (o dos antigos ladrões é uma lenda) — e **apaga marcas**: o túmulo vazio, a coroa derretida.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que o vigia te viu** (a vela, o barulho da pá, a lua cheia), **por que o receptador pagou pouco** (a peça conhecida demais, o boato da maldição), **por que a cidade desconfia de você** (o gasto de quem não tem ofício). Lê-se no cão que late, no boato da vizinha, no diário.
+
+**O deus** (a vista de cima e os poderes): **a maldição do túmulo pode ser de verdade:** de cima, o deus vê quem violou o túmulo do rei; **a Praga** ou **o Raio** sobre o saqueador fazem do boato («quem abriu o monte pegou a febre do rei») um fato — ou o deus deixa passar, e o boato fica só boato.
 
 ## 23. As fases e as provas
 

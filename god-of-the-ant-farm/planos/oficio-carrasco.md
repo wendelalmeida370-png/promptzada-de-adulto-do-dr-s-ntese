@@ -194,7 +194,7 @@ pontos por morte** e sem demorar no corte. O peso está no que acontece em volta
 onde a lei manda arrancar a confissão pela dor**, o jogo mostra que isso existiu e o que causa — **o inocente que confessa qualquer
 coisa** —, sem fazer disso um jogo.
 
-## 18. As falas, as animações, as interações, o grupo e as marcas
+## 18. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 **Os assuntos novos:** a execução de amanhã, o golpe limpo ou falho, as últimas palavras do condenado, o perdão que chegou a tempo (ou
 não), o carrasco que bebeu, a casa do carrasco.
@@ -220,6 +220,10 @@ sentença**; devolver o corpo; vender a corda; curar à noite; pedir para sair d
 
 **As marcas** ([`marcas.md`](marcas.md)): **a colina da forca** (o lugar que o povo evita), a espada que passa de pai para filho, a casa do
 carrasco fora dos muros, **as últimas palavras** que a cidade repete por gerações, a canção do carrasco.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que a mão tremeu** (o medo, o laço com o condenado, o vinho da noite, a multidão contra), **por que a cidade o odeia ou o aplaude** (o condenado querido, o golpe limpo ou o golpe errado). Lê-se no próprio corpo (a mão que treme na tela do corpo), no grito da praça e no diário.
+
+**O deus** (a vista de cima e os poderes): **no cadafalso, o sinal do deus é o perdão:** **a Libertação** (as correntes se partem diante de todos), o raio no céu limpo, o Sinal nos Céus na hora do golpe — **a multidão lê como a vontade do céu**, e o carrasco e o juiz têm de decidir se continuam.
 
 ## 19. As fases e as provas
 

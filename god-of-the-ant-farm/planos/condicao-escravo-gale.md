@@ -193,7 +193,7 @@ remadores pagos); a ração do armazém do povo; o soldo do tesouro; a pena do r
 se revoltam pelas mesmas regras (a revolta dos remadores é uma história do motor de histórias); o capataz é uma pessoa do mundo,
 e nada premia a crueldade.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -218,6 +218,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o nome riscado na madeira do banco, a canção do remo que continua sendo cantada, a revolta lembrada pelo povo.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que o comitre te escolheu** para o chicote (o remo atrasado, a cara que ele não gosta), **por que o companheiro não te apoiou** na fuga (o medo, a família em terra, o laço fraco), **por que o corpo não aguenta** (a fome, a ferida aberta). Lê-se no banco: o vizinho que avisa baixinho, o olhar do comitre, o diário.
+
+**O deus** (a vista de cima e os poderes): **a Libertação** (que já existe: as correntes se partem) **numa galé em pleno mar** é uma história inteira — os galeotes soltos, o comitre, a tripulação livre, para onde levar o navio —, e **a reza do galeote**, a fé de quem não tem mais nada, é a que o deus ouve de cima.
 
 ## 13. Do que depende, as fases e as provas
 

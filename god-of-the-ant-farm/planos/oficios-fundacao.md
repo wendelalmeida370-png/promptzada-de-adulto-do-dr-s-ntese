@@ -204,8 +204,8 @@ do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
 
 ### 2.14 O que cada ofício traz às máquinas do mundo (a ideia do dono, 20/11/2026)
 
-**As falas, as animações, as interações, o grupo e as marcas são máquinas do mundo, não dos ofícios** — servem a tudo: às pessoas,
-às condições, à natureza, ao deus. **Todo patch de ofício alimenta as cinco** com o que é dele, como traz as perícias e a camada do
+**As falas, as animações, as interações, o grupo, as marcas e a leitura são máquinas do mundo, não dos ofícios** — servem a tudo: às pessoas,
+às condições, à natureza, ao deus. **Todo patch de ofício alimenta as seis** com o que é dele, como traz as perícias e a camada do
 ambiente:
 
 - **As falas** (a máquina da 23b): os **assuntos novos** que o ofício cria no mundo (o peixe recorde, a trilha nova, o túmulo
@@ -220,8 +220,43 @@ ambiente:
   grupo — linhas nas portas `G.Grupo.papel`, `ordem` e `situacao`, nunca uma máquina própria.
 - **As marcas** (o registro das marcas do mundo, [`marcas.md`](marcas.md)): os tipos de marca que o ofício deixa, lê ou apaga
   (a estátua, o livro, o talho na árvore, o nome da ilha, a parede dos rabiscos).
+- **A leitura** (a sexta máquina, [`leitura.md`](leitura.md); aprovada em 20/11/2026): **as causas do ofício** — por que não deu (o
+  peixe que não morde, a carga que cai, a sala que esfria), por que deu — e **como cada uma se lê** dentro do mundo (o gesto, a fala de
+  quem está perto, a linha do diário), sem número; e **o olho de quem sabe**: o que a perícia alta deixa ler sozinho.
 
-Cada documento de ofício tem a seção «As falas, as animações e as interações» com os assuntos, os exemplos e as listas.
+Cada documento de ofício tem a seção «As falas, as animações, as interações, o grupo, as marcas e a leitura» com os assuntos, os
+exemplos e as listas.
+
+**O deus — conferido sempre, posto só quando pertinente** (a decisão do dono, 20/11/2026). O principal do jogo hoje é o corpo em 3D,
+mas a vista do deus é o título do jogo e não pode ficar esquecida. **Todo ofício é conferido:** há uma mecânica divertida que use a
+tela do deus, a vista de cima ou os poderes dele com esse ofício? **Se há, entra** (o parágrafo «O deus» na seção do ofício); **se não
+há, não entra nada** — nada de mecânica para encher linguiça. A conferência fica na tabela dos ofícios (§2.15). **A primeira
+conferência** (20/11/2026, os 18 documentos de hoje):
+- **com uma mecânica do deus:** a pesca (o Cardume e a reza antes de sair), o mineiro (o Veio, o Terremoto e os presos lá embaixo), o
+  gladiador (o sinal no meio da luta lido como juízo), o galeote (a Libertação em pleno mar), o navegador (o vento e o presságio
+  que ele lê), o pirata (a razia vista de cima, o tesouro enterrado, o Kraken), o mateiro (a Floresta Sagrada por desbravar), o
+  caçador (a Matilha que vira caçada), quem governa (Ungir, o Mandamento, a Profecia), o juiz (o juízo de deus: o deus sabe a
+  verdade), o carrasco (o sinal que é perdão), o saqueador (a maldição do túmulo que pode ser de verdade), o bardo (o milagre cantado
+  espalha a fé);
+- **sem (nada pertinente):** o estivador, o capataz (a Libertação da galé já está do lado do galeote), o taverneiro, o arqueólogo e
+  o caçador de tesouros.
+
+### 2.15 A tabela dos ofícios (feita pelo código — aprovado, 20/11/2026)
+
+Como a matriz dos prédios (`qa/matriz-predios.js`, D-089): **um quadro de todos os ofícios, calculado do código e das provas, nunca
+afirmado à mão** (`qa/matriz-oficios.js`). Uma linha por ofício, com:
+- **as bases e as perícias** que ele usa, e as técnicas de cada uma;
+- **as seis máquinas:** quantas falas, clipes, verbos, papéis do grupo, tipos de marca e causas da leitura ele trouxe (contra as levas
+  de §2.14);
+- **o deus:** conferido (sim) e o que entrou — ou «nada pertinente»;
+- **as provas:** a invariante, o cenário, a regra do guard — de pé ou não;
+- **o equilíbrio:** quanto ganha por dia de jogo, quanto arrisca (os mortos e os feridos por hora de ofício), quanto tempo pede, pelo
+  jeito de ganhar ([`economia-oficios.md`](economia-oficios.md)) — **nenhum ofício muito acima dos outros para o mesmo risco** (o pirata
+  não pode ganhar mais que todo mundo sem pagar por isso);
+- **o custo:** quanto código novo o ofício pediu — **cada ofício novo deve sair mais barato que o anterior** (a profundidade mora nas
+  bases e nas perícias, que todos dividem); se o décimo custar o mesmo que o primeiro, a fundação volta para a mesa.
+
+**Nasce no Patch 25**, com a fundação e a Pesca; **cada patch de ofício acrescenta as suas linhas** e roda a tabela antes da versão.
 
 ## 3. As regras (o contrato da fundação)
 

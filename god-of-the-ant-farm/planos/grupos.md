@@ -134,7 +134,7 @@ jeito, recusar. O líder do mundo reage como reagiria a qualquer um, pela índol
 3. **As pessoas do mundo, quando lideram, passam pelas mesmas respostas** — o capitão do mundo também enfrenta a tripulação que
    discute.
 4. **Toda resposta tem a sua fala e o seu gesto** (a máquina de falas e a fábrica de animações), para o jogador entender o porquê sem
-   número nenhum.
+   número nenhum — é a máquina da leitura ([`leitura.md`](leitura.md)), e o grupo é o primeiro grande freguês dela.
 
 ### 5.8 Na mata, por exemplo
 

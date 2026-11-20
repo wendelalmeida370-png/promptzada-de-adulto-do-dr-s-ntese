@@ -209,7 +209,7 @@ a Ursa Maior, as colônias por todo o mar); os **romanos** (a rota do grão, os 
 O **piloto do porto** (o prático que leva os navios para dentro), o **cartógrafo do mar**, o **observador das estrelas** (o sacerdote
 do céu), o **faroleiro**, o **timoneiro**, o **vigia do mastro** (o alto do mastro: a escalada), o **mestre de vela**.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -234,6 +234,9 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): o nome da ilha, da rota e do cabo descobertos, o périplo copiado na biblioteca, a carta do mar, o farol com o nome de quem o ergueu.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que o navio derivou** (a corrente que puxou, o vento que virou à noite), **por que a estrela enganou** (a nuvem, o horizonte baixo), **o que o mar diz** (a cor da água, as aves que voltam à terra ao fim da tarde, a sonda que traz areia ou lodo). O navegador mestre lê sozinho; o piloto novo ouve o velho marinheiro.
+
+**O deus** (a vista de cima e os poderes): **o vento e a tempestade são do deus** (os Ventos Favoráveis e a Tempestade já existem), e o navegador é **quem os lê**: o deus vê de cima o mar inteiro que o navegador só adivinha; **o Sinal nos Céus** (o cometa, o eclipse) entra na leitura do céu (o presságio que a tripulação teme); **a oferenda antes da travessia** — o navio que reza e o deus que responde, ou não, com o vento.
 
 ## 19. As fases e as provas
 

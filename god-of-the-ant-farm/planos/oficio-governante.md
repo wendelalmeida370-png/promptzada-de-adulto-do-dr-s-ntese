@@ -312,7 +312,7 @@ escolhido pelo conselho dos nobres, o império do tributo, as guerras para fazer
 |---|---|---|---|---|
 | a sala do trono, a varanda sobre a multidão, a tenda de guerra com o mapa, a câmara do conselho à luz das lamparinas | o arauto, **o rugido da multidão**, o murmúrio do conselho, **o silêncio quando você entra** | a multidão, a batalha | **o livro do reino** (as cartas, os relatórios, os pedidos, o que os espiões contam) e os rostos da corte; nunca o reino inteiro à vista | a vista de quem governa: o selo, a coroa, as chaves do tesouro, as cartas |
 
-## 20. As falas, as animações, as interações, o grupo e as marcas
+## 20. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte das quatro máquinas ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14). Sugestões para começar:
 
@@ -343,6 +343,10 @@ guarda, o espião-mor, o conselheiro, o herdeiro; **as ordens**: os decretos e a
 sabotadas, pela índole de cada um); **as situações**: a crise do tesouro, a guerra, o golpe, a sucessão.
 
 **As marcas** ([`marcas.md`](marcas.md)): tudo: a estátua com o rosto, a rua e o bairro com o nome, a moeda com o rosto, a lei gravada, a crônica, o palácio, o túmulo — e **o nome do antecessor raspado**.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que o povo murmura** (o pão caro, o imposto novo, a guerra perdida, o filho que não voltou), **por que o conselho votou contra** (os laços, o medo, o suborno de outro), **por que o general hesita**. Lê-se na praça, no relatório do conselheiro (que pode mentir: a leitura só diz o que o governante pode saber), e na cara de quem se curva.
+
+**O deus** (a vista de cima e os poderes): **o deus faz e desfaz quem governa** — os poderes da Palavra e do Destino já existem: **Ungir** (quem passa a governar), **o Mandamento** (a lei do céu que o governante engole ou desafia), **a Profecia**, **a Era de Ouro**, **a Maldição**, **a Discórdia**, **a Paz Divina**. **O governante ungido** tem o direito do céu (a fé do povo a favor dele); **o que governa contra o mandamento** desafia o deus à vista de todos; **o sinal no céu na coroação** é lido pelos sacerdotes contra ou a favor dele.
 
 ## 21. Os derivados (os outros ofícios do poder)
 

@@ -243,7 +243,7 @@ esqui); os **astecas** (**a zarabatana**, as aves das plumas preciosas, a onça 
 |---|---|---|---|---|
 | baixa, no capim; o bicho ao longe na luz do entardecer; **o tempo que estica no tiro** | a respiração presa, o vento no capim, o passo do bicho, **o silêncio dos macacos**, a corda do arco | a fera que salta, o gigante que investe | **o bicho lido pelo corpo dele** (a orelha, a cabeça, o rabo) e **o vento no capim**; nada de barra de detecção | a vista do caçador: o arco, as flechas, a faca, as cordas, as peles |
 
-## 20. As falas, as animações, as interações, o grupo e as marcas
+## 20. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 **Os assuntos novos:** a fera que come as cabras, a caçada do rei, o maior urso já caçado, a manada que passou no rio, o caçador que não
 voltou, a pele vendida, o bosque sagrado violado.
@@ -271,6 +271,10 @@ cedo, o ferido no meio da caçada.
 
 **As marcas** ([`marcas.md`](marcas.md)): **a pele e o chifre na parede** (da casa, da taverna, do palácio), o recorde na tábua da cidade,
 **a pintura da caçada** na caverna, a canção da fera morta, o nome do caçador no vale da fera.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que a presa fugiu** (o vento a favor dela, o passo no galho seco, a sombra), **por que a fera não veio** (sentiu o cheiro), **por que o tiro não matou** (o lugar errado do corpo). Lê-se no bicho — a orelha que vira, a cabeça que sobe —, no rastro de sangue, no caçador velho que explica à noite.
+
+**O deus** (a vista de cima e os poderes): **a Matilha do deus vira o trabalho do caçador:** os lobos que o deus solta sobre uma vila fazem os caçadores se juntarem para a caçada — e o deus assiste, de cima, à caçada que ele mesmo causou; **o Herói** faz do caçador o campeão contra a fera que come gente.
 
 ## 21. Os derivados
 

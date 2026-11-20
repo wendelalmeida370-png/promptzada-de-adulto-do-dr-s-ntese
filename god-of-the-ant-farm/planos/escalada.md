@@ -166,7 +166,7 @@ Ler a parede; os pés antes das mãos (gastar menos braço); a fenda e a chamin�
 corda; a ancoragem firme; dar a corda ao companheiro; o nó que não solta; cravar a estaca; testar a pega antes de pesar nela (o
 arenito); o passo na neve dura; frear a escorregada.
 
-## As falas, as animações, as interações, o grupo e as marcas
+## As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -189,6 +189,7 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 
 **As marcas** ([`marcas.md`](marcas.md)): as estacas que ficam na rocha, a via nomeada por quem a abriu.
 
+**A leitura** ([`leitura.md`](leitura.md)): **por que a pega cedeu** (a rocha molhada, a pedra solta que soa oca, a mão cansada demais), **por que a corda não segurou** (a estaca mal posta, a rocha podre atrás dela). Lê-se na rocha — o som do toque, a poeira que cai, a cor da pedra —, no braço que treme na tela do corpo e na fala do companheiro de corda; o escalador velho lê a parede de baixo, antes de subir.
 
 ## 13. As fases e as provas
 

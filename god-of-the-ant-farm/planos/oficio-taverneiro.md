@@ -226,7 +226,7 @@ conhece. A taverna que pega fogo, a que a guerra fecha, a que a lei fecha; a que
 |---|---|---|---|---|
 | a luz quente do fogo e das lamparinas, a fumaça, o quadro apertado da sala cheia, a madrugada vazia | **as vozes em camadas**, as risadas, as canecas, a música, o fogo — e **o silêncio quando o guarda entra** | a briga, a mesa que cai | **a sala lida nos rostos** (quem espera, quem bebeu demais, quem cochicha); a tábua do fiado; a caixa | a vista do taverneiro: as chaves, a tábua, a bolsa, a lista da adega |
 
-## 18. As falas, as animações, as interações, o grupo e as marcas
+## 18. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 Cada ofício chega com a sua parte da **máquina de falas**, da **fábrica de animações**, das **interações** e do **grupo**
 ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14). Sugestões para começar:
@@ -259,6 +259,8 @@ quarto; pagar ou recusar a proteção; abrir e fechar.
 «mesa três», «mais cerveja», «põe ele pra fora», «fecha a porta»; **as situações**: a noite cheia, a briga, a batida do guarda, a festa.
 
 **As marcas** ([`marcas.md`](marcas.md)): **a parede dos rabiscos** (os nomes, as contas, os amores dos fregueses, que duram enquanto a taverna dura), a mesa do rei, o nome da casa.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que o freguês não voltou** (o prato frio, o vinho aguado, a briga da semana, o fiado cobrado na frente dos outros), **por que a sala está vazia** (a festa na taverna do outro bairro, o preço, a chuva). Lê-se no rosto de quem come, no prato que volta, no que se diz na rua — nunca numa nota.
 
 ## 19. Os derivados
 

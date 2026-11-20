@@ -208,7 +208,7 @@ que desonra um rei**, o poeta sagrado como o hóspede); os **astecas** (**os can
 |---|---|---|---|---|
 | a taverna à luz do fogo com todos os rostos virados para você, a praça da festa, a estrada ao entardecer | **a música do povo** (a escala e o timbre que o jogo já faz), a voz, o silêncio da sala presa, **o refrão cantado por todos** | — | **o caderno de histórias** (os fatos, as fontes, a confiança em cada um) e **os rostos da plateia**; nada mais | a vista do bardo: o instrumento, o caderno, as canções sabidas |
 
-## 19. As falas, as animações, as interações, o grupo e as marcas
+## 19. As falas, as animações, as interações, o grupo, as marcas e a leitura
 
 **Os assuntos novos:** a canção nova, o bardo que chegou, o herói cantado, a sátira contra quem governa, o bardo preso, a canção que veio
 de longe.
@@ -236,6 +236,10 @@ ferreiro», «mais devagar», «o refrão»; **as situações**: a sala hostil, 
 
 **As marcas** ([`marcas.md`](marcas.md)): **as canções** (marcas de memória que vivem enquanto são cantadas), a canção escrita e copiada na
 biblioteca, **o nome devolvido ao herói esquecido**, a sátira que ficou no nome de um rei, o bardo lembrado pelo nome — ou só pela canção.
+
+**A leitura** ([`leitura.md`](leitura.md)): **por que a sala esfriou** (a canção errada para a sala, a história que alguém ali viveu diferente, o tom alegre num dia de luto), **por que a canção não viajou** (ninguém a aprendeu, a sátira que deu medo de cantar). Lê-se na sala — quem para de beber, quem sai, quem canta junto — e na fala de quem ouviu.
+
+**O deus** (a vista de cima e os poderes): **o milagre cantado espalha a fé:** o que o deus faz (a chuva na seca, o raio no tirano) vira canção pelo bardo, e **a canção leva o milagre às cidades que não o viram** — onde se canta, se crê; **a Inspiração e a Visão** (que já existem) podem dar ao bardo o sonho de uma canção.
 
 ## 20. Os derivados
 
