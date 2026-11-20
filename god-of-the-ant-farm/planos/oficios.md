@@ -94,7 +94,7 @@ seguir).
 
 ## 6. Todos os ofícios (a lista aprovada pelo dono, 20/11/2026)
 
-**77 ofícios e 13 condições.** Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
+**78 ofícios e 13 condições.** Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
 ramo do mesmo jogo), **papel** ou **título** (um lugar no grupo, um degrau da carreira) ou **função do mundo** (o que se faz por um
 dia). ★ = já tem o seu documento a fundo.
 
@@ -145,8 +145,8 @@ o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola) · *
 **A arte (7):** **bardo** (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
 **auriga** · **atleta**
 
-**O poder (5):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
-**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) · **embaixador** · **agitador**
+**O poder (6):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
+**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador**
 
 **As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·
 mendigo · exilado · foragido · náufrago · perdido (inclui o soterrado) · órfão, criança, ancião · viúvo · herdeiro

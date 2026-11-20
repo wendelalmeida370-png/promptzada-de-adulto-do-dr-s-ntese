@@ -99,8 +99,8 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 ### A terra e a mata
 
 **Ervas** — o que cura e o que mata; o unguento, o chá.
-- *As técnicas:* O unguento, O chá da febre, O emplastro ([o mateiro](oficio-mateiro.md)).
-- *Quem usa:* o mateiro, o curandeiro, o ervanário.
+- *As técnicas:* O unguento, O chá da febre, O emplastro ([o mateiro](oficio-mateiro.md)); O unguento ([o carrasco](oficio-carrasco.md)).
+- *Quem usa:* o mateiro, o carrasco, o curandeiro, o ervanário.
 
 **Conservar** — a salga, a defumação, o garum: a comida que dura.
 - *As técnicas:* A salga e a defumação, O garum ([o pescador](oficio-pesca.md)).
@@ -132,7 +132,7 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 
 **Lutar (um jeito por arma)** — um jeito por arma — a espada curta e a faca, a lança, o escudo, o arco, a funda, a rede e o tridente, o chicote, sem arma —, mais a montaria (o cavaleiro) e a formação (a fileira da infantaria); com o combate do corpo.
 - *As técnicas:* A briga do cais ([o estivador](oficio-estivador.md)); A luta no convés, A flecha de fogo ([o pirata](oficio-pirata.md)); Pôr para fora ([o taverneiro](oficio-taverneiro.md)); A rede que se joga e se recolhe, O empurrão do escudo, O golpe por cima do escudo, O passo do reciário, A guarda do secutor contra a rede, O golpe que decepa, O golpe de misericórdia limpo, Cair e se levantar, Lutar ferido, Ler o adversário ([o gladiador](oficio-gladiador.md)); O chicote certeiro ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o estivador, **o gladiador**, o capataz, o pirata, o taverneiro, o guarda, o soldado, o general, o cavaleiro, o caçador.
+- *Quem usa:* o estivador, **o gladiador**, o capataz, o pirata, o taverneiro, o carrasco, o guarda, o soldado, o general, o cavaleiro, o caçador.
 
 **Abordagem** — a caça e o assalto no mar e na costa: a presa, a emboscada, os ganchos, a razia ([`oficio-pirata.md`](oficio-pirata.md)).
 - *As técnicas:* Ler a presa, A emboscada do estreito, O sol nas costas, O disfarce, Quebrar os remos, O gancho, A razia ([o pirata](oficio-pirata.md)).
@@ -145,24 +145,24 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 ### A gente
 
 **Espetáculo** — agradar a multidão: o gesto, a hora, o drama (a arena; depois o ator e o bardo).
-- *As técnicas:* O discurso na praça, O pão e os jogos ([quem governa](oficio-governante.md)); A sentença na praça ([o juiz](oficio-juiz.md)); O gesto para a multidão ([o gladiador](oficio-gladiador.md)).
-- *Quem usa:* o gladiador, quem governa, o juiz, o ator, o bardo, o auriga.
+- *As técnicas:* O discurso na praça, O pão e os jogos ([quem governa](oficio-governante.md)); A sentença na praça ([o juiz](oficio-juiz.md)); A presença no cadafalso ([o carrasco](oficio-carrasco.md)); O gesto para a multidão ([o gladiador](oficio-gladiador.md)).
+- *Quem usa:* o gladiador, quem governa, o juiz, o carrasco, o ator, o bardo, o auriga.
 
 **Comandar** — a voz, o ritmo, a parte justa, a ordem que se cumpre — da turma ao exército.
 - *As técnicas:* O canto de trabalho ([o estivador](oficio-estivador.md)); A parte justa, O inverno bem passado ([o pirata](oficio-pirata.md)); A voz do trono, Liderar o exército ([quem governa](oficio-governante.md)); O silêncio do tribunal, O júri ([o juiz](oficio-juiz.md)); A voz de comando, A ração medida, Parar a briga do banco ([o capataz](oficio-capataz.md)).
 - *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o taverneiro, quem governa, o juiz, o general, o chefe de turma, o chefe de galeria.
 
 **Intimidar** — o medo como arma: o grito, o nome, o castigo exemplar.
-- *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O olhar que basta ([o taverneiro](oficio-taverneiro.md)); O exemplo, O expurgo ([quem governa](oficio-governante.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o gladiador, o capataz, o pirata, o taverneiro, quem governa, o guarda.
+- *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O olhar que basta ([o taverneiro](oficio-taverneiro.md)); O exemplo, O expurgo ([quem governa](oficio-governante.md)); O olhar que basta ([o carrasco](oficio-carrasco.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o gladiador, o capataz, o pirata, o taverneiro, quem governa, o carrasco, o guarda.
 
 **Ler as pessoas** — a mentira, o sócio, a tripulação, o ânimo de quem está em volta.
-- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a sala, A hora de parar ([o taverneiro](oficio-taverneiro.md)); O conselheiro que mente, O herdeiro impaciente ([quem governa](oficio-governante.md)); Quem mente, O medo da testemunha, O réu poderoso ([o juiz](oficio-juiz.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata, o taverneiro, quem governa, o juiz.
+- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a sala, A hora de parar ([o taverneiro](oficio-taverneiro.md)); O conselheiro que mente, O herdeiro impaciente ([quem governa](oficio-governante.md)); Quem mente, O medo da testemunha, O réu poderoso ([o juiz](oficio-juiz.md)); Deixar falar, Ler o condenado, Ler a multidão ([o carrasco](oficio-carrasco.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata, o taverneiro, quem governa, o juiz, o carrasco.
 
 **Negociar** — o preço, o resgate, a parte, o acordo.
-- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)); Comprar na hora certa, Cobrar o fiado ([o taverneiro](oficio-taverneiro.md)); O tratado, O casamento real, O tributo ([quem governa](oficio-governante.md)); O preço do sangue ([o juiz](oficio-juiz.md)).
-- *Quem usa:* o caçador de tesouros, o pirata, o taverneiro, quem governa, o juiz, o mercador.
+- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)); Comprar na hora certa, Cobrar o fiado ([o taverneiro](oficio-taverneiro.md)); O tratado, O casamento real, O tributo ([quem governa](oficio-governante.md)); O preço do sangue ([o juiz](oficio-juiz.md)); A corda que se vende ([o carrasco](oficio-carrasco.md)).
+- *Quem usa:* o caçador de tesouros, o pirata, o taverneiro, quem governa, o juiz, o carrasco, o mercador.
 
 **Investigar** — juntar pistas: o boato, o informante, a revista, o corpo, o mito — do caçador de tesouros ao guarda.
 - *As técnicas:* Os ossos, Ler o mito ([o arqueólogo](oficio-arqueologo.md)); Pesar a pista, Ler o boato ([o caçador de tesouros](oficio-cacador-tesouros.md)); O informante, Pesar a informação, A revista ([o pirata](oficio-pirata.md)); Ouvir sem parecer ([o taverneiro](oficio-taverneiro.md)); A rede de espiões, A conspiração descoberta, O disfarce ([quem governa](oficio-governante.md)); Perguntar, A contradição, A cena, O álibi, Os ossos e as feridas, A revista ([o juiz](oficio-juiz.md)); A revista dos esconderijos, A rede de delatores ([o capataz](oficio-capataz.md)).
@@ -196,6 +196,10 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 - *As técnicas:* A lei de cor, O peso da prova, A sentença justa, A composição, O precedente, A misericórdia, Recusar a bolsa ([o juiz](oficio-juiz.md)).
 - *Quem usa:* **o juiz**, o ancião, o jurado (por um dia), quem governa (a justiça do rei).
 
+**Executar** — o fio, o nó, o golpe, a calma diante da multidão — a mão da sentença ([`oficio-carrasco.md`](oficio-carrasco.md)).
+- *As técnicas:* O fio sem falha, O golpe limpo, O nó certo, A taça medida, A fogueira breve, A mão firme, O açoite medido, O rito dos condenados ([o carrasco](oficio-carrasco.md)).
+- *Quem usa:* **o carrasco**.
+
 ### As mãos
 
 **Forjar** — o fogo do metal (o ferreiro — o documento a fundo virá).
@@ -215,8 +219,8 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 - *Quem usa:* o padeiro, o moleiro.
 
 **Abater** — o abate e o corte: a carne de cada bicho, o peixe limpo, o couro que se tira.
-- *As técnicas:* virão com o documento a fundo do ofício que mais a usa.
-- *Quem usa:* o açougueiro, o caçador, o pescador (limpar o peixe).
+- *As técnicas:* O osso no lugar ([o carrasco](oficio-carrasco.md)).
+- *Quem usa:* o carrasco, o açougueiro, o caçador, o pescador (limpar o peixe).
 
 **As que virão com os seus ofícios:** lavrar e criar (a terra), olaria, tecer, carpintaria, curar, montar a cavalo, cantar e
 contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofício ganhar o documento a fundo.
@@ -241,6 +245,7 @@ contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofíci
 | [o taverneiro](oficio-taverneiro.md) | **Hospitalidade** | Fermentar, Cozinhar, Ler as pessoas, Negociar, Letras, Investigar, Intimidar, Lutar (um jeito por arma), Comandar, Jogo |
 | [quem governa](oficio-governante.md) | **Governar** | Comandar, Tática, Negociar, Ler as pessoas, Investigar, Intimidar, Espetáculo, Letras |
 | [o juiz](oficio-juiz.md) | **Julgar** | Investigar, Ler as pessoas, Letras, Comandar, Negociar, Espetáculo |
+| [o carrasco](oficio-carrasco.md) | **Executar** | Lutar (um jeito por arma), Ler as pessoas, Intimidar, Espetáculo, Abater, Ervas, Negociar |
 | o guarda | **Lutar** | Investigar, Intimidar, Ler as pessoas |
 | o general | **Tática** | Comandar, Lutar (a montaria, a formação), Ler as pessoas |
 | o conselheiro | **Ler as pessoas** | Governar, Negociar, Investigar, Letras |

@@ -47,6 +47,7 @@ escalada, a montanha e o mundo grande.
 | 33 | **Quem governa** | o poder em cada regime (do imperador ao porta-voz), as alavancas (a lei, o tesouro, as obras, as pessoas, a justiça, a guerra, a fé, a imagem), os estamentos, a corte, governar com o que se sabe, o legado — sobre a política que o jogo já tem | [`oficio-governante.md`](oficio-governante.md) |
 | 34 | **As marcas do mundo** (aprovado; uma máquina do mundo, não dos ofícios — os ofícios têm um pé nela) | a continuidade: quinhentos anos depois, achar a marca de uma vida sua; um registro só para a pintura, a inscrição, a estátua com o rosto, o nome dos lugares, o livro, a canção, o túmulo, o tesouro; a matéria e o cuidado que fazem durar; **o livro das vidas** do jogador | [`marcas.md`](marcas.md) |
 | 35 | **O juiz** | a verdade existe no mundo, o juiz não a vê: o caso, as testemunhas que mentem pela índole, a audiência, a sentença dentro da moldura da lei, as pressões (o poderoso, o suborno, a multidão), o erro que a cidade lembra; com a sombra, no Patch 34 | [`oficio-juiz.md`](oficio-juiz.md) |
+| 36 | **O carrasco** | de papel de um dia a ofício: o golpe que tem de ser um só, a mão que treme (o medo, o laço, o vinho), a vida à parte fora dos muros, o perdão que chega correndo, a recusa; com o juiz, no Patch 34 | [`oficio-carrasco.md`](oficio-carrasco.md) |
 
 ## 2. A lógica da ordem
 
@@ -88,7 +89,7 @@ load (S4); T-1584 e T-1585.
 | **31 — O subterrâneo e a mina** | o corpo debaixo da terra (S1, S2, S4); **o registro do passado começa** (os povos antigos na criação, o enxoval, o tesouro escondido, o tempo que enterra); o mineiro (M1 a M5), o garimpeiro, o escorador, o homem do fogo, o lapidário; o soterrado | 25, 29 (a corda) | o metal e as pedras das oficinas; a base da arqueologia | [`subterraneo.md`](subterraneo.md), [`oficio-mineiro.md`](oficio-mineiro.md), [`passado.md`](passado.md) |
 | **32 — A oficina** | o ferreiro, o armeiro, o oleiro, o tecelão, o carpinteiro, o marceneiro; a construção pelo corpo | 28, 30, 31 (o que a terra, a mata e a mina deram) | as armas, as ferramentas e as coisas de todos os outros | [`oficios.md`](oficios.md) |
 | **33 — A arena e a guerra** | o combate profundo (as zonas, as feridas, o decepar); o gladiador (A1 a A5), o guerreiro, o mercenário, o campeão; a escada no muro do cerco | o combate da v14, 23, 24, 29, 32 (as armas) | a luta que o mar, a sombra e a caça vão usar | [`oficio-gladiador.md`](oficio-gladiador.md) |
-| **34 — A sombra e a lei** | o ladrão, o contrabandista, o espião, o assassino; o preso; **o juiz** (o julgamento que fecha o círculo do crime); o muro e o telhado | 24, 29, 33 | esconder, furtar, ouvir escondido — o que a fuga da galé, a revista do capataz e o contrabando do porto usam | [`oficio-juiz.md`](oficio-juiz.md), [`oficios.md`](oficios.md) |
+| **34 — A sombra e a lei** | o ladrão, o contrabandista, o espião, o assassino; o preso; **o juiz** (o julgamento que fecha o círculo do crime) e **o carrasco** (a sentença cumprida); o muro e o telhado | 24, 29, 33 | esconder, furtar, ouvir escondido — o que a fuga da galé, a revista do capataz e o contrabando do porto usam | [`oficio-juiz.md`](oficio-juiz.md), [`oficio-carrasco.md`](oficio-carrasco.md), [`oficios.md`](oficios.md) |
 | **35 — O porto e o navio por dentro** | as plantas dos navios, o chão que anda, o itinerário do porto (N2, N3); o estivador (E1 a E5), o marinheiro (e o mastro); o remador livre (G1) | 26, 29, 34 | as viagens do corpo | [`navios.md`](navios.md), [`oficio-estivador.md`](oficio-estivador.md) |
 | **36 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar (as viagens de dias, quando o mundo grande chegar) | 33, 34, 35 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
 | **37 — O comércio** | o mercador, o caravaneiro (o taverneiro já veio no 27) | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
@@ -128,6 +129,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | A comida e a cozinha | 27 (a base), 28 (os ofícios da cozinha) |
 | Quem governa | 40 |
 | O juiz | 34 |
+| O carrasco | 34 |
 | As marcas do mundo | 23 (a frente 23f: o registro, os nomes, o livro das vidas), 31 e 39 (o tempo, o ver e ler) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |

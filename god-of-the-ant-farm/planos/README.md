@@ -82,6 +82,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   a corte, governar com o que se sabe, o golpe e a revolução, o legado).
 - [`oficio-juiz.md`](oficio-juiz.md) — o juiz por inteiro (o caso, as testemunhas, a audiência, a sentença na moldura da lei, as
   pressões, o erro, o júri, o preço do sangue; com a sombra, no Patch 34).
+- [`oficio-carrasco.md`](oficio-carrasco.md) — o carrasco por inteiro (o cadafalso, o golpe, a mão que treme, a vida à parte, a
+  consciência; com o juiz, no Patch 34).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.
@@ -115,7 +117,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   continuidade de séculos. **É uma máquina do mundo, não dos ofícios** (a batalha, a cheia, o milagre também deixam marca); os
   ofícios têm um pé nela. **As cinco máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas) servem a tudo, e
   cada ofício as alimenta ([`marcas.md`](marcas.md)).
-- **A lista dos ofícios** (**aprovada**, 20/11/2026): 77 ofícios e 13 condições, sem redundância — o que não aguentava horas
+- **A lista dos ofícios** (**aprovada**, 20/11/2026): 78 ofícios (com o carrasco) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes
   finos, as receitas de cada povo, a combinação livre, a qualidade em sete degraus de palavras, **o retorno pelo mundo** (o rosto
