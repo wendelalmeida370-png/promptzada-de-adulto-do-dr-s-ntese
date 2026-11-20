@@ -8,6 +8,10 @@ teste do dono, [`roteiro.md`](roteiro.md) §5).
 
 1. **Vozes de verdade, feitas por IA, nas falas curtas e fixas** (§2).
 2. **Os murmúrios por povo** em todas as outras falas — como no The Sims (§4).
+3. **O portão da qualidade** (a condição do dono, 20/11/2026): **a voz tem de soar como gente de verdade, nunca a voz tosca e
+   robotizada.** Antes de qualquer trabalho, eu gero umas dez falas de amostra com os melhores programas do momento e mando ao dono;
+   ele ouve (um minuto). **Se soar robótico, as vozes de IA ficam fora** e ficam só os murmúrios — nada se perde. O mesmo portão a
+   cada conjunto novo de vozes.
 
 **A captura do rosto** está no §7, para o dono decidir.
 
@@ -15,12 +19,15 @@ teste do dono, [`roteiro.md`](roteiro.md) §5).
 
 As falas que **não têm nome nem lugar no meio** e que se repetem muito — por isso valem a voz:
 
-- **as reações:** o «pegou!», o «cuidado!», o grito de dor, o riso, o susto, o suspiro;
+- **as reações com palavras:** o «pegou!», o «cuidado!», o «ai, meu deus!»;
 - **os cumprimentos e as despedidas**, no jeito de cada um;
 - **os gritos da arena e da batalha**, o «avança!», o «recua!»;
 - **os pregões do mercado e do porto**;
 - **as ordens e as respostas curtas do grupo** ([`grupos.md`](grupos.md)): o «segura!», o «agora não», o «tô contigo», o «nem pensar»;
 - **as respostas curtas da conversa:** sim, não, talvez, «sei lá».
+
+**Sem voz de IA:** os sons sem palavras — o grito de dor, o riso, o choro, o susto, o sussurro — são onde toda voz de IA ainda soa
+pior; ficam com o som feito pelo código e com o murmúrio do povo.
 
 As falas longas, com nome e lugar («O {nome} anda gastando muito…»), continuam escritas, com o murmúrio do povo por baixo. Uma leva de
 algumas centenas de falas curtas por conjunto de vozes; cada ofício novo pode trazer as suas (o «pegou!» do pescador, o grito do
