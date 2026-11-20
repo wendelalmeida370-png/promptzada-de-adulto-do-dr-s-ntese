@@ -125,6 +125,9 @@ cristaleiro).
 
 ## 5. Como cada patch anda
 
+**Todo patch de ofício traz a sua parte das três máquinas:** as falas, as animações e as interações daquele ofício (a seção de
+mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+
 Cada patch segue o protocolo de qualidade do `CLAUDE.md`: o plano com os números de cada frente, o contrato, as frentes em
 paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar. **E o teste
 do dono no fim de cada ofício: horas a fio, sem enjoar** — se enjoar, o ofício volta para a mesa antes do próximo tronco.

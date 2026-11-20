@@ -218,6 +218,28 @@ O **guia das profundezas**, o **explorador de cavernas** (mapear onde ninguém f
 expedição, o **mergulhador de naufrágios**, o **negociante de mapas** (e o falsificador de mapas), o **patrocinador** (a casa rica
 que paga as expedições).
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o tesouro achado, a pista que corre (o mapa, o boato), a expedição que partiu, quem não voltou, o rival famoso, o túmulo aberto.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o bêbado da taverna) «Meu avô enterrou o ouro do chefe. Entre as três pedras. Eu juro!»
+- (o negociante de mapas) «Esse mapa é verdadeiro. O outro que eu te vendi também era.»
+- (o sócio, na câmara) «Metade é pouco. Eu te trouxe até aqui, não trouxe?»
+- (a pedra se move) «Pra trás! Pra trás!»
+- (o guia) «Daqui pra frente eu não vou. Ninguém que passou dessa pedra voltou.»
+- (o rival) «Chegou tarde, amigo. Mas pode olhar.»
+- (a família do avô) «Você achou o ouro do meu avô… e devolveu? Quem é você?»
+- (quem governa) «Do que sai da terra deste povo, um quinto é meu. Esqueceu?»
+
+**As animações** (os clipes): estudar o mapa girando-o contra a paisagem, copiar os símbolos, sondar a parede, testar o chão com a vara, travar a pedra com a cunha, o passo leve, a tocha erguida na câmara (o ouro que responde), escolher o que vai no saco, fugir da passagem que cede, cavar e cobrir o esconderijo, o aperto de mão do acordo.
+
+**As interações com o mundo:** comprar a pista (a banca, a taverna); ouvir o velho («Contar uma história»); juntar e contratar a turma; estudar o mapa; sondar; desarmar a defesa (E segurado); abrir a porta pela ordem decifrada; declarar ou esconder o achado; devolver à família.
+
+
 ## 21. As fases e as provas
 
 | Fase | O quê |

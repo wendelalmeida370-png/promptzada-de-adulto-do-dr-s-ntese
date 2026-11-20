@@ -147,6 +147,28 @@ reto no mar, a gritaria dos dados.
 O chefe de turma, o capataz, o dono da estiva; o **contrabandista** (a sombra); o **marinheiro** (subir no navio de vez); o
 **mercador** (de dono da estiva a dono de carga); o ladrão do cais; o brigador de taverna que vira **gladiador**.
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o navio que chegou e o que traz, a chamada da manhã (quem foi escolhido), o acidente da prancha, a turma rival, a greve, o contrabando (sussurrado), o capataz da estiva.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (a chamada) «Você, você e você. O resto, amanhã.»
+- (o velho da turma) «Levanta com as pernas, menino. Costas a gente só tem umas.»
+- (o canto de trabalho) «Ê, sobe a ânfora! — Ê, que o vinho é do rei!»
+- (a prancha balança) «Segura! Segura que vai!»
+- (o escriba conferindo) «Faltam duas. Quem levou duas ânforas?»
+- (o marinheiro estrangeiro) «Cuidado com essa caixa. Não pergunta o que tem dentro.»
+- (a taverna, à noite) «Carreguei o navio do senador. Tinha uma caixa que pesava como chumbo — e tilintava.»
+- (do corpo) «Você aguenta carga por dois. O capataz já reparou.»
+
+**As animações** (os clipes): levantar do jeito certo (e do errado), o saco no ombro, a ânfora abraçada, rolar o barril pela prancha, equilibrar-se na prancha que balança, arrumar no porão agachado, girar a roda do guindaste em turma, amarrar o nó de carga, marcar o ritmo do canto com o braço, cair na água e ser puxado, a briga do cais, jogar os dados no chão da taverna, esfregar as costas doloridas.
+
+**As interações com o mundo:** pegar a carga (E); passar a carga ao colega (o par); ir à chamada de manhã; conferir com o escriba; entrar numa turma; puxar o canto; aceitar o «favor» do marinheiro (o contrabando); jogar os dados; tirar da água quem caiu.
+
+
 ## 11. Do que depende, as fases e as provas
 
 **Depende de:** a vida a bordo e o porto ([`navios.md`](navios.md): o porão por dentro na N2, a tábua dos navios na N3); a

@@ -287,6 +287,28 @@ O lance (minutos) → a manhã de pesca (preparar, ir, pescar, voltar) → o dia
 estações (o salmão no outono, o atum na primavera, o gelo no inverno) → o longo prazo (as ferramentas, o barco, os títulos, a
 coleção, os aprendizes, os lendários).
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o peixe grande que alguém tirou (o recorde), o cardume da estação, o pesqueiro que secou, o Velho do Lago (visto ou não), o barco que não voltou, o preço do peixe, a isca boa do momento.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o colega na beira) «Hoje não dá nada. A água tá turva desde a chuva.»
+- «Ontem o {nome} tirou um bagre do tamanho de um menino. Ninguém acredita, mas eu vi.»
+- (o velho, do Velho do Lago) «Ele quebrou a linha do meu pai e a do meu avô. A tua não vai ser diferente.»
+- (ao fisgar) «Pegou! Pegou! Segura firme!» — (o peixe escapa) «Ah, maldito… era grande.»
+- (o comprador na banca) «Sardinha de três dias? Isso não vale meia moeda.»
+- (a mulher do pescador, com o mar bravo) «Não sai hoje. Olha a cor do céu.»
+- (o boato) «Dizem que o pesqueiro da pedra preta secou. Ninguém tira mais nada de lá.»
+- (do corpo) «Foi você que tirou aquele peixe? A cidade inteira tá falando.»
+
+**As animações** (os clipes): lançar a linha (por cima e de lado), esperar com a vara (o tédio: coçar a cabeça, olhar o céu), sentir a mordida (o corpo tenso), fisgar, brigar com o peixe (a vara arqueada, os passos para trás), puxar a linha de mão, tirar o peixe pelo peso (as poses de levantar), mostrar o peixe, girar e lançar a tarrafa, recolher a rede com o corpo, mirar e lançar o arpão, consertar a rede sentado, escamar e limpar, salgar, iscar o anzol, a pesca de noite com a tocha alta.
+
+**As interações com o mundo:** lançar (E com a vara); trocar a isca (F); ler a água (E segurado); oferecer o peixe a alguém (dar); vender na banca; comparar com a tábua dos recordes do cais; pedir ao velho para ensinar; consertar a rede de outro; **contar vantagem** (o verbo social que vira boato — e o peixe cresce na boca do povo).
+
+
 ## 15. Os derivados e as fases
 
 **Os derivados:** o pescador da costa, o mergulhador, o pescador de alto-mar (Patch 36), o salgador e o defumador; e os que servem

@@ -181,6 +181,28 @@ oferendas no alto, o enxofre da cratera).
 |---|---|---|---|---|
 | a vista que se abre, o vazio debaixo dos pés, a névoa que apaga tudo, a luz dura do alto | o vento que cresce com a altura, a respiração, a neve sob os pés, a pedra que cai longe, o silêncio do cume | a queda, a avalanche, o vento forte | **o corpo é a tela**: a respiração, o tremor do frio, o passo trôpego do ar fino; o céu que se lê; nada mais | a vista da expedição: a corda, as estacas, a comida que resta, a lenha que resta, o peso |
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): quem subiu (o primeiro), a expedição que não voltou, a avalanche, o passo fechado pela neve, o santuário do cume, a vista lá de cima.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o guia) «A montanha não tem pressa. Quem tem pressa fica nela.»
+- (o carregador, no ar fino) «Minha cabeça… parece que vai rachar.»
+- (a neve estala) «Ninguém se mexe.»
+- (a hora de voltar) «O sol já passou do meio. Se a gente sobe, a gente desce no escuro.»
+- (o corajoso) «Tá logo ali! Duzentos passos!» — (o prudente) «Duzentos passos de gelo.»
+- (no cume) «Dá pra ver o outro mar… meu avô tinha razão.»
+- (o boato) «Dizem que a expedição do {nome} ainda está lá em cima. Inteira. No gelo.»
+- (o pastor) «Quando a nuvem senta no colo da serra, é hora de descer o rebanho.»
+
+**As animações** (os clipes): andar na neve funda (o joelho alto), cravar o cajado, frear a escorregada, respirar ofegante com as mãos nos joelhos, amarrar-se à corda do companheiro, montar o muro de pedra contra o vento, encolher-se de frio, esfregar e soprar as mãos, pôr a pedra no monte do cume, olhar o horizonte do cume com o vento na roupa, amparar o companheiro que passa mal, descer de costas a encosta.
+
+**As interações com o mundo:** amarrar-se à corda do grupo; montar o acampamento; derreter neve no fogo; pôr a pedra no monte do cume; **decidir a hora de voltar** (a conversa do grupo); cravar a estaca da via com o seu nome; resgatar quem caiu.
+
+
 ## 16. As fases e as provas
 
 | Fase | O quê |

@@ -121,6 +121,28 @@ O capataz é a figura de um sistema de violência, e jogar com ele é sentir o p
 crueldade em pontos (não há prêmio por chicotada); simula o que ela faz: homens que quebram, morrem, odeiam, lembram e planejam.
 Visceral, sem demorar na tortura: a violência aparece pelo que causa.
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o rendimento (a galé ou a mina que anda ou não), o castigo, a fuga, o delator, a revolta, a faca de noite, o capitão, a ração.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (para o banco) «Ritmo! Quem perder o ritmo perde a ração!»
+- (o capitão) «Chegamos tarde. A culpa é dos teus remadores — ou tua?»
+- (o delator) «O do quarto banco tem um prego. Eu vi. Quanto vale pra você?»
+- (o silêncio quando ele passa — e o cochicho que recomeça atrás)
+- (a mulher dele em casa) «As vizinhas não falam mais comigo. Por tua causa.»
+- (o filho) «Pai… o que você faz no navio?»
+- (o galeote que o odeia, baixo) «Eu sei teu nome. Eu nunca vou esquecer teu nome.»
+- (o outro caminho, um galeote) «Você não é como eles. Eu vi você dar pão ao velho.»
+
+**As animações** (os clipes): andar com o passo pesado na passagem entre os bancos, desenrolar o chicote, o estalo no ar (o aviso), a chicotada (a violência pelo que causa, sem demorar), apontar e gritar, a revista (apalpar, levantar o banco), dar e negar a ração, parar a briga pelo colarinho, dormir com a mão na faca, acordar de sobressalto, contar os homens tocando a cabeça de cada um, ouvir o delator de costas, olhar por cima do ombro em terra.
+
+**As interações com o mundo:** dar a ordem do ritmo; escolher o castigo (a decisão com peso); dar ou cortar a ração; revistar o banco; ouvir o delator (e pagar); proteger em segredo (o outro caminho); relatar ao capitão.
+
+
 ## 12. Do que depende, as fases e as provas
 
 **Depende de:** a vida a bordo ([`navios.md`](navios.md)), o remador de galé (o outro lado), o combate (o chicote), o Patch 23 (as

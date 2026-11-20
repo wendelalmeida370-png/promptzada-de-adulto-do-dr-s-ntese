@@ -288,6 +288,29 @@ O **guia da mata**, o **abridor de trilhas** (a estrada do povo), o **coletor** 
 onças**, o **batedor do exército** na mata, o **rastreador de fugitivos** (com a lei), o **canoeiro dos rios da mata**, o **lenhador** e
 o **carvoeiro** (a mata que se corta), o **guarda do bosque sagrado**.
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): quem se perdeu, a fera vista perto, a trilha nova, a febre, a cheia, a nascente, a cidade engolida (o boato), o incêndio, o guia famoso.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o carregador, no segundo dia) «A gente já passou por essa árvore. Eu juro que já passou.»
+- (o mateiro velho) «Na mata ninguém se perde de repente. A gente se perde aos poucos, quando para de prestar atenção.»
+- (o silêncio) «Escuta… os macacos calaram.» — (a pegada) «Ainda tá enchendo de água. Ela passou agora.»
+- (o febril) «Tá frio… por que tá tão frio?»
+- (o grupo querendo voltar) «Mais um dia e a comida acaba. Eu volto amanhã, com ou sem você.»
+- (a velha das ervas) «Não come a fruta que o macaco deixa. Come a que ele come.»
+- (o caçador desconfiado) «Musgo do lado da sombra? Meu pai morreu acreditando nisso.»
+- (o morador da beira da mata) «O filho do {nome} entrou atrás de uma anta e nunca mais saiu.»
+- (do corpo) «Foi você que achou a nascente? Então você viu a serra azul.»
+
+**As animações** (os clipes): o golpe de facão no cipó (e o golpe que prende, e o puxão), afastar os galhos com o braço, agachar e tocar a borda da pegada, cheirar o ar, a mão erguida pedindo silêncio ao grupo, os três talhos na árvore, olhar de cima da árvore com a mão na testa, pendurar a rede, soprar a brasa, abanar a fumaça, os tapas nos mosquitos e a coceira, beber do cipó cortado, atravessar a vau com a carga acima da cabeça, puxar a sanguessuga, tremer de febre na rede, carregar o ferido no ombro, trançar a ponte de cipó.
+
+**As interações com o mundo:** cortar o cipó (E); marcar a árvore (F); ler a pegada (E segurado); subir na árvore da vista; pendurar a rede entre duas árvores; acender o fogo; beber do cipó; trançar a ponte entre duas árvores na margem; desenhar a carta da mata; **os comandos do grupo** (silêncio, sigam, esperem); contratar um guia ou ser contratado; perguntar o caminho a um morador.
+
+
 ## 24. As fases e as provas
 
 | Fase | O quê |

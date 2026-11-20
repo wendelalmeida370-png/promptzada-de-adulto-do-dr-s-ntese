@@ -193,6 +193,28 @@ remadores pagos); a ração do armazém do povo; o soldo do tesouro; a pena do r
 se revoltam pelas mesmas regras (a revolta dos remadores é uma história do motor de histórias); o capataz é uma pessoa do mundo,
 e nada premia a crueldade.
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o banco (quem morreu, quem chegou), o castigo da semana, a ração cortada, o plano (sussurrado), a batalha, o porto à vista, a liberdade de alguém, o capataz novo.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o velho do banco, baixinho) «Respira junto com o remo. Quem briga com o remo perde.»
+- (o novato) «Minhas mãos… não param de sangrar.»
+- (o vizinho, no escuro) «Tem um prego solto no quarto banco. Não fala com ninguém.»
+- (o comitre) «Mais rápido! Ou vão sentir o couro!»
+- (a canção do remo: o voga puxa, o banco responde) «Puxa, irmão, que o mar é longo — puxa, irmão, que a vida é curta!»
+- (a batalha) «Recolham os remos! Vão bater!»
+- (o porto à vista) «Lá é a minha terra… minha mãe mora atrás daquele morro.»
+- (o liberto, na despedida) «Eu volto por vocês. Eu juro pelo mar.»
+
+**As animações** (os clipes): remar nas três cadências (cruzeiro, ataque, batalha), remar com um braço ferido, cair exausto sobre o remo, levantar o remo para a batalha, cochichar de lado sem virar a cabeça, esconder algo na boca, forçar o elo com o prego debaixo do banco, receber a tigela da ração, dormir sentado acorrentado, encolher ao estalo do chicote, nadar acorrentado, o banco inteiro balançando na canção.
+
+**As interações com o mundo:** o ritmo do remo (as teclas do gesto); cochichar ao vizinho (baixo — o capataz pode ouvir); dividir a ração; esconder a peça na fenda do banco (F); forçar a corrente; puxar a canção como voga; remar por dois pelo vizinho ferido; denunciar (o caminho escuro).
+
+
 ## 13. Do que depende, as fases e as provas
 
 **Depende de:** a vida a bordo ([`navios.md`](navios.md): N2 e N5); a fundação dos ofícios; o Patch 23 (os laços, o cochicho, as

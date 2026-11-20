@@ -224,6 +224,28 @@ O garimpeiro, o escorador, o homem do fogo, o aguadeiro da mina, o lapidário (c
 fundidor e o carvoeiro (o fogo do metal), o pedreiro e o canteiro (a pedreira), o salineiro da mina de sal, o feitor da mina e o
 escravo da mina (as condições), o arqueólogo da mina perdida.
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): o veio novo, a mina que se esgota, o desabamento, quem ficou soterrado, o ouro achado, o preço do cobre, o feitor, a corrida do ouro, a tosse do velho.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o velho na galeria) «Escuta a pedra. Quando ela calar, sai correndo.»
+- (a escora range) «Ouviu isso? Ouviu?» — (o veio) «Verde! Tem cobre aqui!»
+- (o chefe de galeria) «Escora primeiro, golpe depois. Quem esquece a ordem fica embaixo.»
+- (na boca da mina, de manhã) «Se eu não voltar, minha parte vai pra minha filha.»
+- (a mulher do mineiro) «Você tosse igual teu pai tossia.»
+- (o boato) «Dizem que acharam uma pedra verde do tamanho de um ovo lá no deserto.»
+- (o resgate) «Tem alguém batendo! Do outro lado! Tá vivo!»
+- (do corpo) «Você achou o veio que meu pai procurou a vida inteira.»
+
+**As animações** (os clipes): o golpe de picareta (alto, de lado, ajoelhado na galeria baixa), ler a rocha (a mão na pedra, a lamparina perto), escorar (erguer e encaixar o tronco), o fogo contra a rocha e a água jogada (recuar do vapor), cravar a cunha, subir a escada com o cesto, girar o sarilho em turma, a bateia (girar, inclinar, olhar o fundo), moer no pilão, erguer a lamparina para ver a chama, tossir, arrastar-se na passagem estreita, bater na rocha e ouvir a resposta, cavar com as mãos no resgate.
+
+**As interações com o mundo:** golpear a face (E); escorar (F com a madeira); ler a rocha (E segurado); encher o cesto; a bateia no rio; ensaiar a amostra; bater para chamar o soterrado; pedir a licença a quem governa; entrar numa turma.
+
+
 ## 19. As fases e as provas
 
 | Fase | O quê |

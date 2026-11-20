@@ -97,6 +97,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **Cada ofício traz as suas falas, animações e interações** (20/11/2026): todo patch de ofício alimenta a máquina de falas,
+  a fábrica de animações e os verbos do mundo com o que é dele ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 - **As quatro camadas** (**aprovado**, 19/11/2026): as bases (as leis do mundo, para todos), as perícias (o saber, com a
   prática e as técnicas, de qualquer ofício — a estrutura que todo ofício daquela atividade respeita), os ofícios (o papel e o
   pacote, que usam perícias) e as condições ([`pericias.md`](pericias.md)).

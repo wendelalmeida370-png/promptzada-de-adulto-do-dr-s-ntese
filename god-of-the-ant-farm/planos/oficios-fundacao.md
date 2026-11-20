@@ -200,6 +200,21 @@ do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
 | **A galé** | baixa e larga no banco, a fila dos remos; o escuro do porão | a flauta, as vozes do chefe dos remos, o remo na água, o chicote | o choque do abalroamento, a onda que entra | o tempo do remo, o fôlego, o ânimo | quase nada: o galeote não tem mochila (o esconderijo) |
 | **O estivador** | perto e de lado na prancha, alta no porão | o canto da turma, o ranger da prancha, o guindaste, o cais | a carga que cai, a prancha que balança | o peso e o equilíbrio da carga | a vista do carregador (o que se leva nos braços) |
 
+### 2.14 As falas, as animações e as interações de cada ofício (a ideia do dono, 20/11/2026)
+
+**Todo patch de ofício traz a sua parte das três máquinas**, como traz as perícias e a camada do ambiente:
+
+- **As falas** (a máquina da 23b): os **assuntos novos** que o ofício cria no mundo (o peixe recorde, a trilha nova, o túmulo
+  violado), as falas do trabalho (dos colegas, do mestre, de quem compra), as reações curtas da hora (o «pegou!», o «os macacos
+  calaram»), o que o mundo diz de quem tem o ofício, e os boatos — **toda fala aponta para um fato verdadeiro**, no jeito de quem
+  fala; ≈ 150 a 250 frases-base por ofício.
+- **As animações** (a fábrica da 23c): os gestos do trabalho, da espera, do perigo e da recompensa, nas pessoas do mundo e no corpo,
+  pelas provas da fábrica (os pés no chão, as mãos no ponto, as cinco idades); ≈ 20 a 30 clipes por ofício.
+- **As interações** (o registro `G.Interact.verb`): os verbos novos nas coisas do mundo e nas pessoas (cortar o cipó, sondar,
+  dividir o saque, contar vantagem), pelas regras da interação; ≈ 8 a 15 por ofício.
+
+Cada documento de ofício tem a seção «As falas, as animações e as interações» com os assuntos, os exemplos e as listas.
+
 ## 3. As regras (o contrato da fundação)
 
 - **O mundo decide no passo do mundo:** a prática que sobe, a técnica aprendida, o título dado, a venda — no passo, pelo `G.R`

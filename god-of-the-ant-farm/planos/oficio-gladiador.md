@@ -168,6 +168,28 @@ apostas; os laços (o companheiro de escola, o rival, o admirador, a família do
 o amigo contra o amigo, a revolta); as missões (o lanista que manda perder; a fera que fugiu da jaula; o filho do morto que vem
 atrás de você).
 
+## As falas, as animações e as interações
+
+Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
+
+**Os assuntos novos** (os fatos de que se passa a falar): os jogos que vêm, quem paga, o programa (quem luta com quem), o favorito do povo, quem morreu na arena, o liberto, o nome nos muros, a fera nova.
+
+**As falas** (exemplos; cada uma com as suas variações, pelo jeito de quem fala e pelo laço com quem ouve):
+
+- (o treinador) «De novo. Teu escudo desce quando você golpeia. Na arena, isso é a tua morte.»
+- (o colega de cela, na véspera) «Se amanhã for eu e você… que seja rápido.»
+- (a multidão) «Mata! Mata!» — «Deixa viver! Ele lutou bem!»
+- (o adversário, na entrada) «Lembra do meu rosto. É o último que você vai ver.»
+- (o lanista) «Eu paguei caro por você. Não morre barato.»
+- (a admiradora) «Escrevi o teu nome perto da fonte. Ninguém apaga.»
+- (o menino na rua) «Mostra o golpe! Mostra o golpe do reciário!»
+- (o liberto, velho) «A espada de madeira pesa mais que todas as outras. Eu sei.»
+
+**As animações** (os clipes): os treinos no poste (por tipo), o empurrão do escudo, o golpe por cima do escudo, jogar e recolher a rede, o passo do reciário, a guarda contra a rede, a saudação à tribuna, erguer a arma chamando o grito, ajoelhar na rendição, esperar a decisão olhando a tribuna, o golpe de misericórdia, cair e levantar, lutar com o braço inútil, a entrada lenta sob o grito, o abraço do colega antes dos jogos, comer em silêncio na escola.
+
+**As interações com o mundo:** treinar com outro (o par); desafiar no treino; saudar a tribuna (F); pedir o favor da multidão (o gesto); **poupar ou matar** quando o outro cai (a escolha); ler o próprio nome nos muros; receber o presente do admirador; negociar com o lanista o contrato do liberto.
+
+
 ## 15. Do que depende, as fases e as provas
 
 **Depende de:** o combate do corpo (a profundidade do Patch 33: as zonas, as feridas, o decepar, a decapitação), a arena com o
