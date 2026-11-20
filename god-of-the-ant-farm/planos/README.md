@@ -96,6 +96,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   gesto, a fala, o diário, o olho de quem sabe).
 - [`primeira-hora.md`](primeira-hora.md) — a primeira hora: o que um jogador novo vive nos primeiros dez minutos, na primeira hora
   e na primeira vida, as escolhas do dono e o teste do novato (rascunho).
+- [`vozes.md`](vozes.md) — as vozes e o rosto que fala: as vozes de IA nas falas curtas e fixas, os murmúrios por povo, a boca que
+  acompanha, e a captura do rosto (a decidir).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -140,6 +142,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   primeira hora** ([`primeira-hora.md`](primeira-hora.md)); **o deus conferido em cada ofício** — entra só a mecânica pertinente e
   divertida, nunca para encher linguiça; **a tabela dos ofícios**, feita pelo código ([`oficios-fundacao.md`](oficios-fundacao.md)
   §2.14–2.15).
+- **As vozes** (**aprovado**, 20/11/2026): **vozes de verdade, feitas por IA, nas falas curtas e fixas** e **os murmúrios por povo**
+  nas outras, no Patch 27 — tudo feito sem trabalho do dono, que só joga e diz se gostou; a captura do rosto fica a decidir
+  ([`vozes.md`](vozes.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 78 ofícios (com o carrasco) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes
