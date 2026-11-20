@@ -30,6 +30,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
+- [`economia-oficios.md`](economia-oficios.md) — a economia dos ofícios: os nove jeitos de ganhar, o jeito de cada ofício, juntar
+  um ofício de soldo com um de risco (o tempo, o posto, a licença), as regras do dinheiro.
 - [`pericias.md`](pericias.md) — o catálogo das bases e das perícias (com as técnicas de todos os ofícios agrupadas por perícia
   e a matriz ofício × perícias).
 - [`oficios-fundacao.md`](oficios-fundacao.md) — a fundação dos ofícios por inteiro (o Patch 25).
@@ -97,6 +99,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **A economia dos ofícios** (20/11/2026, **proposta, a decidir**): nove jeitos de ganhar, do soldo ao achado; quanto mais
+  seguro, menor o teto; o tempo é o que se divide entre os ofícios ([`economia-oficios.md`](economia-oficios.md)).
 - **Cada ofício traz as suas falas, animações e interações** (20/11/2026): todo patch de ofício alimenta a máquina de falas,
   a fábrica de animações e os verbos do mundo com o que é dele ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 - **As quatro camadas** (**aprovado**, 19/11/2026): as bases (as leis do mundo, para todos), as perícias (o saber, com a

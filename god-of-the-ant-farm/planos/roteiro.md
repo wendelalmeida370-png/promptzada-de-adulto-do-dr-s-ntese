@@ -39,6 +39,7 @@ escalada, a montanha e o mundo grande.
 | 25 | **O mateiro** | a mata que pesa (a fase B da natureza, combinada antes do brainstorm: o passo, a vista, o rumo), o facão e a trilha que o mato fecha, a febre e os insetos, rio abaixo, a árvore da vista, o saber falso dos velhos, a cidade engolida pela mata | [`oficio-mateiro.md`](oficio-mateiro.md) |
 | 26 | **O pirata** | a tábua dos navios do porto como informação, a perseguição pelo vento, a abordagem, o nome que rende, o saque pelo livro, o resgate pago pela família, o motim, o corsário e o rei do mar | [`oficio-pirata.md`](oficio-pirata.md) |
 | 27 | **As quatro camadas** (aprovado) | as bases (as leis do mundo, para todos), as perícias (a prática e as técnicas, de qualquer ofício), os ofícios (que usam perícias) e as condições; o pirata no comando do navio vive debaixo da lei do mar como o navegador | [`pericias.md`](pericias.md) |
+| 28 | **A economia dos ofícios** (a decidir) | os nove jeitos de ganhar (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente); juntar o ofício de soldo com o de risco pelo tempo, o posto e a licença; a família come da panela da casa | [`economia-oficios.md`](economia-oficios.md) |
 
 ## 2. A lógica da ordem
 

@@ -138,6 +138,8 @@ decide é o tamanho do momento.
 - **A banca própria:** o corpo pode ter a sua banca (as bancas já existem) ou a sua oficina.
 - **As encomendas:** as pessoas e os lugares pedem ao corpo (a taverna quer sardinhas para a festa, o templo quer o peixe do
   sacrifício, o rico quer a lagosta do banquete) — pequenos pedidos com prazo e pagamento.
+- **Como cada ofício ganha** (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente), o
+  posto com hora, a licença e o juntar dois ofícios: [`economia-oficios.md`](economia-oficios.md).
 - **O freguês fiel e a concorrência:** quem compra sempre de você vira um laço; o rival baixa o preço.
 
 ### 2.9 A aba do Ofício no painel
