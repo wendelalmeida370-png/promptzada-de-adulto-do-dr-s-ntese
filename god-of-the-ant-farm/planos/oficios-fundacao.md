@@ -202,7 +202,7 @@ do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
 | **A galé** | baixa e larga no banco, a fila dos remos; o escuro do porão | a flauta, as vozes do chefe dos remos, o remo na água, o chicote | o choque do abalroamento, a onda que entra | o tempo do remo, o fôlego, o ânimo | quase nada: o galeote não tem mochila (o esconderijo) |
 | **O estivador** | perto e de lado na prancha, alta no porão | o canto da turma, o ranger da prancha, o guindaste, o cais | a carga que cai, a prancha que balança | o peso e o equilíbrio da carga | a vista do carregador (o que se leva nos braços) |
 
-### 2.14 As falas, as animações e as interações de cada ofício (a ideia do dono, 20/11/2026)
+### 2.14 As falas, as animações, as interações e o grupo de cada ofício (a ideia do dono, 20/11/2026)
 
 **Todo patch de ofício traz a sua parte das três máquinas**, como traz as perícias e a camada do ambiente:
 
@@ -214,6 +214,8 @@ do ambiente escolhe **como mostrar** o mundo, nunca muda o que o mundo é.
   pelas provas da fábrica (os pés no chão, as mãos no ponto, as cinco idades); ≈ 20 a 30 clipes por ofício.
 - **As interações** (o registro `G.Interact.verb`): os verbos novos nas coisas do mundo e nas pessoas (cortar o cipó, sondar,
   dividir o saque, contar vantagem), pelas regras da interação; ≈ 8 a 15 por ofício.
+- **O grupo** (a máquina dos companheiros, [`grupos.md`](grupos.md)): os papéis do ofício, as ordens e as situações que mexem no
+  grupo — linhas nas portas `G.Grupo.papel`, `ordem` e `situacao`, nunca uma máquina própria.
 
 Cada documento de ofício tem a seção «As falas, as animações e as interações» com os assuntos, os exemplos e as listas.
 

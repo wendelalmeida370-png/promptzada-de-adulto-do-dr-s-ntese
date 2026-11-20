@@ -39,7 +39,8 @@ escalada, a montanha e o mundo grande.
 | 25 | **O mateiro** | a mata que pesa (a fase B da natureza, combinada antes do brainstorm: o passo, a vista, o rumo), o facão e a trilha que o mato fecha, a febre e os insetos, rio abaixo, a árvore da vista, o saber falso dos velhos, a cidade engolida pela mata | [`oficio-mateiro.md`](oficio-mateiro.md) |
 | 26 | **O pirata** | a tábua dos navios do porto como informação, a perseguição pelo vento, a abordagem, o nome que rende, o saque pelo livro, o resgate pago pela família, o motim, o corsário e o rei do mar | [`oficio-pirata.md`](oficio-pirata.md) |
 | 27 | **As quatro camadas** (aprovado) | as bases (as leis do mundo, para todos), as perícias (a prática e as técnicas, de qualquer ofício), os ofícios (que usam perícias) e as condições; o pirata no comando do navio vive debaixo da lei do mar como o navegador | [`pericias.md`](pericias.md) |
-| 28 | **A economia dos ofícios** (a decidir) | os nove jeitos de ganhar (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente); juntar o ofício de soldo com o de risco pelo tempo, o posto e a licença; a família come da panela da casa | [`economia-oficios.md`](economia-oficios.md) |
+| 28 | **A economia dos ofícios** (aprovado) | os nove jeitos de ganhar (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente); juntar o ofício de soldo com o de risco pelo tempo, o posto e a licença; a família come da panela da casa | [`economia-oficios.md`](economia-oficios.md) |
+| 29 | **O grupo** (a decidir) | os patches dos NPCs não tinham companheiros; uma máquina só para o companheiro, a equipe, a tripulação, a gangue e a tropa (o grupo de grupos do general), e cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito» | [`grupos.md`](grupos.md) |
 
 ## 2. A lógica da ordem
 
@@ -70,7 +71,7 @@ load (S4); T-1584 e T-1585.
 |-----|------------|-----|------|-----|
 | **C — O calendário: o ano de quatro estações** (o primeiro, antes do 23) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, as migrações, o mar fechado) e o que se vê | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md) |
 | **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md) |
-| **24 — O conflito** | o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
+| **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); **o vento que empurra a vela, a corrente e a maré**; a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **27 — O acabamento e o molde afinado** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
@@ -115,6 +116,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | A montanha | 42 |
 | O mundo grande | 41 |
 | O ano de quatro estações | C (antes do 23) |
+| O grupo | 24 (onda 1) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |
@@ -126,8 +128,8 @@ cristaleiro).
 
 ## 5. Como cada patch anda
 
-**Todo patch de ofício traz a sua parte das três máquinas:** as falas, as animações e as interações daquele ofício (a seção de
-mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
+**Todo patch de ofício traz a sua parte das quatro máquinas:** as falas, as animações, as interações e o grupo daquele ofício (a
+seção de mesmo nome em cada documento; [`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 
 Cada patch segue o protocolo de qualidade do `CLAUDE.md`: o plano com os números de cada frente, o contrato, as frentes em
 paralelo, as provas de cada uma, a regressão completa antes de publicar e a versão no artefato para o dono jogar. **E o teste

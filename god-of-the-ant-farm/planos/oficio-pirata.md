@@ -411,7 +411,7 @@ O **corsário**, o **naufragador** (as luzes falsas na costa), o **informante do
 **contrabandista** do mar, o **carpinteiro do refúgio**, o **intermediário de resgates**, o **caçador de piratas** (o capitão da frota que
 limpa o mar).
 
-## As falas, as animações e as interações
+## As falas, as animações, as interações e o grupo
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -432,6 +432,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As animações** (os clipes): girar e lançar o gancho, puxar a corda em turma, saltar o vão entre os cascos, lutar no convés que balança (os pés abertos), subir pela amurada, erguer a espada e gritar, a tripulação batendo as armas nos escudos, contar o saque ajoelhado, pesar o ouro na mão, amarrar o cativo, ditar a carta de resgate, o brinde na enseada, a presa jogando a carga ao mar, içar a flâmula, virar o casco na praia em turma.
 
 **As interações com o mundo:** lançar o gancho (a mira e o tempo); gritar a rendição (o verbo pesa a fama); revistar o porão; **a partilha** (o conselho da tripulação); pedir o resgate (a carta e o intermediário); vender no porto que não pergunta; enterrar o tesouro; chamar o conselho; oferecer-se como corsário a um rei.
+
+**O grupo** ([`grupos.md`](grupos.md)): a tripulação: **os papéis** — o capitão, o imediato, o piloto, o mestre de abordagem, os remadores-guerreiros, os arqueiros, o carpinteiro, o curandeiro; **as ordens** — «remos!», «ganchos!», «abordar!», «recuar»; **as situações** — a caça, a abordagem, a partilha, o motim, o inverno no refúgio.
 
 
 ## 33. As fases e as provas

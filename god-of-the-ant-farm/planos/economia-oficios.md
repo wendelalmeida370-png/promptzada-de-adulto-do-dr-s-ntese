@@ -1,4 +1,4 @@
-# A economia dos ofícios — como o dinheiro chega (proposta, 20/11/2026)
+# A economia dos ofícios — como o dinheiro chega (aprovado pelo dono, 20/11/2026)
 
 A pergunta do dono: tem ofício com salário (o guarda, o estivador) e ofício sem salário (o caçador de tesouros, o saqueador). Como
 uma pessoa ganha a vida — e como junta um ofício que paga todo dia com outro que pode pagar muito, ou nada? Esta é a proposta. Os

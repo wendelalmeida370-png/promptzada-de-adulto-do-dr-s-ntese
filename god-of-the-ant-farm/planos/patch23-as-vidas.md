@@ -239,7 +239,9 @@ das portas do mundo; o medidor da sociedade (a gente, os nascimentos e os casais
 
 ## 7. Fica para depois
 
-- **Patch 24 — O conflito:** o inimigo que age em escalada (provoca, boato, furto, sabotagem, briga, emboscada,
+- **Patch 24 — Os grupos e o conflito** (o grupo por inteiro em [`grupos.md`](grupos.md)): **a onda 1 é o grupo** — a máquina dos
+  companheiros, das equipes, das tripulações e das tropas, onde também vivem as panelinhas, as confrarias, as gangues e as seitas;
+  **a onda 2, o conflito:** o inimigo que age em escalada (provoca, boato, furto, sabotagem, briga, emboscada,
   assassinato, o capanga pago); os planos de vários passos (a arma, a ocasião, o lugar sem testemunhas, o álibi); a
   mentira, o segredo e a chantagem (quem sabe o quê sobre quem); os grupos (panelinhas, confrarias, gangues, seitas); mais
   esqueletos de missão (15 a 20: a herança, o amor proibido, a falsa acusação, o monstro que não é, a peregrinação à

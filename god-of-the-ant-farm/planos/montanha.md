@@ -181,7 +181,7 @@ oferendas no alto, o enxofre da cratera).
 |---|---|---|---|---|
 | a vista que se abre, o vazio debaixo dos pés, a névoa que apaga tudo, a luz dura do alto | o vento que cresce com a altura, a respiração, a neve sob os pés, a pedra que cai longe, o silêncio do cume | a queda, a avalanche, o vento forte | **o corpo é a tela**: a respiração, o tremor do frio, o passo trôpego do ar fino; o céu que se lê; nada mais | a vista da expedição: a corda, as estacas, a comida que resta, a lenha que resta, o peso |
 
-## As falas, as animações e as interações
+## As falas, as animações, as interações e o grupo
 
 Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala aponta para um fato verdadeiro do mundo, no jeito de quem fala), da **fábrica de animações** (a 23c: cada clipe passa pelas provas da fábrica) e das **interações** (os verbos do `G.Interact.verb`). As listas abaixo são sugestões para começar; a leva de cada ofício: ≈ 150 a 250 frases-base, ≈ 20 a 30 clipes, ≈ 8 a 15 interações.
 
@@ -201,6 +201,8 @@ Cada ofício chega com a sua parte da **máquina de falas** (a 23b: toda fala ap
 **As animações** (os clipes): andar na neve funda (o joelho alto), cravar o cajado, frear a escorregada, respirar ofegante com as mãos nos joelhos, amarrar-se à corda do companheiro, montar o muro de pedra contra o vento, encolher-se de frio, esfregar e soprar as mãos, pôr a pedra no monte do cume, olhar o horizonte do cume com o vento na roupa, amparar o companheiro que passa mal, descer de costas a encosta.
 
 **As interações com o mundo:** amarrar-se à corda do grupo; montar o acampamento; derreter neve no fogo; pôr a pedra no monte do cume; **decidir a hora de voltar** (a conversa do grupo); cravar a estaca da via com o seu nome; resgatar quem caiu.
+
+**O grupo** ([`grupos.md`](grupos.md)): a cordada e a expedição: **os papéis** — o guia, os carregadores, quem vai à frente na corda; **as ordens** — «para», «corda», «voltamos»; **as situações** — o ar fino de um, a nevasca, a hora de voltar, o companheiro que cai.
 
 
 ## 16. As fases e as provas

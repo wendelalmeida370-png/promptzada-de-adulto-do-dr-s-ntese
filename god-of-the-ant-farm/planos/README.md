@@ -13,7 +13,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 |---|---|
 | antes do 23 | **O calendário** — o ano de quatro estações (aprovado) |
 | 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões) |
-| 24 | O conflito |
+| 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
 | 27 | O acabamento e o molde afinado |
@@ -30,6 +30,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`patch23-as-vidas.md`](patch23-as-vidas.md) — o plano do Patch 23, com as ondas, as frentes, os números e as provas.
 - [`oficios.md`](oficios.md) — a visão dos ofícios: o molde das dez coisas, a progressão, a escada, a lista de todos os
   ofícios e condições, a ordem dos patches.
+- [`grupos.md`](grupos.md) — o grupo: a máquina dos companheiros, das equipes, das tripulações e das tropas (os membros, o líder,
+  os papéis, as ordens, o ânimo, a carga comum; as portas onde cada ofício entra).
 - [`economia-oficios.md`](economia-oficios.md) — a economia dos ofícios: os nove jeitos de ganhar, o jeito de cada ofício, juntar
   um ofício de soldo com um de risco (o tempo, o posto, a licença), as regras do dinheiro.
 - [`pericias.md`](pericias.md) — o catálogo das bases e das perícias (com as técnicas de todos os ofícios agrupadas por perícia
@@ -99,7 +101,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
-- **A economia dos ofícios** (20/11/2026, **proposta, a decidir**): nove jeitos de ganhar, do soldo ao achado; quanto mais
+- **O grupo** (20/11/2026, **proposta, a decidir**): uma máquina só para os companheiros, as equipes, as tripulações, as gangues e
+  as tropas; cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito»
+  ([`grupos.md`](grupos.md)).
+- **A economia dos ofícios** (**aprovado**, 20/11/2026): nove jeitos de ganhar, do soldo ao achado; quanto mais
   seguro, menor o teto; o tempo é o que se divide entre os ofícios ([`economia-oficios.md`](economia-oficios.md)).
 - **Cada ofício traz as suas falas, animações e interações** (20/11/2026): todo patch de ofício alimenta a máquina de falas,
   a fábrica de animações e os verbos do mundo com o que é dele ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
