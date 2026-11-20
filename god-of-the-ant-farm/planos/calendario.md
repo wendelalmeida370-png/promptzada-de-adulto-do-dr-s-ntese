@@ -56,9 +56,11 @@ decidir. Os números são do código de hoje.
 2. **Fase 1 — o ano de quatro dias, ainda sem estações:** cada uso classificado; cada taxa «por ano» dividida pelos quatro dias.
    **A prova:** as mesmas sementes têm de dar, por ano, o mesmo mundo de antes dentro das faixas dos medidores (a gente, a comida,
    os nascimentos, as guerras, os ofícios). Assim se sabe que nada se perdeu na troca.
-3. **Fase 2 — as estações ligadas:** o plantio e a colheita, o frio do inverno, as migrações, o mar fechado; a economia medida de
-   novo.
+3. **Fase 2 — as estações ligadas:** o plantio e a colheita, o frio do inverno, o mar fechado; **e os bichos** — o calendário de cada
+   espécie, as migrações, o inverno, o mar com as estações ([`natureza-viva.md`](natureza-viva.md)); a economia medida de novo.
 4. **Fase 3 — o que se vê:** as cores de cada estação, a neve, o rio congelado, as folhas.
+4b. **A natureza viva (a onda C3):** o relógio do dia de cada espécie, os nichos em cada altura (a copa, a toca, o penhasco) e os
+   bichos novos, as relações entre as espécies, **o olho da natureza** (a câmera de documentário) — [`natureza-viva.md`](natureza-viva.md).
 5. **Os saves e os mundos prontos** convertidos e gerados de novo; a regressão inteira.
 
 ## 6. A opinião

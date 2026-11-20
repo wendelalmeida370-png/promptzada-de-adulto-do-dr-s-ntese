@@ -11,7 +11,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 
 | Patch | O quê |
 |---|---|
-| antes do 23 | **O calendário** — o ano de quatro estações (aprovado) |
+| antes do 23 | **O calendário** — o ano de quatro estações e a natureza viva (aprovado; três ondas) |
 | 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões; a memória do mundo e o livro das vidas) |
 | 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
@@ -64,6 +64,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   maldição que é crença, a lei e a família do morto).
 - [`calendario.md`](calendario.md) — o ano de quatro estações: a análise (o que muda, o que se ganha, o que custa, como fazer
   sem quebrar) — aprovado: o primeiro patch.
+- [`natureza-viva.md`](natureza-viva.md) — a natureza viva: os bichos com as estações (as migrações, o relógio do dia, os nichos da
+  copa à toca, as relações entre as espécies, a hibernação, o mar que muda, o olho da natureza).
 - [`mundo-grande.md`](mundo-grande.md) — o mundo grande: os mapas de dias (2 e 5 km de lado) e as montanhas grandes; o detalhe
   como conta, a vida por importância, o 3D por pedaços.
 - [`escalada.md`](escalada.md) — a escalada: o corpo na vertical (as pegas, a rocha que diz, a corda, a queda), a base dos
@@ -117,6 +119,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   **navegador** (as estrelas, a sonda, as aves, os marcos, as monções) ([`navios.md`](navios.md) §2b, §2c).
 - **O ano de quatro estações** (**aprovado**, 19/11/2026): um ano vira quatro dias, um dia por estação; é o primeiro patch,
   antes do 23 ([`calendario.md`](calendario.md)).
+- **A natureza viva** (20/11/2026, o pedido do dono): os bichos ainda melhores junto com as estações — as migrações, o relógio do
+  dia, os nichos em cada altura, as relações entre as espécies, a hibernação, o mar que muda, tudo de verdade e lindo como um
+  documentário; o calendário vira três ondas ([`natureza-viva.md`](natureza-viva.md)).
 - **As marcas do mundo** (**aprovado**, 20/11/2026): uma base — a memória do mundo — e um registro só das marcas, para a
   continuidade de séculos. **É uma máquina do mundo, não dos ofícios** (a batalha, a cheia, o milagre também deixam marca); os
   ofícios têm um pé nela. **As cinco máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas) servem a tudo, e

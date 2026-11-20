@@ -50,6 +50,7 @@ escalada, a montanha e o mundo grande.
 | 36 | **O carrasco** | de papel de um dia a ofício: o golpe que tem de ser um só, a mão que treme (o medo, o laço, o vinho), a vida à parte fora dos muros, o perdão que chega correndo, a recusa; com o juiz, no Patch 34 | [`oficio-carrasco.md`](oficio-carrasco.md) |
 | 37 | **O caçador** | a espreita contra o vento, o tiro, o rastro de sangue, a fera que caça gente e lê você — contra o cérebro e o meio dos bichos que o jogo já tem; a caça que esvazia a mata; com a mata, no Patch 30 | [`oficio-cacador.md`](oficio-cacador.md) |
 | 38 | **O bardo** | juntar as histórias verdadeiras do mundo, escolher a versão (a verdade, o enfeite, a propaganda, a sátira), cantar e ver o mundo mudar; a canção como marca; com a arte, no Patch 39 | [`oficio-bardo.md`](oficio-bardo.md) |
+| 39 | **A natureza viva** | os bichos ainda melhores com as estações: as migrações (a chuva, o frio, as aves, o mar, o salmão), o relógio do dia, um nicho em cada altura (a copa, o oco, a toca, o penhasco, o céu), as relações (o mutualismo, o comensalismo, a carniça, os engenheiros), a hibernação, os ninhos raros, o mar que muda; o olho da natureza — tudo de verdade, como um documentário | [`natureza-viva.md`](natureza-viva.md) |
 
 ## 2. A lógica da ordem
 
@@ -79,7 +80,7 @@ load (S4); T-1584 e T-1585.
 
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
-| **C — O calendário: o ano de quatro estações** (o primeiro, antes do 23) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, as migrações, o mar fechado) e o que se vê | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md) |
+| **C — O calendário: o ano de quatro estações e a natureza viva** (o primeiro, antes do 23; três ondas) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, o mar fechado **e os bichos**: o calendário de cada espécie, as migrações, a hibernação, o mar com as estações), o que se vê, e **a natureza viva** (o relógio do dia, os nichos da copa à toca, os bichos novos, as relações entre as espécies, o olho da natureza) | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md), [`natureza-viva.md`](natureza-viva.md) |
 | **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda; **a memória do mundo** (as marcas e o livro das vidas, a frente 23f) | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md), [`marcas.md`](marcas.md) |
 | **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
@@ -134,6 +135,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O carrasco | 34 |
 | O caçador | 30 |
 | O bardo | 39 |
+| A natureza viva | C (as ondas C2 e C3) |
 | As marcas do mundo | 23 (a frente 23f: o registro, os nomes, o livro das vidas), 31 e 39 (o tempo, o ver e ler) |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
