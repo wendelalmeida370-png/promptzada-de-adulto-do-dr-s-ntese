@@ -18,7 +18,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 26 | Os barcos pequenos e a Pesca inteira |
 | 27 | O acabamento, o molde afinado, a cozinha e o taverneiro (o segundo ofício) |
 | 28 a 32 | A terra, **a escalada**, a mata, o subterrâneo e a mina, a oficina |
-| 33 a 36 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
+| 33 a 36 | A arena e a guerra, a sombra e a lei (o juiz), o porto e o navio por dentro, a viagem e a batalha no mar |
 | 37 a 40 | O comércio, a fé, o saber e o passado, a arte, o poder |
 | 41 e 42 | **O mundo grande** (quando o PC novo chegar) e **a montanha** de dias |
 
@@ -80,6 +80,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   vender o que se ouve, a hospedaria, a lei da bebida de cada povo; o segundo ofício, no Patch 27).
 - [`oficio-governante.md`](oficio-governante.md) — quem governa por inteiro (o poder em cada regime, as alavancas, os estamentos,
   a corte, governar com o que se sabe, o golpe e a revolução, o legado).
+- [`oficio-juiz.md`](oficio-juiz.md) — o juiz por inteiro (o caso, as testemunhas, a audiência, a sentença na moldura da lei, as
+  pressões, o erro, o júri, o preço do sangue; com a sombra, no Patch 34).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.

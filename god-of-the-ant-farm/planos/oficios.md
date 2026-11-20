@@ -146,7 +146,7 @@ o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola) · *
 **auriga** · **atleta**
 
 **O poder (5):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
-**conselheiro** (inclui o cortesão) · **juiz** · **embaixador** · **agitador**
+**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) · **embaixador** · **agitador**
 
 **As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·
 mendigo · exilado · foragido · náufrago · perdido (inclui o soterrado) · órfão, criança, ancião · viúvo · herdeiro

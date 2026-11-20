@@ -261,6 +261,27 @@ Os títulos do cargo são os do regime (o Rei, a Cônsul, o Imperador, o Porta-V
 | **A maravilha** | a obra que o mundo inteiro vem ver |
 | **O império** | os povos sob o seu poder |
 
+## 15b. O legado (as marcas do reinado)
+
+O reinado acaba; **as marcas ficam** ([`marcas.md`](marcas.md)) — e são o que o mundo vai lembrar de você daqui a quinhentos anos:
+
+| Marca | Como nasce | O que a ameaça |
+|---|---|---|
+| **A estátua com o seu rosto** | o escultor da corte — **a semelhança é a perícia dele** | o sucessor que a derruba; o bronze derretido na guerra; o conquistador que quebra o nariz |
+| **A moeda com o seu rosto** | a casa da moeda, a cada cunhagem | o derretimento — mas sempre sobra alguma, e ela viaja o mundo inteiro |
+| **A rua, o bairro, a cidade com o seu nome** | o povo agradecido, ou a sua própria ordem | o conquistador que renomeia; o povo que esquece (o nome velho fica com os velhos) |
+| **A lei gravada em pedra** | o decreto na praça | o sucessor que a quebra — a pedra, porém, continua lá |
+| **A obra com a dedicatória** | o templo, as termas, a ponte, a maravilha | o fogo, a guerra, a ruína |
+| **A crônica do reinado** | o cronista — **contada do seu jeito, se você pagar** (a propaganda), ou do jeito dele | o livro que ninguém copia; a crônica do inimigo, que conta outra história |
+| **A canção** | o bardo, o povo | a canção que muda de boca em boca — e às vezes vira sátira |
+| **O túmulo com o enxoval** | a família, o povo | **o saqueador**, o tempo que enterra |
+| **O epíteto** | a vida e a crônica | — fica para sempre |
+
+**A memória condenada:** você pode **apagar o antecessor** — raspar o nome dele das pedras, derrubar as estátuas, queimar a crônica — e
+o seu sucessor pode fazer o mesmo com você. **O registro guarda o que foi apagado**, e quem lê a crônica certa (ou acha a pedra
+enterrada) sabe a verdade. **No livro das vidas**, o reinado que você viveu fica com tudo o que sobrou dele — e o que foi destruído, por
+quem e quando.
+
 ## 16. As lendas (nascem do mundo)
 
 | Lenda | O que é |

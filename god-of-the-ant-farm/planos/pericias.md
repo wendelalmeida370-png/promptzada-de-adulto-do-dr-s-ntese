@@ -145,28 +145,28 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 ### A gente
 
 **Espetáculo** — agradar a multidão: o gesto, a hora, o drama (a arena; depois o ator e o bardo).
-- *As técnicas:* O discurso na praça, O pão e os jogos ([quem governa](oficio-governante.md)); O gesto para a multidão ([o gladiador](oficio-gladiador.md)).
-- *Quem usa:* o gladiador, quem governa, o ator, o bardo, o auriga.
+- *As técnicas:* O discurso na praça, O pão e os jogos ([quem governa](oficio-governante.md)); A sentença na praça ([o juiz](oficio-juiz.md)); O gesto para a multidão ([o gladiador](oficio-gladiador.md)).
+- *Quem usa:* o gladiador, quem governa, o juiz, o ator, o bardo, o auriga.
 
 **Comandar** — a voz, o ritmo, a parte justa, a ordem que se cumpre — da turma ao exército.
-- *As técnicas:* O canto de trabalho ([o estivador](oficio-estivador.md)); A parte justa, O inverno bem passado ([o pirata](oficio-pirata.md)); A voz do trono, Liderar o exército ([quem governa](oficio-governante.md)); A voz de comando, A ração medida, Parar a briga do banco ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o taverneiro, quem governa, o general, o chefe de turma, o chefe de galeria.
+- *As técnicas:* O canto de trabalho ([o estivador](oficio-estivador.md)); A parte justa, O inverno bem passado ([o pirata](oficio-pirata.md)); A voz do trono, Liderar o exército ([quem governa](oficio-governante.md)); O silêncio do tribunal, O júri ([o juiz](oficio-juiz.md)); A voz de comando, A ração medida, Parar a briga do banco ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o taverneiro, quem governa, o juiz, o general, o chefe de turma, o chefe de galeria.
 
 **Intimidar** — o medo como arma: o grito, o nome, o castigo exemplar.
 - *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O olhar que basta ([o taverneiro](oficio-taverneiro.md)); O exemplo, O expurgo ([quem governa](oficio-governante.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
 - *Quem usa:* o gladiador, o capataz, o pirata, o taverneiro, quem governa, o guarda.
 
 **Ler as pessoas** — a mentira, o sócio, a tripulação, o ânimo de quem está em volta.
-- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a sala, A hora de parar ([o taverneiro](oficio-taverneiro.md)); O conselheiro que mente, O herdeiro impaciente ([quem governa](oficio-governante.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata, o taverneiro, quem governa.
+- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a sala, A hora de parar ([o taverneiro](oficio-taverneiro.md)); O conselheiro que mente, O herdeiro impaciente ([quem governa](oficio-governante.md)); Quem mente, O medo da testemunha, O réu poderoso ([o juiz](oficio-juiz.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata, o taverneiro, quem governa, o juiz.
 
 **Negociar** — o preço, o resgate, a parte, o acordo.
-- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)); Comprar na hora certa, Cobrar o fiado ([o taverneiro](oficio-taverneiro.md)); O tratado, O casamento real, O tributo ([quem governa](oficio-governante.md)).
-- *Quem usa:* o caçador de tesouros, o pirata, o taverneiro, quem governa, o mercador.
+- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)); Comprar na hora certa, Cobrar o fiado ([o taverneiro](oficio-taverneiro.md)); O tratado, O casamento real, O tributo ([quem governa](oficio-governante.md)); O preço do sangue ([o juiz](oficio-juiz.md)).
+- *Quem usa:* o caçador de tesouros, o pirata, o taverneiro, quem governa, o juiz, o mercador.
 
 **Investigar** — juntar pistas: o boato, o informante, a revista, o corpo, o mito — do caçador de tesouros ao guarda.
-- *As técnicas:* Os ossos, Ler o mito ([o arqueólogo](oficio-arqueologo.md)); Pesar a pista, Ler o boato ([o caçador de tesouros](oficio-cacador-tesouros.md)); O informante, Pesar a informação, A revista ([o pirata](oficio-pirata.md)); Ouvir sem parecer ([o taverneiro](oficio-taverneiro.md)); A rede de espiões, A conspiração descoberta, O disfarce ([quem governa](oficio-governante.md)); A revista dos esconderijos, A rede de delatores ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o capataz, o arqueólogo, **o caçador de tesouros**, o pirata, o taverneiro, quem governa, o guarda (o crime), o juiz.
+- *As técnicas:* Os ossos, Ler o mito ([o arqueólogo](oficio-arqueologo.md)); Pesar a pista, Ler o boato ([o caçador de tesouros](oficio-cacador-tesouros.md)); O informante, Pesar a informação, A revista ([o pirata](oficio-pirata.md)); Ouvir sem parecer ([o taverneiro](oficio-taverneiro.md)); A rede de espiões, A conspiração descoberta, O disfarce ([quem governa](oficio-governante.md)); Perguntar, A contradição, A cena, O álibi, Os ossos e as feridas, A revista ([o juiz](oficio-juiz.md)); A revista dos esconderijos, A rede de delatores ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o capataz, o arqueólogo, **o caçador de tesouros**, o pirata, o taverneiro, quem governa, o juiz, o guarda (o crime).
 
 **Furtividade** — não ser visto nem ouvido: a ronda, a luz, o som, a noite.
 - *As técnicas:* Esconder na boca, Abrir a corrente ([o remador de galé](condicao-escravo-gale.md)); Ler a ronda, A pá muda, A vela no chapéu, A laje sem estalo, Fechar o túmulo ([o saqueador de túmulos](oficio-saqueador.md)); A noite sem luz ([o pirata](oficio-pirata.md)).
@@ -177,8 +177,8 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 - *Quem usa:* o estivador, o caçador de tesouros, o saqueador de túmulos, o pirata, o contrabandista, o receptador.
 
 **Letras** — ler e escrever: o caderno, a conta, o périplo.
-- *As técnicas:* Escrever o périplo ([o navegador](oficio-navegador.md)); A conta ([o estivador](oficio-estivador.md)); A tábua do fiado ([o taverneiro](oficio-taverneiro.md)); O decreto, A crônica ([quem governa](oficio-governante.md)).
-- *Quem usa:* o navegador, o estivador, o arqueólogo, o taverneiro, quem governa, o escriba.
+- *As técnicas:* Escrever o périplo ([o navegador](oficio-navegador.md)); A conta ([o estivador](oficio-estivador.md)); A tábua do fiado ([o taverneiro](oficio-taverneiro.md)); O decreto, A crônica ([quem governa](oficio-governante.md)); O livro das sentenças, A lei escrita ([o juiz](oficio-juiz.md)).
+- *Quem usa:* o navegador, o estivador, o arqueólogo, o taverneiro, quem governa, o juiz, o escriba.
 
 **Jogo** — os dados e os jogos da taverna — e a trapaça.
 - *As técnicas:* Os dados ([o estivador](oficio-estivador.md)); Os dados da casa ([o taverneiro](oficio-taverneiro.md)).
@@ -190,7 +190,11 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 
 **Governar** — a lei, o tesouro, a administração, o reino lido como um todo ([`oficio-governante.md`](oficio-governante.md)).
 - *As técnicas:* A audiência, O tesouro equilibrado, A lei que pega, Nomear o certo, A viagem pelo reino, O celeiro do rei, Reformar o regime ([quem governa](oficio-governante.md)).
-- *Quem usa:* **quem governa**, o conselheiro, o nobre, o governador de uma cidade, o juiz.
+- *Quem usa:* **quem governa**, o conselheiro, o nobre, o governador de uma cidade.
+
+**Julgar** — a lei, a prova, o peso de cada coisa, a sentença justa ([`oficio-juiz.md`](oficio-juiz.md)).
+- *As técnicas:* A lei de cor, O peso da prova, A sentença justa, A composição, O precedente, A misericórdia, Recusar a bolsa ([o juiz](oficio-juiz.md)).
+- *Quem usa:* **o juiz**, o ancião, o jurado (por um dia), quem governa (a justiça do rei).
 
 ### As mãos
 
@@ -236,6 +240,7 @@ contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofíci
 | [os ofícios das alturas](montanha.md) | **Montanhismo** | Escalar, Sobreviver, Orientar-se, Ler o tempo, Comandar |
 | [o taverneiro](oficio-taverneiro.md) | **Hospitalidade** | Fermentar, Cozinhar, Ler as pessoas, Negociar, Letras, Investigar, Intimidar, Lutar (um jeito por arma), Comandar, Jogo |
 | [quem governa](oficio-governante.md) | **Governar** | Comandar, Tática, Negociar, Ler as pessoas, Investigar, Intimidar, Espetáculo, Letras |
+| [o juiz](oficio-juiz.md) | **Julgar** | Investigar, Ler as pessoas, Letras, Comandar, Negociar, Espetáculo |
 | o guarda | **Lutar** | Investigar, Intimidar, Ler as pessoas |
 | o general | **Tática** | Comandar, Lutar (a montaria, a formação), Ler as pessoas |
 | o conselheiro | **Ler as pessoas** | Governar, Negociar, Investigar, Letras |
