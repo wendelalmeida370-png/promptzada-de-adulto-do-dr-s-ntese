@@ -142,7 +142,7 @@ Em **negrito**, os que as pessoas do mundo já fazem hoje (o ofício existe no c
   de aluguel
 
 **Comércio e serviço** (tronco: o Comércio)
-- **mercador**, **feirante**, **taverneiro**, **foguista**, **cobrador**
+- **mercador**, **feirante**, **taverneiro** ([`oficio-taverneiro.md`](oficio-taverneiro.md)), **foguista**, **cobrador**
 - caravaneiro, cambista e banqueiro, estalajadeiro, cozinheiro, barbeiro, aguadeiro, carregador, mensageiro
 
 **Fé e saber** (tronco: o templo e a biblioteca)

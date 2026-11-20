@@ -41,6 +41,7 @@ escalada, a montanha e o mundo grande.
 | 27 | **As quatro camadas** (aprovado) | as bases (as leis do mundo, para todos), as perícias (a prática e as técnicas, de qualquer ofício), os ofícios (que usam perícias) e as condições; o pirata no comando do navio vive debaixo da lei do mar como o navegador | [`pericias.md`](pericias.md) |
 | 28 | **A economia dos ofícios** (aprovado) | os nove jeitos de ganhar (o soldo, a peça, a venda, a encomenda, a parte, o achado, a renda, a recompensa, o presente); juntar o ofício de soldo com o de risco pelo tempo, o posto e a licença; a família come da panela da casa | [`economia-oficios.md`](economia-oficios.md) |
 | 29 | **O grupo** (aprovado; a obediência que não é automática) | os patches dos NPCs não tinham companheiros; uma máquina só para o companheiro, a equipe, a tripulação, a gangue e a tropa (o grupo de grupos do general), e cada ofício registra nela os seus papéis, ordens e situações; o Patch 24 vira «Os grupos e o conflito» | [`grupos.md`](grupos.md) |
+| 30 | **O taverneiro** | a casa onde a cidade se encontra: a cuba e a adega, ler a sala, o fiado, a briga, ouvir e vender o que se ouve, a hospedaria; o segundo ofício, no Patch 27 (a taverna do jogo já é a base) | [`oficio-taverneiro.md`](oficio-taverneiro.md) |
 
 ## 2. A lógica da ordem
 
@@ -52,8 +53,9 @@ escalada, a montanha e o mundo grande.
    do capataz, o freguês, a fama. Por isso os NPCs (23 e 24) vêm antes de tudo.
 4. **O molde provado num ofício curto.** A Pesca é o ciclo mais curto e mais claro (lançar, esperar, fisgar, puxar) e tem as
    bases prontas (a água e os peixes): é o melhor lugar para provar a fundação.
-5. **Afinar o molde antes de copiar.** Depois da Pesca, o dono joga, e a fundação é afinada pelo que ele sentiu — antes de o
-   molde ser repetido em dez troncos.
+5. **Afinar o molde antes de copiar, com um segundo ofício oposto.** Depois da Pesca (a natureza), o dono joga e a fundação
+   é afinada pelo que ele sentiu — e um segundo ofício, o oposto, a prova de novo: o taverneiro (todo de gente, sobre a taverna que
+   já existe). Só então o molde é repetido nos outros troncos.
 6. **O chão grande espera o computador.** O mundo grande (os mapas de dias e as montanhas grandes) entra quando o PC novo do
    dono chegar; até lá, cada patch se prepara para ele (nenhuma conta nova pelo mapa inteiro, o detalhe como conta), para nada
    ser feito duas vezes. A montanha, que só existe em dias, vem logo depois dele; a mata e o mar vêm antes e crescem com ele.
@@ -74,7 +76,7 @@ load (S4); T-1584 e T-1585.
 | **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
 | **25 — A fundação dos ofícios e a Pesca de água doce** | a máquina comum (**as perícias**: a prática e as técnicas de cada uma, o catálogo), a camada do ambiente, o mercado do corpo, mestre e aprendiz; a Pesca do rio e do lago (P1) | 23 | todo ofício que vem depois | [`oficios-fundacao.md`](oficios-fundacao.md), [`oficio-pesca.md`](oficio-pesca.md) |
 | **26 — Os barcos pequenos e a Pesca inteira** | a canoa, a jangada, o barco a remo (N1); **o vento que empurra a vela, a corrente e a maré**; a costa, o mergulho, a conserva e o mercado (P2 a P4) | 25 | o primeiro chão que anda (a base do navio) | [`navios.md`](navios.md), [`oficio-pesca.md`](oficio-pesca.md) |
-| **27 — O acabamento e o molde afinado** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
+| **27 — O acabamento, o molde afinado e o taverneiro** | os murmúrios de voz por povo, os lábios com a fala, os sonhos; a fundação afinada pelo que o dono sentiu jogando a Pesca; **o segundo ofício, o taverneiro** — todo de gente, sobre a taverna que o jogo já tem: dois ofícios opostos afinam o molde | 23, 25, 26 | um molde melhor para os outros dez troncos | [`patch23-as-vidas.md`](patch23-as-vidas.md) §7, [`oficio-taverneiro.md`](oficio-taverneiro.md) |
 | **28 — A terra** | a Lavoura e a Criação (a horta, o campo, as estações, o solo, os bichos de criação) | 25 | o que a maior parte do povo vive — o ofício que o corpo mais vai encarnar | [`oficios.md`](oficios.md) |
 | **29 — A escalada** | o corpo na vertical: as pegas, a rocha que diz, a corda, a estaca, a queda; as pessoas do mundo nas mesmas regras (V1 a V5) | o movimento do corpo da v14, o relevo de hoje | a árvore da mata, o poço da mina, a montanha, o muro do cerco e da sombra, o mastro | [`escalada.md`](escalada.md) |
 | **30 — A mata** | **a mata que pesa** (a fase B da natureza: o passo, a vista, o rumo, a trilha que o mato fecha); o mateiro, o caçador, o armadilheiro, o lenhador, o ervanário, o carvoeiro; o mel e os ovos do alto da árvore; os ofícios das alturas que cabem num dia (os penhascos, o mel das rochas, o ninho) | 25, 29 | a madeira, o couro, a erva e o carvão das oficinas | [`oficio-mateiro.md`](oficio-mateiro.md), [`oficios.md`](oficios.md) |
@@ -84,7 +86,7 @@ load (S4); T-1584 e T-1585.
 | **34 — A sombra** | o ladrão, o contrabandista, o espião, o assassino; o preso; o muro e o telhado | 24, 29, 33 | esconder, furtar, ouvir escondido — o que a fuga da galé, a revista do capataz e o contrabando do porto usam | [`oficios.md`](oficios.md) |
 | **35 — O porto e o navio por dentro** | as plantas dos navios, o chão que anda, o itinerário do porto (N2, N3); o estivador (E1 a E5), o marinheiro (e o mastro); o remador livre (G1) | 26, 29, 34 | as viagens do corpo | [`navios.md`](navios.md), [`oficio-estivador.md`](oficio-estivador.md) |
 | **36 — A viagem e a batalha no mar** | os dias no mar e a batalha (N4, N5); o galeote (G2 a G5), o capataz (o comitre e o feitor, C1 a C5), o pirata, o navegador, o pescador de alto-mar (as viagens de dias, quando o mundo grande chegar) | 33, 34, 35 | o mundo inteiro pelo mar | [`condicao-escravo-gale.md`](condicao-escravo-gale.md), [`oficio-capataz.md`](oficio-capataz.md) |
-| **37 — O comércio** | o mercador, o caravaneiro, o taverneiro, o estalajadeiro | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
+| **37 — O comércio** | o mercador, o caravaneiro (o taverneiro já veio no 27) | 25 (o mercado do corpo), os troncos que fazem as coisas, 36 (o mar); os passos da montanha chegam com o 42 | o que liga todos os outros | [`oficios.md`](oficios.md) |
 | **38 — A fé, o saber e o passado** | o sacerdote, o curandeiro, o escriba, o oráculo; **o passado**: o arqueólogo, o caçador de tesouros, o saqueador de túmulos (S3), o decifrador | 31 (debaixo da terra e o registro do passado), 34 (a sombra) | as ruínas, os túmulos e as inscrições do próprio mundo | [`passado.md`](passado.md), [`oficio-arqueologo.md`](oficio-arqueologo.md), [`oficio-cacador-tesouros.md`](oficio-cacador-tesouros.md), [`oficio-saqueador.md`](oficio-saqueador.md) |
 | **39 — A arte** | o bardo (as histórias do mundo), o músico, o ator, o auriga | 23 (as histórias), 37 | — | [`oficios.md`](oficios.md) |
 | **40 — O poder** | jogar como quem governa, o conselheiro, o juiz | tudo o que veio antes | o topo da escada | [`oficios.md`](oficios.md) |
@@ -117,6 +119,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | O mundo grande | 41 |
 | O ano de quatro estações | C (antes do 23) |
 | O grupo | 24 (onda 1) |
+| O taverneiro | 27 |
 | O navegador | 26 (o vento e a vela), 36 (o ofício), 41 (as travessias de dias) |
 | O mateiro | 30 (a mata que pesa e o ofício), 41 (as matas de dias) |
 | O pirata | 36 |

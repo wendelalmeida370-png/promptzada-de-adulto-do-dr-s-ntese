@@ -16,7 +16,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 | 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
 | 25 | A fundação dos ofícios e a Pesca de água doce |
 | 26 | Os barcos pequenos e a Pesca inteira |
-| 27 | O acabamento e o molde afinado |
+| 27 | O acabamento, o molde afinado e o taverneiro (o segundo ofício) |
 | 28 a 32 | A terra, **a escalada**, a mata, o subterrâneo e a mina, a oficina |
 | 33 a 36 | A arena e a guerra, a sombra, o porto e o navio por dentro, a viagem e a batalha no mar |
 | 37 a 40 | O comércio, a fé, o saber e o passado, a arte, o poder |
@@ -72,6 +72,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   e a trilha que o mato fecha, a febre, rio abaixo, a árvore da vista, a cidade engolida).
 - [`oficio-pirata.md`](oficio-pirata.md) — o pirata por inteiro (a tábua do porto, a perseguição pelo vento, a abordagem, o nome que
   rende, o saque pelo livro, o resgate, o motim, o corsário, o rei do mar).
+- [`oficio-taverneiro.md`](oficio-taverneiro.md) — o taverneiro por inteiro (a cuba e a adega, ler a sala, o fiado, a briga, ouvir e
+  vender o que se ouve, a hospedaria, a lei da bebida de cada povo; o segundo ofício, no Patch 27).
 - [`subterraneo.md`](subterraneo.md) — o subterrâneo no corpo (as cavernas, as minas, a luz, o desabamento, o passado de
   verdade para cavar) e os ofícios que ele abre.
 - `pdf/` — os planos em PDF para o dono ler.

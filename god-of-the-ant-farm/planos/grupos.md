@@ -182,8 +182,13 @@ perdem e voltam pelas mesmas regras.
 - **O painel do grupo** (como a aba de Relacionamentos): os membros, o papel de cada um, o ânimo e a confiança **lidos nos rostos e
   ditos em palavras**, a carga comum, o acordo.
 - **A roda das ordens:** um botão segurado abre as ordens (as de sempre e as do ofício), também no controle de jogo e no toque —
-  e, escolhida a ordem, **o jeito de dizer** (pedir, mandar, explicar o porquê, gritar, ameaçar, oferecer); olhando para uma
-  pessoa, a ordem é para ela; sem olhar ninguém, para o grupo todo.
+  e, escolhida a ordem, **o jeito de dizer** (pedir, mandar, explicar o porquê, gritar, ameaçar, oferecer).
+- **Para quem é a ordem (sem confusão — a pergunta do dono, 20/11/2026):** o olhar sozinho **nunca** escolhe. A roda abre sempre
+  com **«o grupo»** escolhido, e mostra em cima, escrito, **para quem vai**; se há alguém destacado (o mesmo destaque do E), o nome
+  dele aparece ao lado, e um movimento só troca entre «o grupo» e ele; também se escolhe **um papel** («os carregadores») ou um
+  nome no painel do grupo. **O corpo diz a ordem em voz alta com o nome** («Tito, vai na frente!») — o jogador ouve para quem foi.
+  E existe a ordem de desfazer («Esquece, volta!»), que também é uma ordem e também tem resposta. No perigo, a roda guarda o grupo
+  inteiro como alvo, para ninguém errar de pessoa na pressa.
 - **Os gestos:** a mão erguida (silêncio), o braço que aponta (por ali), o punho (atacar) — o corpo faz o gesto, o grupo vê.
 - **Nada de barras sobre as cabeças:** o grupo se lê pelos rostos, pelas vozes e pelo passo.
 
@@ -198,6 +203,22 @@ perdem e voltam pelas mesmas regras.
 5. **A morte e a sucessão:** o líder que morre passa o comando (o imediato, o mais velho, a escolha do grupo); o membro que morre
    pesa no ânimo e na memória de todos.
 6. **O mesmo efeito nos três níveis** (o salto, o passo, o corpo).
+
+## 10b. É viável? (a resposta sincera, 20/11/2026)
+
+**É viável, e é grande** — o maior sistema novo depois do calendário. O que ajuda: o jogo já tem as peças (as pessoas com cérebro e
+vontades, as tarefas que se emprestam e se devolvem — a cena e a tarefa a dois —, os laços, a índole, a fama, as falas, as
+expedições, as hostes da guerra, o livro das coisas). O que é difícil, e como se faz:
+
+1. **Seguir no ritmo do líder:** no corpo, o jogador trota mais rápido que as pessoas do mundo andam; **no grupo, cada um anda no
+   passo do líder** até onde o fôlego dele deixa (o mais fraco fica para trás — e isso é parte do jogo).
+2. **A resposta tem de ser entendida:** se o jogador não entende por que alguém recusou, parece sorteio. **Toda resposta diz o seu
+   porquê** em fala e em gesto — é a regra que salva o sistema.
+3. **Começar pequeno:** a primeira leva tem **o grupo do corpo até seis pessoas**, umas dez ordens de sempre e as doze respostas; as
+   tripulações e a tropa (o grupo de grupos) crescem com os seus troncos (o mar, a guerra).
+4. **Os sistemas que já têm grupo** (as expedições, as hostes, as tripulações) passam para a máquina um de cada vez, com a prova de
+   que o mundo continua igual.
+5. **O custo:** dezenas de companheiros andam bem; a tropa anda por unidade, como as hostes já andam.
 
 ## 11. As provas (quando for feito)
 

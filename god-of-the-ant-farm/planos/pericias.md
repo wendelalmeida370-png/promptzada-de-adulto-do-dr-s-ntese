@@ -129,8 +129,8 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 ### A luta
 
 **Lutar (um jeito por arma)** — um jeito por arma — a espada curta e a faca, a lança, o escudo, o arco, a funda, a rede e o tridente, o chicote, sem arma —, mais a montaria (o cavaleiro) e a formação (a fileira da infantaria); com o combate do corpo.
-- *As técnicas:* A briga do cais ([o estivador](oficio-estivador.md)); A luta no convés, A flecha de fogo ([o pirata](oficio-pirata.md)); A rede que se joga e se recolhe, O empurrão do escudo, O golpe por cima do escudo, O passo do reciário, A guarda do secutor contra a rede, O golpe que decepa, O golpe de misericórdia limpo, Cair e se levantar, Lutar ferido, Ler o adversário ([o gladiador](oficio-gladiador.md)); O chicote certeiro ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o estivador, **o gladiador**, o capataz, o pirata, o guarda, o soldado, o general, o cavaleiro, o caçador.
+- *As técnicas:* A briga do cais ([o estivador](oficio-estivador.md)); A luta no convés, A flecha de fogo ([o pirata](oficio-pirata.md)); Pôr para fora ([o taverneiro](oficio-taverneiro.md)); A rede que se joga e se recolhe, O empurrão do escudo, O golpe por cima do escudo, O passo do reciário, A guarda do secutor contra a rede, O golpe que decepa, O golpe de misericórdia limpo, Cair e se levantar, Lutar ferido, Ler o adversário ([o gladiador](oficio-gladiador.md)); O chicote certeiro ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o estivador, **o gladiador**, o capataz, o pirata, o taverneiro, o guarda, o soldado, o general, o cavaleiro, o caçador.
 
 **Abordagem** — a caça e o assalto no mar e na costa: a presa, a emboscada, os ganchos, a razia ([`oficio-pirata.md`](oficio-pirata.md)).
 - *As técnicas:* Ler a presa, A emboscada do estreito, O sol nas costas, O disfarce, Quebrar os remos, O gancho, A razia ([o pirata](oficio-pirata.md)).
@@ -148,45 +148,57 @@ mar como o navegador, e navega tão bem quanto a perícia de navegar dele deixar
 
 **Comandar** — a voz, o ritmo, a parte justa, a ordem que se cumpre — da turma ao exército.
 - *As técnicas:* O canto de trabalho ([o estivador](oficio-estivador.md)); A parte justa, O inverno bem passado ([o pirata](oficio-pirata.md)); A voz de comando, A ração medida, Parar a briga do banco ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o general, o chefe de turma, o chefe de galeria.
+- *Quem usa:* o remador de galé, o estivador, **o capataz**, o mateiro, o pirata, os ofícios das alturas, o taverneiro, o general, o chefe de turma, o chefe de galeria.
 
 **Intimidar** — o medo como arma: o grito, o nome, o castigo exemplar.
-- *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o gladiador, o capataz, o pirata, o guarda.
+- *As técnicas:* O grito e o nome ([o pirata](oficio-pirata.md)); O olhar que basta ([o taverneiro](oficio-taverneiro.md)); O castigo exemplar ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o gladiador, o capataz, o pirata, o taverneiro, o guarda.
 
 **Ler as pessoas** — a mentira, o sócio, a tripulação, o ânimo de quem está em volta.
-- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata.
+- *As técnicas:* Ler o sócio ([o caçador de tesouros](oficio-cacador-tesouros.md)); Ler o sócio ([o saqueador de túmulos](oficio-saqueador.md)); Ler a tripulação ([o pirata](oficio-pirata.md)); Ler a sala, A hora de parar ([o taverneiro](oficio-taverneiro.md)); Ler a mentira ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o remador de galé, o capataz, o caçador de tesouros, o saqueador de túmulos, o pirata, o taverneiro.
 
 **Negociar** — o preço, o resgate, a parte, o acordo.
-- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)).
-- *Quem usa:* o caçador de tesouros, o pirata, o mercador, o taverneiro.
+- *As técnicas:* A negociação ([o caçador de tesouros](oficio-cacador-tesouros.md)); O resgate ([o pirata](oficio-pirata.md)); Comprar na hora certa, Cobrar o fiado ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* o caçador de tesouros, o pirata, o taverneiro, o mercador.
 
 **Investigar** — juntar pistas: o boato, o informante, a revista, o corpo, o mito — do caçador de tesouros ao guarda.
-- *As técnicas:* Os ossos, Ler o mito ([o arqueólogo](oficio-arqueologo.md)); Pesar a pista, Ler o boato ([o caçador de tesouros](oficio-cacador-tesouros.md)); O informante, Pesar a informação, A revista ([o pirata](oficio-pirata.md)); A revista dos esconderijos, A rede de delatores ([o capataz](oficio-capataz.md)).
-- *Quem usa:* o capataz, o arqueólogo, **o caçador de tesouros**, o pirata, o guarda (o crime), o juiz.
+- *As técnicas:* Os ossos, Ler o mito ([o arqueólogo](oficio-arqueologo.md)); Pesar a pista, Ler o boato ([o caçador de tesouros](oficio-cacador-tesouros.md)); O informante, Pesar a informação, A revista ([o pirata](oficio-pirata.md)); Ouvir sem parecer ([o taverneiro](oficio-taverneiro.md)); A revista dos esconderijos, A rede de delatores ([o capataz](oficio-capataz.md)).
+- *Quem usa:* o capataz, o arqueólogo, **o caçador de tesouros**, o pirata, o taverneiro, o guarda (o crime), o juiz.
 
 **Furtividade** — não ser visto nem ouvido: a ronda, a luz, o som, a noite.
 - *As técnicas:* Esconder na boca, Abrir a corrente ([o remador de galé](condicao-escravo-gale.md)); Ler a ronda, A pá muda, A vela no chapéu, A laje sem estalo, Fechar o túmulo ([o saqueador de túmulos](oficio-saqueador.md)); A noite sem luz ([o pirata](oficio-pirata.md)).
 - *Quem usa:* o remador de galé, **o saqueador de túmulos**, o pirata, o ladrão, o espião, o assassino.
 
 **Contrabando** — esconder, passar, vender sem ser pego, gastar devagar.
-- *As técnicas:* Esconder o achado ([o caçador de tesouros](oficio-cacador-tesouros.md)); Derreter limpo, O receptador certo, Comprar o vigia, Gastar devagar ([o saqueador de túmulos](oficio-saqueador.md)); O esconderijo, O porto que não pergunta ([o pirata](oficio-pirata.md)).
+- *As técnicas:* Esconder o achado ([o caçador de tesouros](oficio-cacador-tesouros.md)); Derreter limpo, O receptador certo, Comprar o vigia, Gastar devagar ([o saqueador de túmulos](oficio-saqueador.md)); O esconderijo, O porto que não pergunta ([o pirata](oficio-pirata.md)); Aguar o vinho ([o taverneiro](oficio-taverneiro.md)).
 - *Quem usa:* o estivador, o caçador de tesouros, o saqueador de túmulos, o pirata, o contrabandista, o receptador.
 
 **Letras** — ler e escrever: o caderno, a conta, o périplo.
-- *As técnicas:* Escrever o périplo ([o navegador](oficio-navegador.md)); A conta ([o estivador](oficio-estivador.md)).
-- *Quem usa:* o navegador, o estivador, o arqueólogo, o escriba.
+- *As técnicas:* Escrever o périplo ([o navegador](oficio-navegador.md)); A conta ([o estivador](oficio-estivador.md)); A tábua do fiado ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* o navegador, o estivador, o arqueólogo, o taverneiro, o escriba.
 
 **Jogo** — os dados e os jogos da taverna — e a trapaça.
-- *As técnicas:* Os dados ([o estivador](oficio-estivador.md)).
-- *Quem usa:* o estivador.
+- *As técnicas:* Os dados ([o estivador](oficio-estivador.md)); Os dados da casa ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* o estivador, o taverneiro.
+
+**Hospitalidade** — acolher e servir: o freguês, o hóspede, a sala — a medida certa, a hora de parar, a voz que acalma ([`oficio-taverneiro.md`](oficio-taverneiro.md)).
+- *As técnicas:* A medida certa, Lembrar o freguês, A voz que acalma, A rodada da paz, A música certa, O quarto limpo, O valor do hóspede ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* **o taverneiro**, o estalajadeiro, o servente.
 
 ### As mãos
 
 **Forjar** — o fogo do metal (o ferreiro — o documento a fundo virá).
 - *As técnicas:* O fogo de pátio ([o mineiro](oficio-mineiro.md)).
 - *Quem usa:* o mineiro, o ferreiro, o armeiro, o fundidor.
+
+**Fermentar** — a cerveja, o pulque, o hidromel: o grão, a água, o tempo e o calor (a cuba).
+- *As técnicas:* A cerveja boa, O pulque, O hidromel, A bebida estrangeira ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* o taverneiro, o cervejeiro.
+
+**Cozinhar** — o prato, o caldo, o pão, o vinho quente — do que a cidade tem.
+- *As técnicas:* O caldo que rende, O prato do dia, O vinho quente ([o taverneiro](oficio-taverneiro.md)).
+- *Quem usa:* o taverneiro, a cozinheira, o cozinheiro do navio.
 
 **As que virão com os seus ofícios:** lavrar e criar (a terra), olaria, tecer, carpintaria, curar, montar a cavalo, cantar e
 contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofício ganhar o documento a fundo.
@@ -208,6 +220,7 @@ contar (o bardo), governar (o poder) — cada uma entra aqui quando o seu ofíci
 | [o mateiro](oficio-mateiro.md) | **Orientar-se** | Rastrear, Sobreviver, Ervas, Escalar, Nadar e mergulhar, Marinharia, Ler o tempo, Comandar |
 | [o pirata](oficio-pirata.md) | **Abordagem** | Comandar, Marinharia, Navegar, Intimidar, Lutar (um jeito por arma), Negociar, Investigar, Contrabando, Furtividade, Ler as pessoas |
 | [os ofícios das alturas](montanha.md) | **Montanhismo** | Escalar, Sobreviver, Orientar-se, Ler o tempo, Comandar |
+| [o taverneiro](oficio-taverneiro.md) | **Hospitalidade** | Fermentar, Cozinhar, Ler as pessoas, Negociar, Letras, Investigar, Intimidar, Lutar (um jeito por arma), Comandar, Jogo |
 | o guarda | **Lutar** | Investigar, Intimidar, Ler as pessoas |
 | o general | **Tática** | Comandar, Lutar (a montaria, a formação), Ler as pessoas |
 | o soldado de infantaria | **Lutar** (a formação, a lança, o escudo) | Comandar (o graduado) |
