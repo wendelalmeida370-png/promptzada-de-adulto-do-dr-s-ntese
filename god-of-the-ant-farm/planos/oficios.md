@@ -116,7 +116,7 @@ seguir).
 ramo do mesmo jogo), **papel** ou **título** (um lugar no grupo, um degrau da carreira) ou **função do mundo** (o que se faz por um
 dia). ★ = já tem o seu documento a fundo.
 
-**O mar (8):** ★ [pescador](oficio-pesca.md) (inclui o pescador de rede) · **mergulhador** (o recife, as pérolas, o naufrágio) ·
+**O mar (8):** ★ [pescador](oficio-pesca.md) (inclui o pescador de rede, o piscicultor) · **mergulhador** (o recife, as pérolas, o naufrágio) ·
 ★ [navegador](oficio-navegador.md) (inclui o piloto do porto, o cartógrafo do mar) · **marinheiro** (inclui o barqueiro, o canoeiro;
 capitão é título) · **construtor naval** (o estaleiro, o casco) · ★ [estivador](oficio-estivador.md) (inclui o guindasteiro) ·
 ★ [remador de galé](condicao-escravo-gale.md) (voga é título) · ★ [pirata](oficio-pirata.md) (inclui o corsário, o naufragador)
@@ -142,12 +142,12 @@ ouro) · **explorador de cavernas**
 ★ [caçador de tesouros](oficio-cacador-tesouros.md) · ★ [saqueador de túmulos](oficio-saqueador.md)
 
 **A oficina (11):** **ferreiro** (inclui o fundidor) · **armeiro** · **ourives** (inclui o lapidário) · **oleiro** · **tecelão**
-(inclui o tintureiro, a seda) · **alfaiate** · **coureiro** (o couro, o sapato, a sela) · **carpinteiro** (inclui o marceneiro) ·
+(inclui o tintureiro, a seda) · **alfaiate** · **coureiro** (o couro, o sapato, a sela; inclui o pergaminheiro) · **carpinteiro** (inclui o marceneiro) ·
 **cordoeiro** (a corda, a rede, o cesto) · **vidreiro** · **construtor** (inclui o pedreiro; arquiteto é título)
 
-**A luta (8):** **soldado** (inclui o arqueiro, o fundeiro, o escalador de muralhas) · **cavaleiro** · **mercenário** ·
+**A luta (8):** **soldado** (inclui o arqueiro, o fundeiro, o escalador de muralhas, o besteiro, o artilheiro) · **cavaleiro** · **mercenário** ·
 **comandante** (general é título) · ★ [gladiador](oficio-gladiador.md) (inclui o bestiário; lanista é título) · **guarda** (inclui o
-carcereiro, o guarda-costas) · **caçador de recompensas** (inclui o rastreador de fugitivos) · ★ [capataz](oficio-capataz.md) (o
+carcereiro, o guarda-costas, os vigias do fogo) · **caçador de recompensas** (inclui o rastreador de fugitivos) · ★ [capataz](oficio-capataz.md) (o
 comitre e o feitor)
 
 **A sombra (6):** **ladrão** (inclui o batedor de carteira, o arrombador) · **salteador** (o pirata da terra) · **contrabandista**
@@ -157,22 +157,28 @@ comitre e o feitor)
 feirante, o especieiro) · **caravaneiro** · **banqueiro** (inclui o cambista)
 
 **A fé e o saber (11):** **sacerdote** · **oráculo** (os presságios, a profecia que um rei vem ouvir) · **monge** (inclui o eremita,
-o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola, o tradutor) · **curandeiro** (inclui a parteira, o
+o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola, o tradutor, o taquígrafo, o papeleiro) · **curandeiro** (inclui a parteira, o
 barbeiro) · e **os seis do saber** ([`saber.md`](saber.md), aprovados em 20/11/2026, no lugar do sábio): **filósofo** · **astrônomo**
-(inclui o astrólogo; o matemático é ramo dele e do engenheiro) · **engenheiro** (inclui o mecânico e o geômetra) · **médico** ·
-**naturalista** (inclui o cartógrafo) · **alquimista**
+(inclui o astrólogo; o matemático é ramo dele e do engenheiro) · **engenheiro** (inclui o mecânico, o geômetra e o relojoeiro) · **médico** ·
+**naturalista** (inclui o cartógrafo) · **alquimista** (inclui o perfumista e o saboeiro)
 
 **A arte (7):** ★ [bardo](oficio-bardo.md) (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
 **auriga** · **atleta**
 
 **O poder (6):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
-**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador**
+**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) (inclui o advogado) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador**
 
 **As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·
 mendigo · exilado · foragido · náufrago · perdido (inclui o soterrado) · órfão, criança, ancião · viúvo · herdeiro
 
-**As funções do mundo** (fazem-se por um dia, sem ser ofício inteiro): aguadeiro, carregador, mensageiro, foguista, servente,
-faroleiro, salineiro, cobrador.
+**As funções do mundo** (fazem-se por uns dias, chamadas, sem ser ofício inteiro): aguadeiro, carregador (e os homens da roda do
+guindaste), mensageiro, foguista, servente, faroleiro, salineiro, cobrador, arauto — e as que o saber traz ([`saber.md`](saber.md)
+§14b): **o recenseador**, **o medidor dos campos**, **o vigia da quarentena**.
+
+**Os cargos** (o posto que quem governa nomeia — ou o povo vota —, com a índole de quem é nomeado; [`oficio-governante.md`](oficio-governante.md)
+§5.4): o general, o tesoureiro, o governador, o sumo-sacerdote, o chefe da guarda — e os que o saber traz: **o censor**, **o fiscal do
+mercado**, **o curador das águas**, **o mestre do correio**, **o bibliotecário-mor**, **o astrólogo da corte**, **o guardião do
+calendário**. **O orador** é título de quem fala bem.
 
 **As passagens** (uma vida que muda de ofício pela história): o escravo de galé que se revolta ou foge, vira liberto, e depois
 gladiador, mercenário, marinheiro ou pirata; o preso que sai e vira contrabandista; o órfão que um mestre adota e vira

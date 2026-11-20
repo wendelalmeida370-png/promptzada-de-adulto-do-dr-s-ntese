@@ -159,6 +159,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   —, nas duas vistas; **o teto do saber antigo é a beira da pólvora** ([`saber.md`](saber.md) §4b).
 - **As eras do jogo** (a ideia do dono, para muito depois — Patch 70 a 100): a era antiga é uma só; um dia, a passagem com causa para
   as eras seguintes e o futuro que sai das escolhas do mundo ([`eras.md`](eras.md)).
+- **Quem faz o que as descobertas trazem** (20/11/2026, a pergunta do dono sobre o censo): uma família nova na lista, **os cargos**
+  (nomeados por quem governa), e as funções e especialidades novas; **o correio** espera a decisão do dono ([`saber.md`](saber.md) §14b).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 83 ofícios (com o carrasco e os seis do saber) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

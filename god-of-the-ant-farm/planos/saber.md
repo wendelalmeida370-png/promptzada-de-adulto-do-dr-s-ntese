@@ -633,6 +633,71 @@ seis ofícios do saber, aprovados pelo dono** (20/11/2026; cada um terá o seu d
 
 **A conta da lista:** **o sábio sai e entram os seis** — de 78 para **83 ofícios** (aprovado, 20/11/2026: «não precisa enxugar»).
 
+## 14b. Quem mais nasce das descobertas (a pergunta do dono: «e quem faz o censo?»)
+
+**Toda descoberta que pede gente diz quem faz — e como essa pessoa é escolhida.** Nem todo «quem faz» é um ofício: a lista aprovada
+tem **o ofício** (aguenta horas sozinho), **a especialidade** (um ramo de um ofício), **o papel e o título** (um lugar no grupo, um
+degrau), **a função do mundo** (o que se faz por uns dias, chamado) — e o saber traz mais uma família: **o cargo** (o posto que **quem
+governa nomeia**, como o general e o tesoureiro de hoje, [`oficio-governante.md`](oficio-governante.md) §5.4).
+
+### O censo, por inteiro (o exemplo do dono)
+
+O censo **não é um ofício** — não se faz todo dia, e não aguenta horas sozinho. **É duas coisas:**
+
+1. **O censor — um cargo.** Quem organiza o censo e guarda as listas. **Quem governa o nomeia** (na república, **o povo vota**, como em
+   Roma), entre quem tem fama, Letras e Calcular, e a confiança de quem nomeia. **Nomear o certo** importa: o censor honesto conta os
+   ricos como conta os pobres; o corrupto esconde o gado do amigo e o filho do poderoso.
+2. **Os recenseadores — uma função do mundo.** Por uns dias, **o censor chama quem sabe ler**: os escribas primeiro, depois qualquer um
+   que leia — pagos pela diária, pelo tesouro (o soldo do dia). **Pelas regras de todo chamado de hoje** (como o carrasco e o arauto, que
+   já são chamados por um dia): ninguém é tirado da cama, do meio de uma operação, nem de uma fome forte. **O corpo pode receber o
+   convite** («o censor procura quem saiba ler: três moedas por dia») **ou se oferecer** na mesa do censo, na praça.
+
+**De quanto em quanto tempo:** a cada cinco anos (vinte dias, no ano de quatro estações), como o lustro romano — **ou quando quem
+governa manda** (a leva para a guerra, o imposto novo).
+
+**Como se joga, encarnado no recenseador:** de porta em porta com as tabuinhas; a família que **esconde o filho** da leva ou o escravo
+do imposto (Ler as pessoas); o suborno; a casa vazia que não estava vazia; a rua que recebe mal quem conta; a conta que tem de fechar.
+
+**O que muda no mundo:** com o censo, quem governa **sabe a gente e os bens de verdade** — o imposto certo, a leva certa, o pão
+certo para o inverno. **Sem o censo, os números são palpites** (e os conselheiros que mentem mentem mais fácil). O censo errado
+também é do mundo: o povo que paga demais murmura; o que foi esquecido não é chamado à guerra.
+
+### Os outros que as descobertas trazem
+
+| A descoberta | Quem faz | O que é | Como é escolhido |
+|------|----------|------|-----------|
+| **O censo** | o censor; os recenseadores | **cargo**; **função do mundo** | quem governa nomeia (ou o povo vota); o censor chama quem lê, por dias |
+| **A balança e os pesos** | **o fiscal do mercado** (o agorânomo grego): confere os pesos, multa a fraude | **cargo** | quem governa nomeia; pago pelo tesouro e pelas multas |
+| **O aqueduto, o esgoto** | **o curador das águas**: a manutenção — sem ele, o aqueduto racha e a cidade fica sem água | **cargo** | quem governa nomeia |
+| **O correio do rei** | **o mestre do correio** (as estações, os cavalos frescos); **os correios** que cavalgam | **cargo**; o correio, **a decidir** (abaixo) | o mestre, nomeado; os correios, contratados pelo soldo |
+| **O rolo e a biblioteca, o catálogo** | **o bibliotecário-mor** (o de Alexandria era nomeado pelo rei); os copistas (que já existem) | **cargo**; papel | quem governa nomeia, entre os sábios |
+| **As tábuas dos planetas** | **o astrólogo da corte** | **cargo** (título do astrônomo) | quem governa chama o astrônomo de fama |
+| **O calendário do povo, o ano exato** | **o guardião do calendário** (o pontífice romano): anuncia os dias, as festas, o ano novo | **cargo** (do sacerdote ou do astrônomo) | o templo ou quem governa |
+| **A corda de nós** | **os medidores dos campos**: depois da cheia ou no começo do ano, as divisas medidas de novo | **função do mundo** | chamados entre os geômetras e os escribas, por dias |
+| **A quarentena** | **o vigia da quarentena**: a casa marcada, o guarda na porta | **função do mundo** | chamado entre os guardas e os soldados |
+| **A bomba de pistão** | **os vigias do fogo** (os *vigiles* de Roma): a turma da bomba e a ronda da noite | **especialidade do guarda** | o guarda que treina na bomba |
+| **O guindaste de roda** | **os homens da roda** | **função do mundo** (dos carregadores) | chamados pela obra ou pelo cais |
+| **O viveiro de peixes** | **o piscicultor** | **especialidade do pescador** | — |
+| **O relógio de água, o relógio de sol** | **o relojoeiro** | **especialidade do engenheiro** | — |
+| **A taquigrafia** | **o taquígrafo** (o escrivão da assembleia e do tribunal) | **especialidade do escriba** | — |
+| **O papel, o pergaminho** | **o papeleiro**; **o pergaminheiro** | especialidades **do escriba** e **do coureiro** | — |
+| **O sabão, a destilação** | **o saboeiro**; **o perfumista** | **especialidades do alquimista** | — |
+| **O direito** | **o advogado** (o que fala pelo acusado) | **especialidade do juiz** (já no documento dele) | — |
+| **A retórica** | **o orador** | **título** (de quem governa, do agitador, do conselheiro, do advogado) | pela fama da fala |
+| **O hospital** | **o ajudante do médico** | **papel** (no grupo do médico) | — |
+| **A balista, a besta** | **o artilheiro**, **o besteiro** | **especialidades do soldado** | — |
+| **O moinho d'água, o moinho de vento** | o moleiro | **já na lista** (o padeiro inclui o moleiro) | — |
+| **A colmeia, a púrpura, a seda, o vidro soprado, o banco** | o apicultor, o tintureiro, o tecelão da seda, o vidreiro, o banqueiro e o cambista | **já na lista** | — |
+
+**O único candidato a ofício novo: o correio.** O mensageiro hoje é uma função do mundo; com **o correio do rei**, cavalgar entre as
+estações pode aguentar horas — **a rota contra o tempo**, o cavalo que cansa, a chuva, o salteador, **a carta selada que o espião
+quer**, a notícia que muda uma guerra se chegar a tempo. **O dono decide** se o correio vira o 84.º ofício (com o mensageiro dentro)
+ou fica como função.
+
+**A regra:** **o cargo é nomeado por quem governa** (pela porta das pessoas nomeadas, com a índole delas: o nomeado pode roubar,
+mentir, servir bem); **a função do mundo é chamada** pelas regras de todo chamado; **a especialidade e o papel** vivem dentro dos seus
+ofícios. **Uma descoberta nova que pede gente** escreve a sua linha nesta tabela.
+
 ## 15. Quando entra
 
 O saber pede **as pessoas** (o Patch 23: a memória, as marcas para o livro), **o calendário** (o céu e o ano) e **a máquina das perícias**
