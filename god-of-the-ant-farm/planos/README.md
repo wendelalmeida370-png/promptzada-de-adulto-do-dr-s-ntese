@@ -133,7 +133,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   ofícios têm um pé nela. **As seis máquinas do mundo** (as falas, as animações, as interações, o grupo, as marcas, a leitura) servem a tudo, e
   cada ofício as alimenta ([`marcas.md`](marcas.md)).
 - **A análise de game design** (**aprovada**, 20/11/2026): **a meta alta** — a máxima de cada ofício é para manter o nível lá em
-  cima, e a profundidade mora nas bases e nas perícias, com cada ofício novo mais barato que o anterior; **a leitura**, a sexta
+  cima; **a profundidade mora nas bases, nas perícias e no próprio ofício quando ele pede** (a pirataria, quem governa, o mateiro),
+  nunca menos do que o ofício pede, e todo ofício com o molde inteiro (o laço de jogo, a recompensa, a progressão, o retorno que se
+  vê e se ouve), sempre divertido; nenhum refaz o que é comum; **a leitura**, a sexta
   máquina do mundo ([`leitura.md`](leitura.md)); **a prova da diversão em todo patch** (as quatro perguntas do teste do dono) e **a
   primeira hora** ([`primeira-hora.md`](primeira-hora.md)); **o deus conferido em cada ofício** — entra só a mecânica pertinente e
   divertida, nunca para encher linguiça; **a tabela dos ofícios**, feita pelo código ([`oficios-fundacao.md`](oficios-fundacao.md)

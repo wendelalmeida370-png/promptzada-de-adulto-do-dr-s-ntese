@@ -51,7 +51,7 @@ escalada, a montanha e o mundo grande.
 | 37 | **O caçador** | a espreita contra o vento, o tiro, o rastro de sangue, a fera que caça gente e lê você — contra o cérebro e o meio dos bichos que o jogo já tem; a caça que esvazia a mata; com a mata, no Patch 30 | [`oficio-cacador.md`](oficio-cacador.md) |
 | 38 | **O bardo** | juntar as histórias verdadeiras do mundo, escolher a versão (a verdade, o enfeite, a propaganda, a sátira), cantar e ver o mundo mudar; a canção como marca; com a arte, no Patch 39 | [`oficio-bardo.md`](oficio-bardo.md) |
 | 39 | **A natureza viva** | os bichos ainda melhores com as estações: as migrações (a chuva, o frio, as aves, o mar, o salmão), o relógio do dia, um nicho em cada altura (a copa, o oco, a toca, o penhasco, o céu), as relações (o mutualismo, o comensalismo, a carniça, os engenheiros), a hibernação, os ninhos raros, o mar que muda; o olho da natureza — tudo de verdade, como um documentário | [`natureza-viva.md`](natureza-viva.md) |
-| 40 | **A análise de game design** (aprovada) | a meta alta dos ofícios com o cuidado do tamanho; **a leitura**, a sexta máquina (o porquê de cada «não» dentro do mundo); **a prova da diversão** em todo patch e **a primeira hora**; **o deus conferido em cada ofício** (posto só quando pertinente); **a tabela dos ofícios** feita pelo código | [`leitura.md`](leitura.md), [`primeira-hora.md`](primeira-hora.md), [`oficios-fundacao.md`](oficios-fundacao.md) §2.14–2.15 |
+| 40 | **A análise de game design** (aprovada) | a meta alta e **a profundidade de cada ofício** (nas bases, nas perícias e no próprio ofício, quando ele pede — nunca menos do que pede); **a leitura**, a sexta máquina (o porquê de cada «não» dentro do mundo); **a prova da diversão** em todo patch e **a primeira hora**; **o deus conferido em cada ofício** (posto só quando pertinente); **a tabela dos ofícios** feita pelo código | [`leitura.md`](leitura.md), [`primeira-hora.md`](primeira-hora.md), [`oficios-fundacao.md`](oficios-fundacao.md) §2.14–2.15 |
 
 ## 2. A lógica da ordem
 
@@ -160,8 +160,9 @@ de cima ou os poderes do deus; **se há, entra; se não há, nada entra** — ne
 ([`oficios-fundacao.md`](oficios-fundacao.md) §2.14).
 
 **A tabela dos ofícios** (aprovada, 20/11/2026): de pé desde o Patch 25, feita pelo código; cada patch de ofício acrescenta as suas
-linhas — as bases, as perícias, as seis máquinas, o deus, as provas, o equilíbrio e o custo — e **cada ofício novo sai mais barato que
-o anterior** ([`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
+linhas — as bases, as perícias, as seis máquinas, o deus, as provas, o equilíbrio e o custo — e **nenhum ofício refaz o que é comum**,
+enquanto **cada um tem a profundidade que pede** (a pirataria e quem governa, muita; [`oficios.md`](oficios.md) §2;
+[`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
 
 **Todo patch vem com o arcabouço inteiro** (a regra do dono, 20/11/2026): nenhuma coisa nova chega sem **as animações, o cérebro, os
 sons, as interações, o desenho e as provas** de que precisa — e com a melhoria do que já existe onde ela pedir.

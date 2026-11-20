@@ -1,7 +1,8 @@
 # A fundação dos ofícios (Patch 25)
 
-A máquina comum a todos os ofícios. Feita uma vez, cada ofício novo passa a ser **os seus dados e o seu gesto próprio** — a
-prática, as técnicas, os títulos, a coleção, a recompensa que se vê, o mercado, o mestre e o aprendiz já vêm prontos. A visão
+A máquina comum a todos os ofícios. Feita uma vez, **nenhum ofício novo refaz o que é comum** — a prática, as técnicas, os títulos, a
+coleção, a recompensa que se vê, o mercado, o mestre e o aprendiz já vêm prontos — e **cada um põe a sua força no que é dele**: o
+gesto, os dados e, **quando o ofício pede, a profundidade própria** (a pirataria, quem governa, o mateiro; [`oficios.md`](oficios.md) §2). A visão
 geral está em [`oficios.md`](oficios.md); o primeiro ofício a usar a fundação, em [`oficio-pesca.md`](oficio-pesca.md).
 
 ## 1. Como o jogador vai sentir
@@ -253,8 +254,11 @@ afirmado à mão** (`qa/matriz-oficios.js`). Uma linha por ofício, com:
 - **o equilíbrio:** quanto ganha por dia de jogo, quanto arrisca (os mortos e os feridos por hora de ofício), quanto tempo pede, pelo
   jeito de ganhar ([`economia-oficios.md`](economia-oficios.md)) — **nenhum ofício muito acima dos outros para o mesmo risco** (o pirata
   não pode ganhar mais que todo mundo sem pagar por isso);
-- **o custo:** quanto código novo o ofício pediu — **cada ofício novo deve sair mais barato que o anterior** (a profundidade mora nas
-  bases e nas perícias, que todos dividem); se o décimo custar o mesmo que o primeiro, a fundação volta para a mesa.
+- **a profundidade:** o molde inteiro de pé (as dez coisas de [`oficios.md`](oficios.md) §2: o laço de jogo, a recompensa, a
+  progressão, o retorno que se vê e se ouve…) e **a profundidade própria que o ofício pede** — nunca menos;
+- **o custo, em duas partes:** o que o ofício **refez** do que já era comum (deve ser nada — as bases, as perícias e a fundação já dão;
+  um ofício que refaz o comum manda a fundação de volta para a mesa) e o que é **dele** (a profundidade própria, do tamanho que o ofício
+  pede: a pirataria e quem governa pedem muito, e está certo).
 
 **Nasce no Patch 25**, com a fundação e a Pesca; **cada patch de ofício acrescenta as suas linhas** e roda a tabela antes da versão.
 
@@ -297,6 +301,7 @@ outras) e se liga a elas quando chegarem.
 
 ## 6. Pronto quando
 
-Um ofício novo entra **só com os seus dados e o seu gesto** e ganha sozinho a prática, as técnicas, os títulos, a coleção, a
-recompensa que se vê, o mercado, o mestre e o aprendiz, e a aba do Ofício — e a Pesca, o primeiro, passa no teste do dono:
+Um ofício novo **não refaz nada do que é comum** — ganha sozinho a prática, as técnicas, os títulos, a coleção, a recompensa que se
+vê, o mercado, o mestre e o aprendiz, e a aba do Ofício — e põe o trabalho só no que é dele (o gesto, os dados e a profundidade
+própria que pedir) — e a Pesca, o primeiro, passa no teste do dono:
 uma hora só pescando, sem enjoar.

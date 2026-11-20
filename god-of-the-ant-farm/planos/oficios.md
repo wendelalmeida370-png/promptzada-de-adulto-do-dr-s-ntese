@@ -39,11 +39,23 @@ Um ofício só está pronto quando tem as dez coisas:
 
 E **o dia completo** de cada ofício: preparar, ir, fazer, voltar, vender ou guardar, consertar, descansar.
 
-**A meta alta** (o dono, 20/11/2026): a máxima «poderia ser um jogo sozinho» é **para manter o nível lá em cima** — mirando no jogo
-inteiro, mesmo sem chegar lá, **até o ofício de menos potencial fica bom de jogar**, com estrutura e jogabilidade de verdade. Há
-ofícios com mais potencial que outros, e tudo bem. **O cuidado, para a meta não travar o projeto:** a profundidade mora nas bases e
-nas perícias (que todos dividem), um ofício não precisa nascer com a profundidade toda (cresce com as perícias dele), e cada ofício
-novo sai mais barato que o anterior — a tabela dos ofícios mede ([`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
+**A meta alta e a profundidade de cada ofício** (o dono, 20/11/2026): a máxima «poderia ser um jogo sozinho» é **para manter o nível
+lá em cima** — mirando no jogo inteiro, mesmo sem chegar lá, **até o ofício de menos potencial fica bom de jogar**, com estrutura e
+jogabilidade de verdade. **A profundidade mora em três lugares, e os três contam:**
+
+1. **As bases** (as leis do mundo) **e as perícias** (a prática que vários ofícios dividem) — **sempre fundas**.
+2. **O próprio ofício** — **quando ele pede, o ofício é fundo por si**, além do que as bases e as perícias já dão. O mar e as perícias
+   do mar são fundos, **e a pirataria também**: a tripulação, o código, a divisão do saque, a fama, o porto amigo, o tesouro enterrado
+   são dela. O mesmo vale para **quem governa**, para **o mateiro** — e para vários outros.
+
+**A profundidade se adequa ao ofício:** nem todo ofício pede uma profundidade enorme, mas **nunca se faz menos do que o ofício pede**
+— e nenhum, nem o mais curto, fica sem **o molde inteiro**: as dez coisas acima — **o laço de jogo** (o ciclo que prende), **a
+recompensa**, **a progressão que se sente**, **o retorno que se vê e se ouve**, a habilidade, a variedade, o risco, a fama e as
+histórias — e **sempre divertido**. Mesmo curto, um jogo incrível.
+
+**O que a fundação poupa é só o que é comum:** o que as bases, as perícias e a fundação já dão, nenhum ofício refaz. A tabela dos
+ofícios separa o que um ofício refez (deve ser nada) do que é dele (a profundidade própria, do tamanho que ele pede)
+([`oficios-fundacao.md`](oficios-fundacao.md) §2.15).
 
 ## 3. A progressão: o que cresce
 
