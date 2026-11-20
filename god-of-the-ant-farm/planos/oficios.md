@@ -112,7 +112,7 @@ seguir).
 
 ## 6. Todos os ofícios (a lista aprovada pelo dono, 20/11/2026)
 
-**78 ofícios e 13 condições.** Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
+**83 ofícios e 13 condições** (78 na lista de 20/11/2026; o sábio virou os seis ofícios do saber, [`saber.md`](saber.md)). Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
 ramo do mesmo jogo), **papel** ou **título** (um lugar no grupo, um degrau da carreira) ou **função do mundo** (o que se faz por um
 dia). ★ = já tem o seu documento a fundo.
 
@@ -156,9 +156,11 @@ comitre e o feitor)
 **O comércio (4):** ★ [taverneiro](oficio-taverneiro.md) (inclui o cervejeiro; estalajadeiro é título) · **mercador** (inclui o
 feirante, o especieiro) · **caravaneiro** · **banqueiro** (inclui o cambista)
 
-**A fé e o saber (6):** **sacerdote** · **oráculo** (os presságios, a profecia que um rei vem ouvir) · **monge** (inclui o eremita,
-o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola) · **sábio** (o filósofo, o astrólogo, o cartógrafo) ·
-**curandeiro** (inclui o médico, a parteira, o barbeiro)
+**A fé e o saber (11):** **sacerdote** · **oráculo** (os presságios, a profecia que um rei vem ouvir) · **monge** (inclui o eremita,
+o peregrino) · **escriba** (inclui o copista, o cronista, o mestre-escola, o tradutor) · **curandeiro** (inclui a parteira, o
+barbeiro) · e **os seis do saber** ([`saber.md`](saber.md), aprovados em 20/11/2026, no lugar do sábio): **filósofo** · **astrônomo**
+(inclui o astrólogo; o matemático é ramo dele e do engenheiro) · **engenheiro** (inclui o mecânico e o geômetra) · **médico** ·
+**naturalista** (inclui o cartógrafo) · **alquimista**
 
 **A arte (7):** ★ [bardo](oficio-bardo.md) (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
 **auriga** · **atleta**
