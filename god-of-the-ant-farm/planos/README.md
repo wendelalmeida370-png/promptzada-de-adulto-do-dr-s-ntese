@@ -100,8 +100,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`vozes.md`](vozes.md) — as vozes e o rosto que fala: as vozes de IA nas falas curtas e fixas, os murmúrios por povo, a boca que
   acompanha, e a captura do rosto (a decidir).
 - [`saber.md`](saber.md) — o saber: a base da descoberta, da pesquisa e da técnica (quem descobriu, por que causa, onde mora, como
-  se perde), o catálogo de cerca de 180 descobertas em seis eras, os grupos de pesquisa, as oito perícias novas, como o corpo
+  se perde), o catálogo de 187 descobertas em seis eras, os grupos de pesquisa, as oito perícias novas, como o corpo
   descobre e os seis ofícios do saber.
+- [`eras.md`](eras.md) — as eras do jogo: a ideia do dono para muito depois (os limiares, como se atravessa, o futuro que sai do
+  passado, o que fazer agora sem desviar da era antiga).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -150,9 +152,13 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   nas outras, no Patch 27 — tudo feito sem trabalho do dono, que só joga e diz se gostou; a captura do rosto fica a decidir
   ([`vozes.md`](vozes.md)).
 - **O saber** (**aprovado**, 20/11/2026, a ideia do dono): uma base da tecnologia, da pesquisa e da ciência — todo saber com quem o
-  descobriu, a causa, onde mora e como se perde —; **cerca de 180 descobertas em seis eras**, que rendem até o ano 1000, cada uma com
+  descobriu, a causa, onde mora e como se perde —; **187 descobertas em seis eras**, que rendem até o ano 1000, cada uma com
   um efeito de verdade; os grupos de pesquisa; oito perícias novas; **os seis ofícios do saber** (o filósofo, o astrônomo, o
   engenheiro, o médico, o naturalista, o alquimista) ([`saber.md`](saber.md)).
+- **Toda descoberta com o que se vê** (20/11/2026): além do efeito, a coisa no mundo — o guindaste, a foice, o arado pesado, a bússola
+  —, nas duas vistas; **o teto do saber antigo é a beira da pólvora** ([`saber.md`](saber.md) §4b).
+- **As eras do jogo** (a ideia do dono, para muito depois — Patch 70 a 100): a era antiga é uma só; um dia, a passagem com causa para
+  as eras seguintes e o futuro que sai das escolhas do mundo ([`eras.md`](eras.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 83 ofícios (com o carrasco e os seis do saber) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

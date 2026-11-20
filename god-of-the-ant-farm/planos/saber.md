@@ -116,270 +116,293 @@ a prova de equivalência vale (§12). **O que é novo enche os séculos seguinte
 moinho d'água; sem estanho, sem bronze; sem caramujo do mar, sem púrpura), o gosto, as guerras e as perdas fazem cada povo seguir o
 seu caminho — **quem tem, ensina; quem não tem, compra, rouba ou fica sem.**
 
-**O teto** (para o dono decidir): o catálogo vai **até a beira da pólvora** — sem pólvora, sem imprensa, sem relógio mecânico. Assim o
-mundo continua com a cara antiga que o jogo tem (as roupas, os prédios, as armas). Uma era VII, se o dono quiser um dia, mudaria a
-cara do jogo.
+**O teto** (decidido pelo dono, 20/11/2026): o catálogo vai **até a beira da pólvora** — sem pólvora, sem imprensa, sem relógio
+mecânico. Assim o mundo continua com a cara antiga que o jogo tem (as roupas, os prédios, as armas). **Este é o saber da era antiga do
+jogo**; as eras depois dela (a pólvora, as máquinas, a eletricidade, a informação, o futuro) são uma ideia do dono para muito mais à
+frente ([`eras.md`](eras.md)).
 
-Nas tabelas: **(hoje)** marca as dez artes que já existem; **«Pede»** é o saber de antes (e o material ou o lugar, quando há).
+Nas tabelas: **(hoje)** marca as dez artes que já existem; **«O que se vê»** é a coisa nova no mundo, à vista (a regra logo abaixo);
+**«Pede»** é o saber de antes (e o material ou o lugar, quando há).
+
+### O que se vê (a recompensa à vista — a regra do dono)
+
+**Toda descoberta muda o que se vê, não só um número.** O guindaste tem de estar no cais, a foice de ferro na mão do ceifador, o arado
+pesado no campo, a bússola na mão do piloto, a roda d'água girando no rio, a vela triangular no mar. **Ver o que a pesquisa tornou
+possível é a grande recompensa** — maior que o número que melhorou.
+
+1. **Toda descoberta tem a sua coisa no mundo:** um objeto (a ferramenta, a arma, o instrumento — com a forma, a figura e o material no
+   catálogo das coisas), um prédio ou uma parte dele (o aqueduto, a cúpula, o moinho, o farol), um bicho (o cavalo ferrado, o boi de
+   canga), uma parte de navio (a vela latina, o leme de popa) ou **uma cena** — **o saber que não é coisa vira gente fazendo**: a
+   lógica é o debate na praça, os dedos contando os argumentos; o censo é o recenseador de porta em porta; o banco é a mesa do
+   banqueiro com o cofre.
+2. **Nas duas vistas:** no corpo, de perto; **e do deus, de cima** — o aqueduto cruzando o campo, os moinhos girando nos morros, os
+   campos em faixas do arado pesado, as velas triangulares no mar. **Ver uma civilização mudar de cara ao longo dos séculos é uma das
+   melhores recompensas do deus.**
+3. **O que se vê tem causa:** a coisa aparece só onde o povo tem o saber **e** o material (o kit que o 3D desenha já obedece a isso, pela
+   porta da origem das coisas), e onde a usam de verdade (o guindaste onde há obra ou cais; a roda d'água onde há rio e moinho).
+4. **Com o arcabouço inteiro:** a animação (a roda do guindaste com gente andando dentro, o ceifador com a foice), o som (a roda
+   d'água, o moinho, a prensa) e a interação do corpo (usar a foice, girar o guindaste, ler a bússola).
+5. **A perda também se vê:** o saber perdido deixa **a ruína que ninguém mais sabe consertar** — o aqueduto partido, a cúpula que
+   ninguém mais ergue —, e o povo depois olha para ela sem saber como foi feita.
 
 ### A lavoura e a criação
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | O pau de cavar e a enxada | a primeira roça | — |
-| I | A semente guardada | guardar a melhor espiga: a colheita cresce um pouco a cada geração | Observar |
-| I | O cão e a cabra | o cão que guarda o rebanho (já existe), o leite, a lã | — |
-| II | O boi manso | o boi castrado puxa o arado e a carroça | o cão e a cabra |
-| II | O cavalo domado | o cavalo atrelado: o carro de guerra, a carroça ligeira | o boi manso |
-| II | O arado de pau | **um lavrador cuida de um campo maior** | o boi manso |
-| II | O pousio | a terra que descansa um ano não cansa | Observar |
-| II | Os canais de irrigação | a roça na terra seca perto do rio; a cheia guardada | a enxada; um rio |
-| II | O queijo | o leite que dura o inverno inteiro | o cão e a cabra |
-| III | A relha de ferro | o arado entra na terra dura | o ferro |
-| III | A foice de ferro | a colheita na metade do tempo | o ferro |
-| III | O enxerto | o pomar, a vinha e a oliveira dão mais e mais cedo | a semente guardada |
-| III | O cavalo montado | o mensageiro, o pastor, o caçador e o guerreiro a cavalo | o cavalo domado |
-| III | O feno guardado | **o rebanho atravessa o inverno** (com as estações) | a foice |
-| IV | A rotação com leguminosas | o feijão que devolve a força da terra: menos pousio | o pousio |
-| IV | O esterco no campo | a colheita maior onde há curral | o pousio |
-| IV | A colmeia | o mel (comida com origem) e a cera (a vela, o selo) | — |
-| IV | A seleção das raças | o boi maior, a ovelha de lã fina | a semente guardada |
-| V | O moinho d'água | **o grão da cidade moído pela água**: mãos livres para outros ofícios | a engrenagem; um rio |
-| V | A ceifadeira | a carroça que ceifa o campo plano | a roda; o ferro |
-| V | O viveiro de peixes | o peixe criado em tanque | os canais |
-| V | A ferradura | o cavalo na pedra e na estrada sem estragar o casco | o ferro; o cavalo montado |
-| VI | O arado pesado | **as terras pesadas do norte se abrem**: o povo do frio passa a ter campo | a relha de ferro |
-| VI | A coelheira | **o cavalo puxa o dobro** sem se sufocar: o arado e a carroça a cavalo | a ferradura |
-| VI | Os três campos | um terço a mais da terra em uso todo ano | a rotação |
-| VI | O moinho de vento | moer onde não há rio | a engrenagem |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | O pau de cavar e a enxada | a primeira roça | a enxada de pau e de pedra nas mãos, a roça em covas | — |
+| I | A semente guardada | guardar a melhor espiga: a colheita cresce um pouco a cada geração | os potes de semente na casa; a espiga mais cheia no campo | Observar |
+| I | O cão e a cabra | o cão que guarda o rebanho (já existe), o leite, a lã | o cão junto ao rebanho, as cabras no curral | — |
+| II | O boi manso | o boi castrado puxa o arado e a carroça | o boi com a canga | o cão e a cabra |
+| II | O cavalo domado | o cavalo atrelado: o carro de guerra, a carroça ligeira | o cavalo atrelado ao carro | o boi manso |
+| II | O arado de pau | **um lavrador cuida de um campo maior** | o arado puxado pelos bois, os sulcos riscados no campo | o boi manso |
+| II | O pousio | a terra que descansa um ano não cansa | o campo de capim em descanso ao lado do campo plantado | Observar |
+| II | Os canais de irrigação | a roça na terra seca perto do rio; a cheia guardada | os canais de água saindo do rio entre os campos | a enxada; um rio |
+| II | O queijo | o leite que dura o inverno inteiro | as formas de queijo na despensa, o pano pingando | o cão e a cabra |
+| III | A relha de ferro | o arado entra na terra dura | a ponta de ferro no arado, a terra escura revirada | o ferro |
+| III | A foice de ferro | a colheita na metade do tempo | a foice de ferro na mão do ceifador, os feixes atados | o ferro |
+| III | O enxerto | o pomar, a vinha e a oliveira dão mais e mais cedo | as árvores em fileiras, o corte amarrado no galho | a semente guardada |
+| III | O cavalo montado | o mensageiro, o pastor, o caçador e o guerreiro a cavalo | gente a cavalo pelas estradas | o cavalo domado |
+| III | O feno guardado | **o rebanho atravessa o inverno** (com as estações) | os montes de feno e o palheiro no inverno | a foice |
+| IV | A rotação com leguminosas | o feijão que devolve a força da terra: menos pousio | os campos de cores diferentes, o feijão em flor | o pousio |
+| IV | O esterco no campo | a colheita maior onde há curral | a carroça de esterco, o monte junto ao curral | o pousio |
+| IV | A colmeia | o mel (comida com origem) e a cera (a vela, o selo) | as colmeias de barro e de palha, quem tira o mel com fumaça | — |
+| IV | A seleção das raças | o boi maior, a ovelha de lã fina | o boi grande, a ovelha de lã branca e fina | a semente guardada |
+| V | O moinho d'água | **o grão da cidade moído pela água**: mãos livres para outros ofícios | a roda d'água girando no rio, a casa do moinho | a engrenagem; um rio |
+| V | A ceifadeira | a carroça que ceifa o campo plano | a carroça de dentes empurrada pelo boi no trigo | a roda; o ferro |
+| V | O viveiro de peixes | o peixe criado em tanque | os tanques de pedra com peixe | os canais |
+| V | A ferradura | o cavalo na pedra e na estrada sem estragar o casco | o ferreiro ferrando o cavalo, a ferradura no casco | o ferro; o cavalo montado |
+| VI | O arado pesado | **as terras pesadas do norte se abrem**: o povo do frio passa a ter campo | o arado grande de rodas, a parelha de oito bois, os campos em faixas compridas | a relha de ferro |
+| VI | A coelheira | **o cavalo puxa o dobro** sem se sufocar: o arado e a carroça a cavalo | o colar acolchoado no cavalo que puxa o arado | a ferradura |
+| VI | Os três campos | um terço a mais da terra em uso todo ano | três campos grandes, cada um de uma cor | a rotação |
+| VI | O moinho de vento | moer onde não há rio | as pás girando no alto do morro | a engrenagem |
 
 ### O fogo e as misturas
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | O forno de barro | o pote cozido (a olaria) | — |
-| I | O cobre batido | o primeiro enfeite e a primeira faca de metal | cobre à vista |
-| II | A fundição do cobre | a ferramenta de cobre | o forno; o minério |
-| II | **O bronze (hoje)** | a arma e a ferramenta de bronze | o cobre e o estanho |
-| II | A roda de oleiro | o pote mais rápido e mais fino | a roda |
-| II | A cal | a argamassa e o reboco | o forno |
-| II | O ouro fundido | a joia (o ourives) | o ouro achado |
-| III | **O ferro (hoje)** | a arma e a ferramenta de ferro | o minério de ferro; o forno quente |
-| III | A têmpera | a lâmina e a ferramenta mais duras | o ferro |
-| III | O vidro moldado | a conta, o frasco | a areia e a cinza |
-| III | A púrpura | **o pano mais caro do mundo** (a roupa do rei, o comércio) | o caramujo do mar |
-| IV | O aço | a lâmina que não entorta: **a arma e a ferramenta melhores** | a têmpera |
-| IV | O latão | a moeda e o instrumento que brilham | o cobre; a calamina |
-| IV | A cerâmica vidrada | o pote que não vaza: guardar e vender | a roda de oleiro |
-| IV | O sabão | **menos doença onde se lava** | a cinza e a gordura |
-| IV | Os pigmentos | a pintura que dura (a marca) | Ensaiar |
-| V | O vidro soprado | o vidro barato: **a janela de vidro**, o copo, o frasco | o vidro moldado |
-| V | O concreto | **a cúpula e o porto dentro do mar** | a cal; a cinza do vulcão |
-| V | A amálgama | mais ouro tirado do minério — e o mercúrio que envenena | o ouro; o mercúrio |
-| VI | O aço de cadinho | **a melhor lâmina do mundo** (o segredo de uma cidade) | o aço |
-| VI | A destilação | o perfume, o remédio, a bebida forte | o vidro soprado |
-| VI | O fogo grego | **a arma de fogo no mar** — o segredo mais guardado | a destilação; o petróleo achado |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | O forno de barro | o pote cozido (a olaria) | o forno abobadado fumegando, os potes queimando | — |
+| I | O cobre batido | o primeiro enfeite e a primeira faca de metal | o enfeite de cobre no pescoço | cobre à vista |
+| II | A fundição do cobre | a ferramenta de cobre | o forno de fundir, o cobre escorrendo no molde | o forno; o minério |
+| II | **O bronze (hoje)** | a arma e a ferramenta de bronze | (já se vê) a arma e o escudo de bronze dourado | o cobre e o estanho |
+| II | A roda de oleiro | o pote mais rápido e mais fino | o oleiro na roda que gira, os potes iguais em fila | a roda |
+| II | A cal | a argamassa e o reboco | o forno de cal, as paredes brancas rebocadas | o forno |
+| II | O ouro fundido | a joia (o ourives) | a joia de ouro nos ricos | o ouro achado |
+| III | **O ferro (hoje)** | a arma e a ferramenta de ferro | (já se vê) a arma de ferro escura | o minério de ferro; o forno quente |
+| III | A têmpera | a lâmina e a ferramenta mais duras | a lâmina chiando na água, o vapor | o ferro |
+| III | O vidro moldado | a conta, o frasco | as contas coloridas, o frasco de vidro | a areia e a cinza |
+| III | A púrpura | **o pano mais caro do mundo** (a roupa do rei, o comércio) | o manto roxo do rei; as cubas de tinta na praia | o caramujo do mar |
+| IV | O aço | a lâmina que não entorta: **a arma e a ferramenta melhores** | a lâmina clara e brilhante | a têmpera |
+| IV | O latão | a moeda e o instrumento que brilham | o instrumento e a moeda amarelos | o cobre; a calamina |
+| IV | A cerâmica vidrada | o pote que não vaza: guardar e vender | os potes brilhantes e coloridos | a roda de oleiro |
+| IV | O sabão | **menos doença onde se lava** | a lavadeira no rio com espuma, as barras de sabão | a cinza e a gordura |
+| IV | Os pigmentos | a pintura que dura (a marca) | as paredes pintadas de cores vivas, o pintor com os potes | Ensaiar |
+| V | O vidro soprado | o vidro barato: **a janela de vidro**, o copo, o frasco | o soprador com o cano; as janelas de vidro, os copos na mesa | o vidro moldado |
+| V | O concreto | **a cúpula e o porto dentro do mar** | as cúpulas; o molhe do porto dentro do mar | a cal; a cinza do vulcão |
+| V | A amálgama | mais ouro tirado do minério — e o mercúrio que envenena | a bacia de mercúrio do mineiro, o vapor | o ouro; o mercúrio |
+| VI | O aço de cadinho | **a melhor lâmina do mundo** (o segredo de uma cidade) | a lâmina com as ondas no metal | o aço |
+| VI | A destilação | o perfume, o remédio, a bebida forte | o alambique de vidro e de cobre, as gotas | o vidro soprado |
+| VI | O fogo grego | **a arma de fogo no mar** — o segredo mais guardado | o sifão na proa da galé, o fogo sobre a água | a destilação; o petróleo achado |
 
 ### As obras
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | O pau a pique | a cabana | — |
-| I | O tijolo cru | a casa de barro | — |
-| II | O tijolo cozido | a parede que a chuva não desfaz | o forno |
-| II | A viga e a coluna | o templo de pedra | — |
-| III | **A alvenaria (hoje)** | a muralha, a rua calçada, o sobrado | a cal |
-| III | A telha cozida | **o telhado que não pega fogo**: a cidade queima menos | o forno |
-| III | As ordens das colunas | o templo maior (um degrau acima) | a viga e a coluna; Medir |
-| IV | O arco | **a ponte de pedra**, o portão, o aqueduto | Calcular |
-| IV | A abóbada | a sala grande sem colunas | o arco |
-| IV | O aqueduto | **a água que chega à cidade**: as termas, as fontes | o arco; a engenharia |
-| IV | O esgoto | a cidade grande com menos doença | o arco |
-| V | A cúpula | **os degraus de cima** do templo e das termas | o concreto; o círculo |
-| V | O hipocausto | o chão aquecido das grandes termas | a telha; o tijolo cozido |
-| V | A ínsula alta | a cidade densa, de vários andares | o concreto |
-| V | O farol | o navio que chega de noite sem bater | a alvenaria |
-| VI | O arco quebrado | o salão mais alto e mais claro | a abóbada |
-| VI | O guindaste de roda | **o monumento sobe na metade do tempo** | a polia composta |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | O pau a pique | a cabana | a cabana de varas e barro | — |
+| I | O tijolo cru | a casa de barro | os tijolos secando ao sol, a casa de barro | — |
+| II | O tijolo cozido | a parede que a chuva não desfaz | o forno de tijolo, as paredes vermelhas | o forno |
+| II | A viga e a coluna | o templo de pedra | o templo de colunas e vigas de pedra | — |
+| III | **A alvenaria (hoje)** | a muralha, a rua calçada, o sobrado | (já se vê) as muralhas, as ruas calçadas, os sobrados | a cal |
+| III | A telha cozida | **o telhado que não pega fogo**: a cidade queima menos | os telhados de telha vermelha | o forno |
+| III | As ordens das colunas | o templo maior (um degrau acima) | os capitéis: o simples, o de volutas, o de folhas | a viga e a coluna; Medir |
+| IV | O arco | **a ponte de pedra**, o portão, o aqueduto | as pontes de arco, os portões em arco | Calcular |
+| IV | A abóbada | a sala grande sem colunas | o teto curvo da sala grande | o arco |
+| IV | O aqueduto | **a água que chega à cidade**: as termas, as fontes | o aqueduto de arcos cruzando o campo, a fonte na praça | o arco; a engenharia |
+| IV | O esgoto | a cidade grande com menos doença | as bocas do esgoto na rua e no rio | o arco |
+| V | A cúpula | **os degraus de cima** do templo e das termas | as cúpulas dos templos e das termas | o concreto; o círculo |
+| V | O hipocausto | o chão aquecido das grandes termas | os pilaretes debaixo do chão das termas, o vapor | a telha; o tijolo cozido |
+| V | A ínsula alta | a cidade densa, de vários andares | os prédios de quatro andares | o concreto |
+| V | O farol | o navio que chega de noite sem bater | a torre com o fogo no alto | a alvenaria |
+| VI | O arco quebrado | o salão mais alto e mais claro | o salão alto de arcos pontudos | a abóbada |
+| VI | O guindaste de roda | **o monumento sobe na metade do tempo** | a roda grande com gente andando dentro, erguendo a pedra | a polia composta |
 
 ### As máquinas
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | A alavanca | mover a pedra grande | — |
-| I | Os rolos | arrastar a pedra sobre troncos | — |
-| II | **A roda (hoje)** | a carroça, o carro de guerra | os rolos |
-| II | A rampa | **a pedra que sobe à obra alta** (a pirâmide) | a alavanca |
-| III | A polia | o mastro, o poço, a carga erguida | a roda |
-| III | O shaduf | a água erguida para a roça pelo contrapeso | a alavanca |
-| III | O torno | a tigela, a perna da mesa, o eixo | a roda |
-| IV | **A engenharia (hoje)** | o aqueduto, a estrada, o aríete, a catapulta | a polia; Calcular |
-| IV | A polia composta | **o guindaste do cais e da obra** (o estivador, o construtor) | a polia |
-| IV | O parafuso | **a prensa do azeite e do vinho**; a água erguida | Engenhar |
-| IV | A bomba de pistão | **a água contra o fogo**: a cidade apaga incêndios | o parafuso |
-| V | A engrenagem | o moinho d'água, o relógio, o contador de passos | a polia composta |
-| V | Os autômatos | a porta do templo que abre sozinha — o «milagre» dos sacerdotes | a engrenagem |
-| V | A eolípila | o brinquedo do vapor — **um saber sem uso** naquele tempo (a curiosidade e a marca) | a engrenagem |
-| VI | O trabuco de contrapeso | **o cerco que derruba muralhas** | a polia composta |
-| VI | A manivela e o pedal | a roda de fiar e o torno de pedal: **mãos mais rápidas** | a engrenagem |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | A alavanca | mover a pedra grande | o tronco de alavanca sob a pedra | — |
+| I | Os rolos | arrastar a pedra sobre troncos | a pedra deslizando sobre troncos | — |
+| II | **A roda (hoje)** | a carroça, o carro de guerra | (já se vê) as carroças | os rolos |
+| II | A rampa | **a pedra que sobe à obra alta** (a pirâmide) | a rampa de terra subindo ao lado da obra | a alavanca |
+| III | A polia | o mastro, o poço, a carga erguida | a polia no poço e no mastro | a roda |
+| III | O shaduf | a água erguida para a roça pelo contrapeso | o balde com o contrapeso na beira do rio | a alavanca |
+| III | O torno | a tigela, a perna da mesa, o eixo | o torneiro girando a madeira, as tigelas | a roda |
+| IV | **A engenharia (hoje)** | o aqueduto, a estrada, o aríete, a catapulta | (já se vê) o aqueduto, a estrada, a catapulta | a polia; Calcular |
+| IV | A polia composta | **o guindaste do cais e da obra** (o estivador, o construtor) | o guindaste de madeira no cais e na obra | a polia |
+| IV | O parafuso | **a prensa do azeite e do vinho**; a água erguida | a prensa de parafuso no lagar | Engenhar |
+| IV | A bomba de pistão | **a água contra o fogo**: a cidade apaga incêndios | gente bombeando água no incêndio, a mangueira de couro | o parafuso |
+| V | A engrenagem | o moinho d'água, o relógio, o contador de passos | as rodas dentadas dentro do moinho | a polia composta |
+| V | Os autômatos | a porta do templo que abre sozinha — o «milagre» dos sacerdotes | a porta do templo que se abre sozinha, a estátua que se mexe | a engrenagem |
+| V | A eolípila | o brinquedo do vapor — **um saber sem uso** naquele tempo (a curiosidade e a marca) | a bola de bronze que gira soltando vapor, na casa do sábio | a engrenagem |
+| VI | O trabuco de contrapeso | **o cerco que derruba muralhas** | o trabuco lançando pedras no cerco | a polia composta |
+| VI | A manivela e o pedal | a roda de fiar e o torno de pedal: **mãos mais rápidas** | a roda de fiar com o pedal, o torno de pedal | a engrenagem |
 
 ### O mar e os barcos
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | A canoa e a jangada | pescar e cruzar o rio | — |
-| II | **A navegação (hoje)** | a vela: o porto, o barco de pesca, o mercante | a canoa |
-| II | O casco de tábuas | o barco maior | — |
-| III | A quilha | o navio que não vira com o vento | o casco de tábuas |
-| III | O calafeto | o porão seco: a carga vai longe | o piche |
-| III | A birreme | a galé de dois andares de remos | a quilha |
-| IV | A trirreme | **a batalha no mar** | a birreme; Engenhar |
-| IV | A âncora de ferro | o navio que segura na tempestade | o ferro |
-| IV | O périplo | a costa escrita: a rota segura | a escrita |
-| V | A vela latina | **navegar contra o vento** (o vento do mar) | Engenhar |
-| V | O casco de esqueleto | o navio maior e mais barato | a quilha |
-| VI | O leme de popa | o navio grande que obedece | o casco de esqueleto |
-| VI | A bússola | **navegar com o céu fechado** | a pedra que aponta o norte |
-| VI | A carta do mar | a rota desenhada, com as distâncias | a bússola; o mapa |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | A canoa e a jangada | pescar e cruzar o rio | as canoas e as jangadas no rio | — |
+| II | **A navegação (hoje)** | a vela: o porto, o barco de pesca, o mercante | (já se vê) a vela quadrada, o porto | a canoa |
+| II | O casco de tábuas | o barco maior | o barco de tábuas | — |
+| III | A quilha | o navio que não vira com o vento | o casco grande com a quilha no estaleiro | o casco de tábuas |
+| III | O calafeto | o porão seco: a carga vai longe | o piche escuro no casco, o caldeirão de piche | o piche |
+| III | A birreme | a galé de dois andares de remos | a galé de duas fileiras de remos | a quilha |
+| IV | A trirreme | **a batalha no mar** | a galé de três fileiras, com o esporão | a birreme; Engenhar |
+| IV | A âncora de ferro | o navio que segura na tempestade | a âncora de duas patas na proa | o ferro |
+| IV | O périplo | a costa escrita: a rota segura | o rolo da costa na mão do piloto | a escrita |
+| V | A vela latina | **navegar contra o vento** (o vento do mar) | a vela triangular | Engenhar |
+| V | O casco de esqueleto | o navio maior e mais barato | as costelas do navio de pé no estaleiro | a quilha |
+| VI | O leme de popa | o navio grande que obedece | o leme no meio da popa | o casco de esqueleto |
+| VI | A bússola | **navegar com o céu fechado** | a agulha na tigela d'água na mão do piloto | a pedra que aponta o norte |
+| VI | A carta do mar | a rota desenhada, com as distâncias | a carta aberta na mesa do capitão | a bússola; o mapa |
 
 ### O céu e o tempo
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | As fases da lua | o mês contado: a festa no dia certo | Observar |
-| II | O ano do sol | o gnômon e o solstício: **o dia certo de plantar** | as fases da lua |
-| II | A estrela que avisa | **a estação anunciada** (a cheia, o frio) | o ano do sol |
-| II | O calendário do povo | a lavoura e as festas pelo ano certo | a escrita |
-| III | O relógio de sol | as horas do dia (o mercado, o tribunal) | o gnômon |
-| III | As constelações | **o navegador acha o norte de noite** | Observar |
-| IV | O relógio de água | as horas da noite: a ronda da vigia, a fala medida no tribunal | a cerâmica |
-| IV | A terra redonda | o mapa e o navegador mais certos | o triângulo |
-| IV | O ciclo dos eclipses | **o eclipse previsto** — o céu ganha eclipses de verdade, pelo ciclo da lua | o calendário; Calcular |
-| V | O astrolábio | **a latitude no mar**, a hora de noite | a trigonometria |
-| V | As tábuas dos planetas | o astrólogo da corte (a fama, a política) | a trigonometria |
-| VI | O ano exato | o calendário que não escorrega com os séculos | as tábuas dos planetas |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | As fases da lua | o mês contado: a festa no dia certo | as marcas da lua no poste do templo | Observar |
+| II | O ano do sol | o gnômon e o solstício: **o dia certo de plantar** | a vara fincada e as marcas da sombra no chão da praça | as fases da lua |
+| II | A estrela que avisa | **a estação anunciada** (a cheia, o frio) | o sacerdote no terraço antes do amanhecer | o ano do sol |
+| II | O calendário do povo | a lavoura e as festas pelo ano certo | o calendário pintado na parede do templo | a escrita |
+| III | O relógio de sol | as horas do dia (o mercado, o tribunal) | o relógio de sol na praça | o gnômon |
+| III | As constelações | **o navegador acha o norte de noite** | o mapa do céu no teto do templo | Observar |
+| IV | O relógio de água | as horas da noite: a ronda da vigia, a fala medida no tribunal | o vaso que pinga no tribunal e na vigia | a cerâmica |
+| IV | A terra redonda | o mapa e o navegador mais certos | o globo na escola do sábio | o triângulo |
+| IV | O ciclo dos eclipses | **o eclipse previsto** — o céu ganha eclipses de verdade, pelo ciclo da lua | o eclipse anunciado, a multidão olhando o céu | o calendário; Calcular |
+| V | O astrolábio | **a latitude no mar**, a hora de noite | o disco de bronze na mão do astrônomo e do piloto | a trigonometria |
+| V | As tábuas dos planetas | o astrólogo da corte (a fama, a política) | o astrólogo da corte com as tábuas | a trigonometria |
+| VI | O ano exato | o calendário que não escorrega com os séculos | o calendário novo anunciado na praça | as tábuas dos planetas |
 
 ### Os números e a forma
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | A contagem | o talho no osso: quantos | — |
-| II | O número escrito | a conta do armazém e da troca | a escrita |
-| II | A corda de nós | **o campo medido**: a divisa depois da cheia | Medir |
-| III | A tábua de contas | **o mercador e o cobrador sem erro** | o número escrito |
-| III | As frações | a herança, o saque e a colheita repartidos com justiça | o número escrito |
-| IV | O triângulo | a obra no esquadro: **os degraus maiores** | a corda de nós |
-| IV | A escala | **a planta desenhada antes da obra** (o arquiteto) | o triângulo |
-| IV | A demonstração | o saber que se prova: a escola dos números | a lógica |
-| V | O círculo | a cúpula, a roda, **quanto cabe no celeiro** | a demonstração |
-| V | A trigonometria | **medir de longe**: o monte, o rio, o céu | o círculo |
-| V | Os juros | o empréstimo (o banqueiro) | a tábua de contas |
-| VI | O zero e os algarismos | **a conta grande fácil**: o tesouro do reino | o número escrito; o comércio com quem os tem |
-| VI | A álgebra | a herança complicada, a obra, o comércio | os algarismos |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | A contagem | o talho no osso: quantos | os talhos no osso e na vara | — |
+| II | O número escrito | a conta do armazém e da troca | os números na tabuinha do armazém | a escrita |
+| II | A corda de nós | **o campo medido**: a divisa depois da cheia | a corda de nós esticada no campo, as estacas da divisa | Medir |
+| III | A tábua de contas | **o mercador e o cobrador sem erro** | a tábua de pedrinhas na banca do mercador | o número escrito |
+| III | As frações | a herança, o saque e a colheita repartidos com justiça | a partilha feita diante de todos | o número escrito |
+| IV | O triângulo | a obra no esquadro: **os degraus maiores** | o esquadro e o fio de prumo na mão do pedreiro | a corda de nós |
+| IV | A escala | **a planta desenhada antes da obra** (o arquiteto) | a planta riscada no papiro antes da obra | o triângulo |
+| IV | A demonstração | o saber que se prova: a escola dos números | o sábio desenhando na areia, os discípulos em volta | a lógica |
+| V | O círculo | a cúpula, a roda, **quanto cabe no celeiro** | o compasso, a cúpula riscada | a demonstração |
+| V | A trigonometria | **medir de longe**: o monte, o rio, o céu | o instrumento de mirar, medindo o monte | o círculo |
+| V | Os juros | o empréstimo (o banqueiro) | a tabela na mesa do banqueiro | a tábua de contas |
+| VI | O zero e os algarismos | **a conta grande fácil**: o tesouro do reino | os algarismos novos nos livros de contas | o número escrito; o comércio com quem os tem |
+| VI | A álgebra | a herança complicada, a obra, o comércio | o livro de contas do sábio | os algarismos |
 
 ### A palavra e o registro
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | A marca do dono | o pote e o boi marcados: de quem é | — |
-| II | **A escrita (hoje)** | o escriba, a biblioteca, a história guardada | a marca do dono |
-| II | A tabuinha e o papiro | o material de escrever — de onde houver argila, de onde houver papiro | a escrita |
-| III | O alfabeto | **mais gente lê**: o escriba mais barato, o recado escrito | a escrita |
-| III | O selo | o contrato em que se confia | a escrita |
-| III | A lei escrita | **a pena igual para todos** (o juiz) | a escrita |
-| IV | O rolo e a biblioteca | o livro guardado e copiado | o alfabeto |
-| IV | A tradução | o saber e o tratado de outro povo | Decifrar |
-| IV | A taquigrafia | o discurso escrito na hora (a assembleia, o tribunal) | o alfabeto |
-| V | O códice | o livro de páginas: dura mais, copia-se mais depressa | o pergaminho ou o papiro |
-| V | O pergaminho | escrever sem papiro, na pele | o curtume |
-| V | O catálogo | a biblioteca onde se acha o livro: **a pesquisa anda mais depressa** | o rolo e a biblioteca |
-| VI | O papel | **escrever barato**: mais livros, mais gente que lê | o comércio com quem o tem |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | A marca do dono | o pote e o boi marcados: de quem é | as marcas no pote e no couro do boi | — |
+| II | **A escrita (hoje)** | o escriba, a biblioteca, a história guardada | (já se vê) o escriba, a biblioteca | a marca do dono |
+| II | A tabuinha e o papiro | o material de escrever — de onde houver argila, de onde houver papiro | as tabuinhas secando, os rolos de papiro | a escrita |
+| III | O alfabeto | **mais gente lê**: o escriba mais barato, o recado escrito | as letras nas placas, mais gente lendo | a escrita |
+| III | O selo | o contrato em que se confia | o selo de argila e de cera nos fardos e nas cartas | a escrita |
+| III | A lei escrita | **a pena igual para todos** (o juiz) | a lei gravada na pedra da praça | a escrita |
+| IV | O rolo e a biblioteca | o livro guardado e copiado | as estantes de rolos | o alfabeto |
+| IV | A tradução | o saber e o tratado de outro povo | o tradutor ao lado do embaixador | Decifrar |
+| IV | A taquigrafia | o discurso escrito na hora (a assembleia, o tribunal) | o escrivão anotando depressa na assembleia | o alfabeto |
+| V | O códice | o livro de páginas: dura mais, copia-se mais depressa | o livro de páginas | o pergaminho ou o papiro |
+| V | O pergaminho | escrever sem papiro, na pele | as peles esticadas secando no curtume | o curtume |
+| V | O catálogo | a biblioteca onde se acha o livro: **a pesquisa anda mais depressa** | as etiquetas nos rolos, o catálogo na entrada da biblioteca | o rolo e a biblioteca |
+| VI | O papel | **escrever barato**: mais livros, mais gente que lê | as folhas de papel secando, os livros mais baratos | o comércio com quem o tem |
 
 ### O corpo e a cura
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | As ervas | o chá, o unguento (a perícia que já existe) | — |
-| I | A tala | o osso quebrado que cola direito | — |
-| II | A sutura | **menos morte de ferida** | a agulha de bronze |
-| II | A parteira | **menos morte no parto** | Curar |
-| III | Os humores e a sangria | **o saber errado**: o médico que sangra o doente — até alguém provar o contrário | Argumentar |
-| III | O mel e o vinho na ferida | a ferida que não apodrece | as ervas |
-| IV | A higiene | a água limpa, a latrina: **a cidade grande com menos doença** | o esgoto |
-| IV | A quarentena | **a peste que para** | Observar |
-| IV | A amputação | o ferido que vive (com a muleta, que já existe) | a sutura |
-| V | A anatomia | a cirurgia melhor — e o sacerdote contra | a amputação; Ensaiar |
-| V | O hospital | **o soldado ferido que volta** | a higiene |
-| VI | O álcool na ferida | a ferida limpa | a destilação |
-| VI | Os óculos | **o velho escriba que continua lendo** | o vidro soprado |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | As ervas | o chá, o unguento (a perícia que já existe) | os maços de ervas pendurados | — |
+| I | A tala | o osso quebrado que cola direito | o braço na tala | — |
+| II | A sutura | **menos morte de ferida** | os pontos na ferida | a agulha de bronze |
+| II | A parteira | **menos morte no parto** | a parteira chamada à casa | Curar |
+| III | Os humores e a sangria | **o saber errado**: o médico que sangra o doente — até alguém provar o contrário | a tigela de sangue, o doente pálido | Argumentar |
+| III | O mel e o vinho na ferida | a ferida que não apodrece | o pano com mel sobre a ferida | as ervas |
+| IV | A higiene | a água limpa, a latrina: **a cidade grande com menos doença** | as latrinas, as fontes limpas, gente lavando as mãos | o esgoto |
+| IV | A quarentena | **a peste que para** | a casa marcada, o guarda na porta | Observar |
+| IV | A amputação | o ferido que vive (com a muleta, que já existe) | o coto enfaixado, a muleta | a sutura |
+| V | A anatomia | a cirurgia melhor — e o sacerdote contra | a mesa do médico, os desenhos do corpo | a amputação; Ensaiar |
+| V | O hospital | **o soldado ferido que volta** | o pátio de camas com os feridos | a higiene |
+| VI | O álcool na ferida | a ferida limpa | o frasco na mala do médico | a destilação |
+| VI | Os óculos | **o velho escriba que continua lendo** | os óculos no nariz do velho escriba | o vidro soprado |
 
 ### A natureza
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| III | O livro das plantas | o curandeiro e o lavrador sabem mais | a escrita; Observar |
-| IV | O livro dos bichos | o caçador e o pastor sabem mais | a escrita |
-| IV | A migração sabida | **a temporada de caça e de pesca** ([`natureza-viva.md`](natureza-viva.md)) | Observar |
-| V | A seda | **o pano de seda** — o segredo de um povo, e o espião que o rouba | a amoreira; o bicho-da-seda |
-| V | O jardim das plantas | o remédio cultivado perto | o livro das plantas |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| III | O livro das plantas | o curandeiro e o lavrador sabem mais | o livro com as plantas desenhadas | a escrita; Observar |
+| IV | O livro dos bichos | o caçador e o pastor sabem mais | o livro com os bichos desenhados | a escrita |
+| IV | A migração sabida | **a temporada de caça e de pesca** ([`natureza-viva.md`](natureza-viva.md)) | o caçador esperando na passagem, no dia certo | Observar |
+| V | A seda | **o pano de seda** — o segredo de um povo, e o espião que o rouba | as amoreiras, as bandejas do bicho-da-seda, a roupa de seda que brilha | a amoreira; o bicho-da-seda |
+| V | O jardim das plantas | o remédio cultivado perto | os canteiros de ervas junto ao templo da cura | o livro das plantas |
 
 ### A terra e os povos
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| II | O itinerário | a estrada contada: quantos dias até lá | a escrita |
-| III | O mapa | o que os viajantes viram, desenhado | o itinerário |
-| IV | A crônica | a história escrita (a marca) | a escrita |
-| IV | Os costumes dos outros | o embaixador e o mercador erram menos com o outro povo | a crônica |
-| V | As coordenadas | o mapa certo | a trigonometria |
-| VI | O mapa do mundo conhecido | **a expedição que vai ao branco do mapa** | as coordenadas |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| II | O itinerário | a estrada contada: quantos dias até lá | o marco de pedra na estrada, com as distâncias | a escrita |
+| III | O mapa | o que os viajantes viram, desenhado | o mapa na parede do palácio | o itinerário |
+| IV | A crônica | a história escrita (a marca) | o cronista escrevendo os anos | a escrita |
+| IV | Os costumes dos outros | o embaixador e o mercador erram menos com o outro povo | o embaixador com os presentes certos | a crônica |
+| V | As coordenadas | o mapa certo | a grade sobre o mapa | a trigonometria |
+| VI | O mapa do mundo conhecido | **a expedição que vai ao branco do mapa** | o grande mapa, com o branco nas bordas | as coordenadas |
 
 ### O pensamento e a lei
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| III | A pergunta da natureza | o mundo explicado sem os deuses: **o começo da filosofia natural** | a escrita |
-| IV | **A filosofia (hoje)** | as cidades mais leais, a academia | a pergunta da natureza |
-| IV | A lógica | o argumento que se segue: o tribunal e a escola | a filosofia |
-| IV | A retórica | **a assembleia que se convence** (quem governa) | a lógica |
-| IV | A ideia da república | **o regime de muitos** (quem governa) | a filosofia |
-| IV | O direito | o caso de antes vale para o de hoje: a justiça mais certa | a lei escrita |
-| V | A escola de filosofia | **o sábio formado mais depressa** (Ensinar) | a lógica |
-| V | A dúvida | **a fé cai onde se pergunta** — e o deus repara (§9) | a escola |
-| V | A ética de quem aguenta | o povo e o soldado que aguentam a perda | a escola |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| III | A pergunta da natureza | o mundo explicado sem os deuses: **o começo da filosofia natural** | o sábio olhando a água, a roda de ouvintes | a escrita |
+| IV | **A filosofia (hoje)** | as cidades mais leais, a academia | (já se vê) a academia | a pergunta da natureza |
+| IV | A lógica | o argumento que se segue: o tribunal e a escola | o debate em passos, os dedos contando os argumentos | a filosofia |
+| IV | A retórica | **a assembleia que se convence** (quem governa) | o orador na tribuna, a multidão que se vira | a lógica |
+| IV | A ideia da república | **o regime de muitos** (quem governa) | a assembleia votando com pedrinhas na urna | a filosofia |
+| IV | O direito | o caso de antes vale para o de hoje: a justiça mais certa | o jurista com os rolos de casos | a lei escrita |
+| V | A escola de filosofia | **o sábio formado mais depressa** (Ensinar) | o pórtico com o mestre e os discípulos | a lógica |
+| V | A dúvida | **a fé cai onde se pergunta** — e o deus repara (§9) | o filósofo na praça, o sacerdote de cara feia, o templo mais vazio | a escola |
+| V | A ética de quem aguenta | o povo e o soldado que aguentam a perda | o soldado calmo na derrota, o velho sereno | a escola |
 
 ### A guerra
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| I | A lança e o escudo | a primeira luta organizada | — |
-| II | **O arco (hoje)** | o arqueiro no exército e no muro | — |
-| II | O carro de guerra | a carga sobre rodas | a roda; o cavalo domado |
-| II | O arco composto | **a flecha mais longe** | o arco; a cola de chifre |
-| III | A formação | a turma que luta junta: **menos mortos por luta** | Tática |
-| III | A cavalaria | o guerreiro a cavalo | o cavalo montado |
-| IV | O aríete coberto | o portão que cai | a engenharia |
-| IV | A cota de malha | a proteção que dobra com o corpo | o ferro |
-| IV | A legião | a formação que se refaz no meio da luta | a formação |
-| V | A besta | **a arma que qualquer um aprende depressa** | Engenhar |
-| V | A balista | o cerco de longe | a engenharia |
-| VI | O estribo | **a carga da cavalaria pesada** | a cavalaria; a ferradura |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| I | A lança e o escudo | a primeira luta organizada | a lança e o escudo de couro | — |
+| II | **O arco (hoje)** | o arqueiro no exército e no muro | (já se vê) os arqueiros | — |
+| II | O carro de guerra | a carga sobre rodas | o carro de duas rodas com o cavalo e o arqueiro | a roda; o cavalo domado |
+| II | O arco composto | **a flecha mais longe** | o arco curvo, de chifre e madeira | o arco; a cola de chifre |
+| III | A formação | a turma que luta junta: **menos mortos por luta** | a fileira fechada, os escudos lado a lado | Tática |
+| III | A cavalaria | o guerreiro a cavalo | a tropa a cavalo | o cavalo montado |
+| IV | O aríete coberto | o portão que cai | o telhado de couro sobre o tronco, contra o portão | a engenharia |
+| IV | A cota de malha | a proteção que dobra com o corpo | os anéis de ferro sobre o corpo | o ferro |
+| IV | A legião | a formação que se refaz no meio da luta | as fileiras que trocam no meio da luta | a formação |
+| V | A besta | **a arma que qualquer um aprende depressa** | a arma de mira com gatilho | Engenhar |
+| V | A balista | o cerco de longe | a grande besta de cerco sobre o muro | a engenharia |
+| VI | O estribo | **a carga da cavalaria pesada** | o pé no estribo, a lança deitada da carga | a cavalaria; a ferradura |
 
 ### A troca e o governo
 
-| Era | Descoberta | O que muda | Pede |
-|--|--------|--------------|------|
-| II | A balança e os pesos | **a troca honesta** (menos fraude) | Medir |
-| III | **A moeda (hoje)** | o mercado, a rota que rende mais | o ouro fundido; o selo |
-| III | O contrato | a dívida escrita (o fiado do taverneiro) | a escrita |
-| IV | O cambista | as moedas de dois povos trocadas na feira | a moeda |
-| IV | O censo | **o imposto certo** (quem governa) | o número escrito |
-| IV | O correio do rei | **a ordem e a notícia correm** (os mensageiros a cavalo) | o cavalo montado; a estrada |
-| V | O banco | o depósito e o empréstimo | os juros |
-| V | O seguro do mar | o mercador arrisca o navio | o banco |
-| VI | A letra de câmbio | **comerciar longe sem levar o ouro** | o banco |
+| Era | Descoberta | O que muda | O que se vê | Pede |
+|--|-------|------------|-----------|-----|
+| II | A balança e os pesos | **a troca honesta** (menos fraude) | a balança de dois pratos na banca | Medir |
+| III | **A moeda (hoje)** | o mercado, a rota que rende mais | (já se vê) as moedas | o ouro fundido; o selo |
+| III | O contrato | a dívida escrita (o fiado do taverneiro) | a tabuinha selada entre os dois | a escrita |
+| IV | O cambista | as moedas de dois povos trocadas na feira | a mesa do cambista na feira, com moedas de vários povos | a moeda |
+| IV | O censo | **o imposto certo** (quem governa) | o recenseador de porta em porta com as tabuinhas | o número escrito |
+| IV | O correio do rei | **a ordem e a notícia correm** (os mensageiros a cavalo) | o mensageiro a cavalo, a posta com cavalos frescos | o cavalo montado; a estrada |
+| V | O banco | o depósito e o empréstimo | a mesa do banqueiro, o cofre | os juros |
+| V | O seguro do mar | o mercador arrisca o navio | o contrato do navio assinado no porto | o banco |
+| VI | A letra de câmbio | **comerciar longe sem levar o ouro** | a carta selada no lugar do saco de ouro | o banco |
 
-**A conta:** **cerca de 180 descobertas** em catorze ramos e seis eras, **mais os achados de cada ofício** (a seguir) — contra as dez
+**A conta:** **187 descobertas** em catorze ramos e seis eras, cada uma com o que muda e com o que se vê, **mais os achados de cada ofício** (a seguir) — contra as dez
 artes de hoje.
 
 ### Os achados (as invenções pequenas, de cada ofício)
@@ -390,12 +413,12 @@ lima (o ferreiro); a quilha nova (o carpinteiro naval); **a receita nova** (o co
 a sela com arção (o cavalariço); o fio de prumo (o pedreiro). **O achado tem nome:** quem o fez, a cidade, o dia — e o título de
 inventor.
 
-### Como os efeitos chegam ao jogo
+### Como os efeitos e o que se vê chegam ao jogo
 
-**O catálogo é o mapa; os efeitos chegam por partes.** O patch do saber (§15) faz o motor, o registro e os efeitos que mexem no que
+**O catálogo é o mapa; os efeitos e o que se vê chegam por partes.** O patch do saber (§15) faz o motor, o registro e os efeitos que mexem no que
 o jogo já tem; **cada patch depois implementa as descobertas do seu ramo** — a terra, as da lavoura; o porto e o navio, as do mar; a
-oficina, as do fogo; a guerra, as da guerra. Uma descoberta só entra no jogo **com o seu efeito de verdade** (e a sua prova); até lá, ela
-fica no catálogo — nunca no jogo como nome sem efeito.
+oficina, as do fogo; a guerra, as da guerra. Uma descoberta só entra no jogo **com o seu efeito de verdade, com o que se vê e com a sua prova**;
+até lá, ela fica no catálogo — nunca no jogo como nome sem efeito, nem como efeito sem nada à vista.
 
 ## 5. Como se descobre (o motor do mundo, sem o jogador)
 
@@ -550,6 +573,7 @@ quem sabe** de cada perícia (§7).
    como o povo chega lá. **Ninguém escreve a arte de um povo à mão** fora do saber.
 3. **Nunca pela contagem de gente:** o avanço vem de quem pesquisa, do lugar, do material e dos livros.
 4. **Entre povos, só com quem leva** — nunca por sorteio entre povos.
+4b. **Toda descoberta chega com o que se vê** (§4b): a coisa no mundo, nas duas vistas, com a sua causa — nunca só um número.
 5. **O material vem da origem:** o instrumento de bronze só onde há bronze, o papiro de onde há papiro (D-440).
 6. **A aparência e o povo nunca decidem quem é sábio:** a índole (a curiosidade, a paciência), a prática e a vida, sim; o gosto do
    povo é da instituição, como manda o contrato da sociedade.
@@ -629,5 +653,5 @@ achados em vez de remendar depois. Por isso:
 
 ## 16. O estado
 
-**Aprovado pelo dono** (20/11/2026): a base, **os seis ofícios** e **a expansão do catálogo** («tem que render até o ano 500, até o ano
-1000»). **Para o dono decidir:** o teto do catálogo — até a beira da pólvora, como proposto, ou mais além um dia (§4b).
+**Aprovado pelo dono** (20/11/2026): a base, **os seis ofícios**, **a expansão do catálogo** («tem que render até o ano 500, até o ano
+1000»), os grupos de pesquisa, o saber que se perde, o saber errado, nenhum povo chegando a tudo. **O teto** (decidido): até a beira da pólvora — o saber da era antiga; **toda descoberta com o que se vê** (o pedido do dono, 20/11/2026).
