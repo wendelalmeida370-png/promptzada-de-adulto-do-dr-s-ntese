@@ -631,7 +631,7 @@ seis ofícios do saber, aprovados pelo dono** (20/11/2026; cada um terá o seu d
 - **o mestre-escola** e **o tradutor** — dentro do escriba;
 - **o curandeiro** continua o curador do povo (as ervas, a parteira, o barbeiro); **o médico** é o ofício fundo da cura.
 
-**A conta da lista:** **o sábio sai e entram os seis** — de 78 para **83 ofícios** (aprovado, 20/11/2026: «não precisa enxugar»).
+**A conta da lista:** **o sábio sai e entram os seis** — de 78 para **83 ofícios** (aprovado, 20/11/2026: «não precisa enxugar»); **com o correio (§14b), 84**.
 
 ## 14b. Quem mais nasce das descobertas (a pergunta do dono: «e quem faz o censo?»)
 
@@ -655,8 +655,64 @@ O censo **não é um ofício** — não se faz todo dia, e não aguenta horas so
 **De quanto em quanto tempo:** a cada cinco anos (vinte dias, no ano de quatro estações), como o lustro romano — **ou quando quem
 governa manda** (a leva para a guerra, o imposto novo).
 
-**Como se joga, encarnado no recenseador:** de porta em porta com as tabuinhas; a família que **esconde o filho** da leva ou o escravo
-do imposto (Ler as pessoas); o suborno; a casa vazia que não estava vazia; a rua que recebe mal quem conta; a conta que tem de fechar.
+#### O censo como jogo (a função com a sua estrutura — o pedido do dono)
+
+O censo dura só uns dias, mas **quem o vive encarnado tem um jogo inteiro nas mãos** — situações engraçadas, situações tensas e
+escolhas de verdade.
+
+**O dia do recenseador:**
+1. **Recebe a rua** (um pedaço de um bairro, pelo mapa da cidade) e as tabuinhas; às vezes, um soldado de escolta.
+2. **Bate de porta em porta.** A família declara: quem mora ali (os nomes, as idades), os escravos e os criados, os bichos, a terra, o
+   ofício, os bens. **E a fila da praça:** o cidadão que vem declarar na mesa do censo.
+3. **O declarado contra a verdade:** **a verdade está no mundo** — quem mora de fato na casa, os bichos de fato no quintal, o que a casa
+   de fato guarda. O jogador **olha**: o brinquedo da segunda criança no quintal, o mugido atrás do muro, o esterco fresco, **três
+   camas para uma família que diz ter um filho**, o rapaz que some pelos fundos. **Ler as pessoas, Investigar e Observar** — e o olho de
+   quem sabe: o recenseador velho vê o que o novato não vê.
+4. **Registra** — o que viu, o que ouviu, ou o que quis.
+5. **Entrega a conta ao censor** no fim do dia.
+
+**Por que as pessoas mentem** (cada mentira com a sua causa no mundo):
+- **esconder o filho da leva** — há guerra, e o censo é a lista de quem vai;
+- **esconder o gado, o escravo, a terra do imposto** — o comerciante que diz ter três vacas com o rebanho mugindo atrás dele;
+- **aumentar a família para o pão do povo** — o pai morto que «ainda vive», a criança que nunca nasceu, a vizinha emprestada para a
+  contagem;
+- **parecer mais rico** — onde o censo diz a classe e o voto, o rico quer ser contado mais rico (a toga, o lugar na assembleia);
+- **fingir ser o que não é** — o estrangeiro que jura ser cidadão, o liberto que jura ter nascido livre, o casal que não é casado;
+- **sumir** — o devedor que foge do credor, **o foragido que a guarda procura** (o censo encontra o crime).
+
+**As situações:**
+- **As engraçadas:** a família que conta o cão como filho; o «primo» que é o mesmo homem de chapéu; onze filhos e três camas; o velho
+  que declara a idade de cada ano de um jeito; o bode que berra justo quando o dono jura não ter bode.
+- **As tensas:** o filho escondido atrás da parede enquanto o soldado espera na porta; a família que implora; **o mercador poderoso que
+  oferece uma bolsa**; o censor que manda contar a rua do inimigo dele «por cima»; **a rua que se revolta contra o censo** (aconteceu
+  de verdade: o censo já levantou povos inteiros); o foragido que reconhece o recenseador.
+
+**As escolhas:**
+- **Registrar certo** — a fama de honesto; a família que odeia você; o filho que vai para a guerra.
+- **Registrar errado por pena** — esconder o filho; o risco da conferência do censor, do colega honesto, do vizinho que denuncia — é
+  falsificação, um crime do mundo.
+- **Aceitar o suborno** — as moedas; o crime com as testemunhas que houver; o boato.
+- **Denunciar** — o foragido achado: a recompensa; a rua que nunca mais abre a porta.
+- **Extorquir** — o caminho escuro: «ou paga, ou eu conto os seus escravos».
+
+**A conferência:** o censor confere algumas casas ao acaso do mundo; o colega honesto refaz uma rua; **o vizinho que tem rixa** denuncia
+a mentira (os laços); a conta que não fecha com o pão que o bairro come.
+
+**O que fica:** a conta vai para quem governa (o imposto, a leva, o pão); **as mentiras ficam no mundo** (o filho que não foi à guerra
+vive; a casa que pagou demais murmura); a corrupção vira boato; a fama de quem contou; **e o recenseador conhece a rua inteira pelo
+nome** (o que a pessoa sabe cresce — a porta do que o personagem sabe). **O honesto de fama pode ser nomeado censor** um dia: a função
+é o degrau para o cargo.
+
+**As máquinas do mundo:** as falas («Filho? Que filho?», «Três vacas. Juro pelos deuses.», «Escreve aí que eu sou cidadão, que eu te
+pago a bebida»), as animações (escrever na tabuinha, contar nos dedos, espiar por cima do muro, a família em fila na porta), as
+interações (perguntar quem mora, olhar o quintal, contar os bichos, registrar, aceitar ou recusar a bolsa, denunciar), **o grupo** (o
+censor, os recenseadores, o soldado de escolta), **as marcas** (**a lista do censo é uma marca** — as tabuinhas que um arqueólogo acha
+séculos depois), **a leitura** (por que a família mentiu, por que o vizinho denunciou). **E o deus:** os sacerdotes que dizem que
+contar o povo ofende os céus — e o deus que pode responder com a Praga, ou não.
+
+**A mesma estrutura serve a outros:** «conferir o declarado contra a verdade do mundo» é **uma máquina só**, que serve também ao
+**cobrador** (o imposto da colheita: quem esconde o grão), ao **fiscal do mercado** (o peso falso) e à **alfândega do porto** (a carga
+declarada e a contrabandeada). Feita uma vez, quatro jogos.
 
 **O que muda no mundo:** com o censo, quem governa **sabe a gente e os bens de verdade** — o imposto certo, a leva certa, o pão
 certo para o inverno. **Sem o censo, os números são palpites** (e os conselheiros que mentem mentem mais fácil). O censo errado
@@ -689,10 +745,10 @@ também é do mundo: o povo que paga demais murmura; o que foi esquecido não é
 | **O moinho d'água, o moinho de vento** | o moleiro | **já na lista** (o padeiro inclui o moleiro) | — |
 | **A colmeia, a púrpura, a seda, o vidro soprado, o banco** | o apicultor, o tintureiro, o tecelão da seda, o vidreiro, o banqueiro e o cambista | **já na lista** | — |
 
-**O único candidato a ofício novo: o correio.** O mensageiro hoje é uma função do mundo; com **o correio do rei**, cavalgar entre as
-estações pode aguentar horas — **a rota contra o tempo**, o cavalo que cansa, a chuva, o salteador, **a carta selada que o espião
-quer**, a notícia que muda uma guerra se chegar a tempo. **O dono decide** se o correio vira o 84.º ofício (com o mensageiro dentro)
-ou fica como função.
+**O correio vira ofício** (aprovado pelo dono, 21/11/2026 — **o 84.º**, com o mensageiro dentro): com **o correio do rei**, cavalgar
+entre as estações aguenta horas — **a rota contra o tempo**, o cavalo que cansa e é trocado na estação, a chuva, o salteador, **a carta
+selada que o espião quer**, a notícia que muda uma guerra se chegar a tempo. Entra com o comércio (o Patch 37); o seu documento virá
+quando o dono pedir.
 
 **A regra:** **o cargo é nomeado por quem governa** (pela porta das pessoas nomeadas, com a índole delas: o nomeado pode roubar,
 mentir, servir bem); **a função do mundo é chamada** pelas regras de todo chamado; **a especialidade e o papel** vivem dentro dos seus
