@@ -112,7 +112,7 @@ seguir).
 
 ## 6. Todos os ofícios (a lista aprovada pelo dono, 20/11/2026)
 
-**84 ofícios e 13 condições** (78 na lista de 20/11/2026; o sábio virou os seis ofícios do saber e o correio entrou, [`saber.md`](saber.md)). Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
+**85 ofícios e 13 condições** (78 na lista de 20/11/2026; o sábio virou os seis ofícios do saber, e entraram o correio e o fiscal, [`saber.md`](saber.md)). Cada um aguenta horas de jogo sozinho (a máxima); o que não aguentava virou **especialidade** (um
 ramo do mesmo jogo), **papel** ou **título** (um lugar no grupo, um degrau da carreira) ou **função do mundo** (o que se faz por um
 dia). ★ = já tem o seu documento a fundo.
 
@@ -166,21 +166,22 @@ barbeiro) · e **os seis do saber** ([`saber.md`](saber.md), aprovados em 20/11/
 **A arte (7):** ★ [bardo](oficio-bardo.md) (inclui o poeta) · **músico** · **ator** (inclui o dançarino, o acrobata) · **pintor** · **escultor** ·
 **auriga** · **atleta**
 
-**O poder (6):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
-**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) (inclui o advogado) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador**
+**O poder (7):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
+**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) (inclui o advogado) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador** · **fiscal** (o fiscal do mercado, a alfândega do porto, o cobrador; o
+primeiro chamado ao censo — o jogo de anomalia: a verdade do mundo contra o declarado; aprovado em 21/11/2026, [`saber.md`](saber.md) §14b)
 
 **As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·
 mendigo · exilado · foragido · náufrago · perdido (inclui o soterrado) · órfão, criança, ancião · viúvo · herdeiro
 
 **As funções do mundo** (fazem-se por uns dias, chamadas, sem ser ofício inteiro): aguadeiro, carregador (e os homens da roda do
-guindaste), mensageiro (o recado de um dia; a carreira é o correio), foguista, servente, faroleiro, salineiro, cobrador, arauto — e as que o saber traz ([`saber.md`](saber.md)
+guindaste), mensageiro (o recado de um dia; a carreira é o correio), foguista, servente, faroleiro, salineiro, arauto — e as que o saber traz ([`saber.md`](saber.md)
 §14b): **o recenseador**, **o medidor dos campos**, **o vigia da quarentena**. **Uma função dura pouco, mas pode ter a sua
 estrutura de jogo** para quem a vive encarnado — o censo é o modelo (a verdade do mundo contra o declarado, as escolhas, a
 conferência, o que fica).
 
 **Os cargos** (o posto que quem governa nomeia — ou o povo vota —, com a índole de quem é nomeado; [`oficio-governante.md`](oficio-governante.md)
-§5.4): o general, o tesoureiro, o governador, o sumo-sacerdote, o chefe da guarda — e os que o saber traz: **o censor**, **o fiscal do
-mercado**, **o curador das águas**, **o mestre do correio**, **o bibliotecário-mor**, **o astrólogo da corte**, **o guardião do
+§5.4): o general, o tesoureiro, o governador, o sumo-sacerdote, o chefe da guarda — e os que o saber traz: **o censor** (o chefe do censo; os recenseadores são a
+função), **o curador das águas**, **o mestre do correio**, **o bibliotecário-mor**, **o astrólogo da corte**, **o guardião do
 calendário**. **O orador** é título de quem fala bem.
 
 **As passagens** (uma vida que muda de ofício pela história): o escravo de galé que se revolta ou foge, vira liberto, e depois

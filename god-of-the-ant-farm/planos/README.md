@@ -160,8 +160,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - **As eras do jogo** (a ideia do dono, para muito depois — Patch 70 a 100): a era antiga é uma só; um dia, a passagem com causa para
   as eras seguintes e o futuro que sai das escolhas do mundo ([`eras.md`](eras.md)).
 - **Quem faz o que as descobertas trazem** (20/11/2026, a pergunta do dono sobre o censo): uma família nova na lista, **os cargos**
-  (nomeados por quem governa), e as funções e especialidades novas; **o correio vira o 84.º ofício** (21/11/2026); **o censo é função, com a sua estrutura de jogo** ([`saber.md`](saber.md) §14b).
-- **A lista dos ofícios** (**aprovada**, 20/11/2026): 84 ofícios (com o carrasco, os seis do saber e o correio) e 13 condições, sem redundância — o que não aguentava horas
+  (nomeados por quem governa), e as funções e especialidades novas; **o correio e o fiscal viram ofícios** (o 84.º e o 85.º, 21/11/2026 — o fiscal é o jogo de anomalia: o mercado, a alfândega, a
+  cobrança); **o censo é função** (os recenseadores), **com a sua estrutura de jogo**, e **o censor é o cargo** de quem o chefia
+  ([`saber.md`](saber.md) §14b).
+- **A lista dos ofícios** (**aprovada**, 20/11/2026): 85 ofícios (com o carrasco, os seis do saber, o correio e o fiscal) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes
   finos, as receitas de cada povo, a combinação livre, a qualidade em sete degraus de palavras, **o retorno pelo mundo** (o rosto

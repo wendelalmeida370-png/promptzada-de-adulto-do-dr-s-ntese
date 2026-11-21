@@ -631,7 +631,7 @@ seis ofícios do saber, aprovados pelo dono** (20/11/2026; cada um terá o seu d
 - **o mestre-escola** e **o tradutor** — dentro do escriba;
 - **o curandeiro** continua o curador do povo (as ervas, a parteira, o barbeiro); **o médico** é o ofício fundo da cura.
 
-**A conta da lista:** **o sábio sai e entram os seis** — de 78 para **83 ofícios** (aprovado, 20/11/2026: «não precisa enxugar»); **com o correio (§14b), 84**.
+**A conta da lista:** **o sábio sai e entram os seis** — de 78 para **83 ofícios** (aprovado, 20/11/2026: «não precisa enxugar»); **com o correio e o fiscal (§14b), 85**.
 
 ## 14b. Quem mais nasce das descobertas (a pergunta do dono: «e quem faz o censo?»)
 
@@ -710,9 +710,43 @@ censor, os recenseadores, o soldado de escolta), **as marcas** (**a lista do cen
 séculos depois), **a leitura** (por que a família mentiu, por que o vizinho denunciou). **E o deus:** os sacerdotes que dizem que
 contar o povo ofende os céus — e o deus que pode responder com a Praga, ou não.
 
-**A mesma estrutura serve a outros:** «conferir o declarado contra a verdade do mundo» é **uma máquina só**, que serve também ao
-**cobrador** (o imposto da colheita: quem esconde o grão), ao **fiscal do mercado** (o peso falso) e à **alfândega do porto** (a carga
-declarada e a contrabandeada). Feita uma vez, quatro jogos.
+**A mesma estrutura serve a outros:** «conferir o declarado contra a verdade do mundo» — **um jogo de anomalia dentro do jogo**, como
+disse o dono: juntar pistas para descobrir quem mente e o que esconde — é **uma máquina só**, e ela vira **um ofício inteiro**.
+
+#### O fiscal — o 85.º ofício (aprovado pelo dono, 21/11/2026)
+
+**O que acontece todo dia vira ofício; o que acontece de vez em quando fica função.** O fiscal trabalha **todo dia**, em três lugares
+(as especialidades), com a mesma máquina — e cada lugar com as suas pistas e as suas mentiras:
+
+| Especialidade | O que confere | As mentiras (exemplos) | Quem está do outro lado |
+|----|----------|----------|------|
+| **O fiscal do mercado** | os pesos, as medidas, a mercadoria, a moeda | o peso que não bate, a medida roubada, o vinho aguado, **a moeda raspada** | o mercador que rouba no peso, **o falsificador** |
+| **A alfândega do porto** | a carga declarada contra a que vem no porão | o fundo falso no barril, a seda debaixo do trigo, o navio que «não trouxe nada» | **o contrabandista**, o capitão que suborna |
+| **O cobrador** | o imposto da colheita e das casas | **o grão escondido no celeiro do vizinho**, a colheita «ruim», o devedor que some | o lavrador que esconde, o devedor, o rico que tem amigos |
+
+- **Por que um ofício só, e não três:** sozinho, cada lugar cansaria; juntos, mudam o lugar, as mentiras e as pessoas — a variedade que
+  o molde pede. E é uma máquina só para fazer.
+- **A carreira:** o aprendiz, o fiscal, **o chefe do mercado ou da alfândega** (títulos) — e, para o honesto de fama, **os cargos**: o
+  censor, o tesoureiro.
+- **O lado da gente:** o cobrador sempre foi odiado. A fama, a rua que fecha a cara, **a tentação do suborno** (o salário pequeno, a
+  bolsa grande) e o perigo (o contrabandista que não quer ser pego).
+- **O mesmo encontro dos dois lados:** o jogador pode viver **o contrabandista passando pela alfândega** ou **o fiscal tentando pegá-lo**
+  — como o galeote e o capataz.
+- **E o censo:** quando ele vem, **o fiscal é o primeiro chamado** como recenseador — é a máquina que ele usa todo dia —; qualquer um que
+  leia também pode ser chamado.
+
+**O fiscal entra com a sombra e a lei** (o Patch 34), junto do contrabandista e do falsificador que ele caça; o seu documento a fundo
+virá quando o dono pedir.
+
+#### Quem é quem no censo (o censor e o recenseador)
+
+São **duas pessoas diferentes**, como no censo de verdade (o do IBGE: **o presidente do IBGE** é um cargo; **os recenseadores
+temporários**, contratados só para o censo, são uma função):
+
+- **O censor é o chefe** — **um só**, nomeado por quem governa (ou eleito); organiza o censo, guarda as listas, confere o trabalho e
+  responde ao rei pelo número. **É um cargo:** um posto que dura anos, mesmo entre um censo e outro.
+- **Os recenseadores são os muitos** que vão de porta em porta **naqueles dias** — os fiscais primeiro, depois quem sabe ler. **É uma
+  função:** acabado o censo, cada um volta à sua vida.
 
 **O que muda no mundo:** com o censo, quem governa **sabe a gente e os bens de verdade** — o imposto certo, a leva certa, o pão
 certo para o inverno. **Sem o censo, os números são palpites** (e os conselheiros que mentem mentem mais fácil). O censo errado
@@ -722,8 +756,8 @@ também é do mundo: o povo que paga demais murmura; o que foi esquecido não é
 
 | A descoberta | Quem faz | O que é | Como é escolhido |
 |------|----------|------|-----------|
-| **O censo** | o censor; os recenseadores | **cargo**; **função do mundo** | quem governa nomeia (ou o povo vota); o censor chama quem lê, por dias |
-| **A balança e os pesos** | **o fiscal do mercado** (o agorânomo grego): confere os pesos, multa a fraude | **cargo** | quem governa nomeia; pago pelo tesouro e pelas multas |
+| **O censo** | o censor; os recenseadores | **cargo**; **função do mundo** | quem governa nomeia o censor (ou o povo vota); o censor chama os fiscais e quem lê, por dias |
+| **A balança e os pesos** | **o fiscal do mercado** (o agorânomo grego): confere os pesos, multa a fraude | **especialidade do fiscal** (o 85.º ofício, logo acima) | pelo ofício; pago pelo tesouro e pelas multas |
 | **O aqueduto, o esgoto** | **o curador das águas**: a manutenção — sem ele, o aqueduto racha e a cidade fica sem água | **cargo** | quem governa nomeia |
 | **O correio do rei** | **o mestre do correio** (as estações, os cavalos frescos); **os correios** que cavalgam | **cargo**; o correio, **a decidir** (abaixo) | o mestre, nomeado; os correios, contratados pelo soldo |
 | **O rolo e a biblioteca, o catálogo** | **o bibliotecário-mor** (o de Alexandria era nomeado pelo rei); os copistas (que já existem) | **cargo**; papel | quem governa nomeia, entre os sábios |

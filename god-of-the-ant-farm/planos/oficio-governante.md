@@ -110,7 +110,7 @@ o epíteto de Construtor — e endivida.
 ### 5.4 As pessoas (nomear e desfazer)
 
 Quem é o general, o juiz, o sumo-sacerdote, o tesoureiro, **o governador de cada cidade**, o herdeiro — **e os cargos que o saber
-traz** (o censor, o fiscal do mercado, o curador das águas, o mestre do correio, o bibliotecário-mor, o astrólogo da corte, o
+traz** (o censor, o curador das águas, o mestre do correio, o bibliotecário-mor, o astrólogo da corte, o
 guardião do calendário — [`saber.md`](saber.md) §14b); os favores, os casamentos que
 se arranjam, o exílio, o perdão, a execução. **Nomear o certo** é a metade do reinado: o general leal e competente, o tesoureiro que não
 rouba. **E as pessoas nomeadas têm a sua índole:** obedecem, discutem, roubam, conspiram (a obediência que não é automática do
