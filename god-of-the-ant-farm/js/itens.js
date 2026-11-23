@@ -72,11 +72,11 @@
     muleta: { nome: 'muleta', plural: 'muletas', tipo: 'ferramenta', maos: 1, slots: ['mao', 'outra'], pega: 'muleta', peso: 1.2, bem: null, vale: 0, tags: ['apoio'], mats: ['madeira'], desc: 'Debaixo do braço, faz as vezes da perna que falta.', feito: { wood: 0.5 } },
     // the instruments of the musician of the night (P7, D-764): the lyre of the peoples of the Old World — the arms and the yoke of
     // wood, the sound box covered with hide, the strings of gut —, and the drum of the Aztec, the huehuetl: a log hollowed out, the
-    // hide stretched over its mouth. Their material is the beast's (its hide and gut: a people that never had a hide has none, the
+    // hide stretched over its mouth — held in one hand (the other plucks, or beats). Their material is the beast's (its hide and gut: a people that never had a hide has none, the
     // song with the voice alone); what they are made of, the hide and the wood of the store (It.feitoDe). Of the place — the tavern's
     // —, as the cup (G.Inv's kit), none a weapon
-    lira: { nome: 'lira', plural: 'liras', tipo: 'instrumento', maos: 2, slots: ['mao', 'costas'], pega: 'lira', peso: 0.9, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'Os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa: a música da taverna e da festa.' },
-    tambor: { nome: 'tambor', plural: 'tambores', tipo: 'instrumento', maos: 2, slots: ['mao', 'costas'], pega: 'tambor', peso: 2.4, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'O tronco escavado, com o couro esticado na boca: batido com as mãos, marca o passo da dança.' },
+    lira: { nome: 'lira', plural: 'liras', tipo: 'instrumento', maos: 1, slots: ['mao', 'costas'], pega: 'lira', peso: 0.9, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'Os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa: a música da taverna e da festa.' },
+    tambor: { nome: 'tambor', plural: 'tambores', tipo: 'instrumento', maos: 1, slots: ['mao', 'costas'], pega: 'tambor', peso: 2.4, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'O tronco escavado, com o couro esticado na boca: batido com as mãos, marca o passo da dança.' },
   };
   // the materials: what they change in a thing (the weight, the bite of an edge) and how they are said
   // (ord: the plainest 0, bronze 1, iron 2 — the best a people knows is the highest it may make; cor: the material's colour,
