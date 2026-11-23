@@ -34,7 +34,7 @@
     // guard, the weapon put away or drawn — keys that fight nothing: no Ctrl (Ctrl+W shuts the tab), no Alt (it takes the focus))
     ['esquivar', 'Esquivar', ['q']], ['travar', 'Travar a mira num alvo', ['mouse1', 'z']], ['ombro', 'Trocar o ombro da câmera', ['t']],
     // (the interiors 2.0, D-731: the room seen from over its cut ceiling, asked and given back by the player — Cam3D.vista)
-    ['vista', 'Vista da sala (de cima, dentro de casa)', ['o']],
+    ['vista', 'Vista da sala (do canto, dentro de casa)', ['o']],
     ['outra', 'Outra ação (o segundo verbo)', ['f']], ['atacar', 'Atacar', ['mouse0']], ['defender', 'Defender / mirar', ['mouse2']], ['guardar', 'Guardar / sacar a arma', ['r']],
   ];
   // (the controller's buttons, the standard mapping: 0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 8 Back, 9 Start, 10 the left stick
@@ -292,7 +292,7 @@
   In.button('esquivar', { label: 'Esquivar', order: 22, when: () => !!(G.Avatar.state() && G.Avatar.state().ground) });
   In.button('agachar', { label: 'Agachar', toggle: true, on: () => !!(G.Avatar.crouched && G.Avatar.crouched()), order: 30 });
   In.button('travar', { label: 'Travar', toggle: true, on: () => !!(G.Cam3D.locked && G.Cam3D.locked()), order: 40, when: () => !!(G.Cam3D.locked && G.Cam3D.locked()) || !!(G.Modes && G.Modes.lockCandidate && G.Modes.lockCandidate()) });
-  // (the «Vista da sala»: only under a roof — lit while the eye is over the room)
+  // (the «Vista da sala»: only under a roof — lit while the eye is in the room's corner)
   In.button('vista', { label: 'Vista', toggle: true, on: () => !!(G.Cam3D.vistaOn && G.Cam3D.vistaOn()), order: 36, when: () => !!(G.Cam3D.under && G.Cam3D.under()) });
   In.button('menu', { label: '☰', slot: 'canto', order: 90 });
 })(window.G);

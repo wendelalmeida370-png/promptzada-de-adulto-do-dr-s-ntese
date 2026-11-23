@@ -1,12 +1,13 @@
 // olho-dentro: o olho do corpo dentro dos prédios (os interiores 2.0, a frente P4 — D-730 a D-739) — em Node, o corpo e o olho do
 // próprio jogo quadro a quadro (o arreio do qa/movimento.js: o passo do mundo, o quadro do corpo, o Cam3D.update com uma câmera da
 // prova), o corpo entrando pela porta de fora e andando pela planta como um jogador (o olho girado atrás dele, até 4 rad/s). Em cada
-// quadro, o verificador do olho (QA.eye: nunca dentro do sólido; com o corpo sob um teto, nunca debaixo do piso, nunca dentro do que
-// se desenha do prédio sem o corte, e nada sem o corte entre o olho e o corpo):
+// quadro, o verificador do olho (QA.eye: nunca dentro do sólido; com o corpo sob um teto, dentro do volume da sala — nunca acima do
+// teto dela, nunca mais longe das paredes dela que C3.BEYOND, nunca debaixo do piso —, nunca dentro do que se desenha do prédio sem o
+// corte, e nada sem o corte entre o olho e o corpo) e o céu (nenhum raio da lente sai do prédio por cima das paredes: D-738):
 //   o1  o terreiro (L-1860): da porta da rua de cada taverna e olaria com terreiro até o salão
 //   o2  todo prédio: em cada tipo com planta, o corpo entra, anda até o meio do maior cômodo e gira o olho em volta, em três inclinações
-//   o3  a quarta parede (D-730): na taverna, na casa, na ínsula, no sobrado e no paço, o olho fica na distância do jogador — nunca a
-//       menos de 1 m do ombro — e vê a sala (o chão visto pela lente e pelo corte, no PC e no celular em pé)
+//   o3  a quarta parede (D-730, D-738): na taverna, na casa, na ínsula, no sobrado e no paço, o olho fica na sala, longe do ombro o
+//       quanto ela deixa — quase nunca a menos de 1 m — e vê a sala (o chão visto pela lente e pelo corte, no PC e no celular em pé)
 //   o4  a porta sem salto (D-735): entrando e saindo pela porta, o olho nunca salta num quadro (antes, 4 a 5 m)
 //   o5  o quarteirão colado: com o olho para o lado de um vizinho de parede (colado, ou do outro lado de um beco), o vizinho o para —
 //       nunca dentro dele, nada dele entre o olho e o corpo
@@ -14,8 +15,9 @@
 //       vista desligada, o verificador limpo desde o primeiro quadro
 //   o7  a mira do arco: mirando dentro de casa, o raio do meio da tela passa pela parede só onde ela está cortada, e o primeiro sólido
 //       que ele encontra fica à frente do corpo
-//   o8  a vista da sala (D-731): pedida, o olho sobe acima do teto cortado e vê a sala inteira de cima; pedida de novo, volta; o rumo e
-//       a inclinação do jogador nunca mudam; sai do prédio, acaba; fora de casa, não liga
+//   o8  a vista da sala (D-731, D-739): pedida, o olho vai a um canto da sala, logo abaixo do teto, e vê a sala inteira (os quatro
+//       cantos do chão na lente, o chão à vista, nada de céu); pedida de novo, volta; o rumo e a inclinação do jogador nunca mudam; sai
+//       do prédio, acaba; fora de casa, não liga
 //   o9  a lente pela tela (D-732): nunca menos de 50° de lado (o celular em pé abre para cima e para baixo); uns graus a mais dentro de
 //       casa, entrando devagar; a conversa dentro de casa não fecha a lente
 //   o10 o corpo contra os móveis (D-734): empurrado contra cada peça do cômodo, o corpo nunca entra nela — o círculo dos ombros só
@@ -38,13 +40,36 @@ const r2 = x => Math.round(x * 100) / 100;
 const CAM = { position: { set() { } }, lookAt() { }, updateProjectionMatrix() { }, fov: 58, near: 0.1, far: 1000, aspect: 16 / 9 };
 const PC = 16 / 9, PHONE = 390 / 844;
 const stop = () => { IN.mx = 0; IN.mz = 0; IN.run = false; IN.walk = false; IN.jump = false; IN.dodge = false; IN.crouch = false; };
+// (the sky over the walls — D-738: the eye over the roof, the cut a lid over the storey, the sky, the sea and the town over the far
+// wall): of the lens's rays — 5 across, 4 up and down —, one that on its way into the body's building's shell passes through the cut
+// over the ceiling drawn there (the cut in the ceiling, the roof), or leaves the shell through the cut farther from the eye than the
+// body is (and the cut's width) higher than a door — a wall past the body cut. The cut wall between the eye and the body is the fourth
+// wall's own hole; a ray out of the shell over its eave without a cut is the plan's own opening (the hatch to a roof terrace, an open
+// height), and below the eave its wall: the 3D draws it to the eave — in Node the plan's solid has the walls of each storey only,
+// T-1764. Not while the eye glides down in from out of doors — a tenth of a second, the eye coming down from where it was
+const drawnAt = (X, Y, Z) => C3.solidAll(X, Y, Z) && !C3.inCut(X, Y, Z);
+function skyNow() {
+  const o = C3.open(); const l = C3.last; const rb = o && C3.roomBox(); if (!o || o.kept || !l || rb.glide > 0) return null; const E = l.pos, A = l.at; const p = Sp.planNow(o.b), sh = p.shell, X0 = o.b.x * TL, Z0 = o.b.y * TL;
+  const inShell = (X, Z) => { const x = X - X0, z = Z - Z0; return sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3]; };
+  const ceil = (X, Z) => C3.ceilAt(X, Z) + C3.CEIL_GAP - rb.glide; // (the ceiling's underside there: the eye's highest and its gap)
+  const far = Math.hypot(l.body[0] - E[0], l.body[2] - E[2]) + C3.CUT_W + 0.1;
+  let fx = A[0] - E[0], fy = A[1] - E[1], fz = A[2] - E[2]; const fn = Math.hypot(fx, fy, fz); fx /= fn; fy /= fn; fz /= fn; let rx = fz, rz = -fx; const rn = Math.hypot(rx, rz) || 1; rx /= rn; rz /= rn; const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy;
+  const tv = Math.tan(l.fov * Math.PI / 360) * 0.97, th = tv * CAM.aspect;
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) { const a = (i / 4 * 2 - 1) * th, b = (j / 3 * 2 - 1) * tv; let dx = fx + rx * a + ux * b, dy = fy + uy * b, dz = fz + rz * a + uz * b; const dn = Math.hypot(dx, dy, dz); dx /= dn; dy /= dn; dz /= dn;
+    let was = false; for (let s = 0.15; s < 16; s += 0.15) { const X = E[0] + dx * s, Y = E[1] + dy * s, Z = E[2] + dz * s; if (drawnAt(X, Y, Z)) break; const k = inShell(X, Z); const cut = C3.inCut(X, Y, Z);
+      if (k) { was = true; if (cut && Y > ceil(X, Z) + 0.02) return `o corte no teto do ${o.b.type}#${o.b.id}, num raio da lente a ${r2(Y - o.fy)} m sobre o piso`; }
+      else if (was) { if (cut && Y > o.fy + 2.3 && Math.hypot(X - E[0], Z - E[2]) > far) return `o céu num raio da lente, saindo do ${o.b.type}#${o.b.id} pelo corte além do corpo, a ${r2(Y - o.fy)} m sobre o piso`; break; } } }
+  return null;
+}
 // (each frame: the world's step, the body, the eye — and what the verifier of the eye says of it)
 let rec = null;
 function frame(tag) {
   IN.camYaw = C3.yaw; IN.lock = C3.locked(); IN.aim = C3.aiming(); G.debug.step(RDT * Sp.TIME); Av.frame(RDT);
   const p = Av.pos(); if (!p) return; C3.update(RDT, Object.assign({ h: 1.75 }, p), CAM);
-  if (rec) { const bad = QA.eye(); rec.n++; if (bad.length) { rec.bad++; if (!rec.first) rec.first = `${tag}: ${bad[0]}`; }
-    const l = C3.last; if (rec.prev) { const j = Math.hypot(l.pos[0] - rec.prev[0], l.pos[1] - rec.prev[1], l.pos[2] - rec.prev[2]); if (j > rec.jump) { rec.jump = j; rec.jumpAt = tag; } } rec.prev = l.pos.slice(); rec.cur.push(l.cur); }
+  if (rec) { const bad = QA.eye(); const sky = skyNow(); if (sky) bad.push(sky); rec.n++; if (bad.length) { rec.bad++; if (!rec.first) rec.first = `${tag}: ${bad[0]}`; }
+    // (the jump: with the building open to the eye now or the frame before — the door's frames; out of doors on the way to it, a wall
+    // swept into the boom brings the eye in at once, the L-1140's rule — T-1765)
+    const l = C3.last; const op = !!C3.open(); if (rec.prev && (op || rec.op)) { const j = Math.hypot(l.pos[0] - rec.prev[0], l.pos[1] - rec.prev[1], l.pos[2] - rec.prev[2]); if (j > rec.jump) { rec.jump = j; rec.jumpAt = tag; } } rec.prev = l.pos.slice(); rec.op = op; rec.cur.push(l.cur); }
 }
 const frames = (n, tag) => { for (let k = 0; k < n; k++) frame(tag || ''); };
 const watch = () => (rec = { n: 0, bad: 0, first: '', jump: 0, jumpAt: '', prev: null, cur: [] });
@@ -111,8 +136,6 @@ function placeIn(b, at, yaw) {
 }
 // (the eye turned round the body standing still — all round, at three tilts, slowly as a hand turns it)
 function lookAround(tag) { for (const pitch of [0.26, 0.6, 1.0]) { C3.pitch = pitch; for (let k = 0; k < 96; k++) { C3.yaw += Math.PI * 2 / 96; frame(tag + '@' + pitch); } } C3.pitch = 0.26; }
-// (what is drawn at a point: the plan's solid of the building the body is in, less the cut; of the others, all)
-const drawnAt = (X, Y, Z) => C3.solidAll(X, Y, Z) && !C3.inCut(X, Y, Z);
 // (how much of a room's floor the eye sees — points every 20 cm at 0,8 m, the tables' height —: in the lens of the screen's aspect and
 // with nothing drawn on the way)
 function seen(b, p, room, lv, asp) {
@@ -174,15 +197,17 @@ if (want('o3')) {
   }
   CAM.aspect = PC;
   const avg = (asp, k) => { const rs = rows.filter(r => r.asp === asp); return rs.reduce((a, r) => a + r[k], 0) / Math.max(1, rs.length); };
-  const fine = rows.length >= 12 && rows.every(r => r.med >= 4 && r.lt1 === 0) && avg(PC, 'vis') >= 0.6 && avg(PHONE, 'vis') >= 0.55 && bad === 0;
-  ok('o3 a quarta parede: o olho na distância do jogador, nunca a menos de 1 m, e a sala à vista no PC e no celular em pé', fine,
-    `${rows.length / 2} cômodos · o chão visto ${Math.round(100 * avg(PC, 'vis'))}% no PC e ${Math.round(100 * avg(PHONE, 'vis'))}% no celular (antes: 39% e 17%) · olho a menos de 1 m em ${Math.round(100 * avg(PC, 'lt1'))}% (antes: 46%) · ${rows.filter(r => r.asp === PC).map(r => `${r.b} ${r2(r.med)} m ${Math.round(100 * r.vis)}%`).join(', ')} · verificador ${bad}/${tot}${first.length ? ' — ' + first[0] : ''}`);
+  // (the room keeps the eye: in a room of 3 × 3 m with the body against a wall, the eye is under a metre from the shoulder now and then —
+  // the body in its weave, C3.bodyFade —; the median, never)
+  const fine = rows.length >= 10 && rows.every(r => r.med >= 1.6 && r.lt1 <= 0.2) && avg(PC, 'lt1') <= 0.05 && avg(PC, 'vis') >= 0.5 && avg(PHONE, 'vis') >= 0.5 && bad === 0;
+  ok('o3 a quarta parede: o olho na sala, longe do ombro o quanto ela deixa, quase nunca a menos de 1 m, e a sala à vista no PC e no celular em pé', fine,
+    `${rows.length / 2} cômodos · o chão visto ${Math.round(100 * avg(PC, 'vis'))}% no PC e ${Math.round(100 * avg(PHONE, 'vis'))}% no celular (antes: 39% e 17%) · olho a menos de 1 m em ${Math.round(100 * avg(PC, 'lt1'))}% (antes: 46%) · ${rows.filter(r => r.asp === PC).map(r => `${r.b} ${r2(r.med)} m ${Math.round(100 * r.vis)}%`).join(', ')} · verificador ${bad}/${tot}${first.length ? ' — ' + first[0] : ''}${rows.some(r => r.med < 1.6 || r.lt1 > 0.2) ? ' · fora da regra: ' + rows.filter(r => r.med < 1.6 || r.lt1 > 0.2).map(r => `${r.b} ${r.asp === PC ? 'PC' : 'celular'} ${r2(r.med)} m, ${Math.round(100 * r.lt1)}% a menos de 1 m`).join(', ') : ''}`);
 }
 
 // ================================ o4: a porta sem salto ================================
 if (want('o4')) {
   const res = []; let worst = 0, bad = 0, tot = 0;
-  for (const t of ['house', 'taverna', 'insula', 'sobrado', 'temple', 'paco', 'armazem', 'biblioteca']) for (const b of built(t)) {
+  for (const t of ['house', 'taverna', 'insula', 'sobrado', 'temple', 'paco', 'armazem', 'biblioteca', 'olaria', 'workshop']) for (const b of built(t)) { // (the last two: the ready «cidade» has no ínsula, temple, armazém nor library)
     const p = Sp.planNow(b); if (!p || !p.ok || !p.entrance) continue; const mr = mainRoom(b, p); if (!mr) continue;
     watch(); const r = enter(b, { x: mr.x, z: mr.z, lv: mr.lv }); if (!r.ok || !r.walked || !r.inside) { unwatch(); continue; }
     frames(20, 'dentro'); const In1 = unwatch();
@@ -234,7 +259,7 @@ if (want('o6')) {
     const v = S().villagers.get(vid); Av.detach(); const okT = v && take(v, 0); watch(); frames(60, 'depois'); const R = unwatch();
     r = { before, okT, vista: C3.vistaOn(), open: !!C3.open(), bad: R.bad, first: R.first, cur: r2(C3.last.cur) };
   }
-  ok('o6 o save no meio: o olho de volta atrás do corpo, a vista desligada, o verificador limpo desde o primeiro quadro', !!r && r.before.open && r.before.vista && r.okT && !r.vista && r.open && r.bad === 0 && r.cur > 4, JSON.stringify(r));
+  ok('o6 o save no meio: o olho de volta atrás do corpo, a vista desligada, o verificador limpo desde o primeiro quadro', !!r && r.before.open && r.before.vista && r.okT && !r.vista && r.open && r.bad === 0 && r.cur > 1.5, JSON.stringify(r));
 }
 
 // ================================ o7: a mira do arco ================================
@@ -265,20 +290,21 @@ if (want('o8')) {
     C3.yaw = 0.7; frames(60, 'antes'); const y0 = C3.yaw, p0 = C3.pitch, d0 = C3.last.cur;
     watch(); const on = C3.vista(); frames(120, 'vista'); const l = C3.last; const R1 = unwatch();
     const o = C3.open(); const tilt = Math.atan2(l.pos[1] - l.at[1], Math.hypot(l.at[0] - l.pos[0], l.at[2] - l.pos[2])) * 180 / Math.PI;
-    const vis = seen(b, p, mr.m, mr.lv, PC);
+    const vis = seen(b, p, mr.m, mr.lv, PC); const box = C3.roomBox(); const ceil = C3.ceilAt(l.pos[0], l.pos[2]); const vp = C3.vistaPose();
     // (the room's floor corners in the lens)
     const E = l.pos, A = l.at; let fx = A[0] - E[0], fy = A[1] - E[1], fz = A[2] - E[2]; const fn = Math.hypot(fx, fy, fz); fx /= fn; fy /= fn; fz /= fn; let rx = fz, rz = -fx; const rn = Math.hypot(rx, rz) || 1; rx /= rn; rz /= rn; const ux = -rz * fy, uy = rz * fx - rx * fz, uz = rx * fy; const tv = Math.tan(l.fov * Math.PI / 360), th = tv * PC;
-    const corners = [[0, 1], [2, 1], [0, 3], [2, 3]].every(([i, j]) => { const P = [b.x * TL + mr.m.r[i], o.fy, b.y * TL + mr.m.r[j]]; const d = [P[0] - E[0], P[1] - E[1], P[2] - E[2]]; const df = d[0] * fx + d[1] * fy + d[2] * fz; return df > 0 && Math.abs((d[0] * rx + d[2] * rz) / df) <= th && Math.abs((d[0] * ux + d[1] * uy + d[2] * uz) / df) <= tv; });
-    const high = l.pos[1] > o.fc + 0.3, kept = Math.abs(C3.yaw - y0) < 1e-9 && Math.abs(C3.pitch - p0) < 1e-9;
+    // (the three far ones: the one under the corner's eye is under it)
+    const corners = [[0, 1], [2, 1], [0, 3], [2, 3]].every(([i, j]) => { const P = [b.x * TL + box.box[i], o.fy, b.y * TL + box.box[j]]; const d = [P[0] - E[0], P[1] - E[1], P[2] - E[2]]; if (Math.hypot(d[0], d[2]) < 1.2) return true; const df = d[0] * fx + d[1] * fy + d[2] * fz; return df > 0 && Math.abs((d[0] * rx + d[2] * rz) / df) <= th && Math.abs((d[0] * ux + d[1] * uy + d[2] * uz) / df) <= tv; });
+    const inRoom = box.out(l.pos[0], l.pos[2]) < 0.01 && l.pos[1] <= ceil + 0.01 && l.pos[1] > o.fy + 1.6, kept = Math.abs(C3.yaw - y0) < 1e-9 && Math.abs(C3.pitch - p0) < 1e-9;
     watch(); const off = C3.vista(); frames(150, 'volta'); const R2 = unwatch(); const back = Math.abs(C3.last.cur - d0) < 0.3 && C3.last.pos[1] < o.fc + 2;
-    const row = { t, on, olho: r2(l.cur), alto: r2(l.pos[1] - o.fc), inclinacao: Math.round(tilt), salaInteira: corners, chao: Math.round(100 * vis), rumoEInclinacao: kept, desliga: !off, volta: back, verificador: R1.bad + R2.bad, primeiro: R1.first || R2.first || undefined };
-    if (!(on && high && tilt >= 44 && tilt <= 64 && corners && vis >= 0.8 && kept && !off && back && !R1.bad && !R2.bad)) fine = false; res.push(row);
+    const row = { t: `${t}#${b.id}`, on, naSala: inRoom, sobOTeto: r2(ceil - l.pos[1] + C3.CEIL_GAP), sobePiso: r2(l.pos[1] - o.fy), inclinacao: Math.round(tilt), lente: Math.round(l.fov), cantoVe: vp && Math.round(100 * vp.seen), salaInteira: corners, chao: Math.round(100 * vis), rumoEInclinacao: kept, desliga: !off, volta: back, verificador: R1.bad + R2.bad, primeiro: R1.first || R2.first || undefined };
+    if (!(on && inRoom && corners && vis >= 0.6 && kept && !off && back && !R1.bad && !R2.bad)) fine = false; res.push(row);
   }
   // (out of the building, it ends; out of doors, it does not come on)
   let ends = null, outside = null; for (const b of [...built('house'), ...built('taverna')]) { const p = Sp.planNow(b); const m = mainRoom(b, p); if (!m) continue; const r = enter(b, { x: m.x, z: m.z, lv: m.lv });
     if (!r.ok || !r.walked || !r.inside) continue; C3.vista(true); frames(30, 'vista'); const was = C3.vistaOn(); if (!r.leave('sai') || Av.indoors()) continue; // (T-1763)
     frames(30, 'rua'); ends = was && !C3.vistaOn(); outside = C3.vista(true) === false && !C3.vistaOn(); break; }
-  ok('o8 a vista da sala: o olho acima do teto cortado, a sala inteira de cima; de volta; o rumo e a inclinação do jogador intactos; sai, acaba; fora, não liga', fine && res.length >= 3 && ends && outside, `${JSON.stringify(res)} · ao sair acaba: ${ends} · fora de casa não liga: ${outside}`);
+  ok('o8 a vista da sala: o olho num canto da sala, logo abaixo do teto, a sala inteira e nada de céu; de volta; o rumo e a inclinação do jogador intactos; sai, acaba; fora, não liga', fine && res.length >= 3 && ends && outside, `${JSON.stringify(res)} · ao sair acaba: ${ends} · fora de casa não liga: ${outside}`);
 }
 
 // ================================ o9: a lente pela tela ================================
