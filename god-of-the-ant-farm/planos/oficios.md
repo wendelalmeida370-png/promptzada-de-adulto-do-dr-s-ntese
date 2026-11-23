@@ -167,7 +167,7 @@ barbeiro) · e **os seis do saber** ([`saber.md`](saber.md), aprovados em 20/11/
 **auriga** · **atleta**
 
 **O poder (7):** ★ [quem governa](oficio-governante.md) (o rei, o cônsul, o imperador, o porta-voz… — inclui o nobre) ·
-**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) (inclui o advogado) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador** · **fiscal** (o fiscal do mercado, a alfândega do porto, o cobrador; o
+**conselheiro** (inclui o cortesão) · ★ [juiz](oficio-juiz.md) (inclui o advogado) · ★ [carrasco](oficio-carrasco.md) (a mão da sentença; inclui o açoite e o lado de curandeiro) · **embaixador** · **agitador** · ★ [fiscal](oficio-fiscal.md) (o fiscal do mercado, a alfândega do porto, o cobrador; o
 primeiro chamado ao censo — o jogo de anomalia: a verdade do mundo contra o declarado; aprovado em 21/11/2026, [`saber.md`](saber.md) §14b)
 
 **As condições (13):** ★ [galeote](condicao-escravo-gale.md) · escravo da mina · gladiador escravo · cativo e preso · servo ·

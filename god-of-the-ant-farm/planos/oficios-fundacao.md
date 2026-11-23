@@ -239,8 +239,8 @@ conferência** (20/11/2026, os 18 documentos de hoje):
   caçador (a Matilha que vira caçada), quem governa (Ungir, o Mandamento, a Profecia), o juiz (o juízo de deus: o deus sabe a
   verdade), o carrasco (o sinal que é perdão), o saqueador (a maldição do túmulo que pode ser de verdade), o bardo (o milagre cantado
   espalha a fé);
-- **sem (nada pertinente):** o estivador, o capataz (a Libertação da galé já está do lado do galeote), o taverneiro, o arqueólogo e
-  o caçador de tesouros.
+- **sem (nada pertinente):** o estivador, o capataz (a Libertação da galé já está do lado do galeote), o taverneiro, o arqueólogo,
+  o caçador de tesouros e o fiscal (um jogo de gente contra gente).
 
 ### 2.15 A tabela dos ofícios (feita pelo código — aprovado, 20/11/2026)
 

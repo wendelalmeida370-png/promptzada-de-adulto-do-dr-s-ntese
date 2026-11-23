@@ -57,6 +57,7 @@ escalada, a montanha e o mundo grande.
 | 43 | **O que se vê de cada saber; o teto; as eras** | **toda descoberta com o que se vê** (o guindaste no cais, a foice na mão, o arado pesado no campo, a bússola na mão do piloto — nas duas vistas; a ruína do saber perdido); o teto do saber antigo na beira da pólvora; **as eras do jogo** — a ideia do dono para muito depois (a pólvora e a imprensa, as máquinas, a eletricidade, a informação, o futuro que sai das escolhas) | [`saber.md`](saber.md) §4b, [`eras.md`](eras.md) |
 | 44 | **Quem faz o que as descobertas trazem** | o censo não é ofício: **o censor é um cargo** (quem governa nomeia, ou o povo vota) e **os recenseadores, uma função do mundo** (chamados entre quem lê, por dias, pagos pela diária); **os cargos novos** (o fiscal do mercado, o curador das águas, o mestre do correio, o bibliotecário-mor, o astrólogo da corte, o guardião do calendário), as funções e as especialidades novas; **o correio vira ofício** (21/11/2026); **o censo como jogo** (a verdade do mundo contra o declarado, as mentiras com causa, as escolhas, a conferência — uma máquina que serve também ao cobrador, ao fiscal e à alfândega) | [`saber.md`](saber.md) §14b, [`oficios.md`](oficios.md) §6 |
 | 45 | **O fiscal e quem é quem no censo** | **o fiscal vira o 85.º ofício** — o jogo de anomalia todo dia, em três lugares (o mercado, a alfândega do porto, a cobrança), contra o mercador desonesto, o contrabandista e o falsificador; **o censor é o cargo** de quem chefia o censo e **os recenseadores, a função** dos dias do censo (os fiscais os primeiros chamados) | [`saber.md`](saber.md) §14b |
+| 46 | **O fiscal** (o documento) | o jogo de anomalia por inteiro: a declaração contra a verdade do mundo, as pistas na coisa, no lugar, na pessoa, nos outros e nos papéis; o mercado, a alfândega, a cobrança e o censo; quem mente e por quê; a corrupção e a fama; o outro lado (o contrabandista contra a alfândega); o livro dos truques | [`oficio-fiscal.md`](oficio-fiscal.md) |
 
 ## 2. A lógica da ordem
 
@@ -152,6 +153,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | As vozes (as falas curtas e os murmúrios) | 27 (a captura do rosto, se o dono aprovar, no 27 ou com a 23c) |
 | As eras do jogo (a ideia para muito depois) | muito à frente (o dono estima o Patch 70 a 100); até lá, só o cuidado barato |
 | O saber (a base e as perícias) | Sa (antes da terra); os achados em cada patch das mãos; os ofícios no 38 |
+| O fiscal | 34 (a máquina, o mercado, a cobrança, a corrupção), 35 (a alfândega, com os navios por dentro), o censo com o saber |
 | A primeira hora | a faxina (a primeira medição), 27 (o começo refeito) e cada patch que mexer no começo |
 
 **Os que ainda não têm o seu documento a fundo** (para quando o dono quiser ler, na ordem que achar mais divertida): a terra, a

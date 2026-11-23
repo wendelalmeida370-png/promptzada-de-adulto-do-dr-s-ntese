@@ -102,6 +102,8 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 - [`saber.md`](saber.md) — o saber: a base da descoberta, da pesquisa e da técnica (quem descobriu, por que causa, onde mora, como
   se perde), o catálogo de 187 descobertas em seis eras, os grupos de pesquisa, as oito perícias novas, como o corpo
   descobre e os seis ofícios do saber.
+- [`oficio-fiscal.md`](oficio-fiscal.md) — o fiscal por inteiro (o jogo de anomalia: a verdade do mundo contra o declarado, o
+  mercado, a alfândega, a cobrança, o censo, a corrupção, o outro lado, o livro dos truques).
 - [`eras.md`](eras.md) — as eras do jogo: a ideia do dono para muito depois (os limiares, como se atravessa, o futuro que sai do
   passado, o que fazer agora sem desviar da era antiga).
 - `pdf/` — os planos em PDF para o dono ler.
