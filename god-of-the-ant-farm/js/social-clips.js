@@ -96,6 +96,19 @@
   c('ato-servir', 2, U, loopOf({ shRp: -62, shRr: -8, elR: 38, grip: 0.7, lean: 8, neck: 8 }, { shRp: -40, shRr: -6, elR: 60, lean: 4, neck: 4 }), { takes: ['serve'] });
   c('ato-vender', 3, U, loopOf({ shRp: -46, shRr: -34, elR: 50, grip: 0.1, shLp: -30, shLr: 10, elL: 60, talk: 0.6, twist: -8 }, { shRp: -54, shRr: -48, elR: 40, talk: 0.2, twist: -12 }, { shRp: -40, shRr: -20, elR: 60, talk: 0.7, twist: -4 }), { takes: ['sell'] });
   c('ato-contar', 4, U, loopOf({ shLp: -40, shRp: -40, shLr: 10, shRr: -10, elL: 70, elR: 70, talk: 0.6, neck: 4 }, { shLp: -56, shRp: -34, shLr: 24, shRr: -6, elL: 56, elR: 80, talk: 0.2, neck: 0 }, { shLp: -34, shRp: -56, shLr: 6, shRr: -24, elL: 80, elR: 56, talk: 0.7, neck: 6 }), { base: 'sit', feet: 'free', acts: ['story'] });
+  // (P6, D-752: the word at the table and at home, seated — the top only, over the seat: the right hand up from the lap, open and
+  // turning as the sentence goes, the left out with it now and then, the head nodding and turned a little to the one spoken to, the
+  // trunk leaning in; the mouth the talk's. The others at the table listen — soc-ouvir —, turned to the one who speaks)
+  c('soc-conversa-sentado', 4.2, U, loopOf(
+    { shRp: -40, shRr: -14, elR: 82, shRy: 12, grip: 0.1, shLp: -26, shLr: 10, elL: 60, gripL: 0.15, neck: 4, headR: 4, talk: 0.65, lean: 8, twist: -6 },
+    { shRp: -54, shRr: -26, elR: 70, shRy: 26, neck: 8, headR: 8, talk: 0.25, lean: 10, twist: -10 },
+    { shRp: -36, shRr: -8, elR: 90, shLp: -42, shLr: 22, elL: 58, shRy: 6, neck: 2, headR: -2, talk: 0.7, lean: 6, twist: 4 },
+    { shRp: -46, shRr: -18, elR: 74, shLp: -26, shLr: 10, elL: 62, shRy: 14, neck: 10, headR: 6, talk: 0.3, lean: 9, twist: -4 }), { in: 0.45, out: 0.5 });
+  // (the song with an instrument in the hands, seated — the instrument the inventory's, never mimed: P7's; the left hand up its neck,
+  // the right strumming at its belly, the head bent to the strings, a sway)
+  c('tocar-sentado', 1.2, U, loopOf(
+    { shLp: -52, shLr: 6, elL: 74, gripL: 0.8, shRp: -29, shRr: -9, elR: 70, grip: 0.6, neck: 9, lean: 4, twist: -3 },
+    { shLp: -52, shLr: 6, elL: 74, shRp: -31, shRr: -9, elR: 86, neck: 11, lean: 5, twist: 3 }), { item: { hand: 'mao', two: true }, noMirror: true });
   // (the child at play between two runs: the arms swinging loose, the head turning to the others, a little hop of the shoulders)
   c('brincar', 1.4, U, loopOf({ shLp: -30, shRp: 20, shLr: 24, shRr: -24, elL: 40, elR: 30, lean: -4, neck: -8, lookY: -16, twist: 10 }, { shLp: 20, shRp: -30, shLr: 24, shRr: -24, elL: 30, elR: 40, lean: 2, neck: -4, lookY: 16, twist: -10 }));
   // ============================== the society's own acts, posed alone for now ==============================

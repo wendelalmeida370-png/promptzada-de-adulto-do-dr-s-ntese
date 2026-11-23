@@ -269,7 +269,9 @@
   // what someone holds: { form, grip, kg, tint, n, hands, size } — or null. From the world's record only (the load, its marks,
   // the gear, the people's ways); the same load always the same thing
   P3.held = function (v, civ) {
-    const c = v.carry && v.carry.n > 0 ? v.carry : null; const gear = !c && v.gear ? v.gear : null;
+    // (the round the tavern served at the table is in its cup and its bowl — the cup the inventory's, in the hand that drinks —, never a
+    // load set down by the seat: the basket of food drawn on the floor of the tavern by each one who drank, D-751)
+    const c = v.carry && v.carry.n > 0 && !(v.task && v.task.type === 'tavern' && v.carry.op && v.carry.op === v.task.op) ? v.carry : null; const gear = !c && v.gear ? v.gear : null;
     if (!c && !gear) return null;
     const key = c ? c : gear; const m = heldMemo.get(v.id);
     if (m && m.key === key && m.n === (c ? c.n : 0) && m.civ === civ) return m.out;
@@ -1370,6 +1372,199 @@
   }
   const DV = {};
   P3.duoAim = duoAim; P3.keepChest = keepChest; // (for the tests)
+  // ------------------------------ the walk inside, by the plan (D-750 to D-753) ------------------------------
+  // Who the world has inside a building drawn open is drawn getting there on foot, by the plan: in by the door — from where the
+  // view had them in the street, to the point before the door, through the doorway, along the plan's walk from the door
+  // (Interiors.pathIn) to the place —, from one place to another round the furniture (the walk of the plan's cells for a body,
+  // Interiors.passable), out by the door the same way back and on along the world's way at a brisk walk until the drawn place is
+  // the world's again (Anim.trackSeed). Who goes into a building not drawn open is drawn walking to its door and through it; who
+  // comes out of one steps out of its doorway. The way is the view's memory of each one (s.way: its points in the world's
+  // metres with the floor under them, the building and the plan it was made on), made when the world's place changes and walked
+  // at the person's own pace (v.speed, in the body's time: Space.TIME) — never through a piece, a wall or the eye's corner of
+  // the street; a way whose building or plan is gone is given up (the world's place drawn as it is: a jump). Only seen: the
+  // plan's walk is read, nothing is written — the world is the same with it and without it (qa/dentro-gente.js)
+  const INB = new Map(); // (id → [the building not drawn open they were inside of, the frame]: who comes out of it steps out of its doorway)
+  G.worldHooks.push(() => INB.clear());
+  P3.ways = { made: 0, straight: 0, gone: 0 }; // (for the proofs: the ways made, those with no walk of the plan — a straight line —, those given up)
+  const lotY = (p, fy, lv) => { const l = p && p.levels ? p.levels.find(q => q.lv === lv) : null; return fy + (l ? l.y : 0); };
+  // (the door as the walk takes it: O the point before it in the street — the world's own, Interiors.door —, E inside the doorway
+  // — the entrance of the plan, or of its shell for one not drawn open —, each with the floor under it; null where there is none)
+  function doorWay(b, p, fy) {
+    const In = G.Interiors, TL = G.Space.TILE; if (!In || !In.door) return null;
+    const sh = p || (In.shellOf ? In.shellOf(b) : null); const e = sh && sh.entrance; if (!e) return null;
+    const d = In.door(b); if (!d) return null; const f = fy !== undefined ? fy : G.Space.plinth(b).y0 + 0.012;
+    const OX = d[0] * TL, OZ = d[1] * TL; return { O: [OX, OZ, npcFloor(OX, OZ), -1], E: [b.x * TL + e.x, b.y * TL + e.z, lotY(sh, f, e.lv || 0), e.lv || 0], lv: e.lv || 0 };
+  }
+  // (a point of the lot — metres, its storey — in the world's metres with its floor)
+  const ptOf = (b, p, fy, x, z, lv) => [b.x * G.Space.TILE + x, b.y * G.Space.TILE + z, lotY(p, fy, lv), lv];
+  const inLot = (b, X, Z) => { const TL = G.Space.TILE; return X > b.x * TL && Z > b.y * TL && X < (b.x + b.w) * TL && Z < (b.y + b.h) * TL; };
+  // the walk of the plan's cells between two points of one storey (lot metres): the cells a body passes (Interiors.passable: the
+  // plan's own rule for its walk), the eight neighbours — never across a corner —, then pulled straight where the floor between two
+  // of its points is open; [[x, z]…] from a to c, or null where c is not reached. A search of the view, made when a place changes
+  const GW = { n: 0 };
+  function cellWay(p, lv, a, c) {
+    const In = G.Interiors, CS = In.CS, n = p.grid.n; if (!p.grid.lv[lv]) return null;
+    const pass = (x, z) => In.passable(p, lv, x, z);
+    const near = (x, z) => { const cx = Math.floor(x / CS), cz = Math.floor(z / CS); if (pass(cx, cz)) return cz * n + cx; let best = -1, bd = 1e9;
+      for (let r = 1; r <= 4 && best < 0; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const X = cx + dx, Z = cz + dz; if (!pass(X, Z)) continue; const d = Math.hypot((X + 0.5) * CS - x, (Z + 0.5) * CS - z); if (d < bd) { bd = d; best = Z * n + X; } }
+      return best; };
+    const s0 = near(a[0], a[1]), t0 = near(c[0], c[1]); if (s0 < 0 || t0 < 0) return null;
+    if (GW.n !== n) { GW.n = n; GW.g = new Float64Array(n * n); GW.from = new Int32Array(n * n); GW.seen = new Uint8Array(n * n); }
+    const g = GW.g, from = GW.from, seen = GW.seen; g.fill(Infinity); from.fill(-1); seen.fill(0);
+    const tx = t0 % n, tz = (t0 - tx) / n; const hh = k => { const x = k % n, z = (k - x) / n, dx = Math.abs(x - tx), dz = Math.abs(z - tz); return (Math.max(dx, dz) + 0.4142 * Math.min(dx, dz)) * CS; };
+    const H = [], HF = []; const push = (k, f) => { H.push(k); HF.push(f); let i = H.length - 1; while (i) { const j = (i - 1) >> 1; if (HF[j] <= HF[i]) break; [H[i], H[j]] = [H[j], H[i]]; [HF[i], HF[j]] = [HF[j], HF[i]]; i = j; } };
+    const pop = () => { const k = H[0], lk = H.pop(), lf = HF.pop(); if (H.length) { H[0] = lk; HF[0] = lf; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < H.length && HF[l] < HF[m]) m = l; if (r < H.length && HF[r] < HF[m]) m = r; if (m === i) break; [H[i], H[m]] = [H[m], H[i]]; [HF[i], HF[m]] = [HF[m], HF[i]]; i = m; } } return k; };
+    g[s0] = 0; push(s0, hh(s0)); let found = false, guard = 0;
+    while (H.length && guard++ < n * n * 2) {
+      const k = pop(); if (seen[k]) continue; seen[k] = 1; if (k === t0) { found = true; break; }
+      const x = k % n, z = (k - x) / n;
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dz) continue; const X = x + dx, Z = z + dz; if (!pass(X, Z) || (dx && dz && (!pass(x + dx, z) || !pass(x, z + dz)))) continue;
+        const j = Z * n + X, gj = g[k] + (dx && dz ? Math.SQRT2 : 1) * CS; if (gj < g[j]) { g[j] = gj; from[j] = k; push(j, gj + hh(j)); } }
+    }
+    if (!found) return null;
+    const cells = []; for (let k = t0, q = 0; k >= 0 && q < n * n; k = from[k], q++) cells.push(k); cells.reverse();
+    const pts = cells.map(k => [((k % n) + 0.5) * CS, (Math.floor(k / n) + 0.5) * CS]);
+    // (pulled straight: from each point, the farthest the floor between is open to — the plan's own test of a line, a tenth of a metre at a time)
+    const clear = (u, w) => { const d = Math.hypot(w[0] - u[0], w[1] - u[1]); const m = Math.max(1, Math.ceil(d / 0.1)); for (let i = 0; i <= m; i++) { const x = u[0] + (w[0] - u[0]) * i / m, z = u[1] + (w[1] - u[1]) * i / m; if (!pass(Math.floor(x / CS), Math.floor(z / CS))) return false; } return true; };
+    const out = [[a[0], a[1]]]; let i = 0; const all = [[a[0], a[1]], ...pts, [c[0], c[1]]];
+    while (i < all.length - 1) { let j = all.length - 1; while (j > i + 1 && !clear(all[i], all[j])) j--; out.push(all[j]); i = j; }
+    return out;
+  }
+  // (where one stands at a place to get onto it: the plan's walk to it ends there — its last point but the place on a piece)
+  const onPiece = q => !!(q && q.it && (q.it.spots[q.q] || {}).on);
+  // (on a piece, the plan's own point nearest the place — Interiors.standFor: one gets onto a bench by the seat, not along it —; a place
+  // one stands at, itself)
+  function standOf(b, q) { if (!onPiece(q)) return [q.x, q.z, q.lv]; const a = G.Interiors.standFor ? G.Interiors.standFor(b, q, q.x, q.z) : null; return a ? [a[0], a[1], q.lv] : null; }
+  // (from a point of the street to another, round the building's lot where the straight line would cross it: by the lot's corners
+  // half a metre out, the shorter way round — the world walks people to a door from the side of a building, and puts them in from
+  // there)
+  function around(b, A, B, out) {
+    const TL = G.Space.TILE, m = 0.15; const R = [b.x * TL - m, b.y * TL - m, (b.x + b.w) * TL + m, (b.y + b.h) * TL + m];
+    const cuts = (a, c) => { let t0 = 0, t1 = 1; const dx = c[0] - a[0], dz = c[1] - a[1];
+      for (const [p, q] of [[-dx, a[0] - R[0]], [dx, R[2] - a[0]], [-dz, a[1] - R[1]], [dz, R[3] - a[1]]]) { if (Math.abs(p) < 1e-9) { if (q < 0) return false; continue; } const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } }
+      return t1 - t0 > 1e-6; };
+    if (!cuts(A, B)) return;
+    const o = 0.5, K = [[R[0] - o, R[1] - o], [R[2] + o, R[1] - o], [R[2] + o, R[3] + o], [R[0] - o, R[3] + o]];
+    // (the shortest way over A, the four corners and B where no leg crosses the lot: six points, a few legs)
+    const N = [A, ...K, B], D = new Array(6).fill(Infinity), F = new Array(6).fill(-1), done = new Array(6).fill(false); D[0] = 0;
+    for (let it = 0; it < 6; it++) { let u = -1; for (let k = 0; k < 6; k++) if (!done[k] && (u < 0 || D[k] < D[u])) u = k; if (u < 0 || D[u] === Infinity) break; done[u] = true;
+      for (let k = 0; k < 6; k++) { if (done[k] || cuts(N[u], N[k])) continue; const d = D[u] + Math.hypot(N[k][0] - N[u][0], N[k][1] - N[u][1]); if (d < D[k]) { D[k] = d; F[k] = u; } } }
+    if (D[5] === Infinity) return; const via = []; for (let k = F[5]; k > 0; k = F[k]) via.unshift(K[k - 1]);
+    for (const q of via) out.push([q[0], q[1], npcFloor(q[0], q[1]), -1]);
+  }
+  // the way to a place of a building drawn open (pl: the openPlace answer) from where one is drawn: from the street — round the lot,
+  // the point before the door, the doorway, the plan's walk from the door (Interiors.pathIn) —; from inside the lot — off the piece
+  // one is at, by the cells to where one gets onto the new one (the plan's rule for a body), onto it; between two storeys, the plan's
+  // walk of each down to the door's storey and up —
+  function wayTo(s, pl) {
+    const In = G.Interiors, b = pl.b, p = pl.p, TL = G.Space.TILE; const pts = [[s.X, s.Z, s.Y !== undefined ? s.Y : pl.Y, s.wlv]];
+    const D = doorWay(b, p, pl.fy); if (!D) return null;
+    if (!inLot(b, s.X, s.Z)) {
+      around(b, [s.X, s.Z], D.O, pts); if (Math.hypot(pts[pts.length - 1][0] - D.O[0], pts[pts.length - 1][1] - D.O[1]) > 0.25) pts.push(D.O); pts.push(D.E);
+      const P = In.pathIn(b, pl.q), on = onPiece(pl.q); const L = P ? (on ? P.pts.slice(1, -1) : P.pts.slice(1)) : null;
+      if (L && L.length) { for (const q of L) pts.push(ptOf(b, p, pl.fy, q[0], q[1], q[2])); const e = L[L.length - 1], st = on ? standOf(b, pl.q) : null;
+        if (st && e[2] === st[2] && Math.hypot(st[0] - e[0], st[1] - e[1]) > 0.3) { const c = cellWay(p, st[2], [e[0], e[1]], [st[0], st[1]]); if (c) for (const q of c.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], st[2])); } }
+      else P3.ways.straight++;
+      pts.push([pl.X, pl.Z, pl.Y, pl.lv, on ? 'sit' : '']); return { kind: 'in', b, p, pts: mend(b, p, pl.fy, clean(pts)) };
+    }
+    let fromLv = s.wlv !== undefined && s.wlv >= 0 ? s.wlv : D.lv, from = [s.X - b.x * TL, s.Z - b.y * TL];
+    if (s.wAt && s.wq && s.wq.b === b) { const st = standOf(b, s.wq); if (st) { from = [st[0], st[1]]; fromLv = s.wq.lv; pts.push(ptOf(b, p, pl.fy, st[0], st[1], fromLv).concat(onPiece(s.wq) ? 'rise' : '')); } }
+    const to = standOf(b, pl.q) || [pl.q.x, pl.q.z, pl.lv]; if (Math.hypot(to[0] - from[0], to[1] - from[1]) < 1e-3 && pts.length > 1) pts[pts.length - 1][4] = '';
+    if (fromLv === pl.lv) { const c = cellWay(p, pl.lv, from, [to[0], to[1]]); if (c) for (const q of c.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], pl.lv)); else { P3.ways.straight++; pts.push(ptOf(b, p, pl.fy, to[0], to[1], pl.lv)); } }
+    else if (p.stairs && p.stairs.some(st => st.kind !== 'degraus' && ((st.lv0 === fromLv && st.lv1 === pl.lv) || (st.lv1 === fromLv && st.lv0 === pl.lv)))) {
+      // (from another storey by a flight between the two: by the cells to its end on this storey, up or down it, by the cells to the place)
+      const st = p.stairs.find(q => q.kind !== 'degraus' && ((q.lv0 === fromLv && q.lv1 === pl.lv) || (q.lv1 === fromLv && q.lv0 === pl.lv)));
+      const up = st.lv0 === fromLv, A = up ? st.a : st.b, B = up ? st.b : st.a;
+      const c1 = cellWay(p, fromLv, from, [A[0], A[1]]); if (c1) for (const q of c1.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], fromLv)); else { P3.ways.straight++; pts.push(ptOf(b, p, pl.fy, A[0], A[1], fromLv)); }
+      pts.push(ptOf(b, p, pl.fy, B[0], B[1], pl.lv));
+      const c2 = cellWay(p, pl.lv, [B[0], B[1]], [to[0], to[1]]); if (c2) for (const q of c2.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], pl.lv)); else { P3.ways.straight++; pts.push(ptOf(b, p, pl.fy, to[0], to[1], pl.lv)); }
+    }
+    else {
+      // (from another storey with no flight between the two: down the plan's walk of the place one left — or straight to the doorway —,
+      // and up the new one's)
+      const A = s.wq && s.wq.b === b && s.wq.lv === fromLv ? In.pathIn(b, s.wq) : null, B = In.pathIn(b, pl.q);
+      if (A) for (const q of A.pts.slice(0, -1).reverse()) pts.push(ptOf(b, p, pl.fy, q[0], q[1], q[2])); else { P3.ways.straight++; pts.push(D.E); }
+      if (B) for (const q of B.pts.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], q[2])); else P3.ways.straight++;
+    }
+    pts.push([pl.X, pl.Z, pl.Y, pl.lv, onPiece(pl.q) ? 'sit' : '']); return { kind: 'move', b, p, pts: mend(b, p, pl.fy, clean(pts)) };
+  }
+  // the way out of a building drawn open, by its door: off the place one is at, the plan's walk back to the doorway — or from where
+  // one is drawn by the cells —, the point before the door; then the world's way since (w.hist), caught up
+  function wayOut(s, v, b, p, fy) {
+    const In = G.Interiors, TL = G.Space.TILE; const D = doorWay(b, p, fy); if (!D) return null; const pts = [[s.X, s.Z, s.Y]];
+    const at = s.wAt && s.wq && s.wq.b === b; let from = [s.X - b.x * TL, s.Z - b.y * TL], lv = s.wlv !== undefined && s.wlv >= 0 ? s.wlv : D.lv;
+    if (at && onPiece(s.wq)) { const st = standOf(b, s.wq); if (st) { from = [st[0], st[1]]; lv = st[2]; pts.push(ptOf(b, p, fy, st[0], st[1], lv).concat('rise')); } } else if (at) lv = s.wq.lv;
+    // (from another storey by a flight down to the door's: by the cells to its end, down it, then on the door's storey)
+    const st = lv !== D.lv && p.stairs ? p.stairs.find(q => q.kind !== 'degraus' && ((q.lv0 === lv && q.lv1 === D.lv) || (q.lv1 === lv && q.lv0 === D.lv))) : null;
+    if (st) { const A = st.lv0 === lv ? st.a : st.b, B = st.lv0 === lv ? st.b : st.a; const c1 = cellWay(p, lv, from, [A[0], A[1]]); if (c1) for (const q of c1.slice(1)) pts.push(ptOf(b, p, fy, q[0], q[1], lv)); else pts.push(ptOf(b, p, fy, A[0], A[1], lv)); pts.push(ptOf(b, p, fy, B[0], B[1], D.lv)); from = [B[0], B[1]]; lv = D.lv; }
+    const c = lv === D.lv ? cellWay(p, D.lv, from, [D.E[0] - b.x * TL, D.E[1] - b.y * TL]) : null;
+    if (c) for (const q of c.slice(1)) pts.push(ptOf(b, p, fy, q[0], q[1], D.lv));
+    else { const P = at ? In.pathIn(b, s.wq) : null; if (P) for (const q of P.pts.slice(0, onPiece(s.wq) ? -2 : -1).reverse()) pts.push(ptOf(b, p, fy, q[0], q[1], q[2])); else { P3.ways.straight++; pts.push(D.E); } }
+    pts.push(D.O); return { kind: 'out', b, p, pts: mend(b, p, fy, clean(pts)), hist: [[D.O[0], D.O[1]]] };
+  }
+  // (into a building not drawn open: to its door and through it — then not drawn; out of one: out of its doorway to the street)
+  function wayDoor(s, b) { const D = doorWay(b, null); if (!D) return null; const pts = [[s.X, s.Z, s.Y]]; around(b, [s.X, s.Z], D.O, pts); if (Math.hypot(pts[pts.length - 1][0] - D.O[0], pts[pts.length - 1][1] - D.O[1]) > 0.25) pts.push(D.O); pts.push(D.E); return { kind: 'door', b, p: null, pts: clean(pts) }; }
+  // (a way's points with no two at one place)
+  // (a leg of a way between two points of one storey that would cross a wall or a piece — the plan's walk begins at any cell within a
+  // pace of the door, round a corner of its wall too —: walked by the cells instead; the steps onto a seat and off it are the seat's)
+  const BLOCK = new Set([2, 3, 4, 7]); // (Interiors.CELL: WALL, SOLID, LOW, VOID)
+  function openLine(p, lv, a, c) { const CS = G.Interiors.CS, g = p.grid.lv[lv], n = p.grid.n; if (!g) return true; const d = Math.hypot(c[0] - a[0], c[1] - a[1]); const m = Math.max(1, Math.ceil(d / 0.08));
+    for (let i = 1; i < m; i++) { const x = Math.floor((a[0] + (c[0] - a[0]) * i / m) / CS), z = Math.floor((a[1] + (c[1] - a[1]) * i / m) / CS); if (x >= 0 && z >= 0 && x < n && z < n && BLOCK.has(g[z * n + x])) return false; } return true; }
+  function mend(b, p, fy, pts) {
+    if (!p || !p.grid) return pts; const TL = G.Space.TILE, out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], c = pts[i]; const lv = a[3];
+      if (!(lv >= 0) || c[3] !== lv || c[4] === 'sit' || c[4] === 'rise' || a[4] === 'sit') { out.push(c); continue; }
+      const A = [a[0] - b.x * TL, a[1] - b.y * TL], C = [c[0] - b.x * TL, c[1] - b.y * TL];
+      if (!openLine(p, lv, A, C)) { const w = cellWay(p, lv, A, C); if (w) for (const q of w.slice(1, -1)) out.push(ptOf(b, p, fy, q[0], q[1], lv)); else P3.ways.straight++; }
+      out.push(c);
+    }
+    return out;
+  }
+  P3.openLine = openLine; // (for the proofs: the same test of a leg)
+  const clean = pts => { const out = []; for (const q of pts) { const l = out[out.length - 1]; if (l && Math.hypot(q[0] - l[0], q[1] - l[1]) <= 1e-3 && out.length > 1) out[out.length - 1] = q; else if (!l || Math.hypot(q[0] - l[0], q[1] - l[1]) > 1e-3 || Math.abs(q[2] - l[2]) > 1e-3) out.push(q); } return out; };
+  // each frame, before the drawn place is moved: the way begun where the world's place changed (in, out, another place, a door
+  // not drawn open), walked, ended — true while the view walks one (the drawn place, its speed, the floor under it: s.wayY)
+  function wayStep(s, v, pl, dt) {
+    const ib = v.inside > 0 ? v.inside : 0, S = G.S; let w = s.way;
+    // (a way whose building is gone, or whose plan is another now — a fire, a rebuilding —: given up, the world's place a jump)
+    if (w && (!S.buildings.has(w.b.id) || (w.p && G.Space.planMade && G.Space.planMade(w.b) !== w.p))) { w = s.way = null; s.snap = 1; P3.ways.gone++; }
+    const mk = f => { const r = f(); if (r) { P3.ways.made++; r.d = 0; r.v = undefined; r.len = 0; } return r; };
+    if (pl) {
+      if (s.wb !== ib || s.wk !== pl.k) w = s.way = mk(() => wayTo(s, pl));
+      if (s.wb !== ib || s.wk !== pl.k) { s.wb = ib; s.wk = pl.k; s.wq = pl.q; s.wAt = false; }
+      if (!w && !s.wAt) { s.wAt = true; s.wlv = pl.lv; }
+    } else if (s.wb && (ib !== s.wb || !B3open(s.wb))) {
+      const b = S.buildings.get(s.wb); const p = b && G.Space.planMade ? G.Space.planMade(b) : null; const fy = b ? G.Space.plinth(b).y0 + 0.012 : 0;
+      w = s.way = b && p && ib !== s.wb ? mk(() => wayOut(s, v, b, p, fy)) : null; s.wb = 0; s.wk = ''; s.wq = null; s.wAt = false;
+    } else if (ib && !w && !s.wb && !s.gone && !openSkyOf(ib)) { const b = S.buildings.get(ib); w = s.way = b ? mk(() => wayDoor(s, b)) : null; }
+    if (!w) { s.waySeat = ''; return false; }
+    // (walked at the person's own pace in the body's time; the world's way out kept as it goes, for the catch-up)
+    const sp = Math.max(0.8, (v.speed || 1.35) * G.Space.TILE * G.Space.TIME);
+    if (w.hist) { const h = w.hist[w.hist.length - 1], X = v.x * G.Space.TILE, Z = v.y * G.Space.TILE; if (Math.hypot(X - h[0], Z - h[1]) > 0.12) { w.hist.push([X, Z]); if (w.hist.length > 60) w.hist = w.hist.filter((q, i) => i % 2 === 0 || i === w.hist.length - 1); } }
+    const more = Anim.walkWay(s, w, s.waySeat ? Math.min(sp, 0.7) : sp, dt); s.wayY = w.Y;
+    { let i = 0; while (i < w.pts.length - 2 && w.cum[i + 1] <= w.d) i++; const lv = w.pts[i][3]; if (lv !== undefined && lv >= 0) s.wlv = lv; s.waySeat = more ? w.pts[i + 1][4] || '' : ''; } // (the storey the drawn place is on; on the step onto a seat or off it: sat down, got up)
+    if (more) return true;
+    // (the way's end: at the place — the view's drawn place begun again there —; out of the door — on along the world's way since —;
+    // at a door not drawn open — not drawn any more)
+    s.way = null;
+    if (w.kind === 'out') Anim.trackSeed(s, w.hist.concat([[v.x * G.Space.TILE, v.y * G.Space.TILE]]), sp * 1.5);
+    else if (w.kind === 'door') s.gone = 1;
+    else { s.tr = null; s.wAt = true; s.wlv = pl ? pl.lv : s.wlv; }
+    return true;
+  }
+  // (one the world has brawling at their place stands up for it: on the floor where one stands to get onto the piece — the plan's
+  // own point, Interiors.standFor —, a place of its own for the walk; the seat again when the brawl is over, D-752)
+  const UPS = new Map(); G.worldHooks.push(() => UPS.clear());
+  function upOf(v, pl) {
+    if (!pl || v.sleeping || !pl.q || !pl.q.it) return pl; const a0 = Anim.stateOf(v, 0, null); if (!G.Vida3D.UP.has(a0) && !a0.startsWith('cb-')) return pl;
+    const key = pl.b.id + ':' + pl.k; let u = UPS.get(key);
+    if (!u) { const a = G.Interiors.standFor ? G.Interiors.standFor(pl.b, pl.q, pl.q.x, pl.q.z) : null; if (!a) return pl; const P = ptOf(pl.b, pl.p, pl.fy, a[0], a[1], pl.lv); u = { X: P[0], Z: P[1], Y: P[2] }; UPS.set(key, u); if (UPS.size > 400) UPS.delete(UPS.keys().next().value); }
+    return Object.assign({}, pl, { X: u.X, Z: u.Z, Y: u.Y, k: pl.k + '^', st: 'idle', q: Object.assign({}, pl.q, { it: null, x: u.X - pl.b.x * G.Space.TILE, z: u.Z - pl.b.y * G.Space.TILE }) });
+  }
+  const B3open = id => !!(G.Build3D && G.Build3D.isOpen && G.Build3D.isOpen(id));
+  const openSkyOf = id => !!(G.Build3D && G.Build3D.openShell && G.Build3D.openShell(id));
+  P3.wayOf = id => { const s = vis.get(id); return s && s.way ? { kind: s.way.kind, b: s.way.b.id, pts: s.way.pts.map(q => q.slice()), d: s.way.d, len: s.way.len } : null; }; // (for the proofs)
   const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
   const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
   const visAt = id => vis.get(id);
@@ -1418,8 +1613,12 @@
       let put = 0;
       for (const v of ins) {
         if ((v.x * TL - focus.X) ** 2 + (v.y * TL - focus.Z) ** 2 > cr * cr) continue;
-        const pl = placeOf(v); if (!pl && !openSky(v.inside)) continue;
-        const X = pl ? pl.X : v.x * TL, Z = pl ? pl.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
+        // (gone into a building not drawn open, the view drawing them out of doors the frame before: drawn on to its door and through
+        // it — the walk to the door, D-753; the others in one not drawn open, not drawn — kept a frame, for who comes out of it)
+        const pl = placeOf(v); const sv = vis.get(v.id);
+        const toDoor = !pl && !openSky(v.inside) && !!sv && !sv.gone && (sv.way ? sv.way.kind === 'door' : !sv.wb);
+        if (!pl && !openSky(v.inside) && !toDoor) { INB.set(v.id, [v.inside, frameNo]); continue; }
+        const X = pl ? pl.X : toDoor ? sv.X : v.x * TL, Z = pl ? pl.Z : toDoor ? sv.Z : v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
         const e = NEARP[near.length] || (NEARP[near.length] = [0, null]); e[0] = d2; e[1] = v; near.push(e); put++;
       }
       if (put) near.sort(byD2); }
@@ -1469,14 +1668,20 @@
     DRAWN.length = 0; for (let k = 0; k < n; k++) { const w = vis.get(near[k][1].id); if (w) { const e = DRAWNP[DRAWN.length] || (DRAWNP[DRAWN.length] = [0, 0, 0]); e[0] = w === undefined ? 0 : near[k][1].id; e[1] = w.X; e[2] = w.Z; DRAWN.push(e); } }
     for (let k = 0; k < n; k++) {
       const v = near[k][1]; seen.add(v.id);
-      let s = vis.get(v.id); const pl = placeOf(v);
+      let s = vis.get(v.id); const pl = upOf(v, placeOf(v));
       const Xw = pl ? pl.X : v.x * TL, Zw = pl ? pl.Z : v.y * TL; const swim = v.task && v.task.type === 'swim';
       // (each one's own clocks begun at their own place — the breath, the weight shifts, the gestures of no world's stroke —: two seen
       // first in the same frame never move in step, D-599)
-      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); s.an.ph = G.hash(v.id * 7 + 3); vis.set(v.id, s); }
+      if (!s) { s = { X: Xw, Z: Zw, Y: undefined, yaw: v.face > 0 ? 0 : Math.PI, yawV: 0, pose: POSE0(), t: G.hash(v.id * 3 + 1) * 60, sp: 0, acc: 0, st: 'idle', an: Anim.memory(), plant: [{ on: 0 }, { on: 0 }], L: {} }; s.an.ck = G.hash(v.id * 5 + 2); s.an.ph = G.hash(v.id * 7 + 3); vis.set(v.id, s);
+        // (where the view has them inside: the place it found them at; one just come out of a building not drawn open steps out of its
+        // doorway — the view had them inside it the frame before —, D-753)
+        s.wb = pl ? v.inside : 0; s.wk = pl ? pl.k : ''; s.wq = pl ? pl.q : null; s.wAt = !!pl; s.wlv = pl ? pl.lv : undefined;
+        const i0 = !v.inside && INB.get(v.id); const b0 = i0 && i0[1] === frameNo - 1 ? S.buildings.get(i0[0]) : null; const D0 = b0 ? doorWay(b0, null) : null;
+        if (D0 && Math.hypot(D0.O[0] - Xw, D0.O[1] - Zw) < 2.5) { s.X = D0.E[0]; s.Z = D0.E[1]; s.Y = D0.E[2]; s.way = { kind: 'out', b: b0, p: null, pts: [D0.E, D0.O], hist: [[D0.O[0], D0.O[1]]], d: 0, len: 0 }; P3.ways.made++; } }
       // (where the view draws them: where the world has them — the corner of their way rounded ahead, the start and the stop
-      // eased, a change of place inside walked: Anim.track, D-344)
-      const pX = s.X, pZ = s.Z; Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
+      // eased: Anim.track, D-344; inside a building drawn open, and in and out of one, on the plan's walk: the way, D-750)
+      const pX = s.X, pZ = s.Z; const wayOn = wayStep(s, v, pl, dt); if (!wayOn) Anim.track(s, v, Xw, Zw, !!pl, dt, TL); const X = s.X, Z = s.Z;
+      if (s.gone) continue; // (through the door of a building not drawn open: no more drawn)
       s.lod = lodAt(s.lod, (s.X - seenAt[0]) ** 2 + (s.Z - seenAt[1]) ** 2);
       // (far off — the last level of detail —, or out of the eye's field the last frame: the pose made again every second frame, or
       // every third farther than twice its edge or unseen, each one on their own beat by their id; between, the last pose goes along
@@ -1488,22 +1693,32 @@
       const fresh = beat === 1 || (frameNo + v.id) % beat === 0;
       // (the world walks them over a boulder's tile: the feet go up onto the stone and down again, a quick step — never through it;
       // inside, on the floor, the bed, the bench the plan has there)
-      const Yf = pl ? pl.Y : swim ? W.waterH(X / TL, Z / TL) * HM - 0.32 : fresh || s.Yf === undefined ? (s.Yf = npcFloor(X, Z)) : s.Yf;
-      if (s.Y === undefined || Math.abs(Yf - s.Y) > (pl ? 0.6 : 3)) { s.Y = Yf; if (pl) { s.snap = 1; Anim.track(s, v, Xw, Zw, true, dt, TL); } } else s.Y += (Yf - s.Y) * (1 - Math.exp(-14 * dt));
+      // (on the way inside, the floor under the feet along it — the doorway's step, the flight of a stair —: the way's, never a jump)
+      const Yf = wayOn ? s.wayY : pl ? pl.Y : swim ? W.waterH(X / TL, Z / TL) * HM - 0.32 : fresh || s.Yf === undefined ? (s.Yf = npcFloor(X, Z)) : s.Yf;
+      if (s.Y === undefined || (!wayOn && Math.abs(Yf - s.Y) > (pl ? 0.6 : 3))) { s.Y = Yf; if (pl) { s.snap = 1; Anim.track(s, v, Xw, Zw, true, dt, TL); } } else s.Y += (Yf - s.Y) * (1 - Math.exp(-14 * dt));
       const Y = s.Y + (v.z ? v.z * 0.22 : 0);
       // (a jump of the world — a teleport, a load — is not a step: the feet stand where they land)
       if (Math.hypot(s.X - pX, s.Z - pZ) > 3) { s.plant[0].on = s.plant[1].on = 0; s.plant[0].step = s.plant[1].step = null; }
-      Anim.face(s, v, pl && s.sp < 0.2 ? pl : null, dt);
+      // (at the place: the place's turn — or, standing up to brawl, turned to the other one)
+      const atPl = !!pl && !wayOn && s.sp < 0.2; const foeAt = atPl && s.ap && s.ap.up && s.ap.with ? visAt(s.ap.with) : null;
+      Anim.face(s, v, foeAt ? { yaw: Math.atan2(foeAt.Z - s.Z, foeAt.X - s.X) } : atPl || (wayOn && s.waySeat === 'sit' && pl) ? pl : null, dt);
       s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
       const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;
-      let st = pl && s.sp < 0.2 ? pl.st : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st;
+      // (at a place inside, the act over the place — the reader's Vida3D.atPlace, D-751: the cup to the lips over the seat, the round
+      // served at the counter, the song, the word at the table by turns, the brawl on one's feet —; on the way to it, the walk — asleep
+      // or not: one walks to a bed —; elsewhere the state of what they do)
+      let over = null, overK;
+      let st;
+      if (atPl) { if (fresh || !s.ap) s.ap = G.Vida3D.atPlace(v, pl, Lv, s.ap || {}); st = s.ap.st; over = s.ap.over; overK = s.ap.overK; }
+      else if (wayOn && s.waySeat) { if (s.ap) s.ap.with = 0; st = s.waySeat === 'sit' && pl ? pl.st : 'idle'; } // (onto the seat sitting down, off it getting up)
+      else { if (s.ap) s.ap.with = 0; st = wayOn && s.sp > 0.1 ? (v.sleeping ? 'walk' : Anim.stateOf(v, Math.max(0.3, s.sp), Lv)) : fresh || !s.st ? Anim.stateOf(v, s.sp, Lv) : s.st; }
       // (two in one gesture — the reader's Vida3D.duo, D-605: each one's part of the act and, in its window on the world's clock, the
-      // hands on the other; the place is the world's — never moved here —, and too far apart each one plays the act alone)
-      const du = pl ? null : fresh ? G.Vida3D.duo(s, v, visAt) : s.duOn ? s.du : null; s.duOn = !!du;
-      if (du && du.clip) st = du.clip;
+      // hands on the other; the place is the world's — never moved here —, and too far apart each one plays the act alone. Inside,
+      // at their places only — the cups raised over the table from the seats, D-751)
+      const du = pl && !atPl ? null : fresh ? G.Vida3D.duo(s, v, visAt) : s.duOn ? s.du : null; s.duOn = !!du;
+      if (du && du.clip) { if (atPl && G.Vida3D.SEATED.has(st) && G.Vida3D.upperOnly(Anim.CLIPS[du.clip])) { over = du.clip; overK = du.u; } else st = du.clip; }
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
       // of whoever walks: the prisoner's bound hands, the word said walking — the reader's, Vida3D.overOf)
-      let over = null;
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'talk') st = 'wave'; else if (st === 'walk') over = 'wave'; } }
       if (!over) over = G.Vida3D.overOf(v, st);
       // (one of two under one crate: the frame between them; the crate is the one ahead's, drawn once, by his rig — both hands
@@ -1511,7 +1726,7 @@
       Lv.pair = pr;
       if (pr) { Lv.torch = false; Lv.lantern = false; Lv.inv = NO_INV; if (pr.help === v.id) { Lv.held = null; Lv.carry = false; } }
       // (the load in the hands and the hands reaching: the view's own memory of the lift and the setting down — reachOf)
-      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim ? null : npcFloor; if (fresh) reachOf(s, v, Lv, s.X, Y, s.Z, dtA);
+      Lv.ground = swim || v.z > 0.05 ? undefined : Y; Lv.plant = s.plant; Lv.gnd = pl || swim || wayOn ? null : npcFloor; if (fresh) reachOf(s, v, Lv, s.X, Y, s.Z, dtA);
       // (and the drink, where the world has them drunk and on their feet: the additive stagger — inside, at their place, they sit)
       const dk = pl ? 0 : Lv.drunk || 0; s.dk = dk;
       Lv.lod = s.lod; Lv.duo = du && du.k > 0.001 ? duoAim(s, du, Y) : null;
@@ -1521,7 +1736,7 @@
         const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
-        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = undefined; I.clipK = du && du.clip ? du.u : clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
+        I.run = st === 'run' ? 1 : 0; I.walk = st === 'walk' || st === 'carryWalk' || st === 'sneak' ? 1 : 0; I.over = over; I.overK = overK; I.clipK = du && du.clip && st === du.clip ? du.u : clipClock(v, st); I.drunk = dk; I.tired = G.Vida3D.tired(v); I.id = v.id;
         // (the porte: the reader's, made again about twice a second — the years, the cold, the grief… —; the world's clock for its tremor and
         // its breath; the hand one leads with)
         I.porte = G.Vida3D.read(s, v, vt, DRAWN); I.clock = S.clock; I.lefty = G.Vida3D.lefty(v);

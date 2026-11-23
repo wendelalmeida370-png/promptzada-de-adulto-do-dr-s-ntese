@@ -81,6 +81,63 @@
     return 'idle';
   };
 
+  // ------------------------------ the act at a place inside (P6, D-751, D-752) ------------------------------
+  // Inside a building the place the world gives says how one is there — seated at the table, behind the counter, in bed, at the fire
+  // (Interiors.places: its st) — and the act says what one does there: the cup to the lips, the round served, the song, the meal,
+  // the word, the brawl. The reader puts the act over the place: the gesture of the act on the top of the body over the place's
+  // posture where the act's clip keys no leg (the drink, the serving, a word of the society's); standing at a place, the act's own
+  // gesture; the brawl stands one up (out of the seat, on the floor by it: up); the act that is the place's own, or a gesture with a
+  // thing in the hand the hand has not got (the cup, the instrument — G.Inv.held, never mimed), leaves the place alone. And the word
+  // at a table — at home where the world has the household talking (the errand 'lar' «conversar»), at the tavern's tables where
+  // the world has one waiting with others seated by them — goes round by turns: one speaks with the hands, the others listen,
+  // turned to them; the turn by the ids of the table and the world's clock, never a roll — the same table, from any eye, the same
+  // talk. Only reads (rule 213): out — { st, over, overK, up, with } —, kept in the view's memory
+  const SEATED = V3.SEATED = new Set(['sit', 'eat', 'rest', 'eatg', 'rock', 'rockg']);
+  const UP = V3.UP = new Set(['fight', 'dance', 'cb-guarda-punho', 'cb-guarda-arma', 'cb-guarda-duas', 'cb-guarda-escudo']);
+  let LEGSET = null; const upperOnly = C => { LEGSET = LEGSET || new Set(Anim.LEGS || []); for (const j of C.ch) if (LEGSET.has(j)) return false; return true; };
+  V3.upperOnly = upperOnly;
+  // (an instrument in the hands: a thing of the catalogue that is played — its tag 'tocar' —, the inventory's)
+  V3.plays = L => { const I = G.Itens, h = L && L.inv; return !!(I && h && ((h.mao && I.has(h.mao, 'tocar')) || (h.outra && I.has(h.outra, 'tocar')))); };
+  const TALK_T = 3.6; // (the world's seconds one speaks before the turn may pass)
+  V3.atPlace = function (v, pl, L, out) {
+    const r = out || {}; r.st = pl.st; r.over = null; r.overK = undefined; r.up = false; r.with = 0;
+    if (v.sleeping || !has(pl.st)) return r;
+    const base = pl.st, seat = SEATED.has(base);
+    let a = Anim.stateOf(v, 0, L);
+    // (the song of a full room: the instrument in the hands — seated or standing —, or, with none in them, the song sung)
+    if (v.act === 'play') a = V3.plays(L) ? (seat && has('tocar-sentado') ? 'tocar-sentado' : 'strum') : 'ato-atuar';
+    let C = Anim.CLIPS && Anim.CLIPS[a];
+    // (the brawl with nothing in the hand is the fists' — a weapon only where the inventory puts one there)
+    if (v.act === 'fight' && C && C.item && !(L && L.inv && L.inv.mao) && has('cb-guarda-punho')) { a = 'cb-guarda-punho'; C = Anim.CLIPS[a]; }
+    if (C && C.item && !(L && L.inv && L.inv[C.item.hand === 'outra' ? 'outra' : 'mao'])) { a = base; C = null; } // (never mimed)
+    if (UP.has(a) || a.startsWith('cb-')) { r.st = a; r.up = true; r.with = foe(v); return r; } // (the fight's gestures — the combat's own, cb-: on one's feet)
+    if (a !== base && a !== 'idle' && a !== 'sit' && C && upperOnly(C)) {
+      if (seat) { r.over = a; r.overK = C.loop ? ((v.actT || 0) / C.dur) % 1 : Math.min(1, (v.actT || 0) / C.dur); } else r.st = a;
+      return r;
+    }
+    if (a !== base && a !== 'idle' && a !== 'sit' && !seat && has(a)) { r.st = a; return r; }
+    // (the word at the table, by turns)
+    if (seat) { const t = talkAt(v, pl); if (t) { r.with = t.speaker === v.id ? t.to : t.speaker; r.over = t.speaker === v.id ? 'soc-conversa-sentado' : 'soc-ouvir'; if (!has(r.over)) r.over = null; } }
+    return r;
+  };
+  // (whom one brawls with: another of the same building in the brawl, the nearest place — the world's pair is the tavern's own)
+  function foe(v) { const In = G.Interiors; if (!In || !v.inside) return 0; let best = 0, bd = 1e9; const me = In.placeOf(v);
+    for (const o of G.S.villagers.values()) { if (o === v || o.inside !== v.inside || o.act !== 'fight') continue; const q = In.placeOf(o); const d = me && q ? Math.hypot(q.x - me.x, q.z - me.z) : 0; if (d < bd) { bd = d; best = o.id; } } return best; }
+  // (the talk at a table: who of the same building sits within reach of this place — the world's places, Interiors.placeOf —, the
+  // household talking at home or those waiting at the tavern's tables; the one who speaks now, by the turn)
+  const TALKS = t => !!t && ((t.type === 'lar' && t.what === 'conversar') || (t.type === 'tavern' && t.st === 2));
+  function talkAt(v, pl) {
+    const In = G.Interiors; if (!In || !v.inside || !TALKS(v.task) || !pl.q) return null;
+    const P = In.places(G.S.buildings.get(v.inside)); if (!P || !P.by) return null;
+    const ids = [v.id];
+    for (const [id, q] of P.by) { if (id === v.id || q.lv !== pl.q.lv || Math.hypot(q.x - pl.q.x, q.z - pl.q.z) > 1.9) continue; const o = G.S.villagers.get(id); if (!o || o.sleeping || !TALKS(o.task) || !SEATED.has(q.st)) continue; ids.push(id); }
+    if (ids.length < 2) return null; ids.sort((a, b) => a - b);
+    const k = Math.floor((G.S.clock || 0) / TALK_T); const sp = ids[Math.floor(G.hash(ids[0] * 7919 + ids.length * 31 + k * 977) * ids.length) % ids.length];
+    // (the one spoken to: the speaker's neighbour at the table, by the turn too)
+    const rest = ids.filter(id => id !== sp); const to = rest[Math.floor(G.hash(sp * 131 + k * 17) * rest.length) % rest.length];
+    return { speaker: sp, to };
+  }
+
   // ------------------------------ the act over the stride ------------------------------
   // what the top of someone walking shows of their act (I.over: a clip of the arms or the top, over the stride — the layer the
   // greeting's wave uses): the prisoner led with the hands bound, the word said walking (OVER_OF: the act → its walking clip)
@@ -279,6 +336,8 @@
   // are with, where the view draws them (at: id → { X, Z }); else ahead
   V3.look = function (s, v, av, st, at) {
     const b = V3.lookFor(s.yaw, s.X, s.Z, av, st); if (b) return b;
+    // (at a place inside: the one spoken to or spoken by at the table, the one brawled with — the reader's atPlace, D-752 —, seated too)
+    const wi = s.ap && s.ap.with && at ? at(s.ap.with) : null; if (wi && s.sp < 0.2) { const w = V3.lookFar(s.yaw, s.X, s.Z, wi); if (w) return w; }
     const o = V3.partnerOf(v); const p = o && at ? at(o.id) : null;
     if (p) return V3.lookFor(s.yaw, s.X, s.Z, p, st);
     // (the focus of the scene they are in — the grave, the scaffold, the ring of the feast, the one they chase, the house's dog —, D-607)

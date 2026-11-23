@@ -216,7 +216,7 @@
     const jump = tr ? Math.hypot(X - tr.wx, Z - tr.wz) : 0;
     if (!tr || jump > (inside ? 6 : 4) || s.snap) {
       s.snap = 0; tr = s.tr = tr || { hx: new Float32Array(HN), hz: new Float32Array(HN), hd: new Float64Array(HN), n: 0, dw: 0, dd: 0, vd: 0, wx: X, wz: Z, ws: 0 };
-      tr.n = 1; tr.hx[0] = X; tr.hz[0] = Z; tr.hd[0] = 0; tr.dw = tr.dd = 0; tr.vd = 0; tr.wx = X; tr.wz = Z; tr.ws = 0; s.X = X; s.Z = Z; s.vx = s.vz = 0; s.sp = 0; s.acc = 0; return s;
+      tr.n = 1; tr.hx[0] = X; tr.hz[0] = Z; tr.hd[0] = 0; tr.dw = tr.dd = 0; tr.vd = 0; tr.wx = X; tr.wz = Z; tr.ws = 0; s.X = X; s.Z = Z; s.vx = s.vz = 0; s.sp = 0; s.acc = 0; s.lagMax = s.catchV = 0; return s;
     }
     // (the world's way so far: where they were, with how far along it each point is — the drawn place goes along it, behind)
     // (the world's speed, smoothed: the world loses a bit of a step at each point of a way — the drawing keeps the pace)
@@ -234,10 +234,14 @@
     // distance left, never braking harder than a stop can: the body never arrives still moving and halts in a frame, L-1113)
     if (rem < Infinity) { const dE = Math.max(0, rem + lag); want = Math.min(want, Math.sqrt(A_DN * dE), 6 * dE); }
     if (inside) want = Math.min(want, 1.35);
+    // (one come out of a door the view walked them to, behind the world's place: caught up on the world's way at a brisk walk —
+    // s.catchV —, never a sprint; the lag allowed shrinks with the lag — s.lagMax —, D-750)
+    if (s.catchV > 0) want = Math.min(want, s.catchV);
     let vd = clamp(want, tr.vd - A_DN * dt, tr.vd + A_UP * dt); vd = Math.max(0, vd);
     tr.dd = Math.min(tr.dw, tr.dd + vd * dt);
     // (never more than ~0.6 m behind out of doors: caught up at once beyond — the world's place is the truth)
-    const MAXL = inside ? 6 : 0.6; if (tr.dw - tr.dd > MAXL) tr.dd = tr.dw - MAXL;
+    const MAXL = inside ? 6 : Math.max(0.6, s.lagMax || 0); if (tr.dw - tr.dd > MAXL) tr.dd = tr.dw - MAXL;
+    if (s.lagMax > 0) { s.lagMax = Math.min(s.lagMax, tr.dw - tr.dd + 0.05); if (tr.dw - tr.dd < 0.5) s.lagMax = s.catchV = 0; }
     tr.vd = vd;
     // (the drawn place: on the world's way, as far along it as the drawn has come)
     let px = X, pz = Z; const oldest = Math.max(0, tr.n - HN);
@@ -258,6 +262,53 @@
     const vx = (px - s.X) / dt, vz = (pz - s.Z) / dt, sp = Math.hypot(vx, vz);
     s.acc = (sp - (s.sp || 0)) / dt; s.X = px; s.Z = pz; s.vx = vx; s.vz = vz; s.sp = sp;
     return s;
+  };
+  // ------------------------------ the walk inside, by the plan (D-750) ------------------------------
+  // A way the drawer gives (people3d.js: the plan's own walk — In.pathIn, the cells between two places, the door): points in the
+  // world's metres, each with its floor's height, [[X, Z, Y]…], walked from the first at a person's own pace (sp, m/s): eased in
+  // from the speed they had, eased out to stand on the last point — a corner of the way rounded within a stride of it, the body
+  // turning into it ahead. Writes the drawn place as Anim.track does (s.X, s.Z, vx, vz, sp, acc) and the way's height under the
+  // feet (w.Y); true while there is way left. Never off the way: every point drawn is on it or on the curve of one of its corners
+  const ROUND = 0.32;
+  Anim.walkWay = function (s, w, sp, dt) {
+    dt = Math.max(1e-4, Math.min(dt, 0.1)); const P = w.pts, n = P.length;
+    if (!w.len) { w.len = 0; w.cum = [0]; for (let i = 1; i < n; i++) { w.len += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); w.cum.push(w.len); } w.d = w.d || 0; w.v = w.v === undefined ? Math.min(sp, s.sp || 0) : w.v; }
+    const left = w.len - w.d; const want = Math.min(sp, Math.sqrt(4.5 * Math.max(0, left)), 6 * left + 0.02);
+    w.v = clamp(want, w.v - 4.5 * dt, w.v + 3.2 * dt); w.d = Math.min(w.len, w.d + Math.max(0, w.v) * dt);
+    const q = Anim.wayAt(w, w.d), px = q[0], pz = q[1]; w.Y = q[2];
+    const vx = (px - s.X) / dt, vz = (pz - s.Z) / dt, v = Math.hypot(vx, vz);
+    s.acc = (v - (s.sp || 0)) / dt; s.X = px; s.Z = pz; s.vx = vx; s.vz = vz; s.sp = v;
+    return w.d < w.len - 1e-4;
+  };
+  // (the point of a way d metres along it: on its segments, a corner's neighbourhood on a curve from before it to after it)
+  const WQ = [0, 0, 0];
+  Anim.wayAt = function (w, d) {
+    const P = w.pts, C = w.cum, n = P.length; if (n < 2) { WQ[0] = P[0][0]; WQ[1] = P[0][1]; WQ[2] = P[0][2]; return WQ; }
+    let i = 0; while (i < n - 2 && C[i + 1] <= d) i++;
+    const a = P[i], b = P[i + 1], L = C[i + 1] - C[i], f = L > 1e-6 ? clamp((d - C[i]) / L, 0, 1) : 1;
+    WQ[0] = a[0] + (b[0] - a[0]) * f; WQ[1] = a[1] + (b[1] - a[1]) * f; WQ[2] = a[2] + (b[2] - a[2]) * f;
+    // (near the corner at P[i+1] — or just past the one at P[i] —: the quadratic from a point before it to one after it, as far as the
+    // shorter of the two legs allows; the corner's own height. A curve inside the angle of two legs of the plan's walk stays on the
+    // floor the two legs cross: the walk's cells are a body's width wide)
+    for (const k of [i, i + 1]) {
+      if (k <= 0 || k >= n - 1) continue; const A = P[k - 1], Cn = P[k], B = P[k + 1];
+      const la = C[k] - C[k - 1], lb = C[k + 1] - C[k]; const r = Math.min(ROUND, la * 0.45, lb * 0.45); if (r < 0.02) continue;
+      const dc = d - C[k]; if (Math.abs(dc) > r) continue;
+      const t = (dc + r) / (2 * r), u = 1 - t;
+      const Ex = Cn[0] + (A[0] - Cn[0]) * r / la, Ez = Cn[1] + (A[1] - Cn[1]) * r / la, Xx = Cn[0] + (B[0] - Cn[0]) * r / lb, Xz = Cn[1] + (B[1] - Cn[1]) * r / lb;
+      WQ[0] = u * u * Ex + 2 * t * u * Cn[0] + t * t * Xx; WQ[1] = u * u * Ez + 2 * t * u * Cn[1] + t * t * Xz; break;
+    }
+    return WQ;
+  };
+  // (one come out by a door: the drawn place begun at the door, on the world's way since it went out — the points it walked since,
+  // pts [[X, Z]…], its last the world's place now —, behind it by that way, caught up at catch m/s at most: Anim.track goes on from
+  // there)
+  Anim.trackSeed = function (s, pts, catchV) {
+    const m = Math.min(pts.length, HN); const P = pts.slice(pts.length - m);
+    const tr = s.tr = s.tr || { hx: new Float32Array(HN), hz: new Float32Array(HN), hd: new Float64Array(HN), n: 0, dw: 0, dd: 0, vd: 0, wx: 0, wz: 0, ws: 0 };
+    let d = 0; for (let i = 0; i < m; i++) { if (i) d += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]); tr.hx[i] = P[i][0]; tr.hz[i] = P[i][1]; tr.hd[i] = d; }
+    tr.n = m; tr.dw = d; tr.dd = 0; tr.vd = s.sp || 0; tr.wx = P[m - 1][0]; tr.wz = P[m - 1][1]; tr.ws = 0;
+    s.X = P[0][0]; s.Z = P[0][1]; s.lagMax = d + 0.1; s.catchV = catchV;
   };
   // (the corner of a path near a point (tiles): its rounded place, or null. The corners are the path's own points; r a stride)
   const RC = [0, 0], RA = [0, 0];

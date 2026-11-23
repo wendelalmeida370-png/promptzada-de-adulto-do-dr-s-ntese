@@ -235,12 +235,18 @@
   // the standing of a person among their people (polity.js: v.grp), as the clothes tell it
   const GRP = At.GRP = ['', 'povo', 'artesaos', 'mercadores', 'militares', 'sacerdotes', 'nobreza'];
   const DRESS = [];
-  const unpack = c => Object.freeze({ code: c, grp: GRP[c & 7], weave: !!(c & 8), silk: !!(c & 16), fur: !!(c & 32), jewel: !!(c & 64), metal: (c >> 7) & 3, cold: (c >> 9) & 3 });
+  const unpack = c => Object.freeze({ code: c, grp: GRP[c & 7], weave: !!(c & 8), silk: !!(c & 16), fur: !!(c & 32), jewel: !!(c & 64), metal: (c >> 7) & 3, cold: (c >> 9) & 3,
+    inside: !!(c & 2048), bed: !!(c & 4096), duty: !!(c & 8192), rich: (c >> 14) & 3 });
   // (who has no world round them — a portrait, a proof's bare person — dresses as before: woven, dyed, bronze)
   const NEUTRAL = At.NEUTRAL = unpack(1 + 8 + (1 << 7));
   // what the clothes of a person read of the world besides their trade, their age and their house's coin: their standing,
-  // what their people weave and forge, what their house has to wear (silk, furs, jewels), the cold out of doors.
-  // One small record a combination, kept: its code goes into the outfit's signature
+  // what their people weave and forge, what their house has to wear (silk, furs, jewels), the cold out of doors; and (P6, D-754,
+  // D-755) under a roof or in bed — the hat and the helmet come off there, but the helmet of one at their post —, and how well off
+  // the house is now (rich: 0 none or a shack, 1 a hut, 2 a house, 3 a house well off — its coins, a merchant house's flag, the
+  // ruler): what the dye and the ornament of the clothes show. One small record a combination, kept: its code goes into the
+  // outfit's signature
+  const POST = new Set(['guard', 'ronda', 'riotguard', 'patrol', 'drill', 'band', 'combat', 'escort', 'prender', 'levar', 'muster']);
+  At.POST = POST;
   At.dress = function (v) {
     const S = G.S; if (!S || !S.villagers || !v || !v.id) return NEUTRAL;
     const f = v.set && G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null; const a = f ? artsOf(f) : ARTS0;
@@ -253,7 +259,21 @@
     if (I.joias >= 1 || I.perolas >= 1) c |= 64;
     c |= a.metal << 7;
     if (!v.inside && !v.aboard && Number.isFinite(v.x)) c |= At.cold(v.x, v.y) << 9;
+    if (v.inside > 0) c |= 2048;
+    if (v.sleeping) c |= 4096;
+    if (v.task && POST.has(v.task.type) && !v.sleeping) c |= 8192;
+    c |= At.richOf(v, h, f) << 14;
     return DRESS[c] || (DRESS[c] = unpack(c));
+  };
+  // how well off a person's house is now, as the clothes show it (D-755): the ruler, and a merchant house's flag or forty coins in
+  // the house (its coins, h.coin — the house's own, only read) the most; a house with some coins; a house of the plain kind; a hut,
+  // a shack or no house the least — the house's coins of today, not the land it stands on
+  At.richOf = function (v, h, f) {
+    if (v.captive) return 0; if (f && f.leader === v.id) return 3;
+    if (!h) return 0; const t = h.type; if (t === 'barraco') return 0;
+    const coin = h.coin || 0;
+    if (t === 'hut') return coin > 25 ? 2 : 1;
+    return h.elite || coin > 40 ? 3 : coin > 8 ? 2 : 1;
   };
   // (the dyes of standing: the deep ones of those who can pay for them, by people — a noble's mantle —, and the bright ones of
   // a merchant's cape; each person's own by their id — the same flips People3D's clothes are made of —, and who dresses
