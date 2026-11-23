@@ -14,7 +14,11 @@
 //     virado para o freguês; o músico (posto no estrado pela mão da prova, como a noite da taverna o põe) tocando o instrumento que tem
 //     na mão, ninguém tocando sem ele; cada caminho de dentro acabando quando o mundo o acaba (In.passage, t.ww, t.mw); ninguém na
 //     soleira com a porta fechada.
-//   node qa/dentro-gente.js [mundo]     ONLY=d1,d3 para algumas partes (≈ 3 min inteira)
+//  d6 o corpo do deus que entra e sai de uma taverna e de uma casa, com o bebê no colo e sem ele, e com uma carga nos braços e o
+//     bebê (L-1908): ninguém deixado na entrada enquanto o corpo está dentro (o bebê do corpo ficava lá, em pé, do tamanho de uma
+//     bonequinha), o bebê no colo desenhado por ninguém e ainda no colo lá fora, o corpo nunca desenhado duas vezes — no mundo
+//     pronto da taverna egípcia em que o dono o viu (mega);
+//   node qa/dentro-gente.js [mundo]     ONLY=d1,d3 para algumas partes (≈ 3 min inteira; ONLY=d6 ≈ 1,5 min, sempre no mega)
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
 const { G, M, THREE } = T.load();
@@ -29,7 +33,7 @@ const copy = (o, x) => Object.assign(Object.create(Object.getPrototypeOf(o)), o,
 let FOCUS = null; const said = [];
 const frame = draw => { G.debug.step(RDT * G.Space.TIME); if (draw) { B3.insideTick(RDT, FOCUS); P3.update(RDT, FOCUS); } };
 const look = () => { if (G.VidaInv) G.VidaInv((k, sev, msg) => { if (said.length < 8) said.push(msg); }, G.S); };
-function open(t0) { M.pronto(WORLD); M.viver(2); let g = 0; while (!(G.S.time > t0 && G.S.time < t0 + 0.02) && g++ < 6000) M.viver(1); P3.clear(); B3.insideClear(); }
+function open(t0, w) { M.pronto(w || WORLD); M.viver(2); let g = 0; while (!(G.S.time > t0 && G.S.time < t0 + 0.02) && g++ < 6000) M.viver(1); P3.clear(); B3.insideClear(); }
 // (the tavern with the most people in it or on their way to it)
 function tavern() { const S = G.S; const L = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.ip && In.plan(b) && In.plan(b).ok);
   const n = b => [...S.villagers.values()].filter(v => v.inside === b.id || (v.task && v.task.id === b.id)).length; L.sort((a, c) => n(c) - n(a) || a.id - c.id); return L[0]; }
@@ -151,6 +155,67 @@ if (on('d5')) {
   out.push(`${seen.ways} caminhos com o relógio do mundo: ${seen.early} chegaram antes, ${seen.late} depois; na soleira com a porta fechada ${seen.doorShut} quadros; servindo-se no balcão ${seen.self}`);
   const good = seen.keeperBasket === 0 && seen.keeperCup === seen.keeper && seen.keeperTurned >= Math.floor(seen.keeperAt * 0.8) && (seen.keeperHolds || 0) >= Math.floor(seen.keeperAt * 0.8) && (seen.cupDrawn || 0) >= Math.floor(seen.keeperAt * 0.8) && seen.musicMimed === 0 && seen.musicWith >= Math.floor(seen.music * 0.98) && seen.early === 0 && seen.late === 0 && seen.doorShut === 0 && seen.ways > 0 && (!mus || seen.music > 0);
   ok('d5 a taverna da noite no desenho: as canecas do taverneiro, o músico com o instrumento, a caminhada no relógio do mundo, a porta aberta', good, out.join(' · '));
+}
+if (on('d6')) {
+  // the god's body walked in and out of a tavern and of a house by the stick, as the player walks it — with a baby in its arms and
+  // without, and with a load in the arms and the baby —: while the body is inside, nobody drawn standing on the way in at the place of
+  // nobody (In.placeOf with no place left at all: the body has but its disc there, and its baby fell to the way in — L-1908), the
+  // body's baby drawn by nobody, the body never among the world's walkers; out again, the baby still in its arms, drawn by nobody
+  open(0.70, 'mega'); const S = G.S, IN = G.Avatar.input, Sp = G.Space, out = [], bad = [];
+  const bframe = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); const a = G.Avatar.state(); FOCUS = { X: a.X, Z: a.Z }; B3.insideTick(RDT, FOCUS); P3.update(RDT, FOCUS); };
+  const inward = (p, k) => { const e = p.entrance; const d = p.doors[e.door]; const w = p.walls[d.wall]; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; let nx = -(w.b[1] - w.a[1]) / L, nz = (w.b[0] - w.a[0]) / L;
+    if ((p.lot.w / 2 - e.x) * nx + (p.lot.w / 2 - e.z) * nz < 0) { nx = -nx; nz = -nz; } return [e.x + nx * k, e.z + nz * k]; };
+  const civOf = b => { const f = G.Fac.ofSet(b.set); return f ? f.civ : '?'; };
+  let C = null; const drawn = id => { const w = P3.visOf(id); return !!w && !w.gone; };
+  const tick = () => { if (!C) return; C.k++; const v = C.body, b = C.b;
+    if (P3.walkers.some(w => w[7] === v.id)) C.twice++;
+    if (C.baby && drawn(C.baby.id)) { if (v.inside === b.id) C.alone++; else C.aloneOut++; }
+    if (v.inside === b.id) { C.in++;
+      for (const o of S.villagers.values()) { if (o.inside !== b.id || o === v || !drawn(o.id)) continue; const pl = In.placeOf(o), w = P3.visOf(o.id);
+        if (pl && pl.use === '' && !pl.with && !w.way && Math.hypot(w.X - C.E[0], w.Z - C.E[1]) < 0.8) { C.door++; C.who.add(o.id); } } }
+    if (C.k % 15 === 0 && G.VidaInv) G.VidaInv((k, sev, msg) => { if (sev <= 2 && C.inv.length < 3) C.inv.push(msg); }, S); };
+  const walkTo = (X, Z, max, near) => { const st = G.Avatar.state(); let still = 0, last = [st.X, st.Z];
+    for (let k = 0; k < (max || 300); k++) { if (Math.hypot(X - st.X, Z - st.Z) < (near || 0.15)) break; IN.camYaw = Math.atan2(Z - st.Z, X - st.X); IN.mz = 1; IN.mx = 0; bframe(); tick();
+      if (st.loco === 'stair') { still = 0; last = [st.X, st.Z]; continue; } if (Math.hypot(st.X - last[0], st.Z - last[1]) < 0.004) { if (++still > 25) { if (C && !C.stop) C.stop = st.block || 'parado'; break; } } else still = 0; last = [st.X, st.Z]; }
+    IN.mz = 0; IN.mx = 0; };
+  // (one case: the body taken at the door of b, a load put in its arms if asked, walked k metres in, a while there, and out)
+  const run = (name, b, body, baby, load, k, tryOnly) => {
+    if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
+    const p = Sp.planNow(b), d = In.planDoor(b); god(() => { G.Vg.endTask(body); body.inside = 0; body.x = d[0]; body.y = d[1]; body.path = null; body.carry = null; });
+    if (!G.Possess.take(body).ok) { bad.push(name + ': o corpo não foi tomado'); return; }
+    G.Avatar.attach(body, 0); for (let j = 0; j < 4; j++) bframe();
+    let lk = '';
+    if (load) { const f = G.Fac.ofV(body); lk = ['wood', 'stone', 'food'].find(x => f && (f.stock[x] || 0) >= 3) || ''; if (lk) god(() => G.Depot.move('f:' + f.id, 'v:' + body.id, lk, 2, { code: 'prova' })); }
+    const ds = In.doorState(b, p.entrance.door); if (ds && ds.state !== 'aberta') G.Possess.apply(w => { In.useDoor(b, p.entrance.door, 'abrir', w); return { ok: true }; });
+    C = { k: 0, b, body, baby, E: [b.x * TL + p.entrance.x, b.y * TL + p.entrance.z], in: 0, alone: 0, aloneOut: 0, door: 0, who: new Set(), twice: 0, inv: [] };
+    const o = inward(p, -0.6), i = inward(p, k), o2 = inward(p, -2.5);
+    walkTo(b.x * TL + o[0], b.y * TL + o[1], 300, 0.08); walkTo(b.x * TL + i[0], b.y * TL + i[1], 300); for (let j = 0; j < 90; j++) { bframe(); tick(); }
+    const loaded = !!(body.carry && body.carry.n > 0);
+    walkTo(b.x * TL + o[0], b.y * TL + o[1], 300, 0.08); walkTo(b.x * TL + o2[0], b.y * TL + o2[1], 300); for (let j = 0; j < 30; j++) { bframe(); tick(); }
+    const kept = !baby || baby.carrier === body.id, outside = !body.inside, c = C; C = null;
+    if (!c.in && tryOnly) { out.push(`${b.type}#${b.id} (${civOf(b)}) barra o corpo que anda da rua à porta (${c.stop || '?'}): outra`); return false; }
+    out.push(`${name} (${b.type}#${b.id}, ${civOf(b)}; ${body.name}${baby ? ' com ' + baby.name + ' no colo' : ''}${load ? (loaded ? ', a carga nos braços' : ', SEM a carga') : ''}): ${c.in} quadros dentro, na entrada sem lugar ${c.door}${c.who.size ? ' (#' + [...c.who].join(', #') + ')' : ''}, o bebê desenhado sozinho ${c.alone} dentro e ${c.aloneOut} fora, o corpo duas vezes ${c.twice}${baby ? ', o bebê ' + (kept ? 'ainda no colo' : 'NÃO MAIS no colo') : ''}`);
+    if (!c.in || !outside) bad.push(`${name}: o corpo ${!c.in ? 'não entrou' : 'não saiu'}`);
+    if (c.door || c.alone || c.aloneOut || c.twice || !kept || (load && !loaded)) bad.push(name);
+    for (const m of c.inv) bad.push(`${name}: ${m}`); return true;
+  };
+  // (the tavern: the owner's Egyptian one first — the next one where the body walking from the street to its door is barred there: the
+  // avatar's, not the drawing's —; a body of its town carrying a baby — of another town, if none of its own —, and one with free arms)
+  const ok6 = o => o.age >= 18 && o.age < 55 && !o.sleeping && !o.inside && !o.captive && !o.jail && G.Possess.can(o).ok;
+  const holder = (set, home) => [...S.villagers.values()].filter(c => c.age < 2 && c.carrier && (!set || c.set === set)).map(c => [c, S.villagers.get(c.carrier)]).filter(([c, o]) => o && ok6(o) && (!home || o.home === home)).sort((x, y) => x[0].id - y[0].id)[0];
+  const free = (set, home) => [...S.villagers.values()].filter(o => o.set === set && ok6(o) && !G.Vg.holdsBaby(o) && (!home || o.home === home)).sort((x, y) => x.id - y.id)[0];
+  const tavs = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.ip && In.plan(b) && In.plan(b).ok && In.planDoor(b)).sort((a, c) => (civOf(c) === 'egipcio') - (civOf(a) === 'egipcio') || a.id - c.id);
+  let tav = null; for (const b of tavs) { const h = holder(b.set) || holder(0); if (h && run('a taverna com o bebê', b, h[1], h[0], false, 2.0, true)) { tav = b; break; } }
+  if (!tav) bad.push('nenhuma taverna em que o corpo entre com um bebê no colo');
+  else { const f = free(tav.set); if (f) run('a taverna sem bebê', tav, f, null, false, 2.0); else bad.push('a taverna sem bebê: ninguém');
+    const h2 = holder(tav.set) || holder(0); if (h2) run('a taverna com o bebê e a carga', tav, h2[1], h2[0], true, 2.0); }
+  // (a house of the body's own: one with a plan, its door on a street, where one carrying a baby lives — and one where nobody does)
+  const homes = [...S.buildings.values()].filter(b => (b.type === 'house' || b.type === 'sobrado') && b.built && In.has(b) && In.planDoor(b) && Sp.planNow(b) && Sp.planNow(b).entrance).sort((a, c) => (civOf(c) === 'egipcio') - (civOf(a) === 'egipcio') || a.id - c.id);
+  const hb = homes.find(b => holder(b.set, b.id)), hf = homes.find(b => b !== hb && free(b.set, b.id));
+  if (!hb) bad.push('nenhuma casa de quem carrega um bebê'); else { const h = holder(hb.set, hb.id); run('a casa com o bebê', hb, h[1], h[0], false, 1.2); }
+  if (!hf) bad.push('nenhuma casa para o corpo sem bebê'); else run('a casa sem bebê', hf, free(hf.set, hf.id), null, false, 1.2);
+  if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
+  ok('d6 o corpo entra e sai com o bebê no colo e sem ele: ninguém deixado na entrada, o bebê com o corpo, o corpo uma vez só', !bad.length, out.join(' · ') + (bad.length ? ' — FALHAS: ' + bad.join('; ') : ''));
 }
 if (on('d4')) {
   // (the same world lived 600 frames with the inside drawn round the tavern and without the 3D at all: the same save)

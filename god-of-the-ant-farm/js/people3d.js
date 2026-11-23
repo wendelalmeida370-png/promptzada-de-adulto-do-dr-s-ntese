@@ -1581,6 +1581,13 @@
     if (!u) { const a = G.Interiors.standFor ? G.Interiors.standFor(pl.b, pl.q, pl.q.x, pl.q.z) : null; if (!a) return pl; const P = ptOf(pl.b, pl.p, pl.fy, a[0], a[1], pl.lv); u = { X: P[0], Z: P[1], Y: P[2] }; UPS.set(key, u); if (UPS.size > 400) UPS.delete(UPS.keys().next().value); }
     return Object.assign({}, pl, { X: u.X, Z: u.Z, Y: u.Y, k: pl.k + '^', st: 'idle', q: Object.assign({}, pl.q, { it: null, x: u.X - pl.b.x * G.Space.TILE, z: u.Z - pl.b.y * G.Space.TILE }) });
   }
+  // (a baby in the arms of who carries it is where they are, drawn in no place of its own — out of doors, and inside a building too:
+  // there the world has it awake with its arms (v.carried is false indoors, for the place of In.places), and the god's body has no
+  // place there but its disc, so the body's baby stood alone on the way in while the body was inside — L-1908. Asleep, in the
+  // cradle or the bed the world gives it)
+  function inArms(v) { if (!(v.age < 2)) return false; if (v.carried) return true; if (!(v.inside > 0) || v.sleeping || !v.carrier) return false;
+    const c = G.S.villagers.get(v.carrier); return !!c && c.inside === v.inside && !c.sleeping; }
+  P3.inArms = inArms; // (for the proofs and the checker)
   function untilOf(v) { const S = G.S; const P = G.Interiors && G.Interiors.passage ? G.Interiors.passage(v) : null; if (P && P.until > S.clock) return P.until;
     const t = v.task; if (t) { if (t.ww > S.clock) return t.ww; if (t.mw > S.clock) return t.mw; } return 0; }
   P3.untilOf = untilOf; // (for the proofs)
@@ -1625,7 +1632,7 @@
     const ins = INS; ins.length = 0; const RIN2 = (R + IN_REACH) * (R + IN_REACH);
     for (const v of S.villagers.values()) {
       if (av && v.id === av.id) continue;
-      if (v.aboard || v.ug || v.held || (v.age < 2 && v.carried)) continue;
+      if (v.aboard || v.ug || v.held || inArms(v)) continue;
       if (v.inside) { if ((v.x * TL - focus.X) ** 2 + (v.y * TL - focus.Z) ** 2 <= RIN2) ins.push(v); continue; }
       const X = v.x * TL, Z = v.y * TL; const d2 = (X - focus.X) ** 2 + (Z - focus.Z) ** 2; if (d2 > RC2) continue;
       const e = NEARP[near.length] || (NEARP[near.length] = [0, null]); e[0] = d2; e[1] = v; near.push(e);

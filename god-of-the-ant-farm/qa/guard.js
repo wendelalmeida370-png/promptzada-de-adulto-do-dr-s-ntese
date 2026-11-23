@@ -2164,5 +2164,11 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
 { const v3 = (src['vida3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
   if (!/if \(v\.act === 'play'\) \{ const k = V3\.instrument\(L\);/.test(v3)) fails.push('toca-se o que se tem na mão: o gesto de tocar não pergunta ao instrumento da mão (G.Vida3D.instrument, D-758)');
   if (!/!\(G\.Inv && G\.Inv\.roundOf && G\.Inv\.roundOf\(v\)\) \? v\.carry : null/.test(p3)) fails.push('a rodada é caneca: o People3D desenha a rodada da taverna como carga (G.Inv.roundOf, D-757)'); }
+// 304. "o bebê no colo vai com quem o carrega" (L-1908): o People3D pula o bebê no colo pela porta inArms — fora de casa (v.carried) e
+// dentro de um prédio, acordado com quem o carrega no mesmo prédio (o mundo dá-lhe lá o lugar dos braços e o v.carried falso) —, e
+// nenhuma outra linha do people3d.js decide pelo v.carried sozinho quem é desenhado (o bebê do corpo ficava em pé na soleira)
+{ const pp = src['people3d.js'] || []; const p3 = pp.join('\n');
+  if (!/function inArms\(v\) \{/.test(p3) || !/if \(v\.aboard \|\| v\.ug \|\| v\.held \|\| inArms\(v\)\) continue;/.test(p3)) fails.push('o bebê no colo vai com quem o carrega: o People3D não pula o bebê no colo pela porta inArms (L-1908)');
+  pp.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bv\.carried\b/.test(c) && !/function inArms\(v\)/.test(c) && !/if \(v\.carried\) return true;/.test(c)) fails.push(`o bebê no colo vai com quem o carrega: people3d.js:${k + 1} decide pelo v.carried fora da porta inArms (L-1908): ${l.trim().slice(0, 100)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

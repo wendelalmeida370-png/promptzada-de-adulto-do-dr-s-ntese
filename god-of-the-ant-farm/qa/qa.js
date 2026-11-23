@@ -3679,6 +3679,8 @@
 //   · the view keeps nobody who is gone: a person of the view's memory is a person of the world (S3; D-591)
 //   · inside a building drawn open, nobody drawn in a wall or a piece (S2), nor with the street's hat on under a roof or anything on
 //     the head in bed (S3; P6, D-750, D-754)
+//   · a baby in someone's arms — out of doors, or awake inside a building with who carries it — is drawn in no place of its own (S2;
+//     the baby of the god's body stood alone on the way in, L-1908)
 (function (G) {
   // (the acts that are a stance on purpose: the stance is their pose)
   const STAND = new Set(['', 'stand', 'idle', 'sleep', 'zzz', 'run', 'carry', 'haul', 'lift', 'drag', 'hold', 'carry2', 'arrange', 'give']);
@@ -3698,11 +3700,13 @@
     // seat or off it and the flight of a stair (S2) —; nobody drawn with the street's hat on under a roof, nor anything on the head in
     // bed — the helmet of one at their post, the hood of an order, the signs of an office stay (S3)
     const In = G.Interiors, B3 = G.Build3D, Lk = G.Look3D, At = G.Atmos; if (!In || !B3 || !B3.isOpen) return;
-    const BLOCK = [In.CELL.WALL, In.CELL.SOLID, In.CELL.LOW, In.CELL.VOID], TL = G.Space.TILE; let nw = 0, nh = 0;
+    const BLOCK = [In.CELL.WALL, In.CELL.SOLID, In.CELL.LOW, In.CELL.VOID], TL = G.Space.TILE; let nw = 0, nh = 0, nb = 0;
     for (const w of P3.walkers || []) {
       const v = s.villagers.get(w[7]), vs = P3.visOf(w[7]); if (!v || !vs) continue;
       const o = vs.L && vs.L.out; const D = At && At.dress ? At.dress(v) : null;
       if (o && o.hatM && D && (v.inside > 0 || v.sleeping) && (D.bed || (['chapeu', 'gorro'].includes(o.hatM)) || ((o.hatM === 'elmo' || o.hatM === 'galea') && !D.duty)) && nh++ < 3) add('vida', 3, `#${v.id}: desenhado de «${o.hatM}» ${v.sleeping ? 'dormindo' : 'debaixo de um teto'}`);
+      const ca = v.age < 2 && v.carrier ? s.villagers.get(v.carrier) : null; // (L-1908: the baby in arms, where its arms are)
+      if (v.age < 2 && (v.carried || (ca && v.inside > 0 && ca.inside === v.inside && !ca.sleeping && !v.sleeping)) && nb++ < 3) add('vida', 2, `#${v.id}: bebê no colo de #${v.carrier} desenhado sozinho ${v.inside > 0 ? 'dentro de #' + v.inside : 'na rua'}`);
       if (!(v.inside > 0) || !B3.isOpen(v.inside) || vs.waySeat) continue;
       const b = s.buildings.get(v.inside), p = b && G.Space.planMade ? G.Space.planMade(b) : null; if (!p || !p.grid) continue;
       const pl = In.placeOf(v); if (pl && pl.it && (pl.it.spots[pl.q] || {}).on && !vs.way) continue; // (seated or lying on the piece: its place)
