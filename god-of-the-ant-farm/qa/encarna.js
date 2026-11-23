@@ -728,10 +728,11 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     // (and the houses near the body: each with the walls and the roof of its people — planks and turf in the north, tiles in Rome)
     const hs = [...S.buildings.values()].filter(q => q.built && (q.type === 'house' || q.type === 'hut' || q.type === 'sobrado') && G.dist(q.x, q.y, b.x, b.y) < 30).slice(0, 6);
     out.houses = hs.map(q => { const r = G.Build3D.patsOf(q); return { id: q.id, ok: !!(r.pats[r.wall] && r.pats[r.roof]), wall: r.wall, roof: r.roof, pats: r.pats }; });
-    // fire near the body: smoke and sparks rise; the points stay numbers in their pool
+    // fire near the body: smoke and sparks rise; the points stay numbers in their pool (90 frames: with the ready city made again the
+    // fuel is farther from the body and the others' smoke comes and goes — 45 frames gave ~10 new points, at the line: T-1766)
     // (what burns here: a tree, a bush — in the cold the grass does not take fire)
     let fs = null; for (let r = 2; r < 12 && !fs; r++) for (let dy = -r; dy <= r && !fs; dy++) for (let dx = -r; dx <= r; dx++) { const x = Math.floor(b.x) + dx, y = Math.floor(b.y) + dy; if (!G.W.inb(x, y)) continue; const i = y * N + x; const fu = G.Nature.fuel(i); if (fu && fu !== 'building' && fu !== 'crop') { fs = i; break; } }
-    if (fs !== null) { const p0 = G.FX3D.particles || 0; const lit = G.Nature.ignite(fs, 0.9); __E.f(45); out.fire = { lit, before: p0, after: G.FX3D.particles, burning: S.fire[fs] > 0, check: G.FX3D.check() }; G.Nature.extinguish(fs, 9); }
+    if (fs !== null) { const p0 = G.FX3D.particles || 0; const lit = G.Nature.ignite(fs, 0.9); __E.f(90); out.fire = { lit, before: p0, after: G.FX3D.particles, burning: S.fire[fs] > 0, check: G.FX3D.check() }; G.Nature.extinguish(fs, 9); }
     // a tree near the body felled by the world: drawn falling, then lying — and the falling picture gone
     const tr = [...S.trees.values()].filter(t => t.stage === 'grow' && t.size > 0.5).sort((p, q) => G.dist2(p.x, p.y, b.x, b.y) - G.dist2(q.x, q.y, b.x, b.y))[0];
     // (its own picture, not every tree drawn falling round the eye: in the cidade of the generation 25 another tree, felled by a
