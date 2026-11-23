@@ -78,7 +78,7 @@
   // ------------------------------ geometry: one builder, many shapes ------------------------------
   // (every static thing of a chunk goes into one geometry with its colours: a few draw calls, not thousands)
   class Geo {
-    constructor() { this.p = []; this.n = []; this.c = []; this.k = null; this.ao = null; this.pat = 0; this.q = null; this.sph = null; this.uv = null; }
+    constructor() { this.p = []; this.n = []; this.c = []; this.k = null; this.ao = null; this.ao3 = null; this.pat = 0; this.q = null; this.sph = null; this.uv = null; }
     // (the sway of each point: 0 is rooted, 1 moves all the wind gives — only the plants' material reads it)
     _k(v, n) { if (!this.k) { if (!v) return; this.k = new Array(this.p.length / 3 - n).fill(0); } for (let q = 0; q < n; q++) this.k.push(typeof v === 'object' ? v[q] : v || 0); }
     // (the pattern of the surface each point is on — stone, planks, tiles, thatch...: this.pat at the time it was put;
@@ -101,7 +101,10 @@
         this.p.push(X, Y, Z); this.n.push(nx / l, ny / l, nz / l);
         const q = cc || lin(color(X, Y, Z, nx / l, ny / l, nz / l));
         // (the foot of a wall is darker: the sky does not reach it — this.ao gives the ground under a point)
-        if (this.ao) { const f = 0.6 + 0.4 * G.clamp((Y - this.ao(X, Z)) / 2.6, 0, 1); this.c.push(q[0] * f, q[1] * f, q[2] * f); } else this.c.push(q[0], q[1], q[2]);
+        if (this.ao) { const f = 0.6 + 0.4 * G.clamp((Y - this.ao(X, Z)) / 2.6, 0, 1); this.c.push(q[0] * f, q[1] * f, q[2] * f); }
+        // (the shade where things touch inside a building — the foot of a wall, a corner, the floor under and round a piece: ao3 gives
+        // it at a point and its normal, Build3D's inside, D-705)
+        else if (this.ao3) { const f = this.ao3(X, Y, Z, nx / l, ny / l, nz / l); this.c.push(q[0] * f, q[1] * f, q[2] * f); } else this.c.push(q[0], q[1], q[2]);
         if (sway || this.k) this._k(typeof sway === 'function' ? sway(y) : sway, 1);
         if (this.pat || this.q) this._q(1);
       }
@@ -111,7 +114,9 @@
       const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
       let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
       const A = lin(ca), B = lin(cb || ca), Cc = lin(cc || ca);
-      this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); this.n.push(nx, ny, nz, nx, ny, nz, nx, ny, nz); this.c.push(A[0], A[1], A[2], B[0], B[1], B[2], Cc[0], Cc[1], Cc[2]);
+      this.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]); this.n.push(nx, ny, nz, nx, ny, nz, nx, ny, nz);
+      if (this.ao3) { const fa = this.ao3(a[0], a[1], a[2], nx, ny, nz), fb = this.ao3(b[0], b[1], b[2], nx, ny, nz), fc = this.ao3(c[0], c[1], c[2], nx, ny, nz); this.c.push(A[0] * fa, A[1] * fa, A[2] * fa, B[0] * fb, B[1] * fb, B[2] * fb, Cc[0] * fc, Cc[1] * fc, Cc[2] * fc); }
+      else this.c.push(A[0], A[1], A[2], B[0], B[1], B[2], Cc[0], Cc[1], Cc[2]);
       if (this.k) this._k(0, 3);
       if (this.pat || this.q) this._q(3);
     }
@@ -212,6 +217,8 @@
     // the light of the hour, the air and the sky — a hemisphere and one key light, the picture of the light of the flames round
     // the body, the dome with its sun, moon, clouds and stars: the sky's (ceu3d.js, 21d)
     G.Ceu3D.init(THREE, renderer, scene, camera); skyU = R3.skyU;
+    // the light inside the buildings, baked from their plans: its pictures, in the sky's uniforms (G.Luz3D, D-700)
+    G.Luz3D && G.Luz3D.init && G.Luz3D.init(THREE);
     // materials (shared by every chunk)
     // (the ground: painted tile by tile with the god's colours, by the Ground3D; its vertex colour is only the shade of
     // the hollows and of the foot of the walls)
@@ -225,6 +232,10 @@
     MAT.solid = new THREE.MeshLambertMaterial({ vertexColors: true });
     // (the inside of a building drawn round the body: the same stuff, never cut — Build3D's insides)
     MAT.inner = new THREE.MeshLambertMaterial({ vertexColors: true });
+    // (and, where the machine carries it, with its sheen: the waxed wood, the glazed clay, the bronze and the floor polished by the
+    // feet catch the light of the fire and of the window — each pattern its own, Build3D's m3spec; the painter's band of light as
+    // the Lambert's: the Alta and the Ultra, D-706)
+    MAT.innerHi = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 26, specular: 0x3a3630 });
     // the trees, the bushes and the grass: their materials are the forest's (Arvore3D, js/arvore3d.js — 21a)
     G.Arvore3D.materials(THREE, MAT, U);
     // the water's materials: the water, the ice, the parted sea's walls, the sheets of the falls (Agua3D, js/agua3d.js — 21c)
@@ -235,6 +246,9 @@
     G.Build3D && G.Build3D.init && G.Build3D.init(THREE, R3);
     G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.solid); // (the solid material learns the patterns of the walls and roofs)
     G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.inner); // (and the inside's: the cut is the town's only — M3CUT)
+    if (G.Build3D && G.Build3D.dress) { G.Build3D.dress(MAT.innerHi); const ob = MAT.innerHi.onBeforeCompile;
+      MAT.innerHi.onBeforeCompile = (sh, rn) => { ob(sh, rn); sh.fragmentShader = sh.fragmentShader.replace('#include <lights_phong_pars_fragment>', THREE.ShaderChunk.lights_phong_pars_fragment.replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );',
+        'float nl = dot( geometryNormal, directLight.direction ); float dotNL = smoothstep( -0.06, 0.4, nl ) * 0.8 + saturate( nl ) * 0.2;')); }; }
     G.People3D && G.People3D.init && G.People3D.init(THREE, R3);
     G.FX3D && G.FX3D.init && G.FX3D.init(THREE, R3);
     G.Dragon3D && G.Dragon3D.init && G.Dragon3D.init(THREE, R3);
@@ -250,9 +264,12 @@
     renderer.shadowMap.autoUpdate = (q.shadowEvery | 0) <= 1; renderer.shadowMap.needsUpdate = true; // (light() asks for it every n frames)
     G.Ceu3D.quality(q); // (the sun's picture of the shadows, the sky in its cheap way where no grain is drawn: the sky's)
     // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
-    for (const m of [MAT.solid, MAT.flora, MAT.inner]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
-    if (MAT.solid) MAT.solid.defines.M3CUT = 1; // (the town's solid gives way where an inside is drawn: Build3D.cuts)
-    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner]) if (m) m.needsUpdate = true;
+    for (const m of [MAT.solid, MAT.flora, MAT.inner, MAT.innerHi]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
+    if (MAT.innerHi) MAT.innerHi.defines.M3SPEC = 1;
+    for (const m of [MAT.inner, MAT.innerHi]) if (m) m.defines.M3EYE = 1; // (the inside gives way in the eye's box — the front P4's quarta parede: Build3D.eyeBox)
+    if (MAT.solid) { MAT.solid.defines.M3CUT = 1; MAT.solid.defines.GX_NOVOL = 1; } // (the town's solid gives way where an inside is drawn: Build3D.cuts; and its outer faces are the open air's, never lit as the room behind them — G.Luz3D)
+    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner, MAT.innerHi]) if (m) m.needsUpdate = true;
+    G.Build3D && G.Build3D.insideClear && G.Build3D.made && G.Build3D.made() && G.Build3D.insideClear(); // (the insides made again in the material of the quality)
     G.Ground3D.quality();
     G.Agua3D.quality(q); // (the water's ways by the quality: its cheap one, the clouds and the scene in its face — 21c)
     G.FX3D && G.FX3D.quality && G.FX3D.quality(q);
@@ -758,10 +775,52 @@
     G.Dragon3D && G.Dragon3D.update && G.Dragon3D.update(rdt, focus);
     G.Grass3D && G.Grass3D.update && G.Grass3D.update(rdt, focus, camera);
     G.Agua3D.frame(); // (21c: a new frame — the picture behind the water copied again, where the quality has it)
+    // (the flames' lights' pictures of the shadows, in a pass of their own: only what stands in the insides casts — D-707)
+    shadeInsides();
+    // (with the eye in a room, the town only where it is seen through the room's openings: the rest is not drawn this frame — D-708)
+    const hid = R3.portalCull ? portalCull() : null;
     if (!(G.Post3D && G.Post3D.render(scene, camera))) renderer.render(scene, camera); // (the post-processing, where the quality has it)
+    if (hid) for (const g of hid) g.visible = true;
     R3.info = renderer.info;
     if (rdt > 0) R3.fps = R3.fps ? R3.fps * 0.95 + (1 / rdt) * 0.05 : 1 / rdt;
   };
+  // the pictures of the shadows of the flames' lights that are due (D-707): drawn here, before the frame, in a scene of their own that
+  // holds only the insides drawn and those lights — three.js's own pass takes every mesh that casts a shadow round a light, six times
+  // (the whole town, and the bodies, whose picture of depth is the sun's only), and reads the eye's layers, not the light's —, the sun's
+  // picture left as it is; the frame's own pass then leaves them alone (they keep their picture until they are due again)
+  let shadeScene = null, shadeRT = null;
+  function shadeInsides() {
+    const F3 = G.FX3D; if (!F3 || !F3.shadeDue || !renderer.shadowMap.enabled) return; const due = F3.shadeDue(); if (!due.length) return;
+    for (const l of due) l.userData.shDue = false;
+    const grps = G.Build3D && G.Build3D.insideGroups ? G.Build3D.insideGroups() : []; if (!grps.length) return;
+    if (!shadeScene) { shadeScene = new THREE.Scene(); shadeRT = new THREE.WebGLRenderTarget(1, 1); }
+    const back = []; for (const o of grps.concat(due)) { const p = o.parent; back.push([o, p, p ? p.children.indexOf(o) : -1]); shadeScene.add(o); }
+    for (const l of due) l.shadow.needsUpdate = true;
+    const rt = renderer.getRenderTarget(); renderer.setRenderTarget(shadeRT); renderer.render(shadeScene, camera); renderer.setRenderTarget(rt);
+    // (each back in its own place among its parent's: the order of the lights is the order of the masks — FX3D)
+    for (const [o, p, k] of back) { shadeScene.remove(o); if (!p) continue; o.parent = p; if (k >= 0 && k <= p.children.length) p.children.splice(k, 0, o); else p.children.push(o); }
+  }
+  // the town cut by the openings of the room the eye is in (D-708): each chunk's pictures hidden for this frame where no opening — a
+  // window, an open way or door, the court — lets the eye see any of it (the side planes of the pyramid from the eye through the
+  // opening, and the opening's own plane); the chunk the eye is in always drawn. Only seen: the pictures shown again after the frame
+  R3.portalCull = true; R3.culled = 0;
+  const PL = [];
+  function portalCull() {
+    R3.culled = 0; const P = G.Build3D && G.Build3D.portals ? G.Build3D.portals(camera.position.x, camera.position.y, camera.position.z) : null; if (!P) return null;
+    const c = camera.position; PL.length = 0;
+    for (const q of P) { const m = [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, (q[0][2] + q[2][2]) / 2]; const pl = [];
+      for (let k = 0; k < 4; k++) { const a = q[k], b = q[(k + 1) % 4]; const ux = a[0] - c.x, uy = a[1] - c.y, uz = a[2] - c.z, vx = b[0] - c.x, vy = b[1] - c.y, vz = b[2] - c.z;
+        let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; let d = -(nx * c.x + ny * c.y + nz * c.z); if (nx * m[0] + ny * m[1] + nz * m[2] + d < 0) { nx = -nx; ny = -ny; nz = -nz; d = -d; } pl.push([nx, ny, nz, d]); }
+      // (the opening's plane: what lies beyond it from the eye)
+      { const ux = q[1][0] - q[0][0], uy = q[1][1] - q[0][1], uz = q[1][2] - q[0][2], vx = q[3][0] - q[0][0], vy = q[3][1] - q[0][1], vz = q[3][2] - q[0][2]; let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        let d = -(nx * m[0] + ny * m[1] + nz * m[2]); if (nx * c.x + ny * c.y + nz * c.z + d > 0) { nx = -nx; ny = -ny; nz = -nz; d = -d; } pl.push([nx, ny, nz, d]); }
+      PL.push(pl); }
+    const TL = G.Space.TILE, S = C * TL; const out = []; const ccx = Math.floor(c.x / S), ccz = Math.floor(c.z / S);
+    const seen = (x0, z0, x1, z1) => PL.some(pl => pl.every(([nx, ny, nz, d]) => { for (const x of [x0, x1]) for (const y of [-200, 900]) for (const z of [z0, z1]) if (nx * x + ny * y + nz * z + d >= 0) return true; return false; }));
+    for (const ch of chunks.values()) { if (ch.cx === ccx && ch.cy === ccz) continue; const x0 = ch.cx * S, z0 = ch.cy * S; if (seen(x0, z0, x0 + S, z0 + S)) continue;
+      for (const g of [ch.near, ch.far]) if (g && g.visible) { g.visible = false; out.push(g); } }
+    R3.culled = out.length; return out;
+  }
   // (what the GPU holds — counted by three.js when a geometry is first drawn — and what the scene holds right now, drawn or not)
   R3.memory = () => { if (!renderer) return null; const seen = new Set(); scene.traverse(o => { if (o.geometry) seen.add(o.geometry); }); return { geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures, calls: renderer.info.render.calls, tris: renderer.info.render.triangles, live: seen.size }; };
   R3.dropMesh = grp => disposeGroup(grp);

@@ -103,7 +103,7 @@ void main() {
   // the sun between the trunks of the woods, the low sun through the gaps of a town. The air as thick as the map of the air has
   // it (a little everywhere, more in the mist and under the canopy of the wet woods); the light scattered toward the eye most
   // looking into the sun (a phase of Henyey-Greenstein). A quarter of the picture, or half at the finest; jittered and blurred
-  const VLFS = `varying vec2 vUv; uniform sampler2D tShadow; uniform mat4 uShadowM; uniform mat4 uCamW; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uMax; uniform float uBase;
+  const VLFS = `varying vec2 vUv; uniform sampler2D tShadow; uniform mat4 uShadowM; uniform mat4 uCamW; uniform vec3 uSunDir; uniform vec3 uSunCol; uniform float uMax; uniform float uBase; uniform float uDust;
 uniform sampler2D gxAirMap; uniform sampler2D gxShade; uniform vec4 gxAirB; uniform vec4 gxAirK; uniform vec4 gxCanopy;
 ${VIEW}
 #include <packing>
@@ -123,7 +123,7 @@ void main() {
     vec2 uv = gxMapUV(w.xz); vec4 a = texture2D(gxAirMap, uv); float gy = texture2D(gxShade, uv).b * 76.5 * gxAirB.w;
     float mist = (a.r * gxAirK.x + a.b * gxAirK.y) * (1.0 - smoothstep(a.a * 76.5 * gxAirB.w - 2.5, a.a * 76.5 * gxAirB.w + 1.0, w.y));
     float under = a.g * gxAirK.z * (1.0 - smoothstep(gy + gxCanopy.w * 0.8 * gxAirB.w, gy + gxCanopy.w * 1.1 * gxAirB.w, w.y));
-    float d = uBase + mist * 0.02 + under * 0.012;
+    float d = uBase + mist * 0.02 + under * 0.012 + uDust * (1.0 - smoothstep(6.0, 12.0, (float(i) + jit) * dt));
     acc += vec3(lit * d * dt * T); T *= exp(-d * dt);
   }
   float c = dot(rd, uSunDir); float g = 0.62; float ph = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * c, 1.5);
@@ -180,7 +180,7 @@ void main() {
         c += (texture2D(tSrc, vUv + vec2(uTexel.x, 0.0)).rgb + texture2D(tSrc, vUv - vec2(uTexel.x, 0.0)).rgb + texture2D(tSrc, vUv + vec2(0.0, uTexel.y)).rgb + texture2D(tSrc, vUv - vec2(0.0, uTexel.y)).rgb) * 0.12;
         c += (texture2D(tSrc, vUv + uTexel).rgb + texture2D(tSrc, vUv - uTexel).rgb + texture2D(tSrc, vUv + vec2(uTexel.x, -uTexel.y)).rgb + texture2D(tSrc, vUv - vec2(uTexel.x, -uTexel.y)).rgb) * 0.04; gl_FragColor = vec4(c, 1.0); }`, { tSrc: { value: null }, uTexel: { value: new THREE.Vector2() } }),
       rblur: mk(RBLURFS, { tSrc: { value: null }, uSun: { value: new THREE.Vector2() }, uLen: { value: 0.5 } }),
-      vl: null, vlU: Object.assign(view(), { tShadow: { value: null }, uShadowM: { value: new THREE.Matrix4() }, uCamW: { value: new THREE.Matrix4() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color(0) }, uMax: { value: 60 }, uBase: { value: 0.0016 },
+      vl: null, vlU: Object.assign(view(), { tShadow: { value: null }, uShadowM: { value: new THREE.Matrix4() }, uCamW: { value: new THREE.Matrix4() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color(0) }, uMax: { value: 60 }, uBase: { value: 0.0016 }, uDust: { value: 0 },
         gxAirMap: R3.GX.gxAirMap, gxShade: R3.GX.gxShade, gxAirB: R3.GX.gxAirB, gxAirK: R3.GX.gxAirK, gxCanopy: R3.GX.gxCanopy }),
       comp: null, compU: Object.assign(view(), { tScene: { value: null }, tAOt: { value: null }, tBloom: { value: null }, tRays: { value: null }, tVL: { value: null }, uVLK: { value: 0 }, uAOTexel: { value: new THREE.Vector2() }, uAOK: { value: 0.85 }, uBloomK: { value: 0.12 }, uRayK: { value: 0 }, uExp: { value: 1 }, gxGr: R3.GX.gxGr, gxTn: R3.GX.gxTn }),
     };
@@ -236,6 +236,8 @@ void main() {
     const sun = R3.sun; if (!sun || !sun.castShadow || !sun.shadow.map) return 0; const sk = R3.skyU; const sd = sk.sunDir.value; if (sd.y < 0.02) return 0;
     const w = G.S.weather || {}; const k = G.smooth(0.02, 0.1, sd.y) * (1 - G.clamp(w.rain || 0, 0, 1) * 0.8);
     const U = M.vlU; U.tShadow.value = sun.shadow.map.texture; U.uShadowM.value.copy(sun.shadow.matrix); U.uSunDir.value.copy(sd); U.uSunCol.value.copy(sun.color).multiplyScalar(sun.intensity);
+    // (in a room the air holds its dust, the first metres of it: the sun through a window a beam one sees — the eye in an inside, G.Luz3D)
+    const cp = camera.position; const inn = G.Luz3D && G.Luz3D.at ? G.Luz3D.at(cp.x, cp.y, cp.z) : null; U.uDust.value = inn && inn.dentro > 0.5 ? 0.012 : 0;
     return k * 0.32;
   }
   function pass(mat, target) { quad.material = mat; ren.setRenderTarget(target); ren.render(quad, qcam); P3.passes++; }

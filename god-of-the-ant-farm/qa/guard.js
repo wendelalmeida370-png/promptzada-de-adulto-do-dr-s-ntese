@@ -1449,11 +1449,11 @@ for (const f of files) { if (f === 'modes.js' || f === 'input3d.js' || f === 'av
 { const a3 = (src['agua3d.js'] || []).join('\n'); for (const k of ['aguaRefl', 'aguaFall', 'aguaSpray', 'aguaWet']) if (a3 && !new RegExp("qa\\('" + k + "'").test(a3)) fails.push(`as qualidades da água: o agua3d.js não acrescenta o campo ${k} pelo qualAdd (D-510)`); }
 // === 21d: o céu ===
 // 188. "a luz é do céu" (D-466, D-520): os uniformes do ar e da luz (GX) e a luz da hora (a força e a cor do sol e do céu, a
-// exposição) só o js/ceu3d.js escreve — a luz pintada das chamas (gxLM*) é do fx3d.js, e o realm3d.js só dá a exposição de
-// partida ao fazer o desenho; os outros leem
+// exposição) só o js/ceu3d.js escreve — a luz pintada das chamas (gxLM*) é do fx3d.js, os volumes da luz de dentro (gxVol*) do
+// luz3d.js (D-700, regra 250), e o realm3d.js só dá a exposição de partida ao fazer o desenho; os outros leem
 { const W = /\bGX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\bR3\.GX\.(gx\w+)\.value(\.[xyzw])?\s*=(?!=)|\.toneMappingExposure\s*=(?!=)|\b(sun|hemi)\.(intensity|color\.setRGB|groundColor\.setRGB)\b(\s*=(?!=)|\()/;
   for (const f of files) { if (f === 'ceu3d.js') continue; src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); const m = W.exec(c); if (!m) return;
-    if (f === 'fx3d.js' && /gxLM/.test(c)) return; if (f === 'realm3d.js' && /renderer\.toneMappingExposure = 1\.0;/.test(c)) return;
+    if (f === 'fx3d.js' && /gxLM/.test(c)) return; if (f === 'realm3d.js' && /renderer\.toneMappingExposure = 1\.0;/.test(c)) return; if (f === 'luz3d.js' && /\bgxVol[ABFKD]?\.value\b/.test(c) && !/gx(?!Vol)\w+\.value/.test(c.replace(/gxVol[ABFKD]?\.value/g, ''))) return;
     fails.push(`a luz é do céu: ${f}:${k + 1} escreve a luz ou o ar do 3D (só o ceu3d.js; D-520): ${l.trim().slice(0, 110)}`); }); } }
 // 189. "o caminho do sol é um só" (D-469, D-520): só o js/ceu.js diz onde estão o sol e a lua pela hora (o nascer e o pôr, a forma
 // da curva que demora) e o matiz da hora do deus (a tabela AMB) — o 3D, o deus e o pós perguntam ao G.Ceu, nenhum refaz a conta
@@ -1894,7 +1894,7 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
 // que gira sozinha, é feita da parte do modelo: leafModel)
 { const all = (src['build3d.js'] || []).join('\n'); const body = (a, z) => { const i = all.indexOf(a), j = all.indexOf(z, i + 1); return i < 0 ? '' : all.slice(i, j < 0 ? undefined : j); };
   for (const [nm, f] of [['o B3.interior', body('B3.interior = function', '\n  };')], ['o modelled', body('function modelled(', '\n  }\n')]]) if (/G\.Mesh3D\.(?:part|geo)\(|\.put\(G\.Movel3D/.test(f)) fails.push(`a geometria compartilhada: ${nm} junta um modelo de móvel ponto a ponto (os móveis são instâncias, D-712)`);
-  if (!/new THREE\.InstancedMesh\(geo, MI, G0\.list\.length\)/.test(all)) fails.push('a geometria compartilhada: o makeOpen não desenha os móveis por instâncias (D-712)'); }
+  if (!/new THREE\.InstancedMesh\(geo, (?:o\.)?MI, G0\.list\.length\)/.test(body('function makeItems(', '\n  }\n'))) fails.push('a geometria compartilhada: o makeItems (os móveis de um interior aberto, feitos à parte da casca: D-708) não os desenha por instâncias (D-712)'); }
 // 266. "o sombreador sabe da instância" (D-712): o material de dentro põe o desenho do padrão onde a peça está — a matriz da
 // instância antes da do objeto, a normal pela instância como a do three
 { const b3 = (src['build3d.js'] || []).join('\n');
@@ -1948,5 +1948,47 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
 // de uma taverna nunca foi acusado
 { const qa = fs.readFileSync(path.join(__dirname, 'qa.js'), 'utf8');
   if (!/if \(b && G\.Modes && G\.Modes\.state === 'INC'\) for \(const m of QA\.eye\(\)\) add\('vista3d', 2, m\);/.test(qa) || !/if \(!C3 \|\| !v \|\| !C3\.last \|\| v\.sleeping\) return \[\];/.test(qa)) fails.push('o olho verificado dentro de casa (L-1860): a regra «vista3d» do qa/qa.js não pergunta ao QA.eye com o corpo dentro (só quem dorme fica de fora)'); }
+// 250. "a luz de dentro é de dentro" (D-700, D-701): os volumes da luz de dentro, as suas caixas e o fogo de cada um — as uniformes
+// gxVol, gxVolD, gxVolA, gxVolB, gxVolF, gxVolK — só o luz3d.js escreve; a máscara de cada luz de verdade (gxLamp: o prédio de dentro
+// em que a chama arde, ou o ar de fora) só o fx3d.js; o ceu3d.js só as declara e as lê
+{ const VOL = /\bgxVol[ABFKD]?\.value\b/, LAMP = /\bgxLamp\.value\b/;
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (f === 'ceu3d.js') return;
+    if (VOL.test(c) && f !== 'luz3d.js') fails.push(`a luz de dentro é de dentro: ${f}:${k + 1} mexe nos volumes da luz de dentro (só o luz3d.js, D-700): ${l.trim().slice(0, 100)}`);
+    if (LAMP.test(c) && f !== 'fx3d.js') fails.push(`a luz de dentro é de dentro: ${f}:${k + 1} mexe na máscara das luzes (só o fx3d.js, D-701): ${l.trim().slice(0, 100)}`); }); }
+// 251. "toda fonte de dentro tem causa" (D-701): a luz de dentro e as chamas desenhadas dentro de um prédio vêm de uma porta só, o
+// G.Luz3D.sources — o fogo pelo G.Atmos.fire (a família dormindo, o lar apagado), o lampadário e o altar pelo G.Atmos.lit (alguém
+// acordado), a decoração pelo G.Dentro3D.fontes (P5) —; o build3d.js põe as chamas de dentro só dela (nunca «alguém em casa»)
+{ const lz = (src['luz3d.js'] || []).join('\n'); const i = lz.indexOf('L.sources = function'), j = lz.indexOf('\n  };', i); const f = i < 0 ? '' : lz.slice(i, j);
+  if (!/At\.fire\(b\)/.test(f) || !/At\.lit\(b\)/.test(f) || !/G\.Dentro3D\.fontes\(b\)/.test(f)) fails.push('toda fonte de dentro tem causa: o G.Luz3D.sources não pergunta ao G.Atmos.fire, ao G.Atmos.lit e ao G.Dentro3D.fontes (D-701)');
+  const b3 = src['build3d.js'] || []; const pushes = b3.map((l, k) => [l, k]).filter(([l]) => /\bB3\.flames\.push\(/.test(l.replace(/(^|\s)\/\/\s.*$/, '')));
+  if (pushes.length !== 1 || !/for \(const s of o\.src \|\| \[\]\) B3\.flames\.push\(/.test(pushes[0][0])) fails.push(`toda fonte de dentro tem causa: o build3d.js põe chamas de dentro fora das fontes do G.Luz3D.sources (${pushes.map(([, k]) => 'linha ' + (k + 1)).join(', ') || 'nenhuma'}; D-701)`); }
+// 252. "o volume de luz é puro" (D-700): o luz3d.js só lê o mundo — nenhuma escrita no G.S, num prédio, na planta, numa peça — e o
+// mesmo plano com as mesmas fontes dá o mesmo volume (sem relógio no assado: o relógio do olhar só no tremor do fogo)
+{ (src['luz3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.S\.\w+(\.\w+|\[[^\]]+\])*\s*=[^=]/.test(c) || /\b(b|p|it|o\.b|o\.p)\.\w+\s*=[^=]/.test(c)) fails.push(`o volume de luz é puro: luz3d.js:${k + 1} escreve no mundo (D-700): ${l.trim().slice(0, 100)}`); });
+  const lz = (src['luz3d.js'] || []).join('\n'); const i = lz.indexOf('L.job = function'), j = lz.indexOf('\n  L.bake = function', i); const f = i < 0 ? '' : lz.slice(i, j);
+  if (/Date\.now|performance\.now/.test(f.replace(/now\(\)/g, ''))) fails.push('o volume de luz é puro: o assado lê um relógio (só o orçamento do passo o mede, por now(): D-700)'); }
+// 253. "nenhuma luz vaza" (D-701): no ceu3d.js cada luz de verdade passa pela máscara da luz de dentro (gxLampK no laço das luzes
+// pontuais), a luz pintada das chamas de fora entra num cômodo só pelas aberturas (gxOut), e o fx3d.js não pinta as chamas de dentro
+// na luz pintada (a delas é a do volume)
+{ const ce = (src['ceu3d.js'] || []).join('\n'), fx = (src['fx3d.js'] || []).join('\n');
+  if (!/directLight\.color \*= gxLampK\( gxLamp\[ i \], gxIn, gxVS, gxOut, gxV\.g \);/.test(ce)) fails.push('nenhuma luz vaza: as luzes pontuais sem a máscara da luz de dentro (gxLampK, D-701)');
+  if (!/\/ \( 1\.0 \+ lmD \* 0\.45 \) \* gxOut;/.test(ce)) fails.push('nenhuma luz vaza: a luz pintada das chamas entra nos cômodos sem passar pelas aberturas (gxOut, D-701)');
+  if (!/if \(q\[9\]\) continue; \/\/ \(a flame of an inside/.test(fx)) fails.push('nenhuma luz vaza: o fx3d.js pinta as chamas de dentro na luz pintada (D-701)'); }
+// 254. "a janela da Antiguidade" (D-704, D-652): a janela é uma abertura, sem vidro — o que se vê nela de fora é o escuro do cômodo
+// (WIN_DARK, fosco, sem o reflexo do céu) e, de noite, a lamparina de dentro; com o interior desenhado o recorte a abre (a caixa de cada
+// janela em B3.cuts); as venezianas nunca fechadas sobre ela
+{ const b3 = (src['build3d.js'] || []).join('\n');
+  if (!/glass = new THREE\.MeshLambertMaterial\(\{ color: WIN_DARK, emissive: 0xffb860, emissiveIntensity: 0 \}\)/.test(b3)) fails.push('a janela da Antiguidade: o material das janelas não é o escuro do cômodo (WIN_DARK, D-704)');
+  if (/uSkyTop|reflect\(-Vw/.test(b3)) fails.push('a janela da Antiguidade: a janela reflete o céu como vidro (D-704)');
+  if (!/if \(h\.kind === 'janela'\) \{ if \(RF && formWall\(b, S, w\)\) continue;/.test(b3)) fails.push('a janela da Antiguidade: o recorte não abre o vão das janelas com o interior desenhado (D-704)');
+  const wi = b3.indexOf('function winDress(K, F, q, k, ops) {'), wj = b3.indexOf('\n  }\n', wi); if (/fx\(s2 \* ww \* 0\.25, 0, ww \* 0\.5, hh, 0\.05/.test(wi < 0 ? '' : b3.slice(wi, wj))) fails.push('a janela da Antiguidade: uma veneziana fechada sobre a janela de uma casca (D-704)'); }
+// 255. "o chão de dentro não é o de fora" (D-703): o chão de um cômodo é um dos materiais de dentro (a terra batida lisa, o tabuado,
+// a lajota, as lajes sem capim, o mosaico) — nunca a terra lavrada da roça ('soil') nem as lajes com capim da rua ('slab') —, e a parede
+// de dentro é a do innerMat (o reboco caiado, nunca os tijolos de fora)
+{ const b3 = (src['build3d.js'] || []).join('\n'); const i = b3.indexOf('function floorMat(K, l) {'), j = b3.indexOf('\n  }', i); const f = i < 0 ? '' : b3.slice(i, j);
+  if (!f || /'soil'|'slab'|'cobble'/.test(f)) fails.push('o chão de dentro não é o de fora: o floorMat dá a terra lavrada ou as lajes com capim (D-703)');
+  const w = b3.indexOf('function inWall(K, plan, w, l) {'), w2 = b3.indexOf('\n  }\n', w); const fw = w < 0 ? '' : b3.slice(w, w2);
+  if (!/innerMat\(K, wm\)/.test(fw) || /\binMat\(/.test(fw)) fails.push('o chão de dentro não é o de fora: a parede de dentro não é a do innerMat (D-703)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

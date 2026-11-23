@@ -213,7 +213,7 @@ function trisOf(geo, plain, ds) {
   }
   return out;
 }
-const GLASS = [28, 38, 48]; // (the panes: Build3D's glass, 0x1c2630)
+const GLASS = [24, 19, 15]; // (the windows from out: the dark of the room behind the opening — Build3D's WIN_DARK, 0x18130f, D-704; no glass)
 // the near picture of a building as its chunk draws it (its body and its panes; what lies about it, Props3D, put aside:
 // the building is measured, not its yard) — or, with o.props, the yard too
 F.near = function (b, o) {
