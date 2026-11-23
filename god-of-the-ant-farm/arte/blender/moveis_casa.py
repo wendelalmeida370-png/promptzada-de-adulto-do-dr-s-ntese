@@ -6,7 +6,7 @@
 import math
 from moveis_forma import caixa, tabua, tampo, torno, cilindro, tubo, curva, lamina, almofada, ovo, pedra, brasas, tora, TAU
 from moveis_pecas import poste, quatro
-from moveis_fogo import coifa, tripe_panela, lenha
+from moveis_fogo import coifa, lenha
 
 # ------------------------------ a mesa do terreiro (the table with its benches) ------------------------------
 def mesa_terreiro(style):
@@ -126,7 +126,6 @@ def lar(style):
         brasas(M, 'reboco', x0 + t, x1 - t, z0 + t, z1 - t, 0.0, 0.05, seed=7, n=6)
         brasas(M, 'brasa', x0 + t + 0.06, x1 - t - 0.06, z0 + t + 0.1, z1 - t - 0.1, 0.03, 0.05, seed=8, n=6)
         lenha(M, -0.2, 0.2, 0.0, 0.05, n=2, r=0.04, seed=40)
-        tripe_panela(M, 0.0, -0.25, 0.04, r=0.15)
         M.anchor('tampo', 0, h, 0.3, 0.3, 0.2)
     return {'pedras': pedras}[style]
 

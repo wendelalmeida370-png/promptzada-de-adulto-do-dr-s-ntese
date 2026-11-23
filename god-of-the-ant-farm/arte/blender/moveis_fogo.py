@@ -17,15 +17,6 @@ def coifa(M, w, d, y0, top, part='reboco', borda='madeira', fw=0.5, fd=0.34):
     tronco(M, part, (x0 + 0.03, z0, x1 - 0.03, z1 - 0.02), (-fw / 2, z0, fw / 2, z0 + fd), y0 + 0.06, top, faces='fed')
     M.anchor('chamine', 0, top, z0 + fd / 2, fw, fd)
 
-def tripe_panela(M, x, z, y, r=0.16, panela='barro', ferro='ferro'):
-    """an iron tripod standing over the embers with a pot on its ring"""
-    for k in range(3):
-        a = k * TAU / 3 + 0.5; tubo(M, ferro, [(x + math.cos(a) * r, y, z + math.sin(a) * r), (x + math.cos(a) * r * 0.7, y + 0.2, z + math.sin(a) * r * 0.7)], 0.008, seg=4, chao=None)
-    torno(M, ferro, [(y + 0.2, r * 0.7 + 0.008), (y + 0.215, r * 0.7 + 0.008), (y + 0.215, r * 0.7 - 0.004), (y + 0.2, r * 0.7 - 0.004)], seg=12, x=x, z=z, cap0=False, cap1=False)
-    rp = r * 0.72
-    torno(M, panela, [(y + 0.13, 0.03), (y + 0.15, rp * 0.75), (y + 0.21, rp), (y + 0.29, rp * 0.92), (y + 0.31, rp * 0.82), (y + 0.325, rp * 0.86)], seg=14, x=x, z=z, sharp=60, cap1=False)
-    torno(M, 'liquido', [(y + 0.3, rp * 0.84), (y + 0.3, 0.0001)], seg=10, x=x, z=z, cap0=False, cap1=False)
-
 def lenha(M, x0, x1, z, y, n=3, r=0.045, seed=0):
     """logs laid across a fire"""
     for k in range(n):
@@ -45,7 +36,6 @@ def lareira(style):
         for (a, b, c, e) in ((x0, z0, x1, z0 + 0.07), (x0, z0 + 0.07, x0 + 0.07, z1), (x1 - 0.07, z0 + 0.07, x1, z1)):
             pedra(M, 'pedra', (a, yt + 0.05, b), (c, yt + 0.12, e), seed=1311, jit=0.002, ch=0.01)
         brasas(M, 'brasa', x0 + 0.12, x1 - 0.12, z0 + 0.1, z1 - 0.1, yt + 0.05, 0.05, seed=1)
-        tripe_panela(M, -0.3, 0.0, yt + 0.05)
         tubo(M, 'ferro', [(0.18, yt + 0.11, -0.12), (0.5, yt + 0.11, -0.12)], 0.006, seg=4, chao=None)
         tubo(M, 'ferro', [(0.18, yt + 0.11, 0.08), (0.5, yt + 0.11, 0.08)], 0.006, seg=4, chao=None)
         for xx in (0.2, 0.3, 0.4, 0.48): tubo(M, 'ferro', [(xx, yt + 0.11, -0.12), (xx, yt + 0.11, 0.08)], 0.005, seg=4, chao=None)
@@ -82,7 +72,6 @@ def lareira(style):
             pedra(M, 'pedra', (a, yt, b), (c, yt + 0.07, e), seed=1352, jit=0.002, ch=0.01)
         brasas(M, 'brasa', x0 + 0.1, x1 - 0.1, z0 + 0.1, z1 - 0.1, yt, 0.05, seed=3)
         lenha(M, -0.25, 0.25, 0.0, yt + 0.02, n=2, r=0.04, seed=20)
-        tripe_panela(M, 0.3, 0.0, yt, r=0.17, panela='bronze')
         coifa(M, w, d, h, 1.85, borda='pintura')
     return {'focus': focus, 'chamine': chamine, 'eschara': eschara}[style]
 
@@ -160,7 +149,6 @@ def fogo_comprido(style):
         brasas(M, 'brasa', -0.75, 0.75, z0 + t + 0.04, z1 - t - 0.04, 0.05, 0.06, seed=6, n=10)
         for i in range(3):
             xa = -0.6 + i * 0.45; tora(M, 'madeira2', (xa, 0.1, -0.2), (xa + 0.3, 0.13, 0.18), 0.05, seg=7, seed=30 + i, cerne='madeira')
-        tripe_panela(M, x1 - 0.42, 0.0, 0.04, r=0.2)
         pedra(M, 'pedra', (x0 + 0.2, 0.06, -0.22), (x0 + 0.62, 0.13, 0.2), seed=1700, jit=0.006, ch=0.02)
         M.anchor('tampo', x0 + 0.41, 0.13, 0, 0.36, 0.36)
     return {'lareira-longa': lareira_longa}[style]

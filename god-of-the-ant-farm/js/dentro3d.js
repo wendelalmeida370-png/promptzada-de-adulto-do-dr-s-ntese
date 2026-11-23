@@ -152,15 +152,14 @@
   // the top of a table drawn without one —, in the lot's frame and its storey: [{ it, k, i, x (a), y, z (n), w, d, yAbs, room (the
   // height clear over it) }]
   const TABLES = { mesa: 1, 'mesa-redonda': 1, 'mesa-taverna': 1, 'mesa-casa': 1, 'mesa-baixa': 1, 'mesa-terreiro': 1, bancada: 1, 'mesa-leitura': 1, 'mesa-escriba': 1, 'esteira-comer': 1, arca: 1 };
-  // (the clay a piece drawn by Build3D's boxes puts on its own top — never anything of ours over it: those are said to its owner, P2)
+  // (the pieces Build3D draws by its boxes whose top is not the whole piece: the table among its benches, the mat on the floor)
   const FURN_TOP = { 'mesa-casa': 1, 'esteira-comer': 1, 'banco-comer': 1 };
-  // (the top of a piece Build3D draws by its boxes, with the clay it puts there itself: its free part, the discs of its pots kept)
+  // (the top of a piece Build3D draws by its boxes — its table part —: the boxes put no clay of their own on it any more, L-1880)
   function furnTop(it, foot) {
     const { w, d, h } = it;
     if (it.kind === 'mesa-casa') { const two = w >= 1.05, tw = two ? w - 0.72 : w - 0.4, ta = two ? 0 : -0.2;
-      return { it, k: 'tampo', i: 0, x: ta, y: foot + h, z: 0, w: tw - 0.06, d: d - 0.12, lv: it.lv, avoid: [[ta + tw * 0.12, d * 0.22, 0.1], [ta - tw * 0.18, -d * 0.12, 0.06], [ta, -d * 0.3, 0.11]] }; }
-    if (it.kind === 'esteira-comer') { const av = d <= 0.5 ? [[0, d / 2 - 0.09, 0.09], [-w * 0.27, d / 2 - 0.08, 0.07], [w * 0.27, d / 2 - 0.08, 0.07]] : [[0, 0, Math.min(w, d) * 0.2 + 0.01]].concat([0, 1, 2].map(k => { const a = k * TAU / 3 + 0.5; return [Math.cos(a) * w * 0.3, Math.sin(a) * d * 0.3, 0.08]; }));
-      return { it, k: 'tampo', i: 0, x: 0, y: foot + 0.025, z: 0, w: w - 0.06, d: d - 0.06, lv: it.lv, avoid: av }; }
+      return { it, k: 'tampo', i: 0, x: ta, y: foot + h, z: 0, w: tw - 0.06, d: d - 0.12, lv: it.lv }; }
+    if (it.kind === 'esteira-comer') return { it, k: 'tampo', i: 0, x: 0, y: foot + 0.025, z: 0, w: w - 0.06, d: d - 0.06, lv: it.lv };
     return null;
   }
   // (things laid about a top, each at the free point nearest its own spot along it — clear of what is on it already and of the
