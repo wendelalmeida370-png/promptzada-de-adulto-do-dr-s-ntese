@@ -1905,5 +1905,48 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
 { const b3 = (src['build3d.js'] || []).join('\n'); const i = b3.indexOf('function inStair('), j = b3.indexOf('\n  }', i); const f = i < 0 ? '' : b3.slice(i, j);
   if (!/prism\(poly, a - S \/ 2, a \+ S \/ 2, WD\[1\]\)/.test(f) || !/put\(at\(run \* \(k \+ 0\.5\), 0, tr - 0\.045\)/.test(f)) fails.push('a escada aberta: o inStair não desenha as pernas e os degraus da escada de madeira (D-713)');
   if (!/if \(!walled\(sd\)\) continue;/.test(f)) fails.push('a escada aberta: o corrimão fora do lado da parede (T-1720)'); }
+// === os interiores 2.0, P4: a câmera, a tela e a entrada do corpo ===
+// 280. "a quarta parede tem o seu corte" (D-730): com o corpo sob um teto, o olho passa as paredes, os tetos e o telhado do prédio do
+// corpo só porque o que fica entre ele e a sala não se desenha — o cam3d.js deixa o prédio aberto ao olho por uma porta só (openSolid:
+// só o piso do andar para o olho ali) e diz o corte (C3.cutBoxes); o build3d.js põe a caixa do olho primeiro na lista dos cortes do
+// insideTick, antes das portas e dos pátios dos dentros desenhados. Um olho livre sem o corte veria o prédio por dentro das paredes
+{ const cam = (src['cam3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  if (!/if \(!all && eb\) \{ const r = openSolid\(X, Y, Z\); if \(r !== null\) return r; \}/.test(cam) || !/return Y < eb\.fy \+ C3\.EYE_FLOOR;/.test(cam)) fails.push('a quarta parede (D-730): o sólido do olho não abre o prédio do corpo pela porta openSolid (só o piso do andar)');
+  if (!/C3\.cutBoxes = \(\) => cuts;/.test(cam) || !/cuts = eb \? cutFor\(eb, P, body, piv\) : NONE;/.test(cam)) fails.push('a quarta parede (D-730): o cam3d.js não diz o corte do prédio aberto ao olho (C3.cutBoxes)');
+  const i = b3.indexOf('B3.insideTick = function'), j = b3.indexOf('setCut(boxes)', i); const f = i < 0 || j < 0 ? '' : b3.slice(i, j);
+  const ce = f.indexOf('G.Cam3D.cutBoxes()'), co = f.indexOf('for (const c of o.cuts)');
+  if (ce < 0 || co < 0 || ce > co) fails.push('a quarta parede (D-730): o insideTick do build3d.js não põe a caixa do olho (G.Cam3D.cutBoxes) primeiro na lista dos cortes'); }
+// 281. "a vista da sala é do jogador" (D-731): o olho sobe sobre a sala só pela ação 'vista' (a tecla e o botão: Input3D), que o
+// modes.js entrega ao C3.vista; nenhum outro arquivo do jogo liga ou desliga a vista, e o cam3d.js não a liga sozinho (só a desliga
+// quando o corpo sai de sob o teto). A inclinação dela é a do jogador ou a da vista, a maior — nunca escrita no C3.pitch (regra 124)
+{ for (const f of files) { if (f === 'modes.js' || f === 'cam3d.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/Cam3D\.vista\(/.test(c)) fails.push(`a vista da sala é do jogador (D-731): ${f}:${k + 1} liga ou desliga a vista — ela é a ação 'vista' do Input3D: ${l.trim().slice(0, 110)}`); }); }
+  const cam = src['cam3d.js'] || []; cam.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bvistaOn\s*=(?!=)(?!\s*false\b)(?!\s*\(\) =>)/.test(c) && !/C3\.vista = function/.test(c)) fails.push(`a vista da sala é do jogador (D-731): cam3d.js:${k + 1} liga a vista sem o pedido do jogador: ${l.trim().slice(0, 110)}`); });
+  if (!/\['vista', 'Vista da sala/.test((src['input3d.js'] || []).join('\n')) || !/if \(a === 'vista'\)/.test((src['modes.js'] || []).join('\n'))) fails.push("a vista da sala é do jogador (D-731): a ação 'vista' sem a sua tecla no Input3D ou sem o seu despacho no modes.js"); }
+// 282. "a lente pela tela" (D-732): o campo de visão nunca menos de C3.SIDE_FOV graus de lado (o celular em pé abre para cima e para
+// baixo — era uma luneta de 29°), uns graus a mais sob um teto, e a conversa fecha a lente só fora de casa (D-644)
+{ const cam = (src['cam3d.js'] || []).join('\n');
+  if (!/Math\.tan\(C3\.SIDE_FOV \* Math\.PI \/ 360\) \/ asp/.test(cam) || !/- 10 \* talkK \* \(1 - inK\)/.test(cam) || !/C3\.IN_FOV \* inK/.test(cam)) fails.push('a lente pela tela (D-732): a lente do cam3d.js sem o mínimo de lado (C3.SIDE_FOV pela proporção da tela), sem os graus de dentro de casa, ou a conversa fechando a lente dentro de casa'); }
+// 283. "a tela pelo lugar" (D-733): sob um teto e em paz, os botões que o Input3D.CALM diz (o «Correr» e o trio da luta) descansam —
+// a tela pergunta ao IncUI.calm, refeito com o IncUI.fightNear (a briga, a ameaça, a arma na mão), antes de mostrar cada botão
+{ const iu = (src['incui.js'] || []).join('\n'), i3 = (src['input3d.js'] || []).join('\n');
+  if (!/In\.CALM = \{ correr: 1, esquivar: 1, atacar: 1, defender: 1 \};/.test(i3)) fails.push('a tela pelo lugar (D-733): o Input3D.CALM não diz o «Correr» e o trio da luta');
+  if (!/const vis = \(!d\.when \|\| !!d\.when\(\)\) && !\(calmNow && G\.Input3D\.CALM && G\.Input3D\.CALM\[d\.a\]\);/.test(iu) || !/calmNow = !!\(G\.Cam3D\.under && G\.Cam3D\.under\(\)\) && !IU\.fightNear\(G\.Possess\.body\(\)\);/.test(iu)) fails.push('a tela pelo lugar (D-733): os botões do toque não descansam sob um teto em paz (IncUI.calm, Input3D.CALM)'); }
+// 284. "o «Travar» nunca através da parede" (D-733): o alvo da mira travada é visto do corpo — a linha da cabeça ao peito dele não
+// cruza nada desenhado (C3.solidAll: também as paredes que a quarta parede abre ao olho) —, e sob um teto só quem vem contra o corpo
+{ const md = (src['modes.js'] || []).join('\n');
+  if (!/for \(const \[, o\] of list\) if \(seenFrom\(p, o\)\) return \(cand = o\);/.test(md) || !/if \(C3\.solidAll\(/.test(md)) fails.push('a mira travada (D-733): o candidato do «Travar» não passa pela linha de vista (seenFrom, C3.solidAll)');
+  if (!/if \(under && !M3\.hostile\(o, me\)\) return;/.test(md)) fails.push('a mira travada (D-733): sob um teto o «Travar» não se limita a quem vem contra o corpo (M3.hostile)'); }
+// 285. "o corpo contra os móveis pelo contorno" (D-734): a colisão do corpo com as peças da planta é pelo retângulo de cada peça (it.r)
+// — o círculo do corpo nunca mais fundo nela do que estava (nunca gruda) —, além da grade (que marca só as células cujo meio a peça
+// cobre: a mesa passava 12 cm delas, o quadril entrava 19 cm na quina)
+{ const av = (src['avatar.js'] || []).join('\n');
+  if (!/if \(b && b\.inB && b\.inP\) \{ const then = pieceDepth\(X, Z\); if \(then > 0 && then > pieceDepth\(b\.X, b\.Z\) \+ 1e-4\) return 'wall'; \}/.test(av)) fails.push('o corpo contra os móveis (D-734): o blocked do avatar.js não confere o contorno das peças (pieceDepth), ou gruda o corpo nelas');
+  if (!/const dx = Math\.max\(R\[0\] - x, 0, x - R\[2\]\), dz = Math\.max\(R\[1\] - z, 0, z - R\[3\]\);/.test(av)) fails.push('o corpo contra os móveis (D-734): o pieceDepth não mede pelo retângulo da peça (it.r)');
+  if (!/- \(raw \? 0 : it\.h < TUNE\.pieceLowH \? TUNE\.pieceLow : TUNE\.pieceSlack\)/.test(av)) fails.push('o corpo contra os móveis (D-734): o pieceDepth sem a folga pela altura da peça (o quadril numa mesa, o ombro numa estante)'); }
+// 286. "o olho é verificado dentro de casa" (L-1860): a regra «vista3d» do verificador pergunta ao QA.eye com o corpo dentro de um
+// prédio também — só o corpo dormindo na cama fica de fora —: pulando quem estava dentro, o olho dentro da cabeça no terreiro inteiro
+// de uma taverna nunca foi acusado
+{ const qa = fs.readFileSync(path.join(__dirname, 'qa.js'), 'utf8');
+  if (!/if \(b && G\.Modes && G\.Modes\.state === 'INC'\) for \(const m of QA\.eye\(\)\) add\('vista3d', 2, m\);/.test(qa) || !/if \(!C3 \|\| !v \|\| !C3\.last \|\| v\.sleeping\) return \[\];/.test(qa)) fails.push('o olho verificado dentro de casa (L-1860): a regra «vista3d» do qa/qa.js não pergunta ao QA.eye com o corpo dentro (só quem dorme fica de fora)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

@@ -176,6 +176,25 @@ const ONLY = (process.env.ONLY || '').split(',').filter(Boolean); const want = k
     if (!r) ok('t7 a câmera junto das paredes', true, 'nenhuma casa com rua livre ao lado (nada a provar)');
     else ok('t7 a câmera junto da parede de uma casa: nunca dentro de nada, sai de novo devagar; a mira travada marcada na tela', !r.camIn && r.outMax < 0.06 && r.mark, JSON.stringify(r));
     await shot('t7-parede');
+    // (and indoors — the interiors 2.0, P4: the body put in the biggest room of a house and walked round it, the eye turned all
+    // round: the eye never ends a frame wrong (QA.eye: the fourth wall's floor, the drawn without the cut, the line to the body), and
+    // the eye's cut reaches the drawing — its boxes first in the town's list, the one the solid material gives way in (D-730))
+    const ri = await E(() => { __X.reset(); const S = G.S, In = G.Interiors, Sp = G.Space, L = Sp.TILE;
+      const B = [...S.buildings.values()].filter(b => b.built && !b.ruin && (b.type === 'house' || b.type === 'taverna') && In.has(b)).sort((a, b) => b.w - a.w || a.id - b.id).find(b => { const p = Sp.planNow(b); return p && p.ok && p.rooms.some(m => !m.open && (m.r[2] - m.r[0]) > 2.4 && (m.r[3] - m.r[1]) > 2.4); });
+      if (!B) return null; const p = Sp.planNow(B); const lv = p.entryLv || 0; const m = p.rooms.filter(q => q.lv === lv && !q.open).sort((a, c) => (c.r[2] - c.r[0]) * (c.r[3] - c.r[1]) - (a.r[2] - a.r[0]) * (a.r[3] - a.r[1]))[0];
+      const pts = []; for (let x = m.r[0] + 0.4; x < m.r[2] - 0.4; x += 0.2) for (let z = m.r[1] + 0.4; z < m.r[3] - 0.4; z += 0.2) if (In.walk(B, lv, x, z, 0.36)) pts.push([x, z]); if (pts.length < 2) return null;
+      const v = __X.body(); G.Vg.endTask(v); v.inside = B.id; v.x = B.x + pts[0][0] / L; v.y = B.y + pts[0][1] / L; G.Avatar.detach(); G.Avatar.attach(v, 0); __X.f(30);
+      let bad = 0, first = '', n = 0, cutsOk = 0, cutsN = 0;
+      // (W held, the eye turned all the while: the body goes round the room, along its walls and furniture, the eye behind it)
+      __X.key('w', true);
+      for (let k = 0; k < 240; k++) { G.Cam3D.yaw += 0.035; G.Main.frameFor(16.7, true); n++;
+        const q = QA.eye(); if (q.length) { bad++; if (!first) first = q[0]; }
+        const cb = G.Cam3D.cutBoxes(); if (cb.length) { cutsN++; const U = G.Build3D.cutU; if (U.n.value >= cb.length && cb.every((c, i) => Math.abs(U.a.value[i].x - c[0]) < 1e-3 && Math.abs(U.b.value[i].z - c[5]) < 1e-3)) cutsOk++; } }
+      __X.key('w', false); __X.f(10); const open = !!G.Cam3D.open(); const cur = +G.Cam3D.last.cur.toFixed(2);
+      return { house: B.type + '#' + B.id, frames: n, bad, first, cutsN, cutsOk, open, cur }; });
+    if (!ri) ok('t7 dentro de casa', true, 'nenhum prédio com um cômodo de 2,4 m (nada a provar)');
+    else ok('t7 dentro de casa: andando e girando o olho, o olho nunca errado, e o corte do olho chega ao desenho', !ri.bad && ri.cutsN > 50 && ri.cutsOk === ri.cutsN && ri.open, JSON.stringify(ri));
+    await shot('t7-dentro'); await E(() => __X.reset()); // (back out to the corridor: the proofs after it are of out of doors)
   }
   // ================================ t8: o corpo desenhado ================================
   if (want('t8')) {

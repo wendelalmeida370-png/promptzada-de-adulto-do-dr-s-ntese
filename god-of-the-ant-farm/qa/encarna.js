@@ -37,7 +37,8 @@
 //      caixa» junto da pilha, pega; o marcador passa à porta do armazém, «Levar ao armazém do porto»; guarda: o estoque, a
 //      paga na casa e a conta dele como as de um estivador; as fotos da HUD com o marcador
 //  e18 entrar e sair de casa de verdade (Etapa 2) — a porta fechada desenhada no vão, as mãos a abrem e a folha gira como o
-//      mundo a tem, o corpo entra (o mundo o tem dentro), o olho num cômodo e nunca numa parede, quem está em casa onde a
+//      mundo a tem, o corpo entra (o mundo o tem dentro), o olho nunca numa parede — a quarta parede, D-730: o prédio aberto ao
+//      olho, o que fica entre ele e o corpo cortado (QA.eye) —, quem está em casa onde a
 //      planta põe, a escada inteira com o alçapão abrindo, salvar e carregar dentro, o deus tira a casa com o corpo nela
 //  e19 a bateria de trocas (L-309) — a troca da e4 (A, Deus, B; e de dentro, B → C) em oito pares das duas maiores cidades,
 //      de manhã e depois de uma noite do mundo: a IA de quem sai volta, quem entra tem o corpo, ninguém duplicado; o par que
@@ -1369,7 +1370,10 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     for (const k of [0.9, 0.8]) for (const u of [0.5, -0.5, 0.9, -0.9]) { const a = pt(k), q = [a[0] - nz * u, a[1] + nx * u]; if (!way && fits(...a) && fits(...q) && Math.hypot(q[0] - e.x, q[1] - e.z) >= 1) way = [a, q]; }
     go(e.x - nx * 0.6, e.z - nz * 0.6, 200); for (const q of way || [pt(1.3)]) go(q[0], q[1], 300); __E.f(30);
     const c = G.Realm.camera().position; const cx = c.x - b.x * TL, cz = c.z - b.y * TL; const R = p.shell.r;
-    out.inside = { v: v.inside === b.id, lv: G.Possess.level(), camIn, camRoom: cx > R[0] && cx < R[2] && cz > R[1] && cz < R[3] && !G.Cam3D.solid(c.x, c.y, c.z), open: B3.isOpen(b.id) };
+    // (the eye: with the fourth wall it stands where the player put it — in the room or out past its wall —, the building open to it,
+    // never in what is drawn of it uncut, nothing uncut between it and the body: QA.eye, D-730)
+    const eyeBad = QA.eye(); const op = G.Cam3D.open && G.Cam3D.open(); void cx; void cz; void R;
+    out.inside = { v: v.inside === b.id, lv: G.Possess.level(), camIn, eyeOk: !eyeBad.length && !G.Cam3D.solid(c.x, c.y, c.z) && !!op && op.b.id === b.id, eye: eyeBad[0], open: B3.isOpen(b.id) };
     // 4. who is at home stands, sits, lies where Interiors puts them — drawn there
     const home = [...S.villagers.values()].filter(o => o.inside === b.id && o !== v);
     out.people = { n: home.length, placed: home.filter(o => { const q = B3.openPlace(o); return q && q.X > b.x * TL && q.X < (b.x + b.w) * TL && q.Z > b.y * TL && q.Z < (b.y + b.h) * TL; }).length };
@@ -1423,7 +1427,7 @@ const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'encarna'); fs.
     ok('e18 a casa e o morador', true, e18.house);
     ok('e18 a porta fechada: a casa desenhada aberta pela porta, a folha no vão', e18.shut.open && e18.shut.state !== 'aberta' && e18.shut.leaf !== null && Math.abs(e18.shut.leaf) < 0.05 && e18.shut.cuts > 0, JSON.stringify(e18.shut));
     ok('e18 as mãos abrem a porta: a folha gira para dentro como o mundo a tem', e18.open.state === 'aberta' && e18.open.leaf !== null && Math.abs(e18.open.leaf) > 1.2, JSON.stringify(e18.open));
-    ok('e18 entra: o mundo o tem dentro; o olho num cômodo, nunca numa parede', e18.inside.v && e18.inside.open && e18.inside.camRoom && e18.inside.camIn === 0, JSON.stringify(e18.inside));
+    ok('e18 entra: o mundo o tem dentro; o prédio aberto ao olho, o olho nunca numa parede (a quarta parede)', e18.inside.v && e18.inside.open && e18.inside.eyeOk && e18.inside.camIn === 0, JSON.stringify(e18.inside));
     ok('e18 quem está em casa está onde a planta põe (desenhado)', e18.people.placed === e18.people.n, JSON.stringify(e18.people));
     ok('e18 sobe a escada inteira; o alçapão abre enquanto passa', !!e18.up && e18.up.lv === e18.up.want && e18.up.flown > 5 && (!e18.up.hole || e18.up.lid > 0), e18.up ? JSON.stringify(e18.up) : e18.upWhy || 'a subida não rodou');
     if (e18.load) ok('e18 salvar e carregar dentro de casa: dentro ainda, desenhada aberta', e18.load.body && e18.load.inside && e18.load.open && e18.load.err === '{}', JSON.stringify(e18.load));

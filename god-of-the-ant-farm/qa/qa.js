@@ -419,7 +419,9 @@
       // (the feet stand on the floor the body walks on — the earth or a boulder's faces — and never sink into it)
       const ab = b && !b.inside && G.Modes && G.Modes.state === 'INC' && G.Avatar && G.Avatar.state();
       if (ab && ab.loco !== 'climb' && ab.Y < G.Avatar.floorAt(ab.X, ab.Z) - 0.1) add('vista3d', 2, `os pés do corpo afundaram ${(G.Avatar.floorAt(ab.X, ab.Z) - ab.Y).toFixed(2)} m no chão ou numa pedra`);
-      if (b && !b.inside && G.Modes && G.Modes.state === 'INC' && G.Cam3D && G.Cam3D.inside) add('vista3d', 2, `o olho do corpo terminou o quadro dentro do chão, de um prédio ou de um muro (${G.Cam3D.last ? G.Cam3D.last.pos.map(n => n.toFixed(1)).join(', ') : '?'})`);
+      // (and indoors too — in a yard, a room, a storey —: only the body asleep in its bed is left out. Left out indoors, the eye in the
+      // head through the whole yard of a tavern was never told, L-1860)
+      if (b && G.Modes && G.Modes.state === 'INC') for (const m of QA.eye()) add('vista3d', 2, m);
     }
     // ---- the dragon (dragon.js): where it is, what it holds, and who is climbing to its lair
     {
@@ -567,6 +569,29 @@
     return [...seen.values()].sort((a, b) => a.sev - b.sev);
   };
   QA.more = [];
+
+  // ---------------- the eye of the body (the interiors 2.0, P4: D-730, L-1860) ----------------
+  // the eye never ends a frame inside the ground, the water, a building or a wall of the town — L-106 —, indoors as out of doors
+  // (in a yard, a room, a storey): only the body asleep in its bed is left out. What is wrong, as the verifier's lines (the rule
+  // «vista3d» of QA.check asks it while the body is lived; the Node proofs of the eye ask it each frame — qa/olho-dentro.js)
+  // · with the body under a roof the eye goes through the walls, the ceilings and the roof of that building (the fourth wall, D-655):
+  //   there it is never under the floor of the body's storey, and never inside what is drawn of the building — a wall, a ceiling, a
+  //   roof, a piece — where the cut does not take it away (C3.cutBoxes); nor stands any of it, uncut, on the line from the eye to the
+  //   head (but for the body's own half metre: C3.CUT_NEAR) — the eye's collision and the cut say the same thing
+  QA.eye = function () {
+    const C3 = G.Cam3D, v = G.Possess && G.Possess.body(); if (!C3 || !v || !C3.last || v.sleeping) return [];
+    const l = C3.last, P = l.pos; const at = () => P.map(n => n.toFixed(1)).join(', '); const out = [];
+    if (C3.inside) out.push(`o olho do corpo terminou o quadro dentro do chão, de um prédio ou de um muro (${at()})${v.inside ? ' — com o corpo dentro' : ''}`);
+    const o = C3.open ? C3.open() : null; if (!o || !C3.solidAll || !C3.inCut) return out;
+    const L = G.Space.TILE, S = G.S; const inLot = (X, Z) => { const x = X / L, y = Z / L; return G.W.inb(x, y) && S.occ[G.W.idx(x, y)] === o.b.id; };
+    if (inLot(P[0], P[2]) && P[1] < o.fy + 0.2) out.push(`o olho debaixo do piso do corpo no ${o.b.type}#${o.b.id} (${at()})`);
+    else if (inLot(P[0], P[2]) && C3.solidAll(P[0], P[1], P[2]) && !C3.inCut(P[0], P[1], P[2])) out.push(`o olho dentro do que se desenha do ${o.b.type}#${o.b.id} sem o corte (${at()})`);
+    if (l.piv && l.body) { const H = l.piv, B = l.body; const d = Math.hypot(H[0] - P[0], H[1] - P[1], H[2] - P[2]); const near = (C3.CUT_NEAR || 0.45) + 0.05;
+      for (let s = 0.1; s < d; s += 0.1) { const X = P[0] + (H[0] - P[0]) * s / d, Y = P[1] + (H[1] - P[1]) * s / d, Z = P[2] + (H[2] - P[2]) * s / d;
+        if (Math.hypot(X - B[0], Z - B[2]) < near) break; // (the body's own half metre, round it: the cut keeps out of it)
+        if (inLot(X, Z) && C3.solidAll(X, Y, Z) && !C3.inCut(X, Y, Z)) { out.push(`entre o olho e o corpo, o ${o.b.type}#${o.b.id} sem o corte a ${s.toFixed(1)} m do olho (${[X, Y, Z].map(n => n.toFixed(1)).join(', ')})`); break; } } }
+    return out;
+  };
 
   // ---------------- canonical state (for save/load comparison) ----------------
   // (the canonical state of a new system in the making: [name, fn] — inlined into canon when it lands)
