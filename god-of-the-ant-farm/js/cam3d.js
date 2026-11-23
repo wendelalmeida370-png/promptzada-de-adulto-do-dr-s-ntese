@@ -365,11 +365,16 @@
     const r = o.box; const key = o.b.id + ':' + o.lv + ':' + r.join(',') + ':' + aspNow.toFixed(2);
     if (vistaMemo && vistaMemo.key === key) return vistaMemo;
     let best = null; const sx = Math.max(0.4, (r[2] - r[0]) / 9), sz = Math.max(0.4, (r[3] - r[1]) / 9);
+    // (the doors of the storey, along their openings — a corner by one has its leaf in the picture: the solid of the plan has an open
+    // door free, and the leaf swung into the corner of the Egyptian tavern filled half the picture)
+    const dp = []; for (const d of o.p.doors) { const w = o.p.walls[d.wall]; if (!w || (w.lv || 0) !== (o.lv || 0)) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
+      for (const t of [d.at - d.w / 2, d.at, d.at + d.w / 2, d.at + d.w]) { const u = G.clamp(t, 0, L) / L; dp.push([w.a[0] + (w.b[0] - w.a[0]) * u, w.a[1] + (w.b[1] - w.a[1]) * u]); } }
     for (const [i, j] of [[0, 1], [2, 1], [0, 3], [2, 3]]) for (const IN of [C3.VISTA.inset, 2 * C3.VISTA.inset]) {
       const X = o.X0 + r[i] + (i === 0 ? IN : -IN), Z = o.Z0 + r[j] + (j === 1 ? IN : -IN); const E = [X, ceilAt(o, X, Z, true) - C3.CEIL_GAP - 0.05, Z]; // (under its storey's own ceiling: over an open height, the way there crossed the slab)
       if (solid(E[0], E[1], E[2], true) || E[1] < o.fy + 1.6) continue; // (a corner in a wall, a piece, a flight; a ceiling too low)
       let n = 0, m = 0; for (let x = r[0] + sx / 2; x < r[2]; x += sx) for (let z = r[1] + sz / 2; z < r[3]; z += sz) { m++; if (clear(E, [o.X0 + x, o.fy + 0.15, o.Z0 + z])) n++; }
-      const sc = n / Math.max(1, m) + 0.004 * Math.hypot(X - body.X, Z - body.Z);
+      const byDoor = dp.some(q => Math.hypot(q[0] - (X - o.X0), q[1] - (Z - o.Z0)) < 1.3);
+      const sc = n / Math.max(1, m) + 0.004 * Math.hypot(X - body.X, Z - body.Z) - (byDoor ? 0.6 : 0);
       if (!best || sc > best.sc) best = { sc, E, seen: n / Math.max(1, m) };
       break; // (the nearer the corner the better: the inset twice only where the first is not clear)
     }
@@ -434,7 +439,10 @@
   let fade = 0; C3.bodyFade = () => fade;
   // (a body attached, a world made or opened: no building open to the eye from before — the one just left of another body held the
   // eye under its ceiling a frame, then let it fly up 0,55 m a frame)
-  function freshIn() { eb = null; kept = null; room = null; vistaOn = false; vistaK = 0; vistaMemo = null; allowH = allowV = 0; boxKey = ''; poCap = 2; }
+  // (lastOk: the eye of the frame before is this body's — after another body's, put in a room, the eye glided in from the last
+  // building of the other body, metres away, for a minute: the photos of the house#3582)
+  function freshIn() { eb = null; kept = null; room = null; vistaOn = false; vistaK = 0; vistaMemo = null; allowH = allowV = 0; boxKey = ''; poCap = 2; lastOk = false; }
+  let lastOk = false;
   G.worldHooks.push(() => { freshIn(); inK = 0; fade = 0; });
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
@@ -458,7 +466,7 @@
       eb = kept; }
     // (a new room for the eye — come in, gone from one to another —: what the eye had out of its box glides in)
     { const key = eb ? eb.b.id + ':' + eb.lv + ':' + (eb === kept ? 'k' : eb.box.join(',')) : '';
-      if (key !== boxKey) { boxKey = key; allowH = allowV = 0; if (eb && C3.last) { const q = C3.last.pos; allowH = Math.max(0, outOfBox(eb, q[0], q[2]) - C3.BEYOND) + 0.4; allowV = Math.max(0, q[1] - (ceilAt(eb, q[0], q[2]) - C3.CEIL_GAP)) + 0.2; } } // (and the eye's sphere round it)
+      if (key !== boxKey) { boxKey = key; allowH = allowV = 0; if (eb && C3.last && lastOk) { const q = C3.last.pos; allowH = Math.max(0, outOfBox(eb, q[0], q[2]) - C3.BEYOND) + 0.4; allowV = Math.max(0, q[1] - (ceilAt(eb, q[0], q[2]) - C3.CEIL_GAP)) + 0.2; } } // (and the eye's sphere round it)
       else { allowH = Math.max(0, allowH - 3 * rdt); allowV = Math.max(0, allowV - 4 * rdt); } }
     // (the «Vista da sala» ends out of the roof it was asked under; the lens opens a little under a roof, slowly)
     if (!open) vistaOn = false;
@@ -576,7 +584,7 @@
     // (the cut of the fourth wall, and the body in a weave when the eye is at its head)
     cuts = eb ? cutFor(eb, P, body, piv) : NONE;
     { const dH = Math.hypot(P.X - piv.X, P.Y - piv.Y, P.Z - piv.Z); fade = G.clamp((C3.FADE_NEAR - dH) / C3.FADE_SPAN, 0, 1); }
-    C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: cam.fov, cur: C3.cur, sh: shD, piv: [piv.X, piv.Y, piv.Z], body: [body.X, body.Y, body.Z] };
+    C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: cam.fov, cur: C3.cur, sh: shD, piv: [piv.X, piv.Y, piv.Z], body: [body.X, body.Y, body.Z] }; lastOk = true;
   };
   // the pose the camera has right now (for the flight back up to the god)
   C3.pose = () => C3.last || null;
