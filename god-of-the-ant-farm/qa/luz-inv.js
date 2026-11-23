@@ -13,6 +13,8 @@
   if (!window.QA || !QA.more) return;
   QA.luz = function () {
     const out = []; const L = G.Luz3D, B3 = G.Build3D, At = G.Atmos, S = G.S; if (!L || !B3 || !B3.opened || !At || !G.Realm || !G.Realm.on) return out;
+    // (what is drawn is of the last frame: compared with the world only while the world has not stepped since)
+    if (L.frameClock !== S.clock) return out;
     const open = B3.opened(); const byId = new Map(open.map(o => [o.id, o]));
     // the flames drawn inside: each with its cause now
     for (const q of B3.flames || []) {

@@ -286,6 +286,7 @@
       L.drawn.push({ id, slot: s, sig: e.sig, ms: +v.ms.toFixed(2), n: [v.nx, v.ny, v.nz], vs: v.vs, src: e.src.length });
     }
     const K = GX.gxVolK.value; K.x = any; K.y = opt.shadows ? 1 : 0; K.z = 0.22; K.w = L.SKY_GAIN;
+    L.frameClock = G.S.clock; // (the world's clock of the frame these volumes and their sources are of: the verifier compares only then)
   };
   // (the dials of the light inside, for the photos that compare: the sky's gain, the fire's strength, the baked fill under a real light)
   L.SKY_GAIN = 4.0; L.FIRE_I = 3.4; L.FILL_LIT = 0.55;
