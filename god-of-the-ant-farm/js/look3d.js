@@ -58,6 +58,8 @@
     L.inv = invOf(v, L);
     // (22a: a hand lost holds nothing — the stump is drawn, D-555; what it held is not drawn floating where the hand was)
     const lo = v.lost; if (lo && (lo.armL || lo.armR)) { const k = L._lostOf; if (!k || k.src !== L.inv) L._lostOf = { src: L.inv, inv: Object.assign({}, L.inv, { mao: lo.armR ? null : L.inv.mao, outra: lo.armL ? null : L.inv.outra }) }; L.inv = L._lostOf.inv; }
+    // (the cups of the tavern's round in the hands — the keeper's to the table, one a dose: G.Inv.roundOf, D-757)
+    L.cups = G.Inv && G.Inv.roundOf ? G.Inv.roundOf(v) : 0;
     // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
     if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);

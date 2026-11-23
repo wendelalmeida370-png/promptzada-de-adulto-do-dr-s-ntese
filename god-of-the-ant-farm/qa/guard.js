@@ -2158,5 +2158,11 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   for (const k of ['lira', 'tambor']) if (!new RegExp(`\\b${k}: \\{[^\\n]*tags: \\['tocar'\\], mats: \\['couro'\\]`).test(it)) fails.push(`o instrumento tem origem: o ${k} do catálogo sem a etiqueta «tocar» e o material do bicho (D-764)`);
   if (!/const BEAST = \{ lira: \{ couro: [\d.]+, wood: [\d.]+ \}, tambor: \{ couro: [\d.]+, wood: [\d.]+ \} \};/.test(it)) fails.push('o instrumento tem origem: o instrumento sem o couro e a madeira de que é feito (G.Itens.feitoDe, D-764)');
   if (!/bound: 'grilhoes', play: 'lira' \};/.test(iv) || !/if \(t === 'lira'\) t = instrumentOf\(v\);/.test(iv)) fails.push('o instrumento tem origem: o kit não dá a quem toca o instrumento do povo (ACT_TOOL.play, D-764)'); }
+// 303. "toca-se o que se tem na mão; a rodada é caneca" (D-757, D-758): o gesto de tocar é escolhido pelo instrumento que o inventário
+// põe na mão (G.Vida3D.instrument, a etiqueta 'tocar'), nunca pelo ofício nem pelo povo; e a rodada da taverna nas mãos é desenhada
+// como as canecas do inventário (G.Inv.roundOf), não como carga
+{ const v3 = (src['vida3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  if (!/if \(v\.act === 'play'\) \{ const k = V3\.instrument\(L\);/.test(v3)) fails.push('toca-se o que se tem na mão: o gesto de tocar não pergunta ao instrumento da mão (G.Vida3D.instrument, D-758)');
+  if (!/!\(G\.Inv && G\.Inv\.roundOf && G\.Inv\.roundOf\(v\)\) \? v\.carry : null/.test(p3)) fails.push('a rodada é caneca: o People3D desenha a rodada da taverna como carga (G.Inv.roundOf, D-757)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

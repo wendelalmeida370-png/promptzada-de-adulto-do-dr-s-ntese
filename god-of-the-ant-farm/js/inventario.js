@@ -104,8 +104,17 @@
   // leather where the people has had hides, else of woven withies — 22c, D-612)
   const playing = v => v.age >= 3 && v.age < 13 && !!v.task && v.task.type === 'play' && !v.task.chase;
   // (the round the tavern served is in its cup: the drink in the hands is the cup's, not a load in the arms — the cup stays in the
-  // hand of who drinks and toasts it, P6, D-751)
-  const sipping = v => (v.act === 'drink' || v.act === 'toast') && !!v.carry && !!v.task && v.task.type === 'tavern' && v.carry.op === v.task.op;
+  // hand of who drinks it, between the sips too, and the keeper carries the round's cups to the table, one a dose (the round of the
+  // table filled at the counter: t.n1 a cup, the carry bound to the tavern's day, t.op) — P6, D-751, D-757. The cups of the round in
+  // the hands: 0 none)
+  const roundOf = v => { const c = v.carry, t = v.task; if (!c || !t || !(c.n > EPS) || !c.op || c.op !== t.op || c.k === 'food') return 0;
+    if (t.type === 'tavern') return 1; if (t.type === 'atender') return Math.max(1, Math.min(4, Math.round(c.n / (t.n1 > 0 ? t.n1 : c.n)))); return 0; };
+  Inv.roundOf = roundOf;
+  // (the round's cup in the hand — the place's, as the drink's —, what the hand held put away)
+  function round(v, out) {
+    if (!roundOf(v) || (out.mao && It.def(out.mao).kind === 'caneca')) return; const key = made('caneca', G.Fac.idOfV(v), artsOf(v)); if (!key) return;
+    const o = out.mao; out.mao = key; if (!o) return; const g = It.guarda(o); const s = g && !out[g] && It.fits(o, g) ? g : STOWS.find(x => !out[x] && It.fits(o, x)); if (s) out[s] = o;
+  }
   Inv.playing = playing;
   function ball(v, out) {
     if (!playing(v) || out.mao || G.hash(((v.home || v.id) | 0) * 13 + 5) >= 0.5) return;
@@ -142,8 +151,8 @@
   Inv.kit = function (v) {
     const out = Inv.trade(v);
     if (!v || v.age < 2) return out;
-    act(v, out, null); ball(v, out);
-    if ((loaded(v) && !sipping(v)) || v.gear) freeHands(out);
+    act(v, out, null); round(v, out); ball(v, out);
+    if ((loaded(v) && !roundOf(v)) || v.gear) freeHands(out);
     return out;
   };
   // (the act's tool into the view's hand: one of the person's own of that kind — from the belt, the back, the bag —, else the
@@ -194,9 +203,9 @@
       const k = Inv.trade(v);
       for (const s of SLOTS) if (!out[s] && k[s] && !(HANDS.includes(s) && (twoIn(out) || It.def(k[s]).maos >= 2 && out[s === 'mao' ? 'outra' : 'mao']))) out[s] = k[s];
     }
-    act(v, out, bag, !!(e && e.kit) || !!(G.Possess && G.Possess.is && G.Possess.is(v))); // (the god's body: only its own, D-426)
+    act(v, out, bag, !!(e && e.kit) || !!(G.Possess && G.Possess.is && G.Possess.is(v))); round(v, out); // (the god's body: only its own, D-426)
     if (!(e && e.kit) && !(G.Possess && G.Possess.is && G.Possess.is(v))) ball(v, out); // (the house's ball: 22c, D-612)
-    if ((loaded(v) && !sipping(v)) || v.gear) freeHands(out);
+    if ((loaded(v) && !roundOf(v)) || v.gear) freeHands(out);
     return out;
   };
   const hasAny = b => { for (const k in b) if (b[k] > EPS) return true; return false; };
@@ -214,11 +223,11 @@
     const e = v.equip && typeof v.equip === 'object' ? v.equip : null, b = v.mochila && typeof v.mochila === 'object' ? v.mochila : null;
     const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0;
     let same = !!m.out && m.v === v && m.act === v.act && m.role === v.role && m.unit === v.unit && m.arm === v.arm && m.elite === v.elite && m.cap === !!v.captive
-      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg);
+      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg) && m.rd === roundOf(v);
     if (same && e) for (let i = 0; i < SLOTS.length; i++) if (m.es[i] !== (e[SLOTS[i]] || null)) { same = false; break; }
     if (same) { let n = 0; if (b) for (const k in b) if (b[k] > EPS) { if (m.bk[n] !== k || m.bn[n] !== b[k]) { same = false; break; } n++; } if (same && n !== m.bl) same = false; }
     if (same) return m.out;
-    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg);
+    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg); m.rd = roundOf(v);
     m.e = !!e; m.kit = !!(e && e.kit); m.es = m.es || new Array(SLOTS.length); for (let i = 0; i < SLOTS.length; i++) m.es[i] = e ? e[SLOTS[i]] || null : null;
     m.bk = m.bk || []; m.bn = m.bn || []; let n = 0; if (b) for (const k in b) if (b[k] > EPS) { m.bk[n] = k; m.bn[n] = b[k]; n++; } m.bl = n;
     m.out = Inv.held(v); return m.out;

@@ -93,7 +93,7 @@
   // turned to them; the turn by the ids of the table and the world's clock, never a roll — the same table, from any eye, the same
   // talk. Only reads (rule 213): out — { st, over, overK, up, with } —, kept in the view's memory
   const SEATED = V3.SEATED = new Set(['sit', 'eat', 'rest', 'eatg', 'rock', 'rockg']);
-  const UP = V3.UP = new Set(['fight', 'dance', 'cb-guarda-punho', 'cb-guarda-arma', 'cb-guarda-duas', 'cb-guarda-escudo']);
+  const UP = V3.UP = new Set(['fight', 'dance', 'cb-guarda-punho', 'cb-guarda-arma', 'cb-guarda-duas', 'cb-guarda-escudo', 'briga-socos', 'ato-empurrar']);
   let LEGSET = null; const upperOnly = C => { LEGSET = LEGSET || new Set(Anim.LEGS || []); for (const j of C.ch) if (LEGSET.has(j)) return false; return true; };
   V3.upperOnly = upperOnly;
   // (an instrument in the hands: a thing of the catalogue that is played — its tag 'tocar' —, the inventory's)
@@ -105,7 +105,12 @@
     const base = pl.st, seat = SEATED.has(base);
     let a = Anim.stateOf(v, 0, L);
     // (the song of a full room: the instrument in the hands — seated or standing —, or, with none in them, the song sung)
-    if (v.act === 'play') a = V3.plays(L) ? (seat && has('tocar-sentado') ? 'tocar-sentado' : 'strum') : 'ato-atuar';
+    if (v.act === 'play') { const k = V3.instrument(L); a = k === 'tambor' && has('tocar-tambor') ? 'tocar-tambor' : k && has('tocar-lira') ? 'tocar-lira' : 'ato-atuar'; }
+    // (the brawl of the tavern — the world's 'shove' between two of the brawl, D-759 —: the fists, and now and then the shove itself, by the
+    // world's clock and the id — the same brawl from any eye)
+    // (the keeper with the round at the table: the cups before him, and held out to the one served as he hands them over — D-757)
+    if (L && L.cups > 0 && v.task && v.task.type === 'atender') a = v.act === 'give' && has('fam-pedido') ? 'fam-pedido' : has('levar-canecas') ? 'levar-canecas' : a;
+    if (v.act === 'shove' && G.Taverna && G.Taverna.brawling && G.Taverna.brawling(v) && has('briga-socos')) a = Math.floor(((G.S.clock || 0) + (v.id % 7) * 0.37) / 2.4) % 3 === 2 && has('ato-empurrar') ? 'ato-empurrar' : 'briga-socos';
     let C = Anim.CLIPS && Anim.CLIPS[a];
     // (the brawl with nothing in the hand is the fists' — a weapon only where the inventory puts one there)
     if (v.act === 'fight' && C && C.item && !(L && L.inv && L.inv.mao) && has('cb-guarda-punho')) { a = 'cb-guarda-punho'; C = Anim.CLIPS[a]; }
@@ -122,7 +127,7 @@
   };
   // (whom one brawls with: another of the same building in the brawl, the nearest place — the world's pair is the tavern's own)
   function foe(v) { const In = G.Interiors; if (!In || !v.inside) return 0; let best = 0, bd = 1e9; const me = In.placeOf(v);
-    for (const o of G.S.villagers.values()) { if (o === v || o.inside !== v.inside || o.act !== 'fight') continue; const q = In.placeOf(o); const d = me && q ? Math.hypot(q.x - me.x, q.z - me.z) : 0; if (d < bd) { bd = d; best = o.id; } } return best; }
+    for (const o of G.S.villagers.values()) { if (o === v || o.inside !== v.inside || (o.act !== 'fight' && o.act !== 'shove')) continue; const q = In.placeOf(o); const d = me && q ? Math.hypot(q.x - me.x, q.z - me.z) : 0; if (d < bd) { bd = d; best = o.id; } } return best; }
   // (the talk at a table: who of the same building sits within reach of this place — the world's places, Interiors.placeOf —, the
   // household talking at home or those waiting at the tavern's tables; the one who speaks now, by the turn)
   const TALKS = t => !!t && ((t.type === 'lar' && t.what === 'conversar') || (t.type === 'tavern' && t.st === 2));
@@ -142,7 +147,11 @@
   // what the top of someone walking shows of their act (I.over: a clip of the arms or the top, over the stride — the layer the
   // greeting's wave uses): the prisoner led with the hands bound, the word said walking (OVER_OF: the act → its walking clip)
   const OVER_OF = V3.OVER_OF = { bound: 'bound-andar', talk: 'talk', chat: 'talk', shout: 'talk', call: 'talk' };
+  // (the instrument in the hands — a thing of the catalogue that is played, its tag 'tocar' —: its kind, or null)
+  V3.instrument = L => { const I = G.Itens, h = L && L.inv; if (!I || !h) return null; for (const k of [h.mao, h.outra]) if (k && I.has(k, 'tocar')) return I.def(k).kind; return null; };
   V3.overOf = function (v, st) {
+    // (the keeper with the round's cups on his way to the table: the forearms before the belly — the inventory's cups, G.Inv.roundOf, D-757)
+    if (Anim.LOCO && Anim.LOCO[st] && v.task && v.task.type === 'atender' && G.Inv && G.Inv.roundOf && G.Inv.roundOf(v) && Anim.CLIPS && Anim.CLIPS['levar-canecas']) return 'levar-canecas';
     if (!Anim.LOCO || !Anim.LOCO[st] || !v.act) return null;
     const o = OVER_OF[v.act]; return o && Anim.CLIPS && Anim.CLIPS[o] ? o : null;
   };
