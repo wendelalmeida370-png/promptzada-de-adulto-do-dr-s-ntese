@@ -3188,3 +3188,64 @@ plano e o contrato estão no `SOCIEDADE.md`.
 | T-1628 | limite de prova (consertado: `qa/origem.js`; falhava desde os mundos prontos refeitos — o o3 e o o10 desde o «cidade» de 48fec17, o o7 já na v12) | **A forja e a vila de pescadores da prova da origem pediam um mundo que não é mais o pronto.** (a) O o3 e o o10 faziam ferreiro a primeira pessoa crescida da capital — no «cidade» refeito, Neferu, quem governa a Casa de Amon: o oráculo da caverna, o conselho, a assembleia e a festa a levaram da forja quatro dias seguidos, e a fornada de bronze (seis peças) ficou em quatro, «on». A prova toma uma mão sem dever do povo (nunca quem governa, os nobres, os sacerdotes, os guerreiros, o escolhido), um ferreiro da cidade se houver: a fornada acaba (seis de bronze), e com o save no meio também. (b) O o7 punha a vila de pescadores só com peixe no armazém, mas o povo do mundo refeito tem rota de comércio por terra e navios no cais: o grão chegava pela carroça (a carga que volta, «carroca-volta») e pela descarga do navio (o cais, `q:`), e o que um homem carregava antes da prova também — e a prova falhava com a cevada na prateleira. O grão que o comércio traz é grão tido, comprado (D-440), e uma taverna que o compra pode fazer cerveja; a prova agora tira a comida das casas, das prateleiras e das mãos do povo no começo e cobra a regra de verdade: nenhum grão sem fonte — o grão da taverna não passa do que entrou pelo cais e pelas carroças, e a cuba não começa antes de entrar nenhum. Nada mudou no jogo |
 | T-1629 | limite de prova (consertado: `qa/sabe.js`; falhava desde a metrópole pronta refeita, 7acace3 — na v13 também) | **«Tenoch» dentro de «Tenochtitlan».** O p2 e o c1 do `qa/sabe.js` conferem que a ficha do corpo não diz o nome de quem ele não conhece procurando o nome no texto da ficha — um pedaço de texto: na metrópole refeita mora um Tenoch, e a ficha diz «de Tenochtitlan», a cidade. E como palavra inteira ainda estava lá: o povo é o «Altepetl de Tenoch», e a ficha da casa diz «Tenochtitlan · Altepetl de Tenoch». A prova procura o nome como palavra inteira (`says`, sem letra nem número de cada lado) num texto sem os nomes das cidades e dos povos (`placeless`), no p1, no p2, no c1, no t1 e na conta das casas; nada mudou no que a ficha diz |
 | T-1630 | limite de prova (consertado: `qa/det3.js`) | **O det3 contava como erro do jogo um recado do driver do 3D por software.** Com o retrato do painel pelo 3D (D-645), a página B do det3 (com quadros, câmera, cinema e os painéis) faz o rosto de uma pessoa, e a cópia da imagem do 3D para a ficha é uma leitura da placa: o SwiftShader avisa «GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels» (uma vez por contexto). É o mesmo recado do driver que as provas do 3D já separam do que é do jogo (`encarna`, `combate-tela`, `interacao-tela`, `inventario-tela`, `corpo-fera-tela`: «GL Driver Message|GroupMarkerNotSet|software WebGL»); o det3 passa a separar igual. O mundo com e sem quadros continua o mesmo (o retrato só se vê: a regra 238), e o retrato custa uma leitura por rosto novo, guardado na memória do desenho |
+
+## 23. Os interiores 2.0: o piloto da taverna (o contrato, D-650 a D-664)
+
+O dono (23/11/2026): os interiores estão «porcos», «inviáveis» — um depósito de caixas, claustrofóbicos, gente atravessando as mesas,
+surgindo e sumindo, o palácio brutalmente longe do esperado, «e tem vários outros»; sem eles, nada do roteiro funciona. Cinco agentes
+mediram tudo com o próprio jogo (as fotos de 33 prédios, a planta, o desenho e a luz, a câmera e a tela, a vida dentro); o plano para o
+dono está em `planos/interiores-2.md` e o contrato da equipe em `planos/interiores-2-contrato.md` (as frentes, quem é dono de cada
+arquivo, as portas, as peças novas, os números reservados, as provas).
+
+| ID | Tipo | Descrição |
+|---|---|---|
+| D-650 | decisão (o contrato dos interiores 2.0) | **Os interiores 2.0 antes de todo o roteiro; a taverna é o piloto.** Sete frentes em duas ondas: P1 a luz e os materiais de dentro, P2 os móveis modelados, P3 a planta da taverna, P4 a câmera, a tela e a entrada do corpo, P6 as pessoas dentro no desenho (a primeira onda); P5 a decoração com causa e P7 a vida da taverna no mundo (a segunda). A luz, a câmera e as pessoas são do jogo inteiro e valem para os 31 tipos desde o piloto; a planta, os móveis e a decoração começam pela taverna. O motor da planta (o registro, a casca e o miolo, a grade, a caminhada, os lugares, as lojas, a migração, as formas) fica; as receitas, o vocabulário, o desenho, a luz, a câmera de dentro e a vida dentro se refazem |
+| D-651 | decisão (o contrato dos interiores 2.0; a regra magna do dono) | **A decoração tem causa, nunca sorteio.** O que um prédio mostra vem do que ele é e tem: a bebida no livro da taverna são as ânforas, a comida servida está na mesa, as ferramentas na parede são do ofício do dono, o tapete fino é da família rica de um povo que tece e tinge, a lamparina acesa é de alguém acordado, a casa velha mostra o desgaste — nunca um material que o povo não teve. A porta pura `G.Atmos.within(b)` diz o quê e por quê; o `G.Dentro3D` desenha, escolhendo o lugar e a forma pelo `G.hash` do id; nada escreve no mundo nem tira de acaso nenhum |
+| D-652 | decisão (o contrato dos interiores 2.0) | **A janela da Antiguidade:** a abertura com postigo, treliça ou cortina de cada povo, sem vidro — o vidro só quando o povo descobrir o vidro soprado (com a base do saber). A janela deixa entrar o sol e mostra a rua; de noite, o brilho de fora é a lamparina de dentro |
+| D-653 | decisão (o contrato dos interiores 2.0) | **A luz de dentro é de dentro.** O canto escuro, a janela clara, o fogo quente: o interior deixa de receber o céu inteiro; cada fonte tem a sua causa (o lar pelo `G.Atmos.fire`, a lamparina pelo `G.Atmos.lit` e pela decoração); nenhuma luz atravessa a parede, nem de dentro para a rua nem da rua para dentro |
+| D-654 | decisão (o contrato dos interiores 2.0) | **O jogo pode crescer 5 a 10 MB** de móveis e texturas (o alvo é o PC; o celular carrega o mesmo, com a luz mais simples). A biblioteca dos móveis vai num arquivo próprio (`js/movelmesh.js`), fora do teto de 1 MB das malhas avulsas, com o seu orçamento; o teto da pilha de texturas pode subir para os materiais de dentro |
+| D-655 | decisão (o contrato dos interiores 2.0) | **A câmera dentro:** a quarta parede (o olho passa as paredes, o teto e o telhado do próprio prédio atrás do corpo e fica na distância do jogador), a «Vista da sala» por uma tecla e um botão do jogador, a lente com um mínimo de campo de lado, a entrada sem salto, a tela pelo lugar (dentro de casa os botões de luta só com briga; o «Travar» nunca através da parede). Nada gira nem inclina a câmera sozinho (a regra 124, o D-368) |
+| D-656 | decisão (o contrato dos interiores 2.0) | **A taverna cheia à noite:** aberta até tarde, enchendo ao anoitecer; 10 a 25 pessoas numa taverna de cidade; os amigos vão juntos (os laços) |
+| D-657 | decisão (o contrato dos interiores 2.0) | **O canto do músico** em cada povo, com um instrumento de verdade, que tem a sua origem (o catálogo das coisas e o `ORIGEM.md`); o bardo (o ofício) vem no seu patch |
+| D-658 | decisão (o contrato dos interiores 2.0) | **Quem entra é visto entrando:** a pessoa chega à porta antes de estar dentro, o mundo espera a caminhada da porta até o lugar, o desenho a mostra andando pela planta (o `In.pathIn`), e a porta abre para quem passa; quem sai se levanta e sai andando |
+| D-659 | decisão (o contrato dos interiores 2.0) | **A roupa com causa:** a cor do ofício no avental, na faixa ou no xale; o tingido pela riqueza da casa; os penteados pela idade e pela posição — nunca sorteio; **o chapéu sai dentro de casa e na cama** (o guarda de serviço fica de elmo) |
+| D-660 | decisão (o contrato dos interiores 2.0) | **O bebê no colo** em todo prédio, não só na casa e no templo |
+| D-661 | decisão (o contrato dos interiores 2.0) | **A riqueza que se vê dentro é a de agora** — as moedas da casa, a casa mercante —, lida pelas portas certas, e não o valor da terra congelado na fundação |
+| D-662 | decisão (o contrato dos interiores 2.0) | **Ao menos três tavernas diferentes por povo e por tamanho** (pela riqueza do dono, pelo bairro, pelo id); nenhum par igual por dentro |
+| D-663 | decisão (o contrato dos interiores 2.0) | **O lote da taverna não cresce** (8, 12 e 16 m): o salão ganha espaço pela planta — a cozinha e a escada nos cantos, o salão até o telhado com as vigas à mostra, a galeria na de 16 m; as casas do povo continuam pequenas (4 × 4 m) e ficam andáveis na onda das casas |
+| D-664 | decisão (o contrato dos interiores 2.0) | **Os móveis feitos no Blender** (o Blender como módulo do Python, no venv do scratchpad — `arte/ESTUDIO.md`), por scripts que o projeto guarda em `arte/blender/`, com dois níveis de detalhe e as partes por material; o `FURN` de hoje (as caixas) fica como a volta onde não houver modelo |
+
+### P1 — A luz e os materiais de dentro
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P2 — Os móveis modelados
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P3 — A planta da taverna
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P4 — A câmera, a tela e a entrada do corpo
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P5 — A decoração com causa
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P6 — As pessoas dentro, no desenho
+
+| ID | Tipo | Descrição |
+|---|---|---|
+
+### P7 — A vida da taverna no mundo
+
+| ID | Tipo | Descrição |
+|---|---|---|

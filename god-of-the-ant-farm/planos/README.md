@@ -11,6 +11,7 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
 
 | Patch | O quê |
 |---|---|
+| **antes de tudo** | **Os interiores 2.0** — o piloto da taverna, depois as outras ondas (aprovado, 23/11/2026) |
 | antes do 23 | **O calendário** — o ano de quatro estações e a natureza viva (aprovado; três ondas) |
 | 23 | As Vidas (a memória, os laços, a aba de Relacionamentos, a voz, as animações, as missões; a memória do mundo e o livro das vidas) |
 | 24 | Os grupos e o conflito (os companheiros, as equipes, as tripulações, as tropas; o inimigo que age) |
@@ -106,6 +107,10 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   mercado, a alfândega, a cobrança, o censo, a corrupção, o outro lado, o livro dos truques).
 - [`eras.md`](eras.md) — as eras do jogo: a ideia do dono para muito depois (os limiares, como se atravessa, o futuro que sai do
   passado, o que fazer agora sem desviar da era antiga).
+- [`interiores-2.md`](interiores-2.md) — os interiores 2.0: a auditoria (as fotos, a planta, o desenho e a luz, a câmera, a vida
+  dentro), tudo o que está errado, as regras (a decoração com causa — a regra magna), as decisões e o piloto da taverna.
+- [`interiores-2-contrato.md`](interiores-2-contrato.md) — o contrato técnico da equipe dos interiores 2.0 (as frentes, quem é dono
+  de cada arquivo, as portas, as peças novas, os números reservados, as provas).
 - `pdf/` — os planos em PDF para o dono ler.
 
 ## As decisões do dono (valem para todos os planos)
@@ -165,6 +170,9 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   (nomeados por quem governa), e as funções e especialidades novas; **o correio e o fiscal viram ofícios** (o 84.º e o 85.º, 21/11/2026 — o fiscal é o jogo de anomalia: o mercado, a alfândega, a
   cobrança); **o censo é função** (os recenseadores), **com a sua estrutura de jogo**, e **o censor é o cargo** de quem o chefia
   ([`saber.md`](saber.md) §14b).
+- **Os interiores 2.0 antes de todo o roteiro** (**aprovado**, 23/11/2026): os interiores estavam inviáveis (caixas, sem luz,
+  claustrofóbicos, gente atravessando as mesas, surgindo e sumindo); **a taverna é o piloto** e o padrão dela vira a referência dos
+  outros 30 tipos; **a decoração tem causa, nunca sorteio — a regra magna** ([`interiores-2.md`](interiores-2.md)).
 - **A lista dos ofícios** (**aprovada**, 20/11/2026): 85 ofícios (com o carrasco, os seis do saber, o correio e o fiscal) e 13 condições, sem redundância — o que não aguentava horas
   virou especialidade, papel, título ou função do mundo ([`oficios.md`](oficios.md) §6).
 - **A comida e a cozinha** (**aprovado**, 20/11/2026): uma base nova sobre a origem da comida que já existe — os ingredientes

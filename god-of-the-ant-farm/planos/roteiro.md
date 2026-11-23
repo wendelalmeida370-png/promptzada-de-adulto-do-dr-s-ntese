@@ -58,6 +58,7 @@ escalada, a montanha e o mundo grande.
 | 44 | **Quem faz o que as descobertas trazem** | o censo não é ofício: **o censor é um cargo** (quem governa nomeia, ou o povo vota) e **os recenseadores, uma função do mundo** (chamados entre quem lê, por dias, pagos pela diária); **os cargos novos** (o fiscal do mercado, o curador das águas, o mestre do correio, o bibliotecário-mor, o astrólogo da corte, o guardião do calendário), as funções e as especialidades novas; **o correio vira ofício** (21/11/2026); **o censo como jogo** (a verdade do mundo contra o declarado, as mentiras com causa, as escolhas, a conferência — uma máquina que serve também ao cobrador, ao fiscal e à alfândega) | [`saber.md`](saber.md) §14b, [`oficios.md`](oficios.md) §6 |
 | 45 | **O fiscal e quem é quem no censo** | **o fiscal vira o 85.º ofício** — o jogo de anomalia todo dia, em três lugares (o mercado, a alfândega do porto, a cobrança), contra o mercador desonesto, o contrabandista e o falsificador; **o censor é o cargo** de quem chefia o censo e **os recenseadores, a função** dos dias do censo (os fiscais os primeiros chamados) | [`saber.md`](saber.md) §14b |
 | 46 | **O fiscal** (o documento) | o jogo de anomalia por inteiro: a declaração contra a verdade do mundo, as pistas na coisa, no lugar, na pessoa, nos outros e nos papéis; o mercado, a alfândega, a cobrança e o censo; quem mente e por quê; a corrupção e a fama; o outro lado (o contrabandista contra a alfândega); o livro dos truques | [`oficio-fiscal.md`](oficio-fiscal.md) |
+| 47 | **Os interiores 2.0** (aprovado; antes de tudo) | a auditoria com cinco agentes (as fotos de 33 prédios, a planta, o desenho e a luz, a câmera e a tela, a vida dentro); tudo o que está errado; a decoração com causa, nunca sorteio — a regra magna; **o piloto da taverna** e as ondas depois (o palácio, as casas, o templo, as oficinas…) | [`interiores-2.md`](interiores-2.md), [`interiores-2-contrato.md`](interiores-2-contrato.md) |
 
 ## 2. A lógica da ordem
 
@@ -82,12 +83,13 @@ escalada, a montanha e o mundo grande.
 
 ## 3. A ordem de fazer
 
-**Antes do Patch 23 — a faxina da v14:** os mundos prontos gerados de novo com a máquina livre; o vento do céu logo depois do
+**Antes de tudo — os interiores 2.0** (o piloto da taverna, [`interiores-2.md`](interiores-2.md)). **E a faxina da v14:** os mundos prontos gerados de novo com a máquina livre; o vento do céu logo depois do
 load (S4); T-1584 e T-1585; **e a primeira medição da primeira hora** — o dono joga o jogo de hoje como novato e anota o que
 travou ([`primeira-hora.md`](primeira-hora.md)).
 
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
+| **I — Os interiores 2.0** (antes de tudo; aprovado, 23/11/2026) | **o piloto da taverna:** o salão com espaço, os móveis modelados de cada povo, a decoração com causa, a luz com fonte, as pessoas que entram pela porta, andam por onde se anda e fazem o que estão fazendo, a câmera que deixa ver a sala; a luz, a câmera e as pessoas já valem para todos os interiores. **Depois, por ondas:** o palácio e as casas nobres, as casas do povo, o templo, as oficinas e as lojas, a biblioteca, os banhos, a cadeia e o quartel, o armazém e o celeiro, o teatro e o Coliseu, e os que não têm dentro (a doca, a alfândega, a escola de gladiadores) | o jogo de hoje (a v14) | a taverna, a corte, a casa, o templo — onde os NPCs e os ofícios vão viver | [`interiores-2.md`](interiores-2.md) |
 | **C — O calendário: o ano de quatro estações e a natureza viva** (o primeiro, antes do 23; três ondas) | um ano vira quatro dias, um por estação: cada uso do contador do dia classificado (do dia ou do ano), o ano de quatro dias sem estações provado igual ao de antes, depois as estações ligadas (o plantio e a colheita, o inverno, o mar fechado **e os bichos**: o calendário de cada espécie, as migrações, a hibernação, o mar com as estações), o que se vê, e **a natureza viva** (o relógio do dia, os nichos da copa à toca, os bichos novos, as relações entre as espécies, o olho da natureza) | a faxina da v14 | as estações de todo ofício; a vida de ~49 h no corpo | [`calendario.md`](calendario.md), [`natureza-viva.md`](natureza-viva.md) |
 | **23 — As Vidas** | a memória e os laços, **a aba de Relacionamentos**, a voz (as falas contextuais), a fábrica de animações, os pedidos que viram missão, a vida que muda; **a memória do mundo** (as marcas e o livro das vidas, a frente 23f); **a leitura** (a sexta máquina: o porquê de cada «não» dentro do mundo, [`leitura.md`](leitura.md)) | a sociedade da v14 | a base de quase todo ofício | [`patch23-as-vidas.md`](patch23-as-vidas.md), [`marcas.md`](marcas.md) |
 | **24 — Os grupos e o conflito** | **onda 1, o grupo:** a máquina dos companheiros (os membros, o líder, os papéis, as ordens, o ânimo, a carga comum), os grupos do mundo nela, o painel e a roda das ordens; **onda 2, o conflito:** o inimigo que age, os planos de vários passos, a mentira, o segredo e a chantagem, os grupos, mais missões, mais falas e clipes | 23 | toda equipe, tripulação e tropa (o companheiro da corda, a expedição da mata, o navio, o exército); o capataz (o delator, a faca de noite), a fuga da galé, a sombra, o contrabando | [`grupos.md`](grupos.md), [`patch23-as-vidas.md`](patch23-as-vidas.md) §7 |
@@ -135,6 +137,7 @@ soterrado no 31, o perdido na montanha e o congelado no 42, o galeote e o escrav
 | A escalada | 29 |
 | A montanha | 42 |
 | O mundo grande | 41 |
+| Os interiores 2.0 (o diagnóstico e o piloto da taverna) | I (antes de tudo) |
 | O ano de quatro estações | C (antes do 23) |
 | O grupo | 24 (onda 1) |
 | O taverneiro | 27 |
