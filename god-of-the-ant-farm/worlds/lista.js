@@ -38,9 +38,9 @@ G.Ready.list({
   "bytes": 4173122
  },
  "mega": {
-  "day": 83,
-  "pop": 1421,
-  "peoples": 7,
+  "day": 74,
+  "pop": 953,
+  "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
@@ -48,12 +48,12 @@ G.Ready.list({
   "city": {
    "name": "Hedeby",
    "tier": 5,
-   "pop": 156
+   "pop": 153
   },
-  "wars": 0,
+  "wars": 2,
   "ww": null,
   "world": "Corante",
-  "bytes": 5754389
+  "bytes": 4576457
  },
  "mundial": {
   "day": 58,
