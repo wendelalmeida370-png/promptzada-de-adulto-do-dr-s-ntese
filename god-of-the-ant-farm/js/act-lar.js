@@ -52,7 +52,8 @@
       if (T.includes('Trabalhador')) wake -= 0.02;
       if (T.includes('Sociável')) bed += 0.02;
       const r = v.role;
-      if (r === 'taverneiro') { bed = 0.895 + h * 0.025; wake = 0.06 + q * 0.03; }
+      // (the tavern keeper sleeps late: he closes at night, and his day is the evening's — D-763)
+      if (r === 'taverneiro') { bed = 0.895 + h * 0.025; wake = 0.17 + q * 0.04; }
       else if (r === 'pescador' || r === 'pastor' || r === 'sacerdote') wake -= 0.03;
     }
     return { bed: fr(bed), wake: fr(wake) };
@@ -197,8 +198,16 @@
     if (what === 'cozinhar') entry(h).cook = v.id;
     return t;
   }
-  // (in: the house's jar, if one came home with it, is already in the house — setTask, by G.Life.jarHome, L-300)
-  function arrive(v, t, h) { v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; }
+  // (in: the house's jar, if one came home with it, is already in the house — setTask, by G.Life.jarHome, L-300. From the door: in,
+  // and the walk to one's place before the evening at home goes on — D-765)
+  function arrive(v, t, h) { if (v.inside !== h.id && G.Vg.enter) G.Vg.enter(v, h, t); else v.inside = h.id; t.st = 2; v.actT = 0; v.moving = false; v.path = null; }
+  // (the place at home one takes for what one does there — the table for the supper, the fire for the pot, one's own bed ill —
+  // is one's own while one is at it: In.hold, D-762; taken again when what one does changes)
+  function seat(v, t, h) {
+    const In = G.Interiors; if (!In || !In.hold || t.hw === t.what) return; t.hw = t.what;
+    In.unhold(v); const w = L.want(v, h); if (!w || !w.use) return;
+    In.hold(v, h, w.use, w.item ? Lst => Lst.find(p => p.item === w.item) || Lst[0] : null);
+  }
   // (the meal of need over, or nothing left to eat: the evening at home weighs its own — L-774)
   function mealDone(t) { if (t.meal) { t.meal = 0; t.pri = pri(t.what); } }
 
@@ -217,6 +226,8 @@
     // (in only from its door: a way that ended away from it is no way in — the way again, twice, then the errand ends, L-231)
     if (t.st === 1) { if (H.move(v, dt)) { if (!G.Vg.atDoor || G.Vg.atDoor(v, h, G.Vg.IN_R)) arrive(v, t, h); else if ((t.re = (t.re || 0) + 1) <= 2) t.st = 0; else { noWay.set(v.id, S.clock); H.end(v); } } else if (t.age > 60) H.end(v); return; }
     v.moving = false; v.path = null;
+    if (G.Vg.entering && G.Vg.entering(v)) { v.act = ''; return; } // (walking from the door to one's place)
+    seat(v, t, h);
     const night = G.isNight();
     switch (t.what) {
       case 'acamado': {
@@ -370,7 +381,8 @@
   const WANT_PRI = { acamado: 5, cozinhar: 4, ninar: 3, ceia: 2, cuidar: 2, luto: 1, esperar: 1, conversar: 1, descansar: 0 };
   L.want = function (v, b) {
     const S = G.S; const t = v.task;
-    if (v.age < 2) { const c = S.villagers.get(v.carrier); return c && c.inside === b.id && !v.sleeping ? { with: c.id } : v.sleeping ? { use: ['deitar'], item: null, st: 'sleep', pri: 5 } : null; }
+    // (a baby: in the arms of who carries it; with no arms in the house, in its cradle or a bed — never alone at the fire, D-660)
+    if (v.age < 2) { const c = S.villagers.get(v.carrier); return c && c.inside === b.id && !v.sleeping ? { with: c.id } : { use: ['deitar'], item: null, st: 'sleep', pri: 5 }; }
     if (v.sleeping) return { use: ['deitar'], item: null, st: 'sleep', pri: 5 };
     if (t && t.type === 'pray') return t.priest ? { use: ['oficiar', 'rezar', 'sentar'], item: null, st: 'pray', pri: 2 } : { use: ['rezar', 'sentar'], item: null, st: 'pray', pri: 1 };
     if (t && t.type === 'lar') {

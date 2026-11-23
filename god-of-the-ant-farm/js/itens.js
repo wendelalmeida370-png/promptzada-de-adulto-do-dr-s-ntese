@@ -25,7 +25,7 @@
   const It = G.Itens = {};
 
   // ------------------------------ the kinds ------------------------------
-  // tipo: ferramenta | arma | escudo | arco | municao | protecao | luz | recipiente
+  // tipo: ferramenta | arma | escudo | arco | municao | protecao | luz | recipiente | brinquedo | instrumento
   // maos: hands it takes in use (2: both — the spear, the bow, the oar, the hoe…)
   // slots: where it may be (the hands — mao, the other hand — outra; stowed — costas, cinto; worn — cabeca, corpo)
   // pega: how the hand closes on it (the 3D's hold: punho a fist round a handle; duas two hands on a shaft; escudo the forearm
@@ -70,6 +70,13 @@
     bola: { nome: 'bola', plural: 'bolas', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.25, bem: null, vale: 0, tags: ['brincar'], mats: ['vime', 'couro'], desc: 'O brinquedo das crianças: de vime trançado, ou de couro cosido e cheio.' },
     grilhoes: { nome: 'grilhões', plural: 'grilhões', tipo: 'ferramenta', maos: 2, slots: ['mao'], pega: 'algema', peso: 1.6, bem: 'ferramentas', vale: 0.5, tags: ['prender'], mats: ['corda', 'ferro'], desc: 'Prendem as mãos de quem é levado: corda trançada, ou duas argolas de ferro com a corrente.' },
     muleta: { nome: 'muleta', plural: 'muletas', tipo: 'ferramenta', maos: 1, slots: ['mao', 'outra'], pega: 'muleta', peso: 1.2, bem: null, vale: 0, tags: ['apoio'], mats: ['madeira'], desc: 'Debaixo do braço, faz as vezes da perna que falta.', feito: { wood: 0.5 } },
+    // the instruments of the musician of the night (P7, D-764): the lyre of the peoples of the Old World — the arms and the yoke of
+    // wood, the sound box covered with hide, the strings of gut —, and the drum of the Aztec, the huehuetl: a log hollowed out, the
+    // hide stretched over its mouth. Their material is the beast's (its hide and gut: a people that never had a hide has none, the
+    // song with the voice alone); what they are made of, the hide and the wood of the store (It.feitoDe). Of the place — the tavern's
+    // —, as the cup (G.Inv's kit), none a weapon
+    lira: { nome: 'lira', plural: 'liras', tipo: 'instrumento', maos: 2, slots: ['mao', 'costas'], pega: 'lira', peso: 0.9, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'Os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa: a música da taverna e da festa.' },
+    tambor: { nome: 'tambor', plural: 'tambores', tipo: 'instrumento', maos: 2, slots: ['mao', 'costas'], pega: 'tambor', peso: 2.4, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'O tronco escavado, com o couro esticado na boca: batido com as mãos, marca o passo da dança.' },
   };
   // the materials: what they change in a thing (the weight, the bite of an edge) and how they are said
   // (ord: the plainest 0, bronze 1, iron 2 — the best a people knows is the highest it may make; cor: the material's colour,
@@ -89,8 +96,8 @@
   It.SLOTS = ['mao', 'outra', 'costas', 'cinto', 'cabeca', 'corpo'];
   It.SLOT_NOME = { mao: 'mão', outra: 'outra mão', costas: 'costas', cinto: 'cinto', cabeca: 'cabeça', corpo: 'corpo' };
   // what each kind of thing is called as a kind, and what each tag says it is good for (the screen's card)
-  It.TIPO_NOME = { ferramenta: 'Ferramenta', arma: 'Arma', escudo: 'Escudo', arco: 'Arma de tiro', municao: 'Munição', protecao: 'Proteção', luz: 'Luz', recipiente: 'Recipiente', brinquedo: 'Brinquedo', bem: 'Bem' };
-  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', bem: 'um bem do armazém' };
+  It.TIPO_NOME = { ferramenta: 'Ferramenta', arma: 'Arma', escudo: 'Escudo', arco: 'Arma de tiro', municao: 'Munição', protecao: 'Proteção', luz: 'Luz', recipiente: 'Recipiente', brinquedo: 'Brinquedo', instrumento: 'Instrumento', bem: 'Bem' };
+  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', tocar: 'tocar música', bem: 'um bem do armazém' };
 
   // ------------------------------ reading a key ------------------------------
   // a key: 'machado' (its plainest material) or 'machado.ferro'
@@ -179,6 +186,8 @@
     caneca: { wood: 0.1 }, bola: { wood: 0.1 }, grilhoes: { wood: 0.1 }, // (22c: a cup carved of wood; the withies of a ball, the cord of a binding)
   };
   const HIDE = { elmo: 1, couraca: 3, bola: 0.15 };
+  // (a thing of the beast's hide and gut and of wood: the instruments — P7, D-764 — the hide of the store and its wood)
+  const BEAST = { lira: { couro: 0.1, wood: 0.3 }, tambor: { couro: 0.3, wood: 0.6 } };
   // (the fired clay of a thing is the pottery's ware of the store — the good ceramica: 22c, D-612)
   const CLAY = { caneca: 0.25 };
   It.METALS = { bronze: 1, ferro: 1 };
@@ -189,6 +198,7 @@
     if (d && !d.coisa) out = [{ k: d.id, n: 1, of: null }];
     else if (d) {
       if (It.METALS[d.mat] && d.bem && d.vale > 0) out = [{ k: d.bem, n: d.vale, of: d.mat }];
+      else if (d.mat === 'couro' && BEAST[d.kind]) out = Object.keys(BEAST[d.kind]).map(g => ({ k: g, n: BEAST[d.kind][g], of: null }));
       else if (d.mat === 'couro' && HIDE[d.kind]) out = [{ k: 'couro', n: HIDE[d.kind], of: null }];
       else if (d.mat === 'barro' && CLAY[d.kind]) out = [{ k: 'ceramica', n: CLAY[d.kind], of: null }];
       else if (d.feito) out = Object.keys(d.feito).map(g => ({ k: g, n: d.feito[g], of: null }));

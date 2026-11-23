@@ -58,7 +58,9 @@ const calm = () => { const w = G.S.weather; w.rain = 0; if (w.storm) w.storm = 0
 // ================================================================ a: by the hand
 function partA() {
   M.pronto(WORLD); const S = G.S; rebase(); S.time = 0.4; calm(); M.viver(1);
-  const L = pool(); const old = [...S.villagers.values()].filter(v => v.age >= 62 && !v.captive && !v.jail && !v.aboard && !v.ug && !(v.sick > 0) && v.hp > 50).sort((a, c) => a.id - c.id)[0];
+  // (the old one of the same town as the others — the talk with a in reach —: any old one of the world was 48 tiles off in another
+  // town, and a beast's flight there took her from the talk in the last second, counted in the drain: T-1822)
+  const L = pool(); const old = [...S.villagers.values()].filter(v => L.length && v.set === L[0].set && v.age >= 62 && !v.captive && !v.jail && !v.aboard && !v.ug && !(v.sick > 0) && v.hp > 50).sort((a, c) => a.id - c.id)[0];
   // ---- a1: rest against work, the same energy, ten centésimos of the day
   if (on('a1')) {
     const [a, b, c] = L; const o = old;
@@ -66,7 +68,7 @@ function partA() {
     for (const v of [a, b, c, o]) if (v) v.energy = 80;
     M.viver(0.2); const t0 = dayNow(); const e0 = [a, b, c, o].map(v => (v ? v.energy : 0)); const r0 = [a, b, c].map(v => Vg.resting(v));
     let g = 0; while ((dayNow() - t0) * 100 < 10 && g++ < 2000) { calm(); for (const v of [a, b, c, o]) if (v) v.hunger = 10; M.viver(0.5); }
-    const dc = (dayNow() - t0) * 100; const drop = [a, b, c, o].map((v, i) => (v ? e0[i] - v.energy : 0)); const still = [a, b].every(v => v.task && v.task.type === 'talk') && c.task && c.task.type === 'idle';
+    const dc = (dayNow() - t0) * 100; const drop = [a, b, c, o].map((v, i) => (v ? e0[i] - v.energy : 0)); const still = [a, b].concat(o ? [o] : []).every(v => v.task && v.task.type === 'talk') && c.task && c.task.type === 'idle';
     const wantW = dc * WORK, wantR = dc * WORK * K(), wantO = dc * WORK * K() * 1.12;
     ok('a1 o descanso contra o trabalho, pela mão: a mesma energia (80), dez centésimos do dia — de pé e sem descanso cai 100/80 por centésimo, como sempre; na conversa cai REST disso; o velho, 1,12 do que cai o moço',
       still && r0[0] && r0[1] && !r0[2] && Math.abs(drop[2] - wantW) < 0.06 && Math.abs(drop[0] - wantR) < 0.06 && Math.abs(drop[1] - wantR) < 0.06 && (!o || Math.abs(drop[3] - wantO) < 0.06) && K() > 0 && K() < 1,
@@ -78,7 +80,7 @@ function partA() {
     const v = L[3]; const t0 = v.task, m0 = v.moving, s0 = v.sleeping; const bad = [];
     const ask = (task, o) => { v.task = task; v.moving = !!(o && o.moving); v.sleeping = !!(o && o.sleeping); return Vg.resting(v); };
     const C = [
-      ['à mesa da taverna, sentado', { type: 'tavern', st: 2 }, 1], ['à mesa, a beber', { type: 'tavern', st: 3 }, 1], ['a caminho da taverna', { type: 'tavern', st: 0 }, 0],
+      ['à mesa da taverna, sentado', { type: 'tavern', st: 2 }, 1], ['à mesa, a beber', { type: 'tavern', st: 3 }, 1], ['a caminho da taverna', { type: 'tavern', st: 0 }, 0], ['entrando na taverna, da porta ao banquinho', { type: 'tavern', st: 1 }, 0], ['à mesa, na conversa entre as rodadas', { type: 'tavern', st: 5 }, 1], ['no estrado, tocando', { type: 'tavern', st: 6, mw: 0 }, 1], ['a caminho do balcão', { type: 'tavern', st: 7 }, 0], ['de volta do balcão', { type: 'tavern', st: 8 }, 0], ['em casa, da porta ao seu lugar', { type: 'lar', st: 2, what: 'conversar', inW: 1e9 }, 0],
       ['na plateia', { type: 'teatro', st: 1 }, 1], ['a caminho do teatro', { type: 'teatro', st: 0 }, 0],
       ['sobre um rolo', { type: 'ler', st: 1 }, 1], ['a caminho da biblioteca', { type: 'ler', st: 0 }, 0],
       ['na água dos banhos', { type: 'termas', st: 2 }, 1], ['nos cabides', { type: 'termas', st: 1 }, 0], ['a vestir-se', { type: 'termas', st: 3 }, 0],

@@ -45,7 +45,10 @@
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
   const PLACE_TOOL = { caneca: 1, grilhoes: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
-    drink: 'caneca', toast: 'caneca', bound: 'grilhoes' };
+    drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira' };
+  // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
+  // the people had, as the cup is of its clay or wood: P7, D-764)
+  const instrumentOf = v => ((G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) === 'asteca' ? 'tambor' : 'lira');
   // (the acts of the fight: whoever already holds a weapon fights with it — the spearman with his spear, the militia with its club)
   const FIGHT = { stab: 1, fight: 1, brandish: 1 };
   // the trade's own thing and where it rides when the hands are free (the act puts it in the hand while it lasts)
@@ -150,6 +153,7 @@
     if (t === 'vara' && out.mao && It.has(out.mao, 'pescar')) return;
     if (FIGHT[v.act] && out.mao && (It.has(out.mao, 'lutar') || It.has(out.mao, 'golpe'))) return;
     if (t === 'vara') { t = fishGear(v); if (!t || v.gear) return; }
+    if (t === 'lira') t = instrumentOf(v);
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
