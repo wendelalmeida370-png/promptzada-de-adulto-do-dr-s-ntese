@@ -58,8 +58,7 @@
     olaria: { use: 'olaria', H: ['terreiro', 'salao', 'frente', 'patio', 'anexo'], V: ['terreo', 'galeria', 'andar'], skip: { 'terreiro.galeria': 1, 'terreiro.andar': 1 }, prefer: (rec, l) => preferYard(rec, l), open: 1, lockNight: 1, door: [1.0, 1.3], hot: 'forno-olaria', furnish: P => { tradeFurnish(P, [['roda-oleiro', 2]], ['secador'], [], ['forno-olaria']); bricks(P); } },
     acougue: { use: 'acougue', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.9, 1.1], furnish: P => tradeFurnish(P, [['cepo', 1]], ['ganchos'], ['balcao']) },
     ourives: { use: 'ourives', H: ['salao', 'frente', 'anexo'], V: ['terreo', 'porao', 'andar'], open: 1, lockNight: 1, door: [0.85, 1.0], furnish: P => tradeFurnish(P, [['bancada-ourives', 1]], ['cofre'], ['fornalha']) },
-    // (the tavern: the yard before its house first, the tables outside — of two storeys, the northern mead hall of one)
-    taverna: { use: 'taverna', H: ['terreiro', 'salao', 'frente', 'patio', 'naves', 'anexo'], V: ['terreo', 'galeria', 'porao', 'andar'], skip: { 'terreiro.galeria': 1, 'terreiro.porao': 1 }, prefer: (rec, l) => preferYard(rec, l), open: 1, lockNight: 1, door: [1.0, 1.4], furnish: tavernFurnish },
+    // (the tavern is laid out by its own grammar, by zones: below, «the tavern» — D-720)
   };
   const NOTW = { esteios: { patio: 1 }, galeria: { patio: 1 } }; // (the hall behind a court is shallow: a gallery would cover it all)
   // (on a 4 m lot with a front room, the hall behind is too shallow for a cellar's trapdoor and its ladder)
@@ -409,19 +408,6 @@
   // (the other buildings this recipe lays out — the temple, the barracks, the jail, the baths, the chief's hall — register
   // their programmes here, with their own furnishing: int-civicos.js)
   In.WORK = { add: addProg, roomsFor, lvOf, mix, storeCap };
-  // the tavern: the counter and its barrels, the hearth, tables and benches through the hall (and the court, the cells)
-  function tavernFurnish(P) {
-    const rooms = P._rooms; const tr = P.tr; const ids = mix(P, roomsFor(rooms)); const hall = mix(P, [rooms.main, rooms.court, ...rooms.cells, rooms.front].filter(x => x !== undefined && x !== null));
-    const counter = () => { let ok = false; for (const id of [rooms.front, rooms.main].filter(x => x !== undefined && x !== null)) if (P.place('balcao', 0, id, { sides: ['livre'], margin: 0.3 })) { ok = true; break; } if (!ok) P.errs.push('sem lugar para o balcão'); };
-    const fire = () => { let ok = false; for (const id of hall) { if (lvOf(P, id) !== 0 || P.rooms[id].open) continue; if (P.place(tr.fire === 'lar' ? 'fogao' : tr.fire === 'forno' ? 'fogao' : tr.fire, 0, id) || P.place('braseiro', 0, id)) { ok = true; break; } } if (!ok) P.errs.push('sem lugar para o fogo'); };
-    const barrels = () => { let ok = false; for (const id of (rooms.cellar !== undefined ? [rooms.cellar] : []).concat(ids)) if (P.place('pipas', lvOf(P, id), id)) { ok = true; break; } if (!ok) P.errs.push('sem lugar para as pipas'); };
-    const tables = () => { let n = 0; for (const id of hall) { let g = 0; while (n < 4 && g++ < 4) { if (!P.place('mesa', lvOf(P, id), id, { sides: ['livre'], margin: 0.4 })) break; n++; P.opt(() => P.place('banco', lvOf(P, id), id)); } } if (n < 2) P.errs.push(`só ${n} mesas`); };
-    const order = [[counter, fire, barrels, tables], [fire, counter, tables, barrels], [counter, tables, fire, barrels]][P.attempt % 3]; for (const f of order) f();
-    // (the vat where the keeper brews the town's beer or pulque — wine and mead come from the stores: tavern.js —, in the
-    // cellar, else at the back)
-    P.opt(() => { for (const id of (rooms.cellar !== undefined ? [rooms.cellar] : []).concat(roomsFor(rooms).slice().reverse())) if (P.place('cuba', lvOf(P, id), id)) break; });
-  }
-
   // ------------------------------ the yard (B2d) ------------------------------
   // the pottery and the tavern of a lot of 8 m as the god draws them (EXT.olaria, EXT.taverna): the roofed part at the back —
   // the potter's shed in a corner, the tavern's house across it, the northern mead hall — and the yard before it, fenced low,
@@ -438,21 +424,14 @@
       rooms: [[0.52, 3.2, 3.8, 7.48], [3.8, 0.52, 7.48, 7.48]],
       pieces: [['forno-olaria', [4.7, 0.6, 7.3, 3.2], 0, 1, { h: 2.6 }], ['secador', [4.2, 4.5, 7.4, 5.0], 0, 1, { h: 0.7 }], ['secador', [4.2, 5.95, 7.4, 6.45], 0, 1, { h: 0.7 }],
         ['pilha-tijolos', [3.86, 1.3, 4.66, 2.7], 0, 1], ['eira', [0.62, 3.3, 2.22, 5.3], 1, 0], ['roda-oleiro', [2.6, 5.4, 3.4, 6.2], -1, 0], ['tanque-barro', [0.62, 6.0, 1.52, 7.2], 1, 0]] }),
-    taverna: rec => ({ yard: [0.4, 4.4, 7.6, 7.6], house: rec.c === 'nordico' ? [0.4, 0.4, 7.6, 4.4] : [0.4, 0.4, 6.8, 4.4], door: 4.6, dw: 1.0, gate: 3.3, gw: 1.4,
-      rooms: [[0.6, 4.4, 7.4, 7.4]],
-      pieces: [['mesa-terreiro', [0.8, 4.7, 3.0, 6.4], 0, 1], ['pipas', [5.6, 5.4, 6.4, 6.8], -1, 0]].concat(rec.c === 'grego' || rec.c === 'romano' ? [['talha', [6.75, 4.6, 7.35, 5.2], -1, 0]] : []) }),
   };
-  // (of the families the catalogue offers, the yard's — of the tavern, with the god's storeys: the northern hall of one, the
-  // house of two —, where one is laid out)
-  function preferYard(rec, list) {
-    const y = list.filter(f => f.startsWith('w-terreiro.')); if (!y.length) return list;
-    const want = rec.t !== 'taverna' ? null : rec.c === 'nordico' ? 'w-terreiro.terreo' : 'w-terreiro.andar';
-    return want && y.includes(want) ? [want] : y;
-  }
+  // (of the families the catalogue offers, the yard's, where one is laid out)
+  function preferYard(rec, list) { const y = list.filter(f => f.startsWith('w-terreiro.')); return y.length ? y : list; }
   // the parts of a line [a, b] the other one [c0, c1] leaves (the fence along a side, where the roofed part's wall is not)
   const runs = (a, b, c0, c1) => { const lo = Math.min(a, b), hi = Math.max(a, b); const out = []; if (c1 <= lo + 0.05 || c0 >= hi - 0.05) out.push([lo, hi]); else { if (c0 > lo + 0.05) out.push([lo, c0]); if (c1 < hi - 0.05) out.push([c1, hi]); } return out; };
   function yardWork(P) {
     const rec = P.rec, tr = P.tr, L = P.L; const V = P.fam.V; const t = tr.t, mat = tr.mat;
+    if (!YARD[rec.t]) { P.errs.push(`o terreiro não é de ${rec.t}`); return; } // (the taverna's of before: D-720)
     const Y = YARD[rec.t](rec); const ft = 0.2, fh = 1.1; const c2 = ft / 2;
     // (only the other tile of the front open to the street: all of it mirrored)
     const o = rec.o || 0; const flip = !(o & 1) && !!(o & 2);
@@ -507,6 +486,596 @@
       for (const f of P.attempt % 2 ? [shelf, wheel] : [wheel, shelf]) f();
       P.opt(() => P.place('bancada', 0, id, { sides: ['fundo', 'esquerda', 'direita'] }));
     },
-    taverna: P => tavernFurnish(P),
   };
+  // (the yard family of the taverna of before, w-terreiro.andar — the house of two storeys behind the yard —, kept a family no
+  // type lays out any more: an old record of it is judged on loading and given the tavern's own, with its fact, D-720)
+  if (!In.FAMS['w-terreiro.andar']) In.addFamilies([{ id: 'w-terreiro.andar', H: 'w-terreiro', V: 'andar', S: 'w-terreiro.andar', name: 'Terreiro com sobrado', can: () => 'a taverna de 8 m não tem mais terreiro: o salão toma o lote (D-720)', build: P => yardWork(P) }]);
+
+  // ============================== the tavern (interiores 2.0: D-720 a D-729) ==============================
+  // The taberna of 8 m, the taverna of 12 and the hospedaria of 16 (G.Escala), each laid out by zones, as a tavern is used: the
+  // bar — the counter against the wall, the keeper between it and the shelf of the bar behind; the Roman's and the classical's,
+  // the masonry counter in an L at the street's opening —, the tables with their stools and benches, the fire of the people (the
+  // hearth with its hood, the clay oven, the stove with the comal; the Norse long fire in the middle of the hall, the benches
+  // about it), the musician's stage by the fire, the stair against a wall, the barrels, the amphorae and the vat; the hall up to
+  // the roof — the storey above only over the back: the keeper's loft of the 8 m, the rooms over the kitchen and the cellar of
+  // the 12 m, and of the 16 m the guests' with the gallery round the hall —; a corridor of a metre at least from the door to the
+  // counter, the fire, the stage, the stair and the tables, kept clear (P.zones). The lot never grows (D-663): the room is the
+  // plan's. Three taverns at least of each people and size, none the same: the bar's kind and side, where the stage stands, the
+  // shape of the tables — by the id (G.hash, never chance) and by the owner's wealth the record keeps (rec.q: the coins of the
+  // keeper's house and the merchant house, judged at the turn of the day — D-661, interiors.js). Everything a choice of the
+  // record: the same in every attempt; the attempts only move the tables
+  const TAVC = {
+    classico: { fire: 'lareira', rua: 1, yard: 1 },
+    romano: { fire: 'lareira', rua: 1, yard: 1 },
+    grego: { fire: 'lareira', yard: 1 },
+    egipcio: { fire: 'forno-barro', yard: 1 },
+    asteca: { fire: 'fogao-comal', yard: 1 },
+    nordico: { fire: 'fogo-comprido', yard: 0 },
+  };
+  // (the pattern, D-662 — what the proofs measure: the hall's floor, the seats at the tables inside)
+  const TMIN = { 2: { hall: 30, seats: 8 }, 3: { hall: 60, seats: 16 }, 4: { hall: 110, seats: 30 } };
+  // (the back under the storey above, the lot's margin, the front yard of the 16 m, the corridor's width — to the tables a metre
+  // and the grid's tenth: a way measured a metre on the grid of 10 cm may be 0.95 between two groups, T-1743)
+  const BACK = { 2: 2.4, 3: 3.3, 4: 3.4 }, MARG = { 2: 0.3, 3: 0.35, 4: 0.4 }, YARD16 = 3.0, AISLE = 1.0, TAISLE = 1.1;
+  const tavHash = (id, k) => G.hash(Math.imul(id | 0, 7919) + Math.imul(k, 104729) + 977);
+  // the record's choices — the shell's and the inside's, the same in every attempt: the size, the owner's wealth, the bar, the
+  // stage, the door on an open tile of the front (rec.o) and the mirror that puts it on the plan's left (the virtual frame:
+  // the door left of the middle or on it, the fire on the left wall, the stair on the right)
+  function tavAxes(P) {
+    const rec = P.rec, L = P.L, n = Math.round(L / 4), id = P.b.id | 0; if (!TMIN[n]) return null;
+    const c = TAVC[rec.c] || TAVC.classico; const q = Math.max(0, Math.min(2, rec.q | 0)); const H = k => tavHash(id, k);
+    // (the street's corner not in the 12 m: its hall too shallow for the stair, a metre's way to its foot, the shelf and the
+    // counter along the one wall — T-1744; nor the side wall in the 8 m: the bar there leaves the tables a strip that seats less
+    // than the eight, L-1845)
+    const bars = n === 2 ? (c.rua ? ['centro', 'canto', 'rua'] : ['centro', 'canto']) : c.rua && n !== 3 ? ['centro', 'canto', 'rua'] : c.fire === 'fogo-comprido' ? ['centro', 'canto'] : ['centro', 'canto', 'lado']; // (the Norse: its long fire takes the side of the hall a bar against the wall would)
+    const bar = bars[Math.floor(H(1) * bars.length) % bars.length];
+    const stage = H(3) < 0.5 ? 'frente' : 'fundo';
+    const yard = n === 4 && !!c.yard;
+    // (the door: in the 8 m by a side wall — the stair along it and the corridor beside it, the hall's breadth left whole to the
+    // tables —; in the bigger ones in the middle of the front where its tile is open; else on the open tile nearest it)
+    const dw = n === 2 ? 1.2 : n === 3 ? 1.4 : 1.6; const o = rec.o || 0; const open = k => !o || !!((o >> k) & 1);
+    const mg = Math.min(1.9, dw / 2 + 0.1) + 0.05; const cands = []; const want = n === 2 ? r2(MARG[2] + Math.max(0.12, P.tr.t || 0.25) + 1.45) : L / 2;
+    for (let k = 0; k < n; k++) { if (!open(k)) continue; const lo = 4 * k + mg, hi = 4 * k + 4 - mg; for (const w of n === 2 ? [want, L - want] : [want]) if (w >= lo - 1e-6 && w <= hi + 1e-6) cands.push(r2(w)); if (n > 2) cands.push(r2(Math.max(lo, Math.min(hi, L / 2)))); }
+    if (!cands.length) cands.push(r2(n === 2 ? want : L / 2));
+    const side = H(2) < 0.5 ? 1 : -1; cands.sort((a, b) => (n === 2 ? 0 : Math.abs(a - L / 2) - Math.abs(b - L / 2)) || side * (a - b));
+    const ur = cands[0]; const flip = ur > L / 2 + 0.01 ? 1 : ur < L / 2 - 0.01 ? 0 : H(4) < 0.5 ? 1 : 0;
+    // (the 8 m of a people that digs a cellar, on dry ground: its vat and its barrels in the cellar under the bar — D-723)
+    const cellar = n === 2 && !K.cellarOK(rec, P.tr);
+    return { n, L, c, q, bar, stage, yard, dw, du: flip ? r2(L - ur) : ur, flip, Y: yard ? YARD16 : 0, cellar };
+  }
+  In.tavAxes = P => tavAxes(P); // (for the proofs)
+  // a rectangle, a u, a facing of the virtual frame on the plan's (the mirror: u → L − u)
+  const tavFrame = (P, X) => { const L = P.L, f = X.flip;
+    return { U: u => (f ? r2(L - u) : r2(u)), R: r => (f ? [r2(L - r[2]), r2(r[1]), r2(L - r[0]), r2(r[3])] : r.map(r2)), F: fu => (f ? -fu : fu) }; };
+
+  function tavernBuild(P) {
+    const rec = P.rec, tr = P.tr, L = P.L; const X = tavAxes(P); if (!X) { P.errs.push('a taverna só tem os degraus de 8, 12 e 16 m'); return; }
+    const { n } = X; const V = tavFrame(P, X);
+    const t = r2(Math.max(0.12, tr.t || 0.25)), ti = 0.15, m = MARG[n], c = t / 2;
+    const sh = [m, m, r2(L - m), r2(L - m - X.Y)];
+    const h0 = r2(Math.max(n === 2 ? 2.8 : 3.0, (tr.h0 || 2.4) + 0.4)), h1 = r2(Math.max(2.4, tr.h1 || 2.4)), y1 = r2(h0 + 0.2);
+    // ======== the shell: from the record alone — what is seen from afar ========
+    P.shell = { kind: 'rect', r: sh.slice(), t, mat: tr.mat, base: 'pedra', floors: 2, eave: r2(y1 + h1) };
+    const kind = K.roofOf({ t: 'house' }, tr); const along = sh[2] - sh[0] >= sh[3] - sh[1] ? 'u' : 'v'; const span = along === 'u' ? sh[3] - sh[1] : sh[2] - sh[0];
+    const rise = kind === 'plano' ? 0 : r2(Math.min(n === 2 ? 2.6 : 3.4, span * 0.42));
+    P.roof = { kind, along, h: rise, over: kind === 'plano' ? 0 : 0.42 }; P.roofGeo = { kind, along, eave: P.shell.eave, rise, R: sh.slice() };
+    // (the back of the 16 m a little shallower where thick walls would leave the hall less than 8 m deep)
+    const I = P.inner(); const D = n === 4 ? r2(Math.min(BACK[4], I[3] - I[1] - 8.0 - ti)) : BACK[n]; const hb = n === 2 ? r2(I[1] + D) : r2(I[1] + D + ti); // (the hall's back: the loft's edge; the partition's face)
+    P.level(0, 0, h0, 'piso', I); P.entryLv = 0;
+    P.level(1, y1, h1, n === 2 ? 'galeria' : 'andar', [I[0], I[1], I[2], hb]);
+    if (X.cellar) P.level(-1, -2.1, 1.9, 'porao', I.slice()); // (the cellar under the bar: its corner the inside's)
+    // (the outside walls the height of both storeys: over the hall the roof, the storey above only over the back)
+    P.outer = P.walls4(0, [r2(sh[0] + c), r2(sh[1] + c), r2(sh[2] - c), r2(sh[3] - c)], t, r2(y1 + h1), 1, 'parede'); P.outers = [P.outer];
+    const fw = P.outer.frente;
+    // (the way in: the door in the front — onto the street, or onto the yard of the 16 m)
+    const dh = Math.min(r2(h0 - 0.25), 2.5); const at = u => P.atOf(fw, [V.U(u), P.walls[fw].a[1]]);
+    const door = P.door(fw, at(X.du), X.dw, dh, -1, X.yard ? -1 : 'rua', X.yard ? 0 : 1, 'porta');
+    const lay = tavLayout(P, X, I, D, hb, y1);
+    // (the masonry counter's opening onto the street, over its long arm: a window as wide as the arm, its sill on its top)
+    if (lay.street) P.hole(fw, at(lay.street[0]), lay.street[1], 1.15, 1.0, 'janela');
+    tavWindows(P, X, V, I, hb, y1, lay);
+    // (the yard of the 16 m, before the house: its fence, the gate on the street before the door, a table either side of the way)
+    if (X.yard) {
+      const Y = [m, sh[3], r2(L - m), r2(L - m)]; const ft = 0.2, c2 = ft / 2; const gw = 1.8;
+      P.wall(0, [r2(Y[0] + c2), Y[1]], [r2(Y[0] + c2), Y[3]], ft, 1.1, 1, 'cerca'); P.wall(0, [r2(Y[2] - c2), Y[3]], [r2(Y[2] - c2), Y[1]], ft, 1.1, 1, 'cerca');
+      const fy = P.wall(0, [Y[2], r2(Y[3] - c2)], [Y[0], r2(Y[3] - c2)], ft, 1.1, 1, 'cerca'); const gate = P.door(fy, P.atOf(fy, [V.U(X.du), r2(Y[3] - c2)]), gw, 2.2, -1, 'rua', 1, 'portao');
+      P.entrance = { door: gate, u: V.U(X.du), v: Y[3], w: gw, lv: 0 }; P.yard = { r: Y.slice(), h: 1.1, lv: 0 };
+      const yid = P.room(0, 'terreiro', [r2(Y[0] + ft), Y[1], r2(Y[2] - ft), r2(Y[3] - ft)], 1);
+      for (const s of [-1, 1]) {
+        const u0 = s < 0 ? r2(Y[0] + 0.6) : r2(Y[2] - 0.6 - 2.2); const r = [u0, r2(Y[1] + 0.5), r2(u0 + 2.2), r2(Y[1] + 2.2)];
+        if (Math.abs((r[0] + r[2]) / 2 - V.U(X.du)) < 2.3) continue;
+        if (!P.at('mesa-terreiro', 0, yid, r, 0, 1, { yard: 1 })) { P.errs.push('a mesa do terreiro não cabe'); return; }
+      }
+    } else P.entrance = { door, u: V.U(X.du), v: sh[3], w: X.dw, lv: 0 };
+    if (P.inside()) return;
+    // ======== the inside: the rooms, the stair, the bar, the fire, the stage, the corridor, the tables ========
+    tavInside(P, X, V, I, D, hb, y1, ti, lay);
+  }
+  In.tavernBuild = tavernBuild;
+  // the tavern's type: the taberna of 8 m in its family; the bigger steps — the 12 and the 16 — in the estalagem's
+  // (int-familias.js), which int-civicos.js gives the type with its sizes (sizedType)
+  In.addFamilies([{ id: 'taberna.salao', H: 'taberna', V: 'salao', S: 'taberna.salao', name: 'A taberna: o salão até o telhado, o bar ao fundo, o sobrado do taverneiro',
+    can: rec => (In.nOf(rec) !== 2 ? 'a taberna é a de 8 m (as maiores são a estalagem)' : null), build: P => tavernBuild(P) }]);
+  In.addTypes({ taverna: { use: 'taverna', fams: ['taberna.salao'], storeAll: 0, open: 1, lockNight: 1, prefer: (rec, l) => (l.includes('taberna.salao') ? ['taberna.salao'] : l) } });
+  // (the gallery of the 16 m over the hall's sides, its width; the bands of the back storey: the landing, the rooms behind it)
+  const GW = 1.5, LAND = 1.2;
+  // the zones of a tavern in the virtual frame — where each fixed piece stands: the stair, the bar, the fire, the stage, the
+  // barrels —, and the stretches of the walls no window opens in (a tall piece against them): from the record alone
+  // (the 8 m: the door by the left wall, the stair along it and the corridor beside it to the bar at the back, under the loft —
+  // the vat in the corner, the shelf, the barrels, the hearth —, the stage against the right wall, and the rest of the hall the
+  // tables'; the Norse long fire in the middle of them, the tables either side of it. The 12 and the 16: the door in the
+  // middle, the bar against the partition — or the right wall, or the street's corner —, the fire and the stage against the left
+  // wall, the stair against the right wall (the 12) or along the partition up to the right gallery (the 16))
+  function tavLayout(P, X, I, D, hb, y1) {
+    const n = X.n, [x0, z0, x1, z1] = I; const fire = X.c.fire; const rua = X.bar === 'rua'; const du = X.du; const norse = fire === 'fogo-comprido';
+    const lay = { pieces: [], keep: [], stair: null, street: null, hall: n === 2 ? I.slice() : [x0, hb, x1, z1] };
+    const add = (kind, r, fu, fv, o) => { lay.pieces.push(Object.assign({ kind, r: r.map(r2), fu, fv }, o || {})); };
+    const keep = (wall, a0, a1) => lay.keep.push({ wall, a0: r2(a0), a1: r2(a1) });
+    const sw = n === 2 ? 0.85 : 1.0, run = r2(Math.ceil(y1 * 0.86 / 0.05) * 0.05); lay.run = run; lay.sw = sw;
+    const FW = { lareira: [1.4, 0.6], 'forno-barro': [1.0, 1.0], 'fogao-comal': [1.2, 0.7] }; const [fw, fd] = FW[fire] || [1.4, 0.6];
+    const lane = 0.95;
+    // (the bar against the back wall of the hall — the loft's in the 8 m, the partition in the others —: the shelf from a0, the
+    // counter a lane before it; or against the right wall from v a0, facing the hall. → where its buyers stand)
+    const barBack = a0 => { const zb = n === 2 ? z0 : hb; add('prateleira-bar', [a0, zb, a0 + 1.8, zb + 0.4], 0, 1, { role: 'prateleira' }); add('balcao', [a0, zb + 0.4 + lane, a0 + 1.8, zb + 1.0 + lane], 0, 1, { role: 'balcao' }); keep('fundo', a0, a0 + 1.8); lay.exits = [[a0 - 0.9, zb + 0.4, a0, zb + 1.0 + lane], [a0 + 1.8, zb + 0.4, a0 + 2.7, zb + 1.0 + lane]]; return [a0 + 0.9, zb + 1.0 + lane + 0.5]; };
+    const barSide = a0 => { add('prateleira-bar', [x1 - 0.4, a0, x1, a0 + 1.8], -1, 0, { role: 'prateleira' }); add('balcao', [x1 - 1.0 - lane, a0, x1 - 0.4 - lane, a0 + 1.8], -1, 0, { role: 'balcao' }); keep('direita', a0, a0 + 1.8); lay.exits = [[x1 - 1.0 - lane, a0 - 0.9, x1 - 0.4, a0], [x1 - 1.0 - lane, a0 + 1.8, x1 - 0.4, a0 + 2.7]]; return [x1 - 1.0 - lane - 0.5, a0 + 0.9]; };
+    // (the masonry counter at the front's right corner, its long arm along the front under the window onto the street, the
+    // short arm toward the hall — the hand that puts it there —; the shelf against the right wall behind the keeper)
+    const barStreet = () => { add('balcao-alvenaria', [x1 - 2.4, z1 - 1.6, x1, z1], 0, -1, { role: 'balcao', hand: -1 }); lay.street = [r2(x1 - 1.3), 2.0]; add('prateleira-bar', [x1 - 0.4, z1 - 3.45, x1, z1 - 1.65], -1, 0, { role: 'prateleira' }); keep('direita', z1 - 3.45, z1); keep('frente', x1 - 2.4, x1); return [x1 - 2.9, z1 - 0.65]; };
+    const stage = (r, fu, fv, alt) => add('estrado-musico', r, fu, fv, Object.assign({ role: 'palco' }, alt ? { alt: alt.map(q => q.map(r2)) } : {}));
+    if (n === 2) {
+      // ---- the 8 m ----
+      lay.stair = { r: [x0, hb, x0 + sw, hb + run], du: 0, dv: -1 };
+      const backFire = a => { add(fire, [a, z0, a + fw, z0 + fd], 0, 1, { role: 'fogo' }); keep('fundo', a, a + fw); };
+      // (everything but the tables under the loft, along the back wall — the corridor an L from the door: up along the stair,
+      // across before the loft —, the rest of the hall the tables' in one piece. From the left, by the bar's kind: the vat in the
+      // corner, the bar, the barrel, the amphorae and the hearth; the bar in the corner, the barrel, the hearth, the amphorae and
+      // the vat in the other one; the bar against the right wall or at the street's corner: the vat, the barrel, the stage and
+      // the hearth. The stage against the right wall just before the loft — its way on from behind is the corridor before the
+      // bar —, where the bar is not against that wall)
+      // (a people that digs a cellar, on dry ground, keeps its vat, its barrels and its amphorae in the cellar under the bar —
+      // the trapdoor in the keeper's lane —, the hall's back the bar's, the stage's and the hearth's; the others keep the vat in
+      // the back — and the stage, where the back has no room for it, against the right wall before the loft)
+      const cel = !!X.cellar; lay.cellar = cel;
+      const W0 = { bar: 1.8, barril: 0.6, anforeira: 1.2, palco: 1.6, fogo: fw, cuba: 1.0 }, OPT = { barril: 1, anforeira: 1 };
+      // (and the keeper's way out from behind the counter: past a piece deeper than his lane's floor beside the bar — the stage,
+      // the vat, the oven, the stove —, 0.85 m between; a shallow one — the barrel, the amphorae, the hearth — he walks before)
+      const DEEP = { palco: 1, cuba: 1, fogo: fd > 0.65 ? 1 : 0 };
+      const sp = (a, b) => ((a === 'bar' && DEEP[b]) || (b === 'bar' && DEEP[a]) ? 0.85 : (a === 'fogo' && b === 'palco') || (a === 'palco' && b === 'fogo') ? 0.4 : 0.1);
+      const need = l => l.reduce((s, k, i) => s + W0[k] + (i ? sp(l[i - 1], k) : 0), 0);
+      // (what does not go in — the amphorae, the barrel, the last first — stays out; a bar's kind whose back does not fit even
+      // so is laid as the middle one: D-722)
+      const trim = l => { l = l.filter(Boolean); while (need(l) > x1 - x0 - 0.05 && l.some(k => OPT[k])) { const i = l.map(k => !!OPT[k]).lastIndexOf(true); l = l.filter((_, q) => q !== i); } return l; };
+      const seqOf = b => (b === 'canto' ? [cel ? null : 'cuba', 'palco', flat ? 'fogo' : null, 'barril', 'bar'] : b === 'lado' || b === 'rua' ? [cel ? null : 'cuba', flat ? 'fogo' : null, 'palco', 'barril', 'anforeira'] : cel ? ['barril', 'bar', 'palco', flat ? 'fogo' : null] : ['cuba', 'bar', 'barril', 'anforeira', flat ? 'fogo' : 'palco']);
+      let buy = null; const flat = !norse; let kind = X.bar; let list = trim(seqOf(kind));
+      if (need(list) > x1 - x0 - 0.05) { kind = 'centro'; list = trim(seqOf(kind)); }
+      lay.bar8 = kind; const side = kind === 'lado' || kind === 'rua';
+      if (!list.includes('palco')) stage([x1 - 1.2, hb + 0.1, x1, hb + 1.7], -1, 0);
+      // (the first against the left wall, the last against the right where it is the vat or the bar of the corner, the room left
+      // shared between the others)
+      const ends = list[list.length - 1] === 'cuba' || list[list.length - 1] === 'bar' || list[list.length - 1] === 'barril'; const extra = Math.max(0, x1 - x0 - need(list)); const gap = r2(Math.min(0.35, extra / Math.max(1, list.length - (ends ? 1 : 0))));
+      let a = x0; const at = [];
+      for (let i = 0; i < list.length; i++) { const k = list[i]; if (i) a = r2(a + sp(list[i - 1], k) + gap); at.push(a); a = r2(a + W0[k]); }
+      if (ends) { const off = r2(x1 - a); for (let i = 1; i < at.length; i++) at[i] = r2(at[i] + off * (i === at.length - 1 ? 1 : 0)); }
+      list.forEach((k, i) => { const a0 = at[i];
+        if (k === 'bar') buy = barBack(a0); else if (k === 'fogo') backFire(a0); else if (k === 'palco') stage([a0, z0, a0 + 1.6, z0 + 1.2], 0, 1);
+        else if (k === 'cuba') add('cuba', [a0, z0, a0 + 1.0, z0 + 1.0], 0, 1, { role: 'cuba' });
+        else add(k, k === 'barril' ? [a0, z0, a0 + 0.6, z0 + 0.6] : [a0, z0, a0 + 1.2, z0 + 0.5], 0, 1, { role: 'deposito', opt: 1 }); });
+      if (kind === 'lado') buy = barSide(r2(hb - 0.45)); else if (kind === 'rua') buy = barStreet(); // (the bar against the right wall at the loft's edge: who buys stands in the corridor before the loft)
+      lay.buy = buy.map(r2);
+      // (the Norse long fire in the middle of the tables, along the hall: a table and its bench either side of it — the stage,
+      // where the fire leaves the back free, in the back: its side walls are the rows')
+      // (its front to the side: its length across it, one cooks at its ends)
+      if (norse) {
+        const bu = r2(x0 + sw + AISLE), cu = r2((bu + x1) / 2), v0 = r2(Math.min(hb + 1.3, z1 - 3.4)); add('fogo-comprido', [cu - 0.45, v0, cu + 0.45, v0 + 3.0], 1, 0, { role: 'fogo' });
+        // (the Norse hall's two rows, either side of the fire, between the corridor or the wall and the room round it: the bench
+        // of who looks at the fire, the board before it, a stool at each end — laid by measure, the slots are of centimetres)
+        const tv = r2(v0 + 0.7); for (const [b0, t0, fu, g] of [[bu + 0.03, bu + 0.41, 1, 1], [x1 - 0.38, x1 - 1.21, -1, 2]]) {
+          const o = { role: 'mesa', fixed: 1, grp: g };
+          add('mesa-taverna', [t0, tv - 0.1, t0 + 0.8, tv + 1.5].map(r2), fu, 0, o); add('banco', [b0, tv, b0 + 0.35, tv + 1.4].map(r2), fu, 0, o);
+          for (const s of [-1, 1]) { const sv = s < 0 ? tv - 0.1 - 0.03 - 0.4 : tv + 1.5 + 0.03; const stool = { kind: 'banquinho', r: [t0 + 0.2, sv, t0 + 0.6, sv + 0.4].map(r2) };
+            // (the rich one's chair at the head of the first board — the stool where it does not go in)
+            if (X.q === 2 && g === 1 && s > 0) add('cadeira', [t0 + 0.15, sv, t0 + 0.65, sv + 0.5].map(r2), 0, -s, Object.assign({ or: stool }, o)); else add('banquinho', stool.r, 0, -s, o); }
+        }
+      }
+      lay.fire = (lay.pieces.find(q => q.role === 'fogo') || {}).r || null;
+      return lay;
+    }
+    // ---- the 12 and the 16 ----
+    if (n === 4) lay.stair = { r: [x1 - GW - run, hb, x1 - GW, hb + sw], du: 1, dv: 0 };
+    else lay.stair = { r: [x1 - sw, hb, x1, hb + run], du: 0, dv: -1 };
+    const st = lay.stair.r; const footV = lay.stair.dv ? st[3] + 0.8 : st[3];
+    // (the fire: the people's against the left wall, in the hall's front part; the Norse long fire in the middle, its benches
+    // along it either side)
+    const hz0 = hb, hz = z1 - hb; let fireR;
+    if (norse) {
+      // (in the 12 m toward the front — the hall too shallow for tables either end of it: the back's whole for them —, in the
+      // 16 m in the middle of the hall)
+      const cu = r2(Math.max(du + 1.7, Math.min(x1 - (n === 4 ? GW : 0) - 2.8, (du + x1) / 2))), cv = r2(n === 3 ? z1 - 2.3 : hz0 + hz * 0.52);
+      fireR = [cu - 0.45, cv - 1.5, cu + 0.45, cv + 1.5]; add('fogo-comprido', fireR, 1, 0, { role: 'fogo' });
+      for (const s of [-1, 1]) for (const v0 of [cv - 1.45, cv + 0.05]) { const u0 = s < 0 ? fireR[0] - 0.55 - 0.35 : fireR[2] + 0.55; add('banco', [u0, v0, u0 + 0.35, v0 + 1.4], -s, 0, { role: 'banco-fogo', opt: 1 }); }
+    } else { const cv = r2(hz0 + hz * 0.38); fireR = [x0, cv - fw / 2, x0 + fd, cv + fw / 2]; add(fire, fireR, 1, 0, { role: 'fogo' }); keep('esquerda', fireR[1], fireR[3]); }
+    lay.fire = fireR;
+    let buy;
+    if (rua) buy = barStreet();
+    else if (X.bar === 'lado') buy = barSide(r2(Math.min(z1 - 2.6, footV + 0.6)));
+    else if (X.bar === 'canto') buy = barBack(r2(x0 + 0.2));
+    else buy = barBack(r2(Math.max(x0 + 1.4, Math.min(x1 - (n === 4 ? GW + run + 0.4 : 1.4) - 1.8, du - 0.9))));
+    lay.buy = buy.map(r2);
+    // (the stage: by the fire — against the left wall before it, or behind it toward the back; the Norse, against the left wall)
+    // (where a door of the back or the corridor's keep takes its place, the other one)
+    { const back = norse ? [x0, hz0 + 0.3, x0 + 1.2, hz0 + 1.9] : [x0, fireR[1] - 0.4 - 1.6, x0 + 1.2, fireR[1] - 0.4], front = norse ? [x0, z1 - 2.6, x0 + 1.2, z1 - 1.0] : [x0, fireR[3] + 0.4, x0 + 1.2, fireR[3] + 2.0];
+      const backOK = X.stage === 'fundo' && X.bar !== 'canto' && (norse || fireR[1] - hz0 >= 2.1);
+      if (backOK) stage(back, 1, 0, [front]); else stage(front, 1, 0, X.bar !== 'canto' && (norse || fireR[1] - hz0 >= 2.1) ? [back] : null); }
+    // (a barrel by the shelf, the keeper's at hand: the others are the cellar's)
+    const sh = lay.pieces.find(q => q.role === 'prateleira');
+    if (sh.fu) add('barril', [x1 - 0.6, sh.r[1] - 0.75, x1, sh.r[1] - 0.15], -1, 0, { role: 'deposito', opt: 1 });
+    else add('barril', [sh.r[2] + 0.1, sh.r[1], sh.r[2] + 0.7, sh.r[1] + 0.6], 0, 1, { role: 'deposito', opt: 1 });
+    return lay;
+  }
+  // the windows: on the hall's sides and front — none behind a tall piece, nor where the stair climbs —, over the storey above
+  // the rooms'; the upper ones under the eaves
+  function tavWindows(P, X, V, I, hb, y1, lay) {
+    const L = P.L, [x0, z0, x1, z1] = I; const W = P.outer; const n = X.n;
+    // (each wall of the virtual frame: its plan's id — the left and the right swap in the mirror)
+    const wid = { fundo: W.fundo, frente: W.frente, esquerda: X.flip ? W.direita : W.esquerda, direita: X.flip ? W.esquerda : W.direita };
+    const free = (wall, a, w) => !lay.keep.some(k => k.wall === wall && a + w / 2 + 0.3 > k.a0 && a - w / 2 - 0.3 < k.a1);
+    const st = lay.stair.r; if (lay.stair.dv) lay.keep.push({ wall: st[0] <= x0 + 0.01 ? 'esquerda' : 'direita', a0: st[1], a1: st[3] });
+    const put = (wall, along, pos, w, h, sill) => {
+      const id = wid[wall]; const pt = wall === 'fundo' || wall === 'frente' ? [V.U(pos), P.walls[id].a[1]] : [P.walls[id].a[0], pos];
+      const at = P.atOf(id, pt); const len = P.wlen(id); if (at < w / 2 + 0.35 || at > len - w / 2 - 0.35) return;
+      if (P.holes.some(q => q.wall === id && Math.abs(q.at - at) < (q.w + w) / 2 + 0.35)) return;
+      P.window(id, at, w, h, sill);
+    };
+    const ww = n === 2 ? 0.8 : 1.0, wh = 1.3, sill = 1.0;
+    // (the hall's: along each side wall, every 2.6 m of the hall's depth, where nothing tall stands; along the front either
+    // side of the door)
+    const hz0 = lay.hall[1];
+    for (const wall of ['esquerda', 'direita']) { const k = Math.max(1, Math.floor((z1 - hz0) / 2.6)); for (let q = 0; q < k; q++) { const v = r2(hz0 + (z1 - hz0) * (q + 0.5) / k); if (free(wall, v, ww)) put(wall, 'v', v, ww, wh, sill); } }
+    for (const u of [x0 + (X.du - x0) * 0.45, X.du + (x1 - X.du) * 0.5]) if (Math.abs(u - X.du) > X.dw / 2 + ww / 2 + 0.4 && free('frente', u, ww)) put('frente', 'u', r2(u), ww, wh, sill);
+    // (the storey above: its rooms' windows in the back wall and in the sides over the back, the sill a metre over its floor)
+    const k = Math.max(1, Math.floor((x1 - x0) / 3.0)); for (let q = 0; q < k; q++) put('fundo', 'u', r2(x0 + (x1 - x0) * (q + 0.5) / k), 0.8, 1.0, r2(y1 + 0.95));
+    for (const wall of ['esquerda', 'direita']) put(wall, 'v', r2((z0 + hb) / 2), 0.8, 1.0, r2(y1 + 0.95));
+    // (the back of the 8 m: a window low in the back wall where no shelf nor vat stands, the light behind the bar)
+    if (n === 2) for (const u of [x0 + 0.9, x1 - 0.9]) if (free('fundo', u, 0.7)) put('fundo', 'u', r2(u), 0.7, 0.9, 1.3);
+  }
+  // ---- the corridor (D-721): the clearance of each point of a room on a raster of 10 cm — its distance to the nearest solid
+  // (the pieces, a flight, the room's walls), counted up to TCAP —, and where a body a metre wide walks from the door ----
+  const CR = 0.1, TCAP = 0.6, FCAP = 2.0;
+  // (and F: the same distance counted up to FCAP, to the walls and the pieces standing when it is made — where the corridor runs
+  // best: along them, the floor between them left whole to the tables)
+  function tavClear(P, lv, room, far) {
+    const R = P.rooms[room].r; const nx = Math.ceil((R[2] - R[0]) / CR - 1e-6), nz = Math.ceil((R[3] - R[1]) / CR - 1e-6); const C = new Float32Array(nx * nz); const F = far ? new Float32Array(nx * nz) : null;
+    for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) { const u = R[0] + (i + 0.5) * CR, v = R[1] + (j + 0.5) * CR; const d = Math.min(u - R[0], R[2] - u, v - R[1], R[3] - v); C[j * nx + i] = Math.min(TCAP, d); if (F) F[j * nx + i] = Math.min(FCAP, d); }
+    const K = { R, nx, nz, C, F, lv };
+    for (const it of P.items) if (it.lv === lv && !it.niche) for (const q of it.parts && it.parts.length ? it.parts : [it.r]) tavStamp(K, q, F);
+    for (const s of P.stairs) if (s.kind !== 'degraus' && s.lv0 === lv) tavStamp(K, s.r, F);
+    return K;
+  }
+  // (a solid more: the clearance about it, within TCAP — and F, within FCAP, where asked)
+  function tavStamp(K, q, F) {
+    const { R, nx, nz, C } = K; const cap = F ? FCAP : TCAP;
+    const i0 = Math.max(0, Math.floor((q[0] - cap - R[0]) / CR)), i1 = Math.min(nx - 1, Math.floor((q[2] + cap - R[0]) / CR)), j0 = Math.max(0, Math.floor((q[1] - cap - R[1]) / CR)), j1 = Math.min(nz - 1, Math.floor((q[3] + cap - R[1]) / CR));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const u = R[0] + (i + 0.5) * CR, v = R[1] + (j + 0.5) * CR; const e = Math.hypot(Math.max(q[0] - u, 0, u - q[2]), Math.max(q[1] - v, 0, v - q[3])); const k = j * nx + i; if (e < C[k]) C[k] = e; if (F && e < F[k]) F[k] = e; }
+  }
+  // (the points a body a metre wide reaches from the door — its middle half a metre off every solid —, each with the cell it
+  // came from: the way back)
+  function tavFlood(K, start, half) {
+    const { R, nx, nz, C } = K; const from = new Int32Array(nx * nz).fill(-2); const q = [];
+    const si = Math.floor((start[0] - R[0]) / CR), sj = Math.floor((start[1] - R[1]) / CR);
+    for (let dj = -6; dj <= 6; dj++) for (let di = -6; di <= 6; di++) { const i = si + di, j = sj + dj; if (i < 0 || j < 0 || i >= nx || j >= nz || Math.hypot(di, dj) * CR > 0.6) continue; const k = j * nx + i; if (C[k] >= half - 1e-6 && from[k] === -2) { from[k] = -1; q.push(k); } }
+    for (let h = 0; h < q.length; h++) { const k = q[h], i = k % nx, j = (k - i) / nx;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= nx || b >= nz) continue; const kk = b * nx + a; if (from[kk] !== -2 || C[kk] < half - 1e-6) continue; from[kk] = k; q.push(kk); } }
+    return from;
+  }
+  // (the way from the corridor already kept — `on`, its cells, walked for nothing — to a target, each cell where a body a metre
+  // wide walks: the cheapest, a new cell costing more the farther it is from the walls and the fixed pieces (F) — so the
+  // corridor runs along the stair, before the bar, by the walls, not across the hall. → the cell reached near the target, its
+  // way back in `from` (and the cost), or end -1)
+  function tavGrow(K, on, start, p, reach, half) {
+    const { R, nx, nz, C, F } = K; const N = nx * nz; const dist = new Float64Array(N).fill(Infinity), from = new Int32Array(N).fill(-2);
+    const H = []; const push = (k, d) => { H.push([d, k]); let i = H.length - 1; while (i > 0) { const pp = (i - 1) >> 1; if (H[pp][0] <= H[i][0]) break; [H[pp], H[i]] = [H[i], H[pp]]; i = pp; } };
+    const pop = () => { const top = H[0], last = H.pop(); if (H.length) { H[0] = last; let i = 0; for (;;) { const a = 2 * i + 1, b = a + 1; let m = i; if (a < H.length && H[a][0] < H[m][0]) m = a; if (b < H.length && H[b][0] < H[m][0]) m = b; if (m === i) break; [H[m], H[i]] = [H[i], H[m]]; i = m; } } return top; };
+    const si = Math.floor((start[0] - R[0]) / CR), sj = Math.floor((start[1] - R[1]) / CR);
+    for (let dj = -6; dj <= 6; dj++) for (let di = -6; di <= 6; di++) { const i = si + di, j = sj + dj; if (i < 0 || j < 0 || i >= nx || j >= nz || Math.hypot(di, dj) * CR > 0.6) continue; const k = j * nx + i; if (C[k] >= half - 1e-6) { dist[k] = 0; from[k] = -1; push(k, 0); } }
+    for (let k = 0; k < N; k++) if (on[k] && C[k] >= half - 1e-6 && dist[k] > 0) { dist[k] = 0; from[k] = -1; push(k, 0); }
+    const ti = Math.floor((p[0] - R[0]) / CR), tj = Math.floor((p[1] - R[1]) / CR); const kr = Math.ceil(reach / CR) + 1;
+    const near = k => { const i = k % nx, j = (k - i) / nx; return Math.abs(i - ti) <= kr && Math.abs(j - tj) <= kr && Math.hypot(R[0] + (i + 0.5) * CR - p[0], R[1] + (j + 0.5) * CR - p[1]) <= reach; };
+    const cost = kk => (on[kk] ? 0 : 1 + (F ? 0.8 * Math.max(0, Math.min(1, (F[kk] - half) / (FCAP - half))) : 0));
+    while (H.length) {
+      const [d, k] = pop(); if (d > dist[k]) continue; if (near(k)) return { end: k, from, cost: d };
+      const i = k % nx, j = (k - i) / nx;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= nx || b >= nz) continue; const kk = b * nx + a; if (C[kk] < half - 1e-6) continue; const nd = d + cost(kk); if (nd >= dist[kk] - 1e-9) continue; dist[kk] = nd; from[kk] = k; push(kk, nd); }
+    }
+    return { end: -1, from };
+  }
+  // (the cell of the flood nearest a target point within its reach, or -1)
+  const tavReach = (K, from, p, reach) => { const { R, nx, nz } = K; let best = -1, bd = Infinity; const k0 = Math.ceil(reach / CR) + 1; const ci = Math.floor((p[0] - R[0]) / CR), cj = Math.floor((p[1] - R[1]) / CR);
+    for (let dj = -k0; dj <= k0; dj++) for (let di = -k0; di <= k0; di++) { const i = ci + di, j = cj + dj; if (i < 0 || j < 0 || i >= nx || j >= nz) continue; const k = j * nx + i; if (from[k] === -2) continue; const d = Math.hypot(R[0] + (i + 0.5) * CR - p[0], R[1] + (j + 0.5) * CR - p[1]); if (d <= reach && d < bd) { bd = d; best = k; } }
+    return best; };
+  In.TAV_CORR = { clear: tavClear, stamp: tavStamp, flood: tavFlood, reach: tavReach, CR }; // (for the proofs: the same measure)
+  // the corridor's band, kept clear: the cells within `half` of the way from the door to each target, as rectangles (rows of
+  // the raster joined)
+  function tavBand(P, K, path, half) {
+    const { R, nx, nz } = K; const on = new Uint8Array(nx * nz); const k1 = Math.ceil(half / CR);
+    for (let k = 0; k < nx * nz; k++) { if (!path[k]) continue; const i = k % nx, j = (k - i) / nx; for (let dj = -k1; dj <= k1; dj++) for (let di = -k1; di <= k1; di++) { if (Math.hypot(di, dj) * CR > half + 1e-6) continue; const a = i + di, b = j + dj; if (a >= 0 && b >= 0 && a < nx && b < nz) on[b * nx + a] = 1; } }
+    const rows = []; for (let j = 0; j < nz; j++) { let i = 0; while (i < nx) { if (!on[j * nx + i]) { i++; continue; } let e = i; while (e + 1 < nx && on[j * nx + e + 1]) e++; rows.push([i, j, e]); i = e + 1; } }
+    const out = []; for (const [i, j, e] of rows) { const last = out.find(q => q.i === i && q.e === e && q.j1 === j - 1); if (last) last.j1 = j; else out.push({ i, e, j0: j, j1: j }); }
+    // (each one marked a corridor's: a seat may have the way onto it there, never a piece)
+    for (const q of out) { const r = [r2(R[0] + q.i * CR), r2(R[1] + q.j0 * CR), r2(R[0] + (q.e + 1) * CR), r2(R[1] + (q.j1 + 1) * CR)]; r.aisle = 1; P.zones.push({ lv: K.lv, r, aisle: 1 }); }
+  }
+
+  // the inside: the rooms, the stair and the rail, the fixed pieces (the bar, the fire, the stage, the barrels), the kitchen and
+  // the cellar behind the hall, the corridor kept clear, the tables, the storey above
+  function tavInside(P, X, V, I, D, hb, y1, ti, lay) {
+    const n = X.n, [x0, z0, x1, z1] = I; const tr = P.tr; const lvl1 = P.lvl(1);
+    // ---- the rooms of the ground: the hall (the whole of it in the 8 m); behind the hall of the 12 and the 16, the kitchen and
+    // the cellar, a partition between, the kitchen open to the hall by a wide way, the cellar by a door ----
+    const hall = P.room(0, 'salao', V.R(lay.hall)); let kitchen = -1, cellar = -1;
+    if (n > 2) {
+      const pv = r2(hb - ti / 2); const pw = P.wall(0, [V.U(x0), pv], [V.U(x1), pv], ti, P.lvl(0).h, 0, 'divisoria');
+      // (the two ways through it, by the bar: the kitchen's wide one and the cellar's door — never behind the shelf, the stair or
+      // the barrels against it, nor before the stage)
+      const blocked = lay.pieces.filter(q => q.r[1] <= hb + 0.05 && q.role !== 'fogo').map(q => [q.r[0] - 0.1, q.r[2] + 0.1]);
+      const sr = lay.stair.r; if (lay.stair.du) blocked.push([sr[0] - 0.9, sr[2] + 0.1]); else if (sr[1] <= hb + 0.05) blocked.push([sr[0] - 0.4, sr[2] + 0.4]);
+      const fits = (a, w) => a - w / 2 >= x0 + 0.3 && a + w / 2 <= x1 - 0.3 && !blocked.some(([b0, b1]) => a + w / 2 > b0 && a - w / 2 < b1);
+      const near = lay.buy[0]; const cand = (w, avoid) => { let best = null; for (let a = x0 + 0.3 + w / 2; a <= x1 - 0.3 - w / 2 + 1e-6; a += 0.1) { if (!fits(a, w) || (avoid && Math.abs(a - avoid[0]) < (w + avoid[1]) / 2 + 0.7)) continue; if (best === null || Math.abs(a - near) < Math.abs(best - near)) best = a; } return best === null ? null : r2(best); };
+      const kw = n === 3 ? 1.6 : 2.0, ku = cand(kw), cu = ku === null ? null : cand(0.9, [ku, kw]);
+      if (ku === null || cu === null) { P.errs.push('sem passagem para a cozinha e a adega'); return; }
+      // (the kitchen on the side of its way, the cellar on the other: the wall between them halfway between the two ways)
+      const split = r2((ku + cu) / 2); const kL = ku < cu;
+      const back = (a, b) => [a, z0, b, r2(hb - ti)];
+      const rk = kL ? back(x0, r2(split - ti / 2)) : back(r2(split + ti / 2), x1), rc = kL ? back(r2(split + ti / 2), x1) : back(x0, r2(split - ti / 2));
+      kitchen = P.room(0, 'cozinha', V.R(rk)); cellar = P.room(0, 'adega', V.R(rc));
+      P.wall(0, [V.U(split), z0], [V.U(split), r2(hb - ti)], ti, P.lvl(0).h, 0, 'divisoria');
+      P.door(pw, P.atOf(pw, [V.U(ku), pv]), kw, 2.3, kitchen, hall, 0, 'vao'); P.door(pw, P.atOf(pw, [V.U(cu), pv]), 0.9, 2.1, cellar, hall, 0, 'porta');
+      lay.kd = [ku, kw]; lay.cd = cu;
+    }
+    // ---- the storey above: the keeper's loft over the back of the 8 m, open to the hall over its rail; over the back of the 12
+    // and the 16 the landing the stair comes up to and the rooms behind it (the keeper's, the guests'); the gallery round the
+    // hall of the 16 ----
+    const ups = []; let landing = -1; const rails = [];
+    if (n === 2) { const id = P.room(1, 'quarto', V.R([x0, z0, x1, hb])); ups.push({ id, own: 1 }); rails.push([[x0, hb - 0.03], [x1, hb - 0.03]]); }
+    else {
+      const lv = r2(hb - LAND); landing = P.room(1, 'corredor', V.R([x0, lv, x1, hb]));
+      const wb = P.wall(1, [V.U(x1), r2(lv - ti / 2)], [V.U(x0), r2(lv - ti / 2)], ti, lvl1.h, 0, 'divisoria');
+      const nr = n === 3 ? 3 : 5; const each = (x1 - x0 - (nr - 1) * ti) / nr;
+      for (let q = 0; q < nr; q++) { const a = r2(x0 + q * (each + ti)), b = q === nr - 1 ? x1 : r2(a + each); const id = P.room(1, q === 0 ? 'aposento' : 'quarto', V.R([a, z0, b, r2(lv - ti)])); ups.push({ id, own: q === 0 ? 1 : 0 });
+        P.door(wb, P.atOf(wb, [V.U((a + b) / 2), r2(lv - ti / 2)]), 0.9, 2.05, id, landing, 0, 'porta');
+        if (q < nr - 1) P.wall(1, [V.U(r2(b + ti / 2)), z0], [V.U(r2(b + ti / 2)), r2(lv - ti)], ti, lvl1.h, 0, 'divisoria'); }
+      if (n === 4) {
+        // (the gallery over the hall's sides, from the landing to the front: its floor beyond the storey's own rectangle — areas —,
+        // a rail along its edge over the hall)
+        const gl = P.room(1, 'galeria', V.R([x0, hb, r2(x0 + GW), z1])), gr = P.room(1, 'galeria', V.R([r2(x1 - GW), hb, x1, z1])); void gl; void gr;
+        lvl1.areas = [V.R([x0, z0, x1, hb]), V.R([x0, hb, r2(x0 + GW), z1]), V.R([r2(x1 - GW), hb, x1, z1])];
+        rails.push([[x0 + GW, hb - 0.03], [x1 - GW, hb - 0.03]], [[r2(x0 + GW + 0.03), hb], [r2(x0 + GW + 0.03), z1]], [[r2(x1 - GW - 0.03), hb], [r2(x1 - GW - 0.03), z1]]);
+      } else rails.push([[x0, hb - 0.03], [x1, hb - 0.03]]);
+    }
+    // ---- the stair, against its wall, and the rail over the hall with the way the stair comes up through ----
+    const s = lay.stair; const sr = V.R(s.r); const st = P.stair('escada', 0, 1, sr, V.F(s.du), s.dv, null);
+    const top = s.dv ? [(s.r[0] + s.r[2]) / 2, s.r[1]] : [s.r[2], (s.r[1] + s.r[3]) / 2]; void st;
+    for (const [a, b] of rails) {
+      const w = P.wall(1, [V.U(a[0]), r2(a[1])], [V.U(b[0]), r2(b[1])], 0.06, 1.0, 0, 'guarda-corpo');
+      const vert = Math.abs(a[0] - b[0]) < 1e-6; const hit = vert ? Math.abs(a[0] - top[0]) < 0.1 && top[1] >= Math.min(a[1], b[1]) - 0.05 && top[1] <= Math.max(a[1], b[1]) + 0.05 : Math.abs(a[1] + 0.03 - top[1]) < 0.1 && top[0] >= Math.min(a[0], b[0]) && top[0] <= Math.max(a[0], b[0]);
+      if (hit) P.hole(w, P.atOf(w, [V.U(top[0]), top[1]]), r2(lay.sw + 0.15), 1.0, 0, 'vao');
+    }
+    // ---- the fixed pieces of the hall: the bar, the fire, the stage, the barrels — each where its zone says, or a little along
+    // its wall where a door or a window is (never across the hall) ----
+    const placeAt = (p, room, lv) => {
+      const room0 = room === undefined ? hall : room; const along = p.fu ? 1 : 0; // (along its wall: v for a piece against a side wall, u for one against the back)
+      const extra = Object.assign({}, p.hand ? { hand: X.flip ? -p.hand : p.hand } : {});
+      for (const b0 of [p.r].concat(p.alt || [])) for (const d of [0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6, 0.9, -0.9, 1.2, -1.2]) {
+        const r = (along ? [b0[0], b0[1] + d, b0[2], b0[3] + d] : [b0[0] + d, b0[1], b0[2] + d, b0[3]]).map(r2);
+        const it = P.at(p.kind, lv || 0, room0, V.R(r), V.F(p.fu), p.fv, extra); if (it) { p.at = r; return it; }
+        if (p.fixed) break;
+      }
+      return null;
+    };
+    for (const p of lay.pieces) { if (p.grp) continue; const it = p.opt ? P.opt(() => placeAt(p)) : placeAt(p); if (!it && !p.opt) { P.errs.push(`sem lugar para ${In.ITEMS[p.kind].name.toLowerCase()}`); return; } }
+    // (the groups laid by measure — the Norse rows by the long fire —: all of a group, or none of it)
+    const pre = [];
+    for (const g of [...new Set(lay.pieces.filter(q => q.grp).map(q => q.grp))]) {
+      const n0 = P.items.length, drops = P.items.map(it => (it.drop ? it.drop.slice() : null)); const its = [];
+      for (const p of lay.pieces.filter(q => q.grp === g)) { const it = P.opt(() => placeAt(p)) || (p.or ? P.opt(() => placeAt(Object.assign({}, p, p.or))) : null); if (!it) break; its.push(it); }
+      const got = its.reduce((s, it) => s + P.spotsOf(it).filter(q => q.on && q.use === 'sentar').length, 0);
+      if (its.length < lay.pieces.filter(q => q.grp === g).length) { P.items.length = n0; P.items.forEach((it, q) => { it.drop = drops[q]; }); P._ver = (P._ver || 0) + 1; continue; }
+      const pieces = its.map(it => it.r); const bx = [Math.min(...pieces.map(q => q[0])), Math.min(...pieces.map(q => q[1])), Math.max(...pieces.map(q => q[2])), Math.max(...pieces.map(q => q[3]))];
+      pre.push({ box: bx, claim: [bx[0] - 0.45, bx[1] - 0.45, bx[2] + 0.45, bx[3] + 0.45], pieces, acc: tavAcc(P, n0), got });
+    }
+    // ---- the cellar of the 8 m (D-723): under the bar, its walls in the earth; the ladder down from a trapdoor in the floor
+    // above where no piece stands — the keeper's lane first —; the vat, the barrels and the amphorae ----
+    if (lay.cellar) {
+      const bar = lay.pieces.find(q => q.role === 'prateleira'); const cx = bar && !bar.fu ? Math.max(x0, Math.min(x1 - 2.6, (bar.r[0] + bar.r[2]) / 2 - 1.3)) : x1 - 2.6;
+      const cr = [r2(cx), z0, r2(cx + 2.6), r2(z0 + 2.2)]; const lc = P.lvl(-1); lc.area = V.R(cr);
+      const cel = P.room(-1, 'adega', V.R(cr)); const R = V.R(cr); P.walls4(-1, [r2(R[0] - 0.12), r2(R[1] - 0.12), r2(R[2] + 0.12), r2(R[3] + 0.12)], 0.24, 1.9, 1, 'parede');
+      const on0 = P.items.filter(it => it.lv === 0).map(it => it.r); const cands = [];
+      for (let v0 = z0 + 0.45; v0 + 0.7 <= z0 + 2.1 + 1e-6; v0 += 0.15) for (let u0 = cx + 0.15; u0 + 0.6 <= cx + 2.45 + 1e-6; u0 += 0.15) for (const dv of [1, -1]) {
+        const hz = V.R([r2(u0), r2(v0), r2(u0 + 0.6), r2(v0 + 0.7)]); if (on0.some(q => hz[0] < q[2] + 0.05 && q[0] < hz[2] + 0.05 && hz[1] < q[3] + 0.05 && q[1] < hz[3] + 0.05)) continue;
+        cands.push({ r: hz, du: 0, dv, hole: hz });
+      }
+      if (!In.HOME.ladderAt(P, -1, 0, cands)) { P.errs.push('o alçapão da adega não cabe'); return; }
+      if (!P.place('cuba', -1, cel)) { P.errs.push('sem lugar para a cuba na adega'); return; }
+      P.opt(() => { P.place('barril', -1, cel); P.place('anforeira', -1, cel); P.place('barril', -1, cel); });
+    }
+    // ---- the kitchen and the cellar of the 12 and the 16 ----
+    if (n > 2) {
+      const kf = { lar: 'fogao', forno: 'forno', fogao: 'fogao' }[tr.fire] || 'fogao';
+      if (!(P.place(kf, 0, kitchen) || P.place('fogao', 0, kitchen) || P.place('braseiro', 0, kitchen))) { P.errs.push('sem lugar para o fogo da cozinha'); return; }
+      if (!P.place('pipas', 0, cellar)) { P.errs.push('sem lugar para as pipas'); return; }
+      if (!P.place('cuba', 0, cellar) && !P.place('cuba', 0, kitchen)) { P.errs.push('sem lugar para a cuba'); return; }
+      P.opt(() => { P.place('barril', 0, cellar); P.place('barril', 0, cellar); P.place('anforeira', 0, cellar); });
+      // (the firewood by the kitchen's fire and the baskets — no table where one would eat standing: a freguês is seated, D-722)
+      P.opt(() => { P.place('lenha', 0, kitchen); P.place('cesto', 0, kitchen); });
+    }
+    // ---- the corridor: from the door to the counter, the fire, the stage and the stair, a metre and more wide, kept clear ----
+    const K = tavClear(P, 0, hall, true); const R0 = P.rooms[hall].r; const e = P.entrance;
+    // (where it starts: just inside the hall's door — the street's, or the yard's of the 16)
+    const hd = P.doors.find(d => d.wall === P.outer.frente && P.walls[d.wall].lv === 0 && d.kind !== 'janela'); const dp = P.ptOn(hd.wall, hd.at);
+    const start = [dp[0], r2(R0[3] - 0.6)]; void e;
+    const targets = [];
+    const spotsUse = (it, use) => P.spotsOf(it).filter(q => !q.on && (!use || q.use === use)).map(q => [q.u, q.v]);
+    const byRole = role => { const p = lay.pieces.find(q => q.role === role); return p && p.at ? P.items.find(it => it.lv === 0 && Math.abs(it.r[0] - V.R(p.at)[0]) < 1e-6 && Math.abs(it.r[1] - V.R(p.at)[1]) < 1e-6 && it.kind === p.kind) : null; };
+    const bal = byRole('balcao'), fog = byRole('fogo'), pal = byRole('palco');
+    if (bal) targets.push({ why: 'balcão', pts: spotsUse(bal, 'comprar') });
+    if (fog) targets.push({ why: 'fogo', pts: spotsUse(fog, 'cozinhar') });
+    if (pal) targets.push({ why: 'palco', pts: spotsUse(pal, 'acesso') });
+    targets.push({ why: 'escada', pts: [[(sr[0] + sr[2]) / 2 - V.F(s.du) * ((sr[2] - sr[0]) / 2 + 0.45), s.dv ? sr[3] + 0.45 : (sr[1] + sr[3]) / 2]] });
+    // (one way after the other, each from the corridor already kept: a tree from the door, not a way of its own to each — its
+    // trunk straight in from the door to the bar's line, the hall's spine; the rest grown from it)
+    const path = new Uint8Array(K.nx * K.nz);
+    { const i = Math.floor((start[0] - R0[0]) / CR); const stopV = Math.min(r2(R0[3] - 0.6), lay.buy[1] + 0.3);
+      for (let j = Math.floor((start[1] - R0[1]) / CR); j >= 0 && i >= 0 && i < K.nx; j--) { if (R0[1] + (j + 0.5) * CR < stopV) break; const k = j * K.nx + i; if (K.C[k] < AISLE / 2 - 1e-6) break; path[k] = 1; } }
+    for (const tg of targets) {
+      let got = null; for (const p of tg.pts) { const g = tavGrow(K, path, start, p, 0.35, AISLE / 2); if (g.end >= 0 && (!got || g.cost < got.cost)) got = g; }
+      if (!got) { P.errs.push(`sem corredor de ${AISLE} m até ${tg.why === 'escada' ? 'a escada' : tg.why === 'palco' ? 'o estrado do músico' : 'o ' + tg.why}`); return; }
+      for (let k = got.end; k >= 0; k = got.from[k]) path[k] = 1;
+    }
+    tavBand(P, K, path, AISLE / 2);
+    // (round the Norse long fire, the floor where one warms oneself and passes kept clear — 0.75 m all round —: no table
+    // against the fire; its benches, laid before, are in it)
+    const inHall = z => [r2(Math.max(z[0], R0[0])), r2(Math.max(z[1], R0[1])), r2(Math.min(z[2], R0[2])), r2(Math.min(z[3], R0[3]))]; // (a zone kept is the hall's floor)
+    if (fog && fog.kind === 'fogo-comprido') { const r = fog.r; const z = inHall([r[0] - 0.75, r[1] - 0.75, r[2] + 0.75, r[3] + 0.75]); z.aisle = 1; P.zones.push({ lv: 0, r: z, aisle: 1 }); }
+    // (and the keeper's ways out from behind the counter, at its ends: no table there)
+    for (const q of lay.exits || []) { const z = inHall(V.R(q.map(r2))); if (z[2] - z[0] < 0.3 || z[3] - z[1] < 0.3) continue; z.aisle = 1; P.zones.push({ lv: 0, r: z, aisle: 1 }); }
+    // ---- the tables: groups of a table and its seats, packed through the hall beside the corridor, each one a metre's way to ----
+    tavTables(P, X, hall, K, start, targets, pre);
+    if (P.errs.length) return;
+    // ---- the storey above: a bed in each room — the keeper's the couple's —, its chest; the Norse sleeping bench ----
+    let beds = 0; const bed = tr.rich && tr.rich[0] ? tr.rich[0] : 'cama';
+    const lie = (kind, id) => (In.ITEMS[kind] && In.ITEMS[kind].per ? ['fundo', 'esquerda', 'direita'].some(sd => P.bench(1, id, sd, { min: 1 })) : !!P.place(kind, 1, id, { sides: ['fundo', 'esquerda', 'direita'] }));
+    for (const u of ups) { if (lie(u.own && n > 2 ? tr.coupleRich || bed : bed, u.id) || P.place('cama', 1, u.id)) { beds++; P.opt(() => P.place('arca', 1, u.id)); } }
+    if (!beds) P.errs.push('sem cama no andar de cima');
+  }
+  // ---- the tables (D-722): each group a table and its seats — the round one with its stools, the long one with its benches or
+  // its stools —, of the kinds the owner's wealth says (the long ones with benches of the poor, the round ones with the
+  // stools, the rich one's chair); laid where a group fits snug against the walls, the fixed pieces and the groups laid before
+  // it, its seats got onto from behind, and kept only where a metre's way from the door still reaches it and everything before
+  // it. The ties by the id (G.hash), the attempts' dice only for the order of the equal ones ----
+  const TPL = {
+    // [table, its w, its d, and the seats: [kind, du, dv (the seat's middle off the table's, along its long side and across — 3 cm
+    // off it: the engine keeps two pieces 2 cm apart at the least),
+    // w, d, how it faces: toward the table]]
+    redonda: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [[0, -0.68], [0, 0.68], [-0.68, 0], [0.68, 0]].map(([a, b]) => ['banquinho', a, b, 0.4, 0.4]) },
+    comprida: { t: 'mesa-taverna', w: 1.6, d: 0.8, seats: [['banco', 0, -0.605, 1.4, 0.35], ['banco', 0, 0.605, 1.4, 0.35], ['banquinho', -1.03, 0, 0.4, 0.4], ['banquinho', 1.03, 0, 0.4, 0.4]] },
+    banquinhos: { t: 'mesa-taverna', w: 1.6, d: 0.8, seats: [-0.55, 0, 0.55].flatMap(a => [['banquinho', a, -0.63, 0.4, 0.4], ['banquinho', a, 0.63, 0.4, 0.4]]).concat([['banquinho', -1.03, 0, 0.4, 0.4]]) },
+    cadeira: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [['cadeira', 0, -0.73, 0.5, 0.5], ['banquinho', 0, 0.68, 0.4, 0.4], ['banquinho', -0.68, 0, 0.4, 0.4], ['banquinho', 0.68, 0, 0.4, 0.4]] },
+    // (the long table of stools with the owner's chair at its head: the rich one's where the round tables do not seat enough)
+    cabeceira: { t: 'mesa-taverna', w: 1.6, d: 0.8, seats: [-0.55, 0, 0.55].flatMap(a => [['banquinho', a, -0.63, 0.4, 0.4], ['banquinho', a, 0.63, 0.4, 0.4]]).concat([['cadeira', -1.08, 0, 0.5, 0.5]]) },
+    cabeceira2: { t: 'mesa-taverna', w: 1.6, d: 0.8, seats: [-0.55, 0, 0.55].flatMap(a => [['banquinho', a, -0.63, 0.4, 0.4], ['banquinho', a, 0.63, 0.4, 0.4]]).concat([['cadeira', 1.08, 0, 0.5, 0.5]]) },
+  };
+  // (the kinds of group of each wealth, the first the most of them)
+  const TMIX = { 0: ['comprida', 'banquinhos', 'redonda'], 1: ['redonda', 'comprida', 'banquinhos'], 2: ['redonda', 'cadeira', 'comprida'] };
+  function tavTables(P, X, hall, K, start, fixed, pre) {
+    const R = P.rooms[hall].r; const n = X.n; const goal = TMIN[n].seats, cap = Math.round(goal * 1.6);
+    const id = P.b.id | 0;
+    let groups = [], seats = 0; const n00 = P.items.length; const drops0 = P.items.map(it => (it.drop ? it.drop.slice() : null)); const C00 = K.C.slice();
+    // (a group's own rectangles in the plan's frame at a middle and a turn: the table, each seat with the way behind it)
+    const shape = (tp, cu, cv, rot) => {
+      const T = TPL[tp]; const tw = rot ? T.d : T.w, td = rot ? T.w : T.d; const tab = [cu - tw / 2, cv - td / 2, cu + tw / 2, cv + td / 2];
+      const out = []; for (const [k, a, b, w, d] of T.seats) { const su = rot ? cu + b : cu + a, sv = rot ? cv + a : cv + b; const along = Math.abs(b) > Math.abs(a) ? !rot : rot; // (a seat on a long side lies along it)
+        const ww = along ? w : d, dd = along ? d : w; const r = [su - ww / 2, sv - dd / 2, su + ww / 2, sv + dd / 2];
+        // (it faces the table: its front toward the table's middle)
+        const fu = Math.abs(su - cu) > Math.abs(sv - cv) ? (su > cu ? -1 : 1) : 0, fv = fu ? 0 : (sv > cv ? -1 : 1);
+        // (the ways onto it: behind it, and at its ends)
+        const hw = (fu ? dd : ww) / 2, hd = (fu ? ww : dd) / 2; const at = e => [[su - fu * (hd + e), sv - fv * (hd + e)], [su + fv * (hw + e), sv + fu * (hw + e)], [su - fv * (hw + e), sv - fu * (hw + e)]];
+        // (and where the middle of one a metre and a tenth wide stands to get onto it: 0.6 m off it — the floor its own seats leave)
+        out.push({ k, r, fu, fv, acc: at(0.35), deep: at(0.6) }); }
+      // (none where the group's own table or seats leave no room for that middle)
+      const own = [tab].concat(out.map(q => q.r)); const off = (p, q) => Math.hypot(Math.max(q[0] - p[0], 0, p[0] - q[2]), Math.max(q[1] - p[1], 0, p[1] - q[3]));
+      for (const se of out) se.deep = se.deep.filter(p => own.every(q => off(p, q) >= 0.55 - 1e-6));
+      return { tab, seats: out };
+    };
+    const ov = (a, b, g) => a[0] < b[2] - (g || 0) && b[0] < a[2] - (g || 0) && a[1] < b[3] - (g || 0) && b[1] < a[3] - (g || 0);
+    const inR = (a, g) => a[0] >= R[0] + (g || 0) - 1e-6 && a[1] >= R[1] + (g || 0) - 1e-6 && a[2] <= R[2] - (g || 0) + 1e-6 && a[3] <= R[3] - (g || 0) + 1e-6;
+    const solids = () => { const F = P.floorOf(0); return F.solid.map(it => it.r).concat(F.zones); };
+    const seats0 = (pre || []).reduce((s, g) => s + g.got, 0);
+    let first = null; // (the first group a round laid: tp|rot|u|v)
+    const pack = (mix, more, wt, fine, ban) => {
+      if (!more) { groups = (pre || []).slice(); seats = seats0; } first = null;
+      // (the candidates: every middle on a quarter-metre lattice — the big hall's on a half metre: its groups have room, and a
+      // quarter is four times the work; the small one's last round on an eighth —, either turn, each kind the wealth takes; the
+      // lattice's origin and the turn first by the id: two taverns alike in all else lay their tables otherwise, D-662)
+      let cands = []; let ci = 0;
+      const step = fine ? 0.125 : n === 4 ? 0.5 : 0.25; const ou = tavHash(id, 31) < 0.5 ? 0 : step / 2, ov0 = tavHash(id, 37) < 0.5 ? 0 : step / 2, rot1 = tavHash(id, 41) < 0.5 ? 0 : 1;
+      for (const tp of mix) for (const rot of [rot1, 1 - rot1]) for (let cv = R[1] + 0.9 + ov0; cv <= R[3] - 0.9 + 1e-6; cv += step) for (let cu = R[0] + 0.9 + ou; cu <= R[2] - 0.9 + 1e-6; cu += step) cands.push({ tp, rot, cu: r2(cu), cv: r2(cv), h: tavHash(id, 500 + ci++) + (rot === rot1 ? 0.5 : 0), w: mix.indexOf(tp), dead: ban && ban.has(`${tp}|${rot}|${r2(cu)}|${r2(cv)}`) ? 1 : 0 });
+      let tries = 0;
+      while (seats < cap && tries < 150) {
+        // (what stands now: the solids, the corridor, the groups laid with the way behind their seats)
+        // (each rectangle in the cells of a metre it touches: a candidate asks only the ones within 2.7 m of its middle — all its
+        // seats, the ways onto them and the snug's reach are within that)
+        const S0 = solids(); const claims = groups.map(g => g.claim); const cell = new Map(); const seen = new Uint32Array(S0.length); let stamp = 0;
+        S0.forEach((q, i) => { for (let a = Math.floor(q[0]); a <= Math.floor(q[2]); a++) for (let b = Math.floor(q[1]); b <= Math.floor(q[3]); b++) { const l = cell.get(a * 1024 + b); if (l) l.push(i); else cell.set(a * 1024 + b, [i]); } });
+        const nearOf = (u, v) => { stamp++; const out = []; for (let a = Math.floor(u - 2.7); a <= Math.floor(u + 2.7); a++) for (let b = Math.floor(v - 2.7); b <= Math.floor(v + 2.7); b++) { const l = cell.get(a * 1024 + b); if (l) for (const i of l) if (seen[i] !== stamp) { seen[i] = stamp; out.push(S0[i]); } } return out; };
+        let best = null; cands = cands.filter(c => !c.dead); // (the dead ones out: the round goes on over the few left)
+        const reach1 = tavFlood(K, start, TAISLE / 2); // (where a metre's way goes now: a group none of whose ways onto it it reaches never will)
+        for (const c of cands) {
+          if (c.dead) continue;
+          // (judged before, nothing laid near it since — but a group laid far may have cut the way to it)
+          if (c.ev) { if (!c.ev.ok.some(se => se.deep.some(p => tavReach(K, reach1, p, 0.12) >= 0))) { c.dead = 1; continue; } if (!best || c.ev.sc > best.sc) best = c.ev; continue; }
+          // (the table first — cheap —, the seats only where it stands)
+          const T0 = TPL[c.tp], tw0 = c.rot ? T0.d : T0.w, td0 = c.rot ? T0.w : T0.d; const tab0 = [c.cu - tw0 / 2, c.cv - td0 / 2, c.cu + tw0 / 2, c.cv + td0 / 2];
+          if (!inR(tab0) || claims.some(q => ov(tab0, q))) { c.dead = 1; continue; }
+          const S = nearOf(c.cu, c.cv); if (S.some(q => ov(tab0, q, -0.02))) { c.dead = 1; continue; }
+          const sp = c.sp || (c.sp = shape(c.tp, c.cu, c.cv, c.rot));
+          // (its seats that fit: in the hall, off every solid and the corridor, one of the ways onto them open — behind, or at a
+          // side — at least two)
+          const freePt = p => p[0] > R[0] + 0.3 && p[0] < R[2] - 0.3 && p[1] > R[1] + 0.3 && p[1] < R[3] - 0.3 && !S.some(q => !q.aisle && p[0] > q[0] - 0.3 && p[0] < q[2] + 0.3 && p[1] > q[1] - 0.3 && p[1] < q[3] + 0.3) && !groups.some(g => g.pieces.some(q => p[0] > q[0] - 0.3 && p[0] < q[2] + 0.3 && p[1] > q[1] - 0.3 && p[1] < q[3] + 0.3)) && !(p[0] > sp.tab[0] - 0.3 && p[0] < sp.tab[2] + 0.3 && p[1] > sp.tab[1] - 0.3 && p[1] < sp.tab[3] + 0.3);
+          const ok = sp.seats.filter(se => inR(se.r) && !S.some(q => ov(se.r, q, -0.02)) && !claims.some(q => ov(se.r, q)) && se.acc.some(freePt));
+          if (ok.length < 2 || !ok.some(se => se.deep.some(p => tavReach(K, reach1, p, 0.12) >= 0))) { c.dead = 1; continue; } // (the floor only fills in a round — an undone group leaves it as it was —: never again)
+          // (how snug: each side of its outline against a wall, the corridor, a fixed piece, or a group with a passage of a metre
+          // between — 1.2 m: the metre and the grid's margin; at 0.95 nearly every snug group shut a way, T-1743 —; the hall filled
+          // from its edges — the nearer a wall of the hall the better —, the floor left in one piece; the more seats the better, the
+          // wealth's kind first)
+          const box = [Math.min(sp.tab[0], ...ok.map(q => q.r[0])), Math.min(sp.tab[1], ...ok.map(q => q.r[1])), Math.max(sp.tab[2], ...ok.map(q => q.r[2])), Math.max(sp.tab[3], ...ok.map(q => q.r[3]))];
+          if (claims.some(q => ov([box[0] - 0.45, box[1] - 0.45, box[2] + 0.45, box[3] + 0.45], q))) { c.dead = 1; continue; }
+          // (a side against the corridor counts less than one against a wall, a piece or a group: the floor filled from the walls in)
+          const sideGap = (k) => { let g = k === 0 ? box[0] - R[0] : k === 1 ? box[1] - R[1] : k === 2 ? R[2] - box[2] : R[3] - box[3]; let ga = Infinity;
+            for (const q of S) { const across = k % 2 === 0 ? q[1] < box[3] && box[1] < q[3] : q[0] < box[2] && box[0] < q[2]; if (!across) continue; const d = k === 0 ? box[0] - q[2] : k === 1 ? box[1] - q[3] : k === 2 ? q[0] - box[2] : q[1] - box[3]; if (d > -0.05) { if (q.aisle) ga = Math.min(ga, Math.max(0, d)); else g = Math.min(g, Math.max(0, d)); } }
+            for (const g0 of groups) { const q = g0.box; const across = k % 2 === 0 ? q[1] < box[3] && box[1] < q[3] : q[0] < box[2] && box[0] < q[2]; if (!across) continue; const d = k === 0 ? box[0] - q[2] : k === 1 ? box[1] - q[3] : k === 2 ? q[0] - box[2] : q[1] - box[3]; if (d > -0.05) g = Math.min(g, Math.abs(Math.max(0, d) - 1.2)); }
+            return Math.max(Math.max(0, 1 - g / 0.6), 0.4 * Math.max(0, 1 - ga / 0.6)); };
+          let snug = 0; for (let k = 0; k < 4; k++) snug += sideGap(k);
+          const sc = ok.reduce((s, se) => s + (se.k === 'banco' ? 2 : 1), 0) * 1.0 + snug * 0.9 - 0.5 * Math.min(box[0] - R[0], box[1] - R[1], R[2] - box[2], R[3] - box[3]) - c.w * wt + c.h * 0.3 + (P.attempt ? P.rnd() * 0.5 : 0);
+          c.ev = { c, sp, ok, box, sc }; if (!best || sc > best.sc) best = c.ev;
+        }
+        if (!best) break; tries++;
+        // (laid: the table, then each seat; kept with two seats at least and the corridor still a metre to everything)
+        const n0 = P.items.length; const drops = P.items.map(it => (it.drop ? it.drop.slice() : null)); const C0 = K.C.slice();
+        const undo = () => { P.items.length = n0; P.items.forEach((it, q) => { it.drop = drops[q]; }); P._ver = (P._ver || 0) + 1; K.C.set(C0); };
+        const T = TPL[best.c.tp]; const tab = best.sp.tab;
+        // (the corridor first, on the grid of the floor's room — cheap —: still as wide as it was to the counter, the fire, the
+        // stage and the stair, and a metre to every group laid and to this one; only then the pieces, by the engine)
+        for (const q of [tab].concat(best.ok.map(se => se.r))) tavStamp(K, q);
+        const from = tavFlood(K, start, AISLE / 2); let from1 = null;
+        const reachAll = fixed.every(tg => tg.pts.some(p => tavReach(K, from, p, 0.35) >= 0)) && (from1 = TAISLE === AISLE ? from : tavFlood(K, start, TAISLE / 2)) && groups.every(g => g.acc.some(p => tavReach(K, from1, p, 0.35) >= 0)) && best.ok.some(se => se.acc.some(p => tavReach(K, from1, p, 0.35) >= 0));
+        // (a group that shuts a way: the same group a step beside it would too — never again in this round)
+        if (!reachAll) { K.C.set(C0); for (const c2 of cands) if (c2.tp === best.c.tp && c2.rot === best.c.rot && Math.abs(c2.cu - best.c.cu) < 0.3 && Math.abs(c2.cv - best.c.cv) < 0.3) c2.dead = 1; continue; }
+        const ti = P.at(T.t, 0, hall, tab, best.c.rot ? 1 : 0, best.c.rot ? 0 : 1); if (!ti) { undo(); best.c.dead = 1; for (const c2 of cands) if (c2.rot === best.c.rot && Math.abs(c2.cu - best.c.cu) < 0.3 && Math.abs(c2.cv - best.c.cv) < 0.3) c2.dead = 1; continue; }
+        const pieces = [tab]; let got = 0;
+        for (const se of best.ok) { const it = P.at(se.k, 0, hall, se.r, se.fu, se.fv); if (it) { got += P.spotsOf(it).filter(q => q.on && q.use === 'sentar').length; pieces.push(se.r); } }
+        if (got < 2 || !tavAcc(P, n0).some(p => tavReach(K, from1, p, 0.35) >= 0)) { undo(); best.c.dead = 1; continue; }
+        // (the stamp again with the pieces that stood: a seat that did not stand leaves its floor)
+        if (pieces.length < best.ok.length + 1) { K.C.set(C0); for (const q of pieces) tavStamp(K, q); }
+        // (its outline, and the room kept about it: no group laid within 0.9 m of another)
+        const bx = [Math.min(...pieces.map(q => q[0])), Math.min(...pieces.map(q => q[1])), Math.max(...pieces.map(q => q[2])), Math.max(...pieces.map(q => q[3]))];
+        groups.push({ box: bx, claim: [bx[0] - 0.45, bx[1] - 0.45, bx[2] + 0.45, bx[3] + 0.45], pieces, acc: tavAcc(P, n0) }); seats += got; best.c.dead = 1;
+        if (!first) first = `${best.c.tp}|${best.c.rot}|${best.c.cu}|${best.c.cv}`;
+        // (the candidates whose judgement the group changes — the ones within the reach they ask of the floor —, judged again)
+        for (const c2 of cands) if (c2.ev && c2.cu > bx[0] - 3.2 && c2.cu < bx[2] + 3.2 && c2.cv > bx[1] - 3.2 && c2.cv < bx[3] + 3.2) c2.ev = null;
+      }
+    };
+    // (the wealth's kinds first; where they do not seat the tavern's least — round tables are dear in room —, the rest of the
+    // floor with the long tables, the wealth's groups kept; and where even so not, all of it laid again with the long tables of
+    // stools, which seat the most)
+    // (the wealth's taste weighs a kind's place in its list — 1.6 a place: the rich one's round table before a long one of more
+    // seats —; where the seats are what is short, a tenth of that)
+    pack(TMIX[X.q], false, 1.6);
+    if (seats < goal) pack(X.q === 2 ? ['cabeceira', 'cabeceira2', 'banquinhos', 'comprida'] : ['banquinhos', 'comprida'], true, 0.16);
+    // (and where the greedy's first group took the middle of the floor, the round again without it — a few times, cheaper than
+    // the whole plan again)
+    const ban = new Set(); const reset = () => { P.items.length = n00; P.items.forEach((it, q) => { it.drop = drops0[q]; }); P._ver = (P._ver || 0) + 1; K.C.set(C00); };
+    for (let r = 0; r < 4 && seats < goal; r++) { if (r && first) ban.add(first); reset(); pack(X.q === 2 ? ['cabeceira', 'cabeceira2', 'banquinhos', 'comprida'] : ['banquinhos', 'comprida', 'redonda'], false, 0.16, n === 2, ban); }
+    P.tav = { seats, groups: groups.length };
+    if (seats < goal) P.errs.push(`só ${seats} lugares à mesa no salão (a taverna pede ${goal})`);
+  }
+  // (the places behind the seats of the group laid from the item n0 on, where one gets onto them)
+  const tavAcc = (P, n0) => { const out = []; for (let q = n0; q < P.items.length; q++) for (const sp of P.spotsOf(P.items[q])) if (!sp.on && sp.use === 'acesso') out.push([sp.u, sp.v]); return out; };
 })(window.G);

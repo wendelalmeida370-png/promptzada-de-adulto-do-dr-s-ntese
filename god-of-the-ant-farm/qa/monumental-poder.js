@@ -53,10 +53,11 @@
 // E a F, a taverna — a taverna (3 casas) e a hospedaria (4) dos seis povos: a taverna não tem forma, os degraus maiores são a
 // planta do lote do tamanho (TYPES.taverna.sizes), a estalagem de int-familias.js, na sua família (estalagem.andar):
 //   F1 a escada oferecida a todo povo pela planta do tamanho
-//   F2 a planta em todo povo, tamanho e lado (a família do registro novo e do catálogo); a taberna de 8 m com as suas; a mesma
-//      duas vezes; a casca; o tempo da planta; a tabela dos lugares da hospedaria
+//   F2 a planta em todo povo, tamanho e lado (a família do registro novo e do catálogo); a taberna de 8 m na sua (taberna.salao,
+//      D-720: o padrão dela é o da qa/taverna-padrao.js); a mesma duas vezes; a casca; o tempo da planta; a tabela dos lugares
 //   F3 a hospedaria: o salão ≥ 10 × 8 m, ≥ 8 mesas, a cozinha com o fogo, o depósito das pipas, o balcão; ≥ 20 sentados
-//   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m, a escada, os quartos de cima alcançados; F4b as camas de
+//   F4 as regras do corpo: o portão e a porta do salão ≥ 2,2 m (a da rua, onde não há terreiro), a escada, os quartos de cima
+//      alcançados; F4b as camas de
 //      cima — nenhuma peça sem tamanho, cada quarto com um lugar de deitar, o banco-cama do nórdico 0,7 m por lugar (L-585)
 //   F5 de pé no mundo (a hospedaria na metrópole, com os lugares da tabela do mundo; as duas num mundo novo, um ano, o save)
 //   F6 os casos ruins: a obra salva no meio, a taverna derrubada, a regra do verificador
@@ -787,8 +788,8 @@ function F2() {
   const V = taverns(); const bad = V.filter(m => !m.p.ok); const offer = [];
   for (const n of VPL) for (const c of TODOS) { const r = vrec(c, 'S', n); if (r.f !== VFAM) offer.push(`V${n}/${c}: o registro com ${r.f}`); if (!In.familiesFor(r).ok.includes(VFAM)) offer.push(`V${n}/${c}: o catálogo sem a estalagem`); }
   ok('F2a a planta da taverna e da hospedaria em todo povo e lado pela estalagem — a família que o mundo dá ao registro do degrau', !bad.length && !offer.length, `${V.length - bad.length} de ${V.length} plantas${bad.length ? '; ' + some(bad).map(m => `${vtag(m)}: ${m.p.errs.slice(0, 2).join('; ')}`).join(' / ') : ''}${offer.length ? '; ' + offer.join(' · ') : '; o registro novo e o catálogo com a estalagem em todos'}`);
-  const cl = TODOS.map(c => [c, vrec(c, 'S', 2).f]).filter(([, f]) => f === VFAM || !/^w-/.test(f));
-  ok('F2b a taberna (2 casas) com as famílias da receita de antes', !cl.length, cl.length ? cl.map(([c, f]) => `${c}: ${f}`).join(', ') : `nos seis povos (${TODOS.map(c => vrec(c, 'S', 2).f).filter((f, q, a) => a.indexOf(f) === q).join(', ')})`);
+  const cl = TODOS.map(c => [c, vrec(c, 'S', 2).f]).filter(([, f]) => f !== 'taberna.salao');
+  ok('F2b a taberna (2 casas) na sua família, a do salão até o telhado (taberna.salao, D-720)', !cl.length, cl.length ? cl.map(([c, f]) => `${c}: ${f}`).join(', ') : `nos seis povos (${TODOS.map(c => vrec(c, 'S', 2).f).filter((f, q, a) => a.indexOf(f) === q).join(', ')})`);
   const diff = V.filter(m => m.p.ok).filter(m => { const q = In.makeFam(m.b, m.b.ip, VFAM); return JSON.stringify([q.rooms, q.items.map(i => [i.kind, i.x, i.z, i.ry]), q.doors, q.holes]) !== JSON.stringify([m.p.rooms, m.p.items.map(i => [i.kind, i.x, i.z, i.ry]), m.p.doors, m.p.holes]); });
   ok('F2c a mesma planta duas vezes da mesma entrada', !diff.length, `${diff.length} diferentes${diff.length ? ': ' + some(diff).map(vtag).join(', ') : ''}`);
   const sh = V.filter(m => m.p.ok && (!m.so || strip(m.so) !== strip(In.shellOfPlan(m.p))));
@@ -806,10 +807,10 @@ function F3() {
     const p = m.p; const why = []; const room = fn => p.rooms.find(q => q.fn === fn); const hall = room('salao');
     if (!hall) { out.push(`${vtag(m)}: sem o salão`); continue; }
     const a = hall.r[2] - hall.r[0], b = hall.r[3] - hall.r[1]; if (Math.max(a, b) < 10 - 1e-6 || Math.min(a, b) < 8 - 1e-6) why.push(`o salão de ${a.toFixed(1)} × ${b.toFixed(1)} m`);
-    const tables = p.items.filter(i => i.kind === 'mesa-terreiro' || i.kind === 'mesa').length; if (tables < 8) why.push(`${tables} mesas`);
+    const tables = p.items.filter(i => i.kind === 'mesa-terreiro' || i.kind === 'mesa-taverna' || i.kind === 'mesa-redonda').length; if (tables < 8) why.push(`${tables} mesas`);
     const kit = room('cozinha'), cel = room('adega'); const inRoom = (k, r) => p.items.some(i => k.includes(i.kind) && r && i.room === r.id);
-    if (!kit || !inRoom(['fogao', 'lar', 'braseiro'], kit)) why.push('a cozinha sem o seu fogo'); if (!cel || !inRoom(['pipas'], cel)) why.push('o depósito sem as pipas');
-    if (!p.items.some(i => i.kind === 'balcao')) why.push('sem o balcão'); if (!(reachOf(p, 'vender') < Infinity && reachOf(p, 'comprar') < Infinity)) why.push('o balcão que a porta não alcança');
+    if (!kit || !inRoom(['fogao', 'lar', 'braseiro', 'forno'], kit)) why.push('a cozinha sem o seu fogo'); if (!cel || !inRoom(['pipas'], cel)) why.push('o depósito sem as pipas');
+    if (!p.items.some(i => i.kind === 'balcao' || i.kind === 'balcao-alvenaria')) why.push('sem o balcão'); if (!(reachOf(p, 'vender') < Infinity && reachOf(p, 'comprar') < Infinity)) why.push('o balcão que a porta não alcança');
     const seats = seatsOf(p); if (seats < 20) why.push(`${seats} fregueses sentados`);
     if (why.length) out.push(`${vtag(m)}: ${why.join(', ')}`);
     if (m.s === 'S') sum.push(`${m.c} ${a.toFixed(1)}×${b.toFixed(1)} m, ${tables} mesas, ${seats} sentados`);
@@ -822,7 +823,8 @@ function F4() {
   for (const m of taverns().filter(q => q.p.ok && q.s === 'S')) {
     const p = m.p; const why = []; const hole = d => p.holes.find(h => h.door === d.id);
     const rua = p.doors.find(d => d.rooms.includes('rua')); if (!rua || hole(rua).h < 2.2 - 1e-6) why.push(`o portão da rua de ${rua ? hole(rua).h.toFixed(2) : '-'} m`);
-    const hall = p.rooms.find(q => q.fn === 'salao'); const hd = hall && p.doors.find(d => d.rooms.includes(hall.id) && d.rooms.some(x => x !== 'rua' && p.rooms[x] && p.rooms[x].fn === 'terreiro'));
+    // (the hall's door: onto the yard where there is one, onto the street where there is none — the 12 m, the Norse 16)
+    const hall = p.rooms.find(q => q.fn === 'salao'); const hd = hall && (p.doors.find(d => d.rooms.includes(hall.id) && d.rooms.some(x => x !== 'rua' && p.rooms[x] && p.rooms[x].fn === 'terreiro')) || p.doors.find(d => d.rooms.includes(hall.id) && d.rooms.includes('rua')));
     if (!hd || hole(hd).h < 2.2 - 1e-6) why.push(`a porta do salão de ${hd ? hole(hd).h.toFixed(2) : '-'} m`);
     for (const s of p.stairs) if (s.kind === 'escada' && !(s.cls === 'degraus' || s.cls === 'escada')) why.push(`uma escada de ${s.slope}° (${s.cls})`);
     if (!(reachOf(p, 'deitar') < Infinity)) why.push('as camas de cima que a porta não alcança');
