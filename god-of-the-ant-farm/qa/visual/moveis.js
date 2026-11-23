@@ -26,10 +26,10 @@ const B3 = G.Build3D, MV = G.Movel3D, In = G.Interiors;
 const CIVS = ['classico', 'romano', 'grego', 'egipcio', 'nordico', 'asteca'];
 // (the tavern's own kinds: the contract's §4 and the ones of before it uses — today's plan's and the new one's)
 const TAVERNA = ['banquinho', 'mesa-redonda', 'mesa-taverna', 'banco', 'cadeira', 'balcao', 'balcao-alvenaria', 'prateleira-bar', 'anforeira', 'barril', 'lareira',
-  'forno-barro', 'fogao-comal', 'fogo-comprido', 'estrado', 'cuba', 'pipas', 'lampadario', 'cama', 'cama-casal', 'arca', 'mesa', 'mesa-terreiro', 'talha', 'jarros', 'fogao', 'lar', 'esteira', 'esteira-casal'];
+  'forno-barro', 'fogao-comal', 'fogo-comprido', 'estrado-musico', 'cuba', 'pipas', 'lampadario', 'cama', 'cama-casal', 'arca', 'mesa', 'mesa-terreiro', 'talha', 'jarros', 'fogao', 'lar', 'esteira', 'esteira-casal'];
 const SEC4 = [['banquinho', 0.40, 0.40, 0.45], ['mesa-redonda', 0.90, 0.90, 0.74], ['mesa-taverna', 1.60, 0.80, 0.74], ['banco', 1.40, 0.35, 0.45], ['cadeira', 0.50, 0.50, 0.45],
   ['balcao', 1.80, 0.60, 1.00], ['balcao-alvenaria', 2.40, 1.60, 1.00], ['prateleira-bar', 1.80, 0.40, 1.90], ['anforeira', 1.20, 0.50, 1.10], ['barril', 0.60, 0.60, 0.90],
-  ['lareira', 1.40, 0.60, 1.20], ['forno-barro', 1.00, 1.00, 1.10], ['fogao-comal', 1.20, 0.70, 0.60], ['fogo-comprido', 3.00, 0.90, 0.30], ['estrado', 1.60, 1.20, 0.25]];
+  ['lareira', 1.40, 0.60, 1.20], ['forno-barro', 1.00, 1.00, 1.10], ['fogao-comal', 1.20, 0.70, 0.60], ['fogo-comprido', 3.00, 0.90, 0.30], ['estrado-musico', 1.60, 1.20, 0.25]];
 const TL = G.Space.TILE;
 // (the points of a piece as drawn, in the lot's metres: its instances' — both levels — or its boxes' in the storey's geometry)
 function ptsOf(out, it) {
@@ -138,7 +138,7 @@ ok('m2. as peças do contrato (§4) em cada um dos seis povos: o modelo, no ret�
 ok('m4. o metal é o do povo: sem ferro nem bronze, o vime; com o ferro tido e a arte, o ferro, e o desenho de novo', did4 && !bad.m4.length, few(bad.m4) || 'o vime e o ferro');
 ok('m5. a casa rica de agora tem as peças ricas, a pobre as simples; o taverneiro morto no meio, o desenho segue', did5 && !bad.m5.length, few(bad.m5) || 'a riqueza do taverneiro, a mesa de pedra, o taverneiro morto');
 ok('m6. um save e um load no meio: o mesmo desenho', did6 && !bad.m6.length, few(bad.m6) || 'iguais');
-ok('m7. o custo de uma taverna: as malhas por instância (uma por modelo e parte) e os triângulos dos móveis no orçamento (≤ 48 malhas, ≤ 30 mil triângulos)', !bad.m7.length && cMax[0] <= 48 && cMax[1] <= 30000,
+ok('m7. o custo de uma taverna: as malhas por instância (uma por modelo e parte) e os triângulos dos móveis no orçamento (≤ 64 malhas, ≤ 30 mil triângulos: D-715, a planta da P3)', !bad.m7.length && cMax[0] <= 64 && cMax[1] <= 30000,
   `${cost.length} tavernas: malhas média ${cMean[0].toFixed(1)}, máx ${cMax[0]} (no nível do meio ${cMax[2]}); triângulos dos móveis média ${Math.round(cMean[1])}, máx ${cMax[1]}${few(bad.m7)}`);
 ok('m9. puro: o mesmo desenho duas vezes, nenhum sorteio, o prédio como estava', !bad.m9.length, few(bad.m9) || `${nTav} tavernas`);
 ok('m10. as folhas das portas pelo modelo do seu povo', nLeaf > 0 && !bad.m10.length, `${nLeaf} folhas${few(bad.m10)}`);

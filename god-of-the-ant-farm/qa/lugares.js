@@ -151,7 +151,7 @@ const lying = pl => pl && (pl.st === 'sleep' || pl.st === 'sick') && pl.pose ===
   const w1 = person({ age: 30, inside: b.id, job: b.id, task: { type: 'oficio', b: b.id, use: 'tornear', item: wheel2 } });
   const P2 = In.places(b); ok('5b a peça que a tarefa nomeia', (P2.by.get(w1.id) || {}).item === wheel2, `t.item ${wheel2} → ${(P2.by.get(w1.id) || {}).item}`);
   reset();
-  const ft = famWith('taverna', 'romano', p => p.items.some(i => i.kind === 'balcao') && p.items.filter(i => i.kind === 'mesa').length >= 2);
+  const ft = famWith('taverna', 'romano', p => p.items.some(i => i.kind === 'balcao' || i.kind === 'balcao-alvenaria') && p.items.filter(i => i.kind === 'mesa-taverna' || i.kind === 'mesa-redonda' || i.kind === 'mesa').length >= 2); // (the tables of the taberna: D-722)
   const bt = building('taverna', 'romano', ft, 60, 10, 'S');
   const keeper = person({ age: 45, inside: bt.id, job: bt.id, task: { type: 'tavern', id: bt.id } });
   const clients = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(k => person({ age: 20 + k, inside: bt.id, task: { type: 'tavern', id: bt.id, st: 1 } }));

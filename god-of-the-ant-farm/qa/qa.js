@@ -872,6 +872,7 @@
   let placeTurn = 0; // (and which few buildings with people inside have their places looked at)
   let heard = new Map(), heardS = null; // (the step's words on the way in already asked again here — once each, in this world)
   let pocketAt = new Map(), pocketS = null; // (the day each door was first seen before a pocket, in this world: L-216)
+  let tavTurn = 0; // (which tavern's plan this round measures)
   QA.more.push(function (add, s) {
     const In = G.Interiors; if (!In) return;
     const withIp = [];
@@ -962,6 +963,22 @@
       }
       for (const id of [...pocketAt.keys()]) if (!seen.has(id)) pocketAt.delete(id);
     }
+    // ---- the tavern of the interiors 2.0 (D-720 to D-724): the taberna of 8 m in its family, the bigger ones in the estalagem's;
+    // its wealth's step one of three; and each round one tavern's plan measured — the seats at its tables the pattern's (8, 16,
+    // 30: a place on a piece one sits on, by a table of the hall) and nobody seated in the air (every place of sitting and of
+    // eating on its piece: the root the 3D gives, In.rootY)
+    { const FAM = { 2: 'taberna.salao', 3: 'estalagem.andar', 4: 'estalagem.andar' }, MIN = { 2: 8, 3: 16, 4: 30 };
+      const TAB = { 'mesa-taverna': 1, 'mesa-redonda': 1 }, SEAT = { banquinho: 1, banco: 1, cadeira: 1 };
+      const tav = withIp.filter(b => b.type === 'taverna' && b.built);
+      for (const b of tav) { const r = b.ip; if (FAM[b.w] && r.f !== FAM[b.w]) add('int', 2, `taverna#${b.id} (${b.w * 4} m): a planta da família ${r.f}, não a do padrão (${FAM[b.w]}: D-720)`);
+        if (r.q !== undefined && r.q !== 0 && r.q !== 1 && r.q !== 2) add('int', 2, `taverna#${b.id}: o degrau da riqueza ${r.q} (0 a 2: D-724)`); }
+      if (tav.length) { const b = tav[(tavTurn++ * 7919) % tav.length]; const p = In.plan(b); const h = p && p.ok && p.rooms.find(q => q.fn === 'salao' && q.lv === 0);
+        if (h && MIN[b.w]) { const gap = (a, c) => Math.max(0, Math.max(a[0], c[0]) - Math.min(a[2], c[2]), Math.max(a[1], c[1]) - Math.min(a[3], c[3]));
+          const its = p.items.filter(it => it.lv === 0 && it.room === h.id); const tabs = its.filter(it => TAB[it.kind]); let n = 0;
+          for (const it of its) if (SEAT[it.kind] && tabs.some(t => gap(t.r, it.r) <= 0.12)) n += it.spots.filter(sp => sp.on && sp.use === 'sentar').length;
+          if (n < MIN[b.w]) add('int', 3, `taverna#${b.id} (${b.w * 4} m): ${n} lugares à mesa no salão (o padrão: ${MIN[b.w]}, D-722)`);
+          const air = p.items.find(it => it.spots.some(sp => (sp.use === 'sentar' || sp.use === 'comer') && !sp.on));
+          if (air) add('int', 3, `taverna#${b.id}: um lugar de ${air.spots.find(sp => !sp.on && (sp.use === 'sentar' || sp.use === 'comer')).use} fora da peça (${air.kind}) — o freguês sentaria no ar (D-722)`); } } }
     // ---- a few plans each round: valid, and the shell seen from afar the whole plan's (the 3D draws the one far, the
     // other near: the same building, always)
     if (!withIp.length) return;

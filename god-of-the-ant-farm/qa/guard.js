@@ -1942,7 +1942,7 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
 { const av = (src['avatar.js'] || []).join('\n');
   if (!/if \(b && b\.inB && b\.inP\) \{ const then = pieceDepth\(X, Z\); if \(then > 0 && then > pieceDepth\(b\.X, b\.Z\) \+ 1e-4\) return 'wall'; \}/.test(av)) fails.push('o corpo contra os móveis (D-734): o blocked do avatar.js não confere o contorno das peças (pieceDepth), ou gruda o corpo nelas');
   if (!/const dx = Math\.max\(R\[0\] - x, 0, x - R\[2\]\), dz = Math\.max\(R\[1\] - z, 0, z - R\[3\]\);/.test(av)) fails.push('o corpo contra os móveis (D-734): o pieceDepth não mede pelo retângulo da peça (it.r)');
-  if (!/- \(raw \? 0 : it\.h < TUNE\.pieceLowH \? TUNE\.pieceLow : TUNE\.pieceSlack\)/.test(av)) fails.push('o corpo contra os móveis (D-734): o pieceDepth sem a folga pela altura da peça (o quadril numa mesa, o ombro numa estante)'); }
+  if (!/const slack = raw \? 0 : it\.h < TUNE\.pieceLowH \? TUNE\.pieceLow : TUNE\.pieceSlack;[^]*?\) - slack; if \(k > worst\)/.test(av)) fails.push('o corpo contra os móveis (D-734): o pieceDepth sem a folga pela altura da peça (o quadril numa mesa, o ombro numa estante)'); }
 // 286. "o olho é verificado dentro de casa" (L-1860): a regra «vista3d» do verificador pergunta ao QA.eye com o corpo dentro de um
 // prédio também — só o corpo dormindo na cama fica de fora —: pulando quem estava dentro, o olho dentro da cabeça no terreiro inteiro
 // de uma taverna nunca foi acusado
@@ -1990,5 +1990,36 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   if (!f || /'soil'|'slab'|'cobble'/.test(f)) fails.push('o chão de dentro não é o de fora: o floorMat dá a terra lavrada ou as lajes com capim (D-703)');
   const w = b3.indexOf('function inWall(K, plan, w, l) {'), w2 = b3.indexOf('\n  }\n', w); const fw = w < 0 ? '' : b3.slice(w, w2);
   if (!/innerMat\(K, wm\)/.test(fw) || /\binMat\(/.test(fw)) fails.push('o chão de dentro não é o de fora: a parede de dentro não é a do innerMat (D-703)'); }
+// 270. "a escolha da taverna é do registro" (D-720, D-722): as escolhas da taverna dos interiores 2.0 — o tamanho, a riqueza, o bar,
+// o estrado, a porta, o espelho, a adega — saem do registro e do id (tavHash, o G.hash), as mesmas em toda tentativa; o dado das
+// tentativas (P.rnd) só desempata as mesas (tavTables) — nunca o acaso do mundo nem o do que só se vê
+{ const tw = (src['int-trabalho.js'] || []).join('\n'); const body = (a, b) => { const i = tw.indexOf(a), j = b ? tw.indexOf(b, i + 1) : -1; return i < 0 ? null : tw.slice(i, j < 0 ? undefined : j); };
+  const ax = body('function tavAxes(P)', 'In.tavAxes = '), lay = body('function tavLayout(', 'function tavWindows('), ins = body('function tavInside(', 'const TPL = {'), bld = body('function tavernBuild(P)', 'In.tavernBuild = ');
+  if (!ax || !lay || !ins || !bld) fails.push('a escolha da taverna é do registro: o int-trabalho.js sem o tavAxes, o tavLayout, o tavInside ou o tavernBuild (D-720)');
+  else { if (!/const H = k => tavHash\(id, k\);/.test(ax)) fails.push('a escolha da taverna é do registro: o tavAxes não tira as escolhas do id (tavHash, D-722)');
+    for (const [n, f] of [['tavAxes', ax], ['tavLayout', lay], ['tavInside', ins], ['tavernBuild', bld]]) if (/\bP\.rnd\(|\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(f)) fails.push(`a escolha da taverna é do registro: o ${n} sorteia (só as mesas desempatam pelo dado das tentativas: D-722)`); } }
+// 271. "ninguém sentado no ar" (D-722): os lugares de sentar das mesas da taverna são de peças de sentar — o banquinho, o banco, a
+// cadeira, cada lugar sobre a peça (on: 1: o In.rootY o põe no assento) — e a cozinha da taverna não tem a mesa de comer de pé
+{ const tw = (src['int-trabalho.js'] || []).join('\n'), mv = (src['int-moveis.js'] || []).join('\n'); const i = tw.indexOf('const TPL = {'), j = tw.indexOf('\n  };', i); const tpl = i < 0 ? '' : tw.slice(i, j);
+  const kinds = [...tpl.matchAll(/\['(\w[\w-]*)', -?[\d.]+|\['(\w[\w-]*)', a, b/g)].map(m => m[1] || m[2]); const SEAT = { banquinho: 1, banco: 1, cadeira: 1 };
+  if (!tpl || !kinds.length) fails.push('ninguém sentado no ar: o int-trabalho.js sem a tabela dos grupos de mesa (TPL, D-722)');
+  for (const k of new Set(kinds)) if (!SEAT[k]) fails.push(`ninguém sentado no ar: o grupo de mesa da taverna com o assento ${k}, que não é peça de sentar (D-722)`);
+  for (const k of ['banquinho', 'cadeira']) if (!new RegExp(`\\b${k}: \\{[^\\n]*\\{ use: 'sentar', a: 0, n: 0, on: 1 \\}`).test(mv)) fails.push(`ninguém sentado no ar: o ${k} sem o lugar de sentar sobre a peça (on: 1, D-722)`);
+  if (!/out\.push\(\{ use: 'sentar', a, n: 0, on: 1 \}/.test(mv)) fails.push('ninguém sentado no ar: o banco comprido sem os seus lugares sobre a peça (on: 1, D-725)');
+  const ins = tw.slice(tw.indexOf('function tavInside('), tw.indexOf('const TPL = {')); if (/P\.place\('mesa',/.test(ins)) fails.push('ninguém sentado no ar: a cozinha da taverna com a mesa de comer de pé (o freguês sentaria no ar: D-722)'); }
+// 272. "o corredor de 1 m" (D-721): o corredor da taverna, da porta ao balcão, ao fogo, ao estrado, à escada e às mesas, tem 1 m de
+// largura ao menos (AISLE, TAISLE), e as faixas dele, a roda do fogo comprido e as saídas do taverneiro são zonas de passagem (aisle)
+{ const tw = (src['int-trabalho.js'] || []).join('\n'); const m = /AISLE = ([\d.]+), TAISLE = ([\d.]+);/.exec(tw);
+  if (!m || +m[1] < 1.0 || +m[2] < 1.0) fails.push(`o corredor de 1 m: a largura do corredor da taverna ${m ? m[1] + ' / ' + m[2] : 'sumiu'} (D-721)`);
+  if (!/r\.aisle = 1; P\.zones\.push\(\{ lv: K\.lv, r, aisle: 1 \}\);/.test(tw)) fails.push('o corredor de 1 m: as faixas do corredor da taverna não são zonas de passagem (D-721)');
+  if (!/tavBand\(P, K, path, AISLE \/ 2\);/.test(tw)) fails.push('o corredor de 1 m: o corredor não é guardado na largura de AISLE (D-721)'); }
+// 273. "a riqueza da taverna é a do dono agora, e só se lê" (D-661, D-724): o degrau da taverna (rec.q) é julgado na virada do dia
+// pelas portas de quem tem as moedas (G.Taverna.keeperOf, G.Eco.purse, G.Eco.homeOf) — a conta nunca escreve no mundo —, e só o
+// interiors.js o escreve (tavernWealth, com o fato 'riqueza')
+{ const ir = (src['interiors.js'] || []).join('\n'); const i = ir.indexOf('In.tavernStep = function (b) {'), j = ir.indexOf('\n  };', i); const f = i < 0 ? '' : ir.slice(i, j);
+  if (!f || !/T\.keeperOf\(b\)/.test(f) || !/G\.Eco\.purse\(k\)/.test(f)) fails.push('a riqueza da taverna: o In.tavernStep não lê o taverneiro e as moedas pelas portas (D-724)');
+  if (/\b(?:k|h|b|T|G)\.[\w.]+\s*=[^=]|\bG\.Depot\.move\(/.test(f)) fails.push('a riqueza da taverna: o In.tavernStep escreve no mundo (D-724)');
+  if (!/rec\.q = w\.to; rec\.r\+\+; fact\(b, 'riqueza', String\(w\.to\)\);/.test(ir)) fails.push('a riqueza da taverna: o degrau muda sem a reforma do registro e o fato (D-724)');
+  for (const f2 of files) if (f2 !== 'interiors.js' && /^(int-|act-)/.test(f2)) (src[f2] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:rec|ip|b\.ip)\.q\s*=[^=]/.test(c)) fails.push(`a riqueza da taverna: ${f2}:${k + 1} escreve o degrau do registro (só o interiors.js: D-724)`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

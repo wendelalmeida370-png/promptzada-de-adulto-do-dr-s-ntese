@@ -333,10 +333,13 @@
   function pieceDepth(X, Z, raw) {
     const B = b.inB, p = b.inP, L = TL(), r = TUNE.radius; const x = X - B.x * L, z = Z - B.y * L; let worst = 0;
     for (const it of p.items) {
-      if (it.lv !== b.lv || it.niche) continue; const R = it.r;
-      if (x < R[0] - r || x > R[2] + r || z < R[1] - r || z > R[3] + r) continue;
-      const dx = Math.max(R[0] - x, 0, x - R[2]), dz = Math.max(R[1] - z, 0, z - R[3]); const d = Math.hypot(dx, dz);
-      const k = (d > 0 ? r - d : r + Math.min(x - R[0], R[2] - x, z - R[1], R[3] - z)) - (raw ? 0 : it.h < TUNE.pieceLowH ? TUNE.pieceLow : TUNE.pieceSlack); if (k > worst) worst = k;
+      if (it.lv !== b.lv || it.niche) continue; const slack = raw ? 0 : it.h < TUNE.pieceLowH ? TUNE.pieceLow : TUNE.pieceSlack;
+      // (a piece in parts — the masonry counter in an L, D-721 — is its arms: the keeper stands inside the L, the body too)
+      for (const R of (it.parts && it.parts.length ? it.parts : [it.r])) {
+        if (x < R[0] - r || x > R[2] + r || z < R[1] - r || z > R[3] + r) continue;
+        const dx = Math.max(R[0] - x, 0, x - R[2]), dz = Math.max(R[1] - z, 0, z - R[3]); const d = Math.hypot(dx, dz);
+        const k = (d > 0 ? r - d : r + Math.min(x - R[0], R[2] - x, z - R[1], R[3] - z)) - slack; if (k > worst) worst = k;
+      }
     }
     return worst;
   }

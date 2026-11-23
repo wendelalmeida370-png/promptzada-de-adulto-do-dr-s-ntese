@@ -30,7 +30,7 @@ TABLE = [
     ('forno-barro', [(1.00, 1.00, 1.10)], {'colmeia': ['egipcio', 'romano', 'classico', 'grego', 'nordico', 'asteca']}, forno_barro),
     ('fogao-comal', [(1.20, 0.70, 0.60)], {'tlecuilli': ['asteca', 'romano', 'classico', 'grego', 'egipcio', 'nordico']}, fogao_comal),
     ('fogo-comprido', [(3.00, 0.90, 0.30)], {'lareira-longa': ['nordico', 'romano', 'classico', 'grego', 'egipcio', 'asteca']}, fogo_comprido),
-    ('estrado', [(1.60, 1.20, 0.25)], {'tablado': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'asteca': ['asteca']}, estrado),
+    ('estrado-musico', [(1.60, 1.20, 0.25)], {'tablado': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'asteca': ['asteca']}, estrado),
     # ---- the pieces of before the tavern uses (int-moveis.js, their sizes) ----
     ('mesa', [(1.10, 0.70, 0.75)], {'romano': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'cavalete': ['nordico'], 'asteca': ['asteca']}, mesa_longa),
     ('cuba', [(1.00, 1.00, 1.10)], {'aduelada': ['romano', 'classico', 'grego', 'nordico'], 'barro': ['egipcio', 'asteca']}, cuba),

@@ -23,7 +23,7 @@
   const In = G.Interiors = {};
   const TILE = 4;
   const CS = In.CS = 0.25; // (a cell of the inner grid, in metres)
-  In.VERSION = 5; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196; 4: what hangs on a wall stays under the floor above it, L-814; 5: the walk starts at the cells nearest the door and a flight's end, L-816)
+  In.VERSION = 6; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196; 4: what hangs on a wall stays under the floor above it, L-814; 5: the walk starts at the cells nearest the door and a flight's end, L-816; 6: the tavern of the interiors 2.0 — its zones, its corridor, its tables and stools, the hall up to the roof —, a piece in parts, the bench of two, D-720)
   const REC_V = In.REC_V = 4; // (the record's version: an older one has its door judged on loading — 4: the grammar of In.VERSION 2. A world saved under an older grammar has all its records judged so: the save keeps the grammar its plans were made by, intG — D-196)
   In.TRIES = 12; // (how many times a recipe is laid out, each with its own dice, before its family gives way)
   In.STEP = 0.3; // (along a wall, the places tried every so many metres — besides the corners and right beside each piece)
@@ -336,6 +336,16 @@
     Object.assign(P, KIT);
     return P;
   }
+  // (the solid of a piece that is not its whole rectangle — the masonry counter in an L, its keeper inside it, D-720: the
+  // catalogue's parts, [a0, n0, a1, n1] in the piece's own frame, as rectangles of the plan's frame; what the grid stamps, and
+  // what the body keeps out of. What overlaps, what a place stands clear of, is still the whole rectangle)
+  function partsOf(it, D) {
+    const cu = (it.r[0] + it.r[2]) / 2, cv = (it.r[1] + it.r[3]) / 2; const [fu, fv] = it.face; const au = -fv, av = fu;
+    return D.parts({ w: it.w, d: it.d, h: it.h, hand: it.hand }).map(([a0, n0, a1, n1]) => { const p = [cu + fu * n0 + au * a0, cv + fv * n0 + av * a0], q = [cu + fu * n1 + au * a1, cv + fv * n1 + av * a1];
+      return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])]; });
+  }
+  // (the rectangles a piece's solid is: its parts, or itself)
+  const solidsOf = it => (it.parts && it.parts.length ? it.parts : [it.r]);
   // the kit the recipes build with (all in canonical metres)
   const KIT = {
     level(lv, y, h, kind, area) { const o = { lv, y, h, kind, area: area.slice(), slab: SLABS[kind] || 0 }; this.levels.push(o); this.levels.sort((a, b) => a.lv - b.lv); return o; },
@@ -511,6 +521,7 @@
       const D = ITEMS[kind]; if (!D) { this.errs.push('móvel desconhecido: ' + kind); return null; }
       const it = Object.assign({ k: this.items.length, kind, lv, room, r: r.slice(), face: [fu, fv], y: 0, h: D.h, opt: this.optNext ? 1 : 0 }, extra || {});
       it.w = fu ? r[3] - r[1] : r[2] - r[0]; it.d = fu ? r[2] - r[0] : r[3] - r[1];
+      if (D.parts) it.parts = partsOf(it, D);
       this.items.push(it); this._ver = (this._ver || 0) + 1; return it;
     },
     // the spots of an item in the canonical frame (q: its number among the piece's own; the ones lost are left out)
@@ -520,7 +531,7 @@
     spotsAll(it) {
       const D = ITEMS[it.kind]; const cu = (it.r[0] + it.r[2]) / 2, cv = (it.r[1] + it.r[3]) / 2; const [fu, fv] = it.face;
       const au = -fv, av = fu; // (across: the right hand of one facing the item from its front)
-      return (D.spots ? D.spots({ w: it.w, d: it.d, h: it.h }) : []).map((s, q) => ({ q, use: s.use, on: s.on ? 1 : 0, u: cu + fu * s.n + au * s.a, v: cv + fv * s.n + av * s.a, f: s.on ? (s.along === 'a' ? (s.back ? [-au, -av] : [au, av]) : s.back ? [-fu, -fv] : [fu, fv]) : Math.abs(s.a) > Math.abs(s.n) ? [-au * Math.sign(s.a), -av * Math.sign(s.a)] : [-fu * Math.sign(s.n || 1), -fv * Math.sign(s.n || 1)] }));
+      return (D.spots ? D.spots({ w: it.w, d: it.d, h: it.h, hand: it.hand }) : []).map((s, q) => ({ q, use: s.use, on: s.on ? 1 : 0, u: cu + fu * s.n + au * s.a, v: cv + fv * s.n + av * s.a, f: s.on ? (s.along === 'a' ? (s.back ? [-au, -av] : [au, av]) : s.back ? [-fu, -fv] : [fu, fv]) : Math.abs(s.a) > Math.abs(s.n) ? [-au * Math.sign(s.a), -av * Math.sign(s.a)] : [-fu * Math.sign(s.n || 1), -fv * Math.sign(s.n || 1)] }));
     },
     spotsOf(it) { const all = this.spotsAll(it); return it.drop && it.drop.length ? all.filter(sp => !it.drop.includes(sp.q)) : all; },
     // what stands on a storey, for the placing of one piece (taken once per piece: the pieces, the places one stands to use
@@ -609,7 +620,7 @@
         // (the ones by it — and the ones it took a place from, wherever their other places are: the hearth's far end)
         if (o !== it && !(steal && steal.some(q => q[0] === o)) && !sps.some(sp => !sp.on && pt2(sp.u, sp.v, it.r, 1.6))) continue;
         const spots = sps.map(sp => { const p = toLoc(s, L, sp.u, sp.v); return { use: sp.use, on: sp.on, x: r2(p[0]), z: r2(p[1]), far: wk.R && !ptIn([sp.u, sp.v], wk.R, 0.05) ? 1 : 0 }; });
-        if (fitItem(pp, { lv, kind: o.kind, niche: o.niche, r: rectLoc(s, L, o.r).map(r2), spots })) return false;
+        if (fitItem(pp, { lv, kind: o.kind, niche: o.niche, r: rectLoc(s, L, o.r).map(r2), parts: o.parts ? o.parts.map(q => rectLoc(s, L, q).map(r2)) : null, spots })) return false;
       }
       return true;
     },
@@ -777,7 +788,7 @@
     at(kind, lv, room, rr, fu, fv, extra) {
       const D = ITEMS[kind]; if (!D || !this.rooms[room]) return null; let F = this.floorOf(lv); if (extra && extra.form) F = Object.assign({}, F, { zones: [], near: null });
       const w = fu ? rr[3] - rr[1] : rr[2] - rr[0], d = fu ? rr[2] - rr[0] : rr[3] - rr[1];
-      const f = this.fits(rr, lv, room, kind, this.spotsAll({ r: rr, face: [fu, fv], kind, w, d, h: D.h }), null, F); if (!f) return null;
+      const f = this.fits(rr, lv, room, kind, this.spotsAll({ r: rr, face: [fu, fv], kind, w, d, h: D.h, hand: extra && extra.hand }), null, F); if (!f) return null;
       return this.put(kind, lv, room, rr, fu, fv, f, extra);
     },
     // a niche cut into a thick outer wall of the room (where a house of adobe or stone keeps its things): it takes no floor,
@@ -1110,7 +1121,9 @@
     // (the inside may not change the shell: what it was when the inside began, it still is — or the plan is refused)
     if (P.shellPrint && JSON.stringify(so) !== P.shellPrint) plan.errs.push('o interior mexeu na casca');
     plan.shell = so.shell; if (so.yard) plan.yard = so.yard;
-    plan.levels = so.levels.map((l, i) => Object.assign({}, l, { area: R(P.levels[i].area) }));
+    // (a storey whose floor is more than its rectangle — the gallery of the hospedaria round its hall, D-720 —: each of its
+    // rectangles, areas; the walk's floor is its rooms', and the 3D lays the floor over each)
+    plan.levels = so.levels.map((l, i) => Object.assign({}, l, { area: R(P.levels[i].area) }, P.levels[i].areas ? { areas: P.levels[i].areas.map(R) } : {}));
     plan.walls = P.walls.map(w => Object.assign({ id: w.id, lv: w.lv, a: loc(w.a[0], w.a[1]), b: loc(w.b[0], w.b[1]), t: w.t, h: r2(w.h), outer: w.outer, kind: w.kind, mat: w.mat, shell: w.shell ? 1 : 0 }, w.ring ? { ring: ringLoc(s, L, w.ring) } : {}));
     plan.holes = P.holes.map(h => Object.assign({ wall: h.wall, at: r2(h.at), w: r2(h.w), h: r2(h.h), sill: r2(h.sill), kind: h.kind, door: h.door }, h.arch ? { arch: 1 } : {}));
     plan.doors = P.doors.map(d => Object.assign({ id: d.id, wall: d.wall, at: r2(d.at), w: r2(d.w), h: r2(d.h), sill: r2(d.sill || 0), hinge: d.hinge, into: d.into, outer: d.outer, rooms: d.rooms.slice(), kind: d.kind }, d.arch ? { arch: 1 } : {}));
@@ -1127,6 +1140,7 @@
       const r = R(it.r); const f = dirLoc(s, it.face[0], it.face[1]); const D = ITEMS[it.kind];
       const o = { id: P.b.id + ':' + it.k, k: it.k, kind: it.kind, name: D.name, room: it.room, lv: it.lv, x: r2((r[0] + r[2]) / 2), z: r2((r[1] + r[3]) / 2), y: r2(it.y || 0), ry: r2(Math.atan2(f[0], f[1])), w: r2(it.w), d: r2(it.d), h: r2(it.h), r, solid: D.low ? 0 : 1, low: D.low ? 1 : 0, places: it.places !== undefined ? it.places : (D.places || 0), job: D.job ? 1 : 0, fire: D.fire ? 1 : 0, niche: it.niche ? 1 : 0 };
       if (D.store) o.store = Object.assign({}, D.store, { cap: it.cap || D.store.cap });
+      if (it.parts) { o.parts = it.parts.map(R); if (it.hand) o.hand = it.hand; } // (its solid, where it is not its whole rectangle: the L's arms, and which hand it is — the grid's, the body's, the P2's)
       if (it.yard) o.yard = 1; // (one of the yard's, laid with the shell)
       if (it.form) o.form = 1; // (one the type's form draws — the god and the 3D —, the plan only using it: D-093)
       o.spots = P.spotsOf(it).map(sp => { const p = loc(sp.u, sp.v); const fd = dirLoc(s, sp.f[0], sp.f[1]); return { use: sp.use, on: sp.on, x: p[0], z: p[1], ry: r2(Math.atan2(fd[0], fd[1])), y: r2(it.y || 0) + (sp.on ? r2(D.h) : 0) }; });
@@ -1266,10 +1280,12 @@
   }
   const cellsOfN = (n, r, pad) => { const x0 = Math.max(0, Math.ceil((r[0] - (pad || 0)) / CS - 0.5)), x1 = Math.min(n - 1, Math.floor((r[2] + (pad || 0)) / CS - 0.5)), z0 = Math.max(0, Math.ceil((r[1] - (pad || 0)) / CS - 0.5)), z1 = Math.min(n - 1, Math.floor((r[3] + (pad || 0)) / CS - 0.5)); return [x0, z0, x1, z1]; };
   // furniture: by the cells whose middle it covers (a niche, a hung shelf: none)
+  // (a piece in parts — the masonry counter in an L —: its parts only, the floor inside the L open)
   function stampItems(plan, lv, g, n) {
     for (const it of plan.items) {
-      if (it.lv !== lv || it.niche) continue; const [x0, z0, x1, z1] = cellsOfN(n, it.r, -1e-3); const code = it.low ? C.LOW : C.SOLID;
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const k = z * n + x; if (g[k] === C.FLOOR || g[k] === C.LOWROOF) g[k] = code; }
+      if (it.lv !== lv || it.niche) continue; const code = it.low ? C.LOW : C.SOLID;
+      for (const r of it.parts && it.parts.length ? it.parts : [it.r]) { const [x0, z0, x1, z1] = cellsOfN(n, r, -1e-3);
+        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const k = z * n + x; if (g[k] === C.FLOOR || g[k] === C.LOWROOF) g[k] = code; } }
     }
   }
   function rasterStatic(plan, l, n) {
@@ -1352,7 +1368,7 @@
       const l = P.levels.find(q => q.lv === lv); base = st[lv] = { key, g: l ? rasterStatic(pp, l, n) : null, crawl: !!(l && l.kind === 'jirau') };
     }
     if (!base.g) return null;
-    const g = base.g.slice(); const items = []; for (const it of P.items) if (it.lv === lv && (!keep || keep(it))) items.push({ lv, r: it.r, low: ITEMS[it.kind].low ? 1 : 0, niche: it.niche ? 1 : 0 });
+    const g = base.g.slice(); const items = []; for (const it of P.items) if (it.lv === lv && (!keep || keep(it))) items.push({ lv, r: it.r, parts: it.parts || null, low: ITEMS[it.kind].low ? 1 : 0, niche: it.niche ? 1 : 0 });
     stampItems({ items }, lv, g, n);
     return { g, n, crawl: base.crawl, hgt: hgtOf(P, lv, n) };
   }
@@ -1607,7 +1623,7 @@
     const own = new Map(); let any = 0; const D = ITEMS[it.kind] || {};
     for (const sp of it.spots) {
       if (sp.on) continue; if (sp.far) { sp.ok = 1; any = 1; own.set(sp.use, (own.get(sp.use) || 0) + 1); continue; }
-      const pt = fitStand(plan, it.lv, sp.x, sp.z, it.niche ? null : it.r);
+      const pt = fitStand(plan, it.lv, sp.x, sp.z, it.niche ? null : it.parts && it.parts.length ? it.parts : it.r);
       // (a place of use one stands at — behind the counter, at the fire —: where the whole body takes it from; the way onto a
       // piece, where the feet stand — the body is laid in its bed, and sits on a bench from a stride off: interact.js)
       sp.ok = pt && (APPROACH[sp.use] || rimNear(plan, it.lv, pt[0], pt[1])) ? 1 : 0; if (pt) { sp.x = pt[0]; sp.z = pt[1]; any = 1; } own.set(sp.use, (own.get(sp.use) || 0) + sp.ok);
@@ -1971,8 +1987,10 @@
   // where one standing at a piece stands: its place of use, or — that point on a flight, a wall, another piece, as the plan's
   // walk lets it be (a reached cell within 0.3 m of it is all the walk asks) — the nearest point within 0.4 m where the feet
   // stand on open floor the door reaches, never in the piece; null where there is none (L-282)
+  // (R: the piece's rectangle — or, a piece in parts, the list of them: the L's inside is where its keeper stands)
   function fitStand(p, lv, x, z, R) {
-    const seen = p.reach || {}; const good = (X, Z) => !(R && X > R[0] && X < R[2] && Z > R[1] && Z < R[3]) && standsAt(p, lv, X, Z, BODY.feet) && reachedNear(p, seen, lv, [X, Z], 0.3, true);
+    const Rs = !R ? [] : Array.isArray(R[0]) ? R : [R];
+    const seen = p.reach || {}; const good = (X, Z) => !Rs.some(q => X > q[0] && X < q[2] && Z > q[1] && Z < q[3]) && standsAt(p, lv, X, Z, BODY.feet) && reachedNear(p, seen, lv, [X, Z], 0.3, true);
     if (good(x, z)) return [x, z];
     for (let rad = 0.05; rad <= BODY.fit + 1e-9; rad += 0.05) { const n = Math.max(8, Math.round(2 * Math.PI * rad / 0.05)); for (let k = 0; k < n; k++) { const a = k / n * 2 * Math.PI; const X = r2(x + Math.cos(a) * rad), Z = r2(z + Math.sin(a) * rad); if (good(X, Z)) return [X, Z]; } }
     return null;
@@ -2635,6 +2653,24 @@
   // a type changed by someone else becomes a renovation; the households that moved in, a fact
   // (who takes a house its head left by dying: the partner, a child, a grandchild — the heir; anyone else moved in)
   const kinOf = (dead, v) => !!(dead && v && (dead.partner === v.id || v.mother === dead.id || v.father === dead.id || (dead.kids || []).includes(v.id) || [v.mother, v.father].some(pid => { const pa = G.S.villagers.get(pid) || G.S.dead.get(pid); return pa && (pa.mother === dead.id || pa.father === dead.id); })));
+  // the tavern's wealth (D-661, D-724): the step its record keeps (rec.q, 0 to 2 — what its plan lays out by: the round tables
+  // and the owner's chair of the rich, the long ones with benches of the poor) is its keeper's now — the coins of his house
+  // (G.Eco.purse) and the merchant house (its banner, h.elite) —, read through the doors of their owners and never written;
+  // judged at the turn of the day, a step up from TAV_Q's marks, down only well under them (a band: a purse about a mark does
+  // not turn it back and forth), one change in TAV_DAYS days at the most — a renovation of the record, with its fact
+  const TAV_Q = In.TAV_Q = [12, 40], TAV_DAYS = In.TAV_DAYS = 20;
+  In.tavernStep = function (b) {
+    const T = G.Taverna; const k = T && T.keeperOf ? T.keeperOf(b) : null; if (!k) return null;
+    const coins = G.Eco && G.Eco.purse ? G.Eco.purse(k) || 0 : 0; const h = G.Eco && G.Eco.homeOf ? G.Eco.homeOf(k) : null; const elite = !!(h && h.elite);
+    const now = b.ip.q | 0; const up = elite || coins >= TAV_Q[1] ? 2 : coins >= TAV_Q[0] ? 1 : 0;
+    const keep = elite ? 2 : coins >= TAV_Q[1] * 0.6 ? 2 : coins >= TAV_Q[0] * 0.5 ? 1 : 0;
+    return { up, keep, now, coins, elite, to: up > now ? up : keep < now ? keep : now };
+  };
+  function tavernWealth(b) {
+    const rec = b.ip; const w = In.tavernStep(b); if (!w || w.to === (rec.q | 0)) return;
+    let last = -Infinity; for (const f of rec.h) if (f[1] === 'riqueza') last = f[0]; if (G.S.day - last < TAV_DAYS) return;
+    rec.q = w.to; rec.r++; fact(b, 'riqueza', String(w.to));
+  }
   In.onNewDay = function () {
     const S = G.S;
     const heads = new Map(), dwell = new Map();
@@ -2649,6 +2685,8 @@
       if (!b.built) continue;
       // (the door: where its street is closed, or the way in no longer fits before it, it moves — doorRule)
       doorRule(b);
+      // (a tavern: its owner's wealth of now — D-661)
+      if (rec.t === 'taverna') tavernWealth(b);
       if (TYPES[b.type].use === 'casa') {
         const head = heads.get(b.id) || null; const hid = head ? head.id : 0; const n = dwell.get(b.id) || 0;
         // (the last of the household gone: empty from today — a house nobody lived in yet is only new —; given up after
@@ -2668,7 +2706,7 @@
   // a record broken or lost (a damaged save, a building of an older world): made again from the building as it stands
   function repair(b) {
     const r = b.ip; const ok = r && typeof r === 'object' && typeof r.f === 'string' && FAMS[r.f] && Number.isInteger(r.r) && typeof r.t === 'string' && SIDES.includes(r.s) && Array.isArray(r.h);
-    if (ok) { if (!Array.isArray(r.fx)) r.fx = []; if (!r.dr || typeof r.dr !== 'object') r.dr = {}; for (const k of ['hh', 'nm', 'vz', 'ab']) if (!Number.isFinite(r[k])) r[k] = 0; return false; }
+    if (ok) { if (!Array.isArray(r.fx)) r.fx = []; if (!r.dr || typeof r.dr !== 'object') r.dr = {}; for (const k of ['hh', 'nm', 'vz', 'ab']) if (!Number.isFinite(r[k])) r[k] = 0; if (r.q !== undefined && !(Number.isInteger(r.q) && r.q >= 0 && r.q <= 2)) delete r.q; return false; } // (a tavern's wealth: a step, or none — D-724)
     const t = TYPES[b.type] ? b.type : TYPES[b.origType] ? b.origType : null; if (!t) { delete b.ip; return false; }
     const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); if (b.type !== 'ruin') placeDoor(b); b.ip.h.push([G.S.day, 'migrado']); secure(b); return true;
   }

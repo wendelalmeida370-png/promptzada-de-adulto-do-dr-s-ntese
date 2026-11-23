@@ -60,7 +60,14 @@
     'fogo-chao': { name: 'Fogo de chão', w: 0.5, d: 0.5, h: 0.15, solid: 1, fire: 1, free: 1, chao: 1, spots: it => [{ use: 'cozinhar', a: 0, n: it.d / 2 + 0.4 }, { use: 'aquecer', a: 0, n: -(it.d / 2 + 0.4) }, { use: 'aquecer', a: it.w / 2 + 0.4, n: 0 }, { use: 'aquecer', a: -(it.w / 2 + 0.4), n: 0 }] },
     mesa: { name: 'Mesa', w: 1.1, d: 0.7, h: 0.75, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
     'mesa-baixa': { name: 'Mesa baixa', w: 0.9, d: 0.6, h: 0.35, solid: 1, free: 1, spots: it => [{ use: 'comer', a: 0, n: it.d / 2 + 0.4 }, { use: 'comer', a: 0, n: -(it.d / 2 + 0.4) }] },
-    banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }] },
+    // (one sitter every 0.7 m of it — the bench of before, 1.1 m, one, as it was; the tavern's, 1.4 m, two, D-720 —, each facing
+    // its front; the long one got onto from its front, from behind — it is stepped over, at a table — and from its ends)
+    banco: { name: 'Banco', w: 1.1, d: 0.35, h: 0.45, low: 1, wall: 1, spots: it => {
+      const k = Math.max(1, Math.floor((it.w + 0.02) / 0.7)); if (k < 2) return [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }];
+      const out = []; for (let q = 0; q < k; q++) { const a = -it.w / 2 + it.w * (q + 0.5) / k; out.push({ use: 'sentar', a, n: 0, on: 1 }, { use: 'acesso', a, n: it.d / 2 + 0.35 }, { use: 'acesso', a, n: -(it.d / 2 + 0.35) }); }
+      for (const s of [-1, 1]) out.push({ use: 'acesso', a: s * (it.w / 2 + 0.35), n: 0 });
+      return out;
+    } },
     // (where a household eats together — D-196. The table of a house and its benches, one piece: the board between two benches
     // along its depth — one bench, the board against the wall, where it is narrow: under 1.05 m across —; who eats sits on a
     // bench, one every half metre, facing the board, and gets onto it from its ends or over it from its outer side)
@@ -121,6 +128,39 @@
     // (the small stall of a shop cell: room behind it for the one who sells)
     banquinha: { name: 'Banca da loja', w: 1.1, d: 0.6, h: 0.9, solid: 1, free: 1, job: 1, show: 1, across: 'comprar', store: { dep: 'predio', key: 'inv', cap: 12 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
     balcao: { name: 'Balcão', w: 1.8, d: 0.6, h: 1.0, solid: 1, wall: 0, free: 1, job: 1, show: 1, across: 'comprar', store: { dep: 'predio', key: 'inv', cap: 16 }, spots: it => [{ use: 'vender', a: 0, n: -(it.d / 2 + 0.45) }, { use: 'comprar', a: 0, n: it.d / 2 + 0.5 }] },
+    // ---- the tavern (interiores 2.0, D-720): the measures of the contract (§4), the P2 models them ----
+    // (a seat at a table: who sits on it faces its front — the table —, the hips on its top (seat), and gets onto it from behind
+    // or from either side — one of them free is enough; at a table its front is the table's)
+    banquinho: { name: 'Banquinho', w: 0.4, d: 0.4, h: 0.45, seat: 0.45, low: 1, free: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: -(it.d / 2 + 0.35) }, { use: 'acesso', a: -(it.w / 2 + 0.35), n: 0 }, { use: 'acesso', a: it.w / 2 + 0.35, n: 0 }] },
+    // (the rich one's chair: its back at 0.95, the seat at 0.45 — the Greek klismos, the Roman cathedra, the Egyptian's of lion feet)
+    cadeira: { name: 'Cadeira', w: 0.5, d: 0.5, h: 0.95, seat: 0.45, low: 1, free: 1, spots: it => [{ use: 'sentar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: -(it.d / 2 + 0.35) }, { use: 'acesso', a: -(it.w / 2 + 0.35), n: 0 }, { use: 'acesso', a: it.w / 2 + 0.35, n: 0 }] },
+    // (the tables of a tavern's hall: no place of their own — who sits at one sits on the stools and the benches about it)
+    'mesa-redonda': { name: 'Mesa redonda', w: 0.9, d: 0.9, h: 0.74, solid: 1, free: 1, spots: () => [] },
+    'mesa-taverna': { name: 'Mesa comprida', w: 1.6, d: 0.8, h: 0.74, solid: 1, free: 1, spots: () => [] },
+    // (the shelf of the bar behind the counter, against the wall: what the keeper serves — the tavern's own shelf, b: —; three
+    // boards; the jars and amphorae it shows are the decoration's, P5)
+    'prateleira-bar': { name: 'Prateleira do bar', w: 1.8, d: 0.4, h: 1.9, solid: 1, wall: 1, tall: 1, store: { dep: 'predio', key: 'inv', cap: 12 }, spots: front('guardar', 0.4) },
+    // (the rack of the pointed amphorae, the barrel of staves and hoops — of wicker where the people has no iron, the P2's)
+    anforeira: { name: 'Anforeira', w: 1.2, d: 0.5, h: 1.1, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 10 }, spots: front('guardar', 0.4) },
+    barril: { name: 'Barril', w: 0.6, d: 0.6, h: 0.9, solid: 1, wall: 1, store: { dep: 'predio', key: 'inv', cap: 4 }, spots: front('guardar', 0.4) },
+    // (the masonry counter of the Roman and the classical taberna, in an L with its jars set in it, at the street's opening: its
+    // two arms are the solid of it — the long one along its back, the short one at one end: hand 1 its right, −1 its left, an L
+    // has two hands, and a plan mirrored takes the other —, the keeper inside the L, who is bought from across the short arm
+    // (or across the long one, where that is a room); parts: the arms in the piece's own frame, [a0, n0, a1, n1] — the grid, the
+    // walk and the body read them, the bounding rectangle the rest)
+    'balcao-alvenaria': { name: 'Balcão de alvenaria', w: 2.4, d: 1.6, h: 1.0, solid: 1, job: 1, show: 1, across: 'comprar', as: 'balcao', store: { dep: 'predio', key: 'inv', cap: 16 },
+      parts: it => { const h = it.hand === -1 ? -1 : 1; return [[-it.w / 2, -it.d / 2, it.w / 2, -it.d / 2 + 0.6], h > 0 ? [it.w / 2 - 0.6, -it.d / 2, it.w / 2, it.d / 2] : [-it.w / 2, -it.d / 2, -it.w / 2 + 0.6, it.d / 2]]; },
+      spots: it => { const h = it.hand === -1 ? -1 : 1; return [{ use: 'vender', a: -0.35 * h, n: -it.d / 2 + 0.6 + 0.45 }, { use: 'comprar', a: h * (it.w / 2 + 0.5), n: 0.15 }, { use: 'comprar', a: 0, n: -(it.d / 2 + 0.5) }]; } },
+    // (the fires of the peoples' taverns: the hearth with its hood up to the roof — the Roman's, the Greek's, the classical —, the
+    // clay oven of the Egyptian, the Aztec's stove with the comal; the Norse long fire in the middle of the hall, the only piece
+    // that stands free there on purpose, the benches about it: one cooks at either end of it)
+    lareira: { name: 'Lareira', w: 1.4, d: 0.6, h: 1.2, solid: 1, fire: 1, wall: 1, tall: 1, spots: front('cozinhar', 0.45) },
+    'forno-barro': { name: 'Forno de barro', w: 1.0, d: 1.0, h: 1.1, solid: 1, fire: 1, wall: 1, tall: 1, spots: front('cozinhar', 0.45) },
+    'fogao-comal': { name: 'Fogão com comal', w: 1.2, d: 0.7, h: 0.6, solid: 1, fire: 1, wall: 1, spots: front('cozinhar', 0.45) },
+    'fogo-comprido': { name: 'Fogo comprido', w: 3.0, d: 0.9, h: 0.3, solid: 1, fire: 1, free: 1, spots: it => [{ use: 'cozinhar', a: it.w / 2 + 0.45, n: 0 }, { use: 'cozinhar', a: -(it.w / 2 + 0.45), n: 0 }] },
+    // (the musician's corner: a low stage one plays on — the musician on it, got onto from its front or its sides. Not the
+    // harbour's loading floor, 'estrado': its own name)
+    'estrado-musico': { name: 'Estrado do músico', w: 1.6, d: 1.2, h: 0.25, low: 1, wall: 1, spots: it => [{ use: 'tocar', a: 0, n: 0, on: 1 }, { use: 'acesso', a: 0, n: it.d / 2 + 0.35 }, { use: 'acesso', a: -(it.w / 2 + 0.35), n: 0 }, { use: 'acesso', a: it.w / 2 + 0.35, n: 0 }] },
     // ---- the trades ----
     bancada: { name: 'Bancada', w: 1.5, d: 0.7, h: 0.85, solid: 1, wall: 1, job: 1, store: { dep: 'predio', key: 'inv', cap: 8 }, spots: front('trabalhar', 0.5) },
     'forja-fogo': { name: 'Forja', w: 1.3, d: 1.0, h: 0.85, solid: 1, fire: 1, wall: 1, tall: 1, job: 1, spots: front('forjar', 0.55) },
