@@ -107,12 +107,17 @@
   // hand of who drinks it, between the sips too, and the keeper carries the round's cups to the table, one a dose (the round of the
   // table filled at the counter: t.n1 a cup, the carry bound to the tavern's day, t.op) — P6, D-751, D-757. The cups of the round in
   // the hands: 0 none)
-  const roundOf = v => { const c = v.carry, t = v.task; if (!c || !t || !(c.n > EPS) || !c.op || c.op !== t.op || c.k === 'food') return 0;
-    if (t.type === 'tavern') return 1; if (t.type === 'atender') return Math.max(1, Math.min(4, Math.round(c.n / (t.n1 > 0 ? t.n1 : c.n)))); return 0; };
+  // (P7, D-768: and the plates of the meals the keeper carries to the table, one a meal — the plate is the tavern's, as the cup —; the
+  // round the god's body was served at a table — G.Taverna.holds —, the cup in its hand, the plate on the table before it: a round of
+  // the house, never a load in the arms)
+  const roundOf = v => { const c = v.carry, t = v.task; if (!c || !(c.n > EPS) || !c.op) return 0;
+    if (t && c.op === t.op) { if (t.type === 'tavern') return c.k === 'food' ? 0 : 1; if (t.type === 'atender') return Math.max(1, Math.min(4, Math.round(c.n / (t.n1 > 0 ? t.n1 : c.n)))); }
+    return G.Taverna && G.Taverna.holds && G.Possess && G.Possess.is && G.Possess.is(v) && G.Taverna.holds(v) ? 1 : 0; };
   Inv.roundOf = roundOf;
-  // (the round's cup in the hand — the place's, as the drink's —, what the hand held put away)
+  // (the round's cup in the hand — the place's, as the drink's —, what the hand held put away; the plate in the server's hand)
   function round(v, out) {
-    if (!roundOf(v) || (out.mao && It.def(out.mao).kind === 'caneca')) return; const key = made('caneca', G.Fac.idOfV(v), artsOf(v)); if (!key) return;
+    if (!roundOf(v)) return; const kind = v.carry.k !== 'food' ? 'caneca' : v.task && v.task.type === 'atender' ? 'prato' : null; if (!kind) return;
+    if (out.mao && It.def(out.mao).kind === kind) return; const key = made(kind, G.Fac.idOfV(v), artsOf(v)); if (!key) return;
     const o = out.mao; out.mao = key; if (!o) return; const g = It.guarda(o); const s = g && !out[g] && It.fits(o, g) ? g : STOWS.find(x => !out[x] && It.fits(o, x)); if (s) out[s] = o;
   }
   Inv.playing = playing;
@@ -223,11 +228,11 @@
     const e = v.equip && typeof v.equip === 'object' ? v.equip : null, b = v.mochila && typeof v.mochila === 'object' ? v.mochila : null;
     const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0;
     let same = !!m.out && m.v === v && m.act === v.act && m.role === v.role && m.unit === v.unit && m.arm === v.arm && m.elite === v.elite && m.cap === !!v.captive
-      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg) && m.rd === roundOf(v);
+      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg) && m.rd === roundOf(v) && m.rk === (c ? v.carry.k : null);
     if (same && e) for (let i = 0; i < SLOTS.length; i++) if (m.es[i] !== (e[SLOTS[i]] || null)) { same = false; break; }
     if (same) { let n = 0; if (b) for (const k in b) if (b[k] > EPS) { if (m.bk[n] !== k || m.bn[n] !== b[k]) { same = false; break; } n++; } if (same && n !== m.bl) same = false; }
     if (same) return m.out;
-    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg); m.rd = roundOf(v);
+    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg); m.rd = roundOf(v); m.rk = c ? v.carry.k : null;
     m.e = !!e; m.kit = !!(e && e.kit); m.es = m.es || new Array(SLOTS.length); for (let i = 0; i < SLOTS.length; i++) m.es[i] = e ? e[SLOTS[i]] || null : null;
     m.bk = m.bk || []; m.bn = m.bn || []; let n = 0; if (b) for (const k in b) if (b[k] > EPS) { m.bk[n] = k; m.bn[n] = b[k]; n++; } m.bl = n;
     m.out = Inv.held(v); return m.out;

@@ -125,10 +125,10 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 |---|---|---|
 | **bronze**, **ferro** | uma das **ferramentas** (machado, picareta, pá, enxada, foice, martelo, faca, vara, rede, remo; os grilhões de ferro: ½) ou das **armas** (espada, lança, flecha — 20 a cada uma —, escudo, elmo, couraça) **daquele metal** do armazém (`of: 'bronze'`) | a arte do metal **e** o metal tido |
 | **pedra** | a pedra e a madeira do armazém (o machado: ½ + ½; a lança: ¼ de pedra e ¾ de madeira; a faca: ¼ de pedra…) | sempre |
-| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
+| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1; o prato torneado: 0,15) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
 | **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼; a bola de vime: 0,1; os grilhões de corda: 0,1) | sempre |
 | **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15); os instrumentos (P7, D-764), o couro e a madeira (a lira: 0,1 de couro — a caixa coberta e as cordas de tripa — e 0,3 de madeira; o tambor: 0,3 de couro e 0,6 de madeira) | **só quem teve couro** (caçou ou abateu: o couro e a tripa são do mesmo bicho) |
-| **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
+| **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼; o prato de barro: 0,3) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
 
 - **O armazém dá o que a divisão dele tem** (`G.Inv.offer` / `Inv.make`): o melhor material de que o armazém tem com que fazer a coisa
@@ -140,6 +140,11 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   a bola de couro onde houve couro; senão a madeira, a corda e o vime de sempre. Nenhuma é arma. A caneca e os grilhões são **do
   lugar** (a casa onde se bebe, quem leva o preso), não da pessoa: passam também a quem tem coisas de verdade — o corpo do deus —,
   no mesmo material (`PLACE_TOOL`, L-1778); a ferramenta do ofício, não (D-426).
+- **O prato da taverna** (P7, D-768): o prato que o taverneiro leva à mesa (a comida de uma rodada nas mãos dele, `G.Inv.roundOf`)
+  é a coisa do catálogo `prato`, pelo kit, no material que o povo teve — o barro da cerâmica da olaria, senão a madeira torneada —,
+  como a caneca; nunca entra no armazém como coisa. A comida que vai nele é a da prateleira da taverna, da parte que o corpo pediu
+  (`of`: o arroz, o peixe — a origem da comida, 20h), e o corpo a come pelo livro (`T.bite`, «refeicao»): o que foi comido sai das
+  mãos dele com as suas partes.
 - **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
   instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a
   **lira** (os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa) dos outros — do couro e da tripa do

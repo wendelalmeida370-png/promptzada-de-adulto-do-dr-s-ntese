@@ -318,7 +318,9 @@
     if (sw && st && st.stamina <= 0 && !drownTold) { drownTold = true; IU.toast('Sem fôlego: você está se afogando!', 4); }
     if (!sw) { lowTold = false; drownTold = false; }
     hud.classList.toggle('drowning', !!(sw && st && st.stamina <= 0));
-    $('.ih-carry', hud).textContent = v.carry && v.carry.n > 0 ? `Carregando ${v.carry.n} de ${G.Eco ? G.Eco.name(v.carry.k) : v.carry.k}` : '';
+    // (what the tavern served the body is no load: «À mesa: …» — P7, D-768)
+    { const tv = v.carry && v.carry.n > 0 && G.Taverna && G.Taverna.holds && G.Taverna.holds(v) ? G.Taverna.corpo(v) : null;
+      $('.ih-carry', hud).textContent = tv && tv.hold ? `${tv.seat ? 'À mesa' : 'Nas mãos'}: ${tv.hold.nome}` : v.carry && v.carry.n > 0 ? `Carregando ${v.carry.n} de ${G.Eco ? G.Eco.name(v.carry.k) : v.carry.k}` : ''; }
     $('.ih-time', hud).textContent = `Dia ${S.day} · ${hourOf(S.time)}${S.weather && S.weather.rain > 0.2 ? ' · chuva' : ''}`;
     $('.ih-place', hud).textContent = w.txt;
     // the compass: the strip turns with the eye
@@ -486,7 +488,7 @@
   function aimFrame(rdt, v) {
     // (a panel over the middle of the screen — the bag, the things kept —: what lies behind it, the news, the hint, the prompt,
     // steps out of sight, and the world's answers rise above it: the panel is read, not the screen behind it)
-    { const on = !!(G.Modes.panelIs('mochila') || G.Modes.panelIs('guardados')); if (root._po !== on) { root._po = on; root.classList.toggle('panel-on', on); } }
+    { const on = !!(G.Modes.panelIs('mochila') || G.Modes.panelIs('guardados') || G.Modes.panelIs('cardapio')); if (root._po !== on) { root._po = on; root.classList.toggle('panel-on', on); } } // (and the tavern's menu: cardapio-ui.js, P7)
     if (G.GuardUI) G.GuardUI.frame(rdt); // (the screen of what is kept, on the body's beat: guardados-ui.js)
     bestT -= rdt;
     if (bestT <= 0) { bestT = 0.12; const c = look(v); renderPrompt(c); }

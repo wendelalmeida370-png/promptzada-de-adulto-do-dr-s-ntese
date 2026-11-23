@@ -67,6 +67,8 @@
     // the things of daily life the gestures hold (22c, D-612): the cup of who drinks, the children's ball, the bonds of who is led
     // bound, the crutch of who lost a leg — each in what its people has (G.Origem.matOK), none a weapon (no dano: the fight's fists)
     caneca: { nome: 'caneca', plural: 'canecas', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.3, bem: null, vale: 0, tags: ['beber'], mats: ['madeira', 'barro'], desc: 'Para a cerveja, o vinho e a água: na taverna, na festa, no brinde.' },
+    // (P7, D-768: the plate the keeper carries to the table — one in a hand, held by its rim —, of the tavern's own, as the cup)
+    prato: { nome: 'prato', plural: 'pratos', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.4, bem: null, vale: 0, tags: ['servir'], mats: ['madeira', 'barro'], desc: 'O prato da taverna: o taverneiro o traz à mesa com a comida da casa.' },
     bola: { nome: 'bola', plural: 'bolas', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.25, bem: null, vale: 0, tags: ['brincar'], mats: ['vime', 'couro'], desc: 'O brinquedo das crianças: de vime trançado, ou de couro cosido e cheio.' },
     grilhoes: { nome: 'grilhões', plural: 'grilhões', tipo: 'ferramenta', maos: 2, slots: ['mao'], pega: 'algema', peso: 1.6, bem: 'ferramentas', vale: 0.5, tags: ['prender'], mats: ['corda', 'ferro'], desc: 'Prendem as mãos de quem é levado: corda trançada, ou duas argolas de ferro com a corrente.' },
     muleta: { nome: 'muleta', plural: 'muletas', tipo: 'ferramenta', maos: 1, slots: ['mao', 'outra'], pega: 'muleta', peso: 1.2, bem: null, vale: 0, tags: ['apoio'], mats: ['madeira'], desc: 'Debaixo do braço, faz as vezes da perna que falta.', feito: { wood: 0.5 } },
@@ -97,7 +99,7 @@
   It.SLOT_NOME = { mao: 'mão', outra: 'outra mão', costas: 'costas', cinto: 'cinto', cabeca: 'cabeça', corpo: 'corpo' };
   // what each kind of thing is called as a kind, and what each tag says it is good for (the screen's card)
   It.TIPO_NOME = { ferramenta: 'Ferramenta', arma: 'Arma', escudo: 'Escudo', arco: 'Arma de tiro', municao: 'Munição', protecao: 'Proteção', luz: 'Luz', recipiente: 'Recipiente', brinquedo: 'Brinquedo', instrumento: 'Instrumento', bem: 'Bem' };
-  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', tocar: 'tocar música', bem: 'um bem do armazém' };
+  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', tocar: 'tocar música', servir: 'servir a comida', bem: 'um bem do armazém' };
 
   // ------------------------------ reading a key ------------------------------
   // a key: 'machado' (its plainest material) or 'machado.ferro'
@@ -184,12 +186,13 @@
     martelo: { stone: 0.5, wood: 0.25 }, faca: { stone: 0.25 }, vara: { wood: 0.5 }, rede: { wood: 1 }, remo: { wood: 1 },
     lanca: { stone: 0.25, wood: 0.75 }, clava: { wood: 1 }, arco: { wood: 1 }, flecha: { stone: 0.0125, wood: 0.0125 }, funda: { wood: 0.25 }, escudo: { wood: 1 },
     caneca: { wood: 0.1 }, bola: { wood: 0.1 }, grilhoes: { wood: 0.1 }, // (22c: a cup carved of wood; the withies of a ball, the cord of a binding)
+    prato: { wood: 0.15 }, // (P7: a plate turned of wood)
   };
   const HIDE = { elmo: 1, couraca: 3, bola: 0.15 };
   // (a thing of the beast's hide and gut and of wood: the instruments — P7, D-764 — the hide of the store and its wood)
   const BEAST = { lira: { couro: 0.1, wood: 0.3 }, tambor: { couro: 0.3, wood: 0.6 } };
   // (the fired clay of a thing is the pottery's ware of the store — the good ceramica: 22c, D-612)
-  const CLAY = { caneca: 0.25 };
+  const CLAY = { caneca: 0.25, prato: 0.3 };
   It.METALS = { bronze: 1, ferro: 1 };
   const feitoCache = new Map();
   It.feitoDe = function (key) {

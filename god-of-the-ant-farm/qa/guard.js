@@ -29,7 +29,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -483,7 +483,7 @@ for (const f of files) if (f !== 'possess.js') src[f].forEach((line, k) => {
   if (KEN_WRITE.test(line)) fails.push(`sabe: ${f}:${k + 1} escreve o registro do que a pessoa sabe (.ken) fora de possess.js: ${line.trim().slice(0, 110)}`); });
 // 56. "a tela do corpo pergunta à porta" (D-171, D-172): nas telas do corpo, as moedas de uma casa e o nome de um bairro só
 // saem numa linha que pergunta ao G.Possess.knows; e um encontro só se pede ao mundo (Possess.apply) ou no feito (activity.js)
-const BODY_SCREEN = ['incui.js', 'interact.js', 'diario-ui.js'];
+const BODY_SCREEN = ['incui.js', 'interact.js', 'diario-ui.js', /* P7, D-768: o cardápio da taverna */ 'cardapio-ui.js'];
 const ASKS = /\bknows\.|\bK\.(house|stock|person|name|call|town|district|where|how)\(/;
 // (a linha, ou uma das 8 antes dela, abre um G.Possess.apply( — o encontro do interact.js fica 6 linhas depois dele)
 const inApply = (f, k) => { for (let j = k; j >= Math.max(0, k - 8); j--) if (/\bPossess\.apply\(/.test(src[f][j])) return true; return false; };
@@ -1695,7 +1695,7 @@ for (const f of files) { if (f === 'soc-boatos.js') continue; src[f].forEach((l,
     for (const [k, l, c] of b) if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\b(Lacos|L)\.(ato|marca|desmarca|corte)\(|\b(Fama|F)\.(feito|desfeito|lembra|lembraPovo|respondida)\(|\b(ensina|semeia|carry|desmente|distort|fama|st)\(|\bB\.(nasce|ensina|leva|porto|fofoca|fala|cala)\(|\bsetTask\(|\b(v|o|r|w|e|sr|set)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--|\|=|&=)|\bw\[[^\]]+\]\s*(=(?!=)|\+=|-=|\|=|&=)/.test(c)) fails.push(`as leituras dos boatos são puras: soc-boatos.js:${k + 1} (${nm}) sorteia ou escreve (D-621): ${l.trim().slice(0, 110)}`); } }
 // 230. "o corpo ouve pela porta" (D-623): a tela do corpo sabe dos boatos só pelo G.Possess.knows (boatos, hearsNow) — nem o incui.js
 // nem outra tela leem o G.Boatos ou o S.boatos —, e a faixa de notícia de outra cidade passa pelo hearsNow
-{ const UIF = ['incui.js', 'interact.js', 'diario-ui.js', 'inv-ui.js', 'guardados-ui.js', 'combate-ui.js', 'trabalho-ui.js'];
+{ const UIF = ['incui.js', 'interact.js', 'diario-ui.js', 'inv-ui.js', 'guardados-ui.js', 'combate-ui.js', 'trabalho-ui.js', 'cardapio-ui.js'];
   for (const f of UIF) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Boatos\b|\.boatos\b(?!\s*\()/.test(c) && !/knows\.boatos/.test(c)) fails.push(`o corpo ouve pela porta: ${f}:${k + 1} lê os boatos sem o G.Possess.knows (D-623): ${l.trim().slice(0, 110)}`); });
   const iu = (src['incui.js'] || []).join('\n'); if (!/knows\.hearsNow/.test(iu) || !/knows\.boatos\(/.test(iu)) fails.push('o corpo ouve pela porta: a faixa de notícia do incui.js não pergunta ao knows.hearsNow e ao knows.boatos (D-623)'); }
 // 231. "o boato sem o acaso do mundo" (D-620): o js/soc-boatos.js não sorteia — quem sabe, a versão e o culpado trocado são do
@@ -2156,7 +2156,7 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   if (!/D\.move\('b:' \+ b\.id, 'v:' \+ v\.id, t\.k, n, \{ op: op\.id, code: 'taverna-caneca', by: v\.id, to: 'b:' \+ b\.id,/.test(tv)) fails.push('a caneca vai à mesa pelo livro: o taverneiro não enche a caneca da prateleira para as mãos pelo livro (D-763)');
   if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
   if (!/code: 'taverna-volta'/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a caneca que ninguém tomou não volta à prateleira pelo livro (D-763)');
-  if (!/leg\(op, v\) \{ const t = v\.task; return t && t\.type === 'atender' && t\.op === op\.id && t\.st >= 2 && t\.st <= 5 \? 'servir' : null; \}/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a ronda de quem serve não é uma perna da operação do dia (D-094, D-763)'); }
+  if (!/leg\(op, v\) \{ const t = v\.task; return t && t\.type === 'atender' && t\.op === op\.id && t\.st >= 2 && t\.st <= \d+/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a ronda de quem serve não é uma perna da operação do dia (D-094, D-763)'); }
 // 314. "o bebê no colo em todo prédio" (D-660): o repartidor dá ao bebê de colo o colo de quem o carrega em todo prédio, antes de
 // qualquer lugar da planta — nunca o fogão, o banco ou a piscina para um bebê sozinho
 { const ir = (src['interiors.js'] || []).join('\n');
@@ -2173,6 +2173,28 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   for (const k of ['lira', 'tambor']) if (!new RegExp(`\\b${k}: \\{[^\\n]*tags: \\['tocar'\\], mats: \\['couro'\\]`).test(it)) fails.push(`o instrumento tem origem: o ${k} do catálogo sem a etiqueta «tocar» e o material do bicho (D-764)`);
   if (!/const BEAST = \{ lira: \{ couro: [\d.]+, wood: [\d.]+ \}, tambor: \{ couro: [\d.]+, wood: [\d.]+ \} \};/.test(it)) fails.push('o instrumento tem origem: o instrumento sem o couro e a madeira de que é feito (G.Itens.feitoDe, D-764)');
   if (!/bound: 'grilhoes', play: 'lira' \};/.test(iv) || !/if \(t === 'lira'\) t = instrumentOf\(v\);/.test(iv)) fails.push('o instrumento tem origem: o kit não dá a quem toca o instrumento do povo (ACT_TOOL.play, D-764)'); }
+// 317. "o pedido do corpo vai pelas mãos" (D-767): as portas do corpo à mesa da taverna (T.order, T.bite, T.dismiss, T.call,
+// T.counter) só respondem no passo do mundo e só ao corpo do deus; fora do act-taverna.js, quem as chama as chama de dentro de um
+// G.Possess.apply (na mesma linha) ou do contato de um ato do corpo (op: w =>, que o avatar.js pede pelo Possess.apply) — a tela
+// do cardápio e as mãos à mesa nunca mudam o mundo por conta própria
+{ const tv = (src['act-taverna.js'] || []).join('\n');
+  for (const n of ['order', 'dismiss', 'call', 'counter', 'bite']) if (!new RegExp(`T\\.${n} = function \\(v[^)]*\\) \\{\\n\\s*if \\(!G\\.inSim \\|\\| !v \\|\\| !A\\.isBody\\(v\\)\\) return`).test(tv)) fails.push(`o pedido do corpo vai pelas mãos: o T.${n} do act-taverna.js responde fora do passo do mundo ou a quem não é o corpo (D-767)`);
+  const CALL = /\b(?:Taverna|T\(\))\.(order|bite|dismiss|call|counter)\(/;
+  for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (CALL.test(c) && !/Possess\.apply\(|\bop: w =>/.test(c)) fails.push(`o pedido do corpo vai pelas mãos: ${f}:${k + 1} chama a porta do corpo à mesa fora do G.Possess.apply (D-767): ${line.trim().slice(0, 110)}`); }); }
+// 318. "a entrada do corpo é da taverna" (D-767): a entrada do corpo às mesas (corpo: 1), o pedido dele (m.pedido) e quem o atende
+// (m.srv) só o act-taverna.js escreve — a tela lê pelo T.corpo / T.carta, que devolvem cópias
+for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.(?:pedido|srv)\s*=(?!=)|\bcorpo:\s*1\b/.test(c)) fails.push(`a entrada do corpo é da taverna: ${f}:${k + 1} escreve a entrada do corpo às mesas fora do act-taverna.js (D-767): ${line.trim().slice(0, 110)}`); });
+// 319. "o cardápio só lê, e o prato é de verdade" (D-768, D-440): a tela do cardápio não move bens (nada de G.Depot.move / use / swap
+// / make / drop nem addStock) e só diz as moedas numa linha que pergunta ao G.Possess.knows.house; o prato que o taverneiro leva à
+// mesa é a coisa do catálogo (prato: de madeira ou de barro, a receita no itemforma.js), posta na mão dele pelo kit (G.Inv), nunca
+// uma carga nos braços
+{ const cu = src['cardapio-ui.js'] || [], it = (src['itens.js'] || []).join('\n'), iv = (src['inventario.js'] || []).join('\n'), fo = (src['itemforma.js'] || []).join('\n');
+  if (!cu.length) fails.push('o cardápio só lê: sem o js/cardapio-ui.js (D-768)');
+  cu.forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:Depot|D\(\))\.(?:move|use|swap|make|drop)\(|\baddStock\(/.test(c)) fails.push(`o cardápio só lê: cardapio-ui.js:${k + 1} move bens (D-768): ${line.trim().slice(0, 110)}`);
+    if (/'moedas'/.test(c) && !/knows\.house\(/.test(c)) fails.push(`o cardápio só lê: cardapio-ui.js:${k + 1} diz as moedas sem perguntar ao G.Possess.knows.house (D-768): ${line.trim().slice(0, 110)}`); });
+  if (!/\bprato: \{ nome: 'prato'[^\n]*pega: 'copo'[^\n]*mats: \['madeira', 'barro'\]/.test(it) || !/const CLAY = \{[^}]*prato: [\d.]+/.test(it)) fails.push('o prato é de verdade: o prato do catálogo sem a pega, o material e o barro de que é feito (D-768)');
+  if (!/R\.prato = \(M, mat\) =>/.test(fo)) fails.push('o prato é de verdade: o prato sem a sua receita no itemforma.js (D-768)');
+  if (!/v\.task && v\.task\.type === 'atender' \? 'prato'/.test(iv)) fails.push('o prato é de verdade: o kit não põe o prato na mão de quem o leva à mesa (G.Inv, D-768)'); }
 // 303. "toca-se o que se tem na mão; a rodada é caneca" (D-757, D-758): o gesto de tocar é escolhido pelo instrumento que o inventário
 // põe na mão (G.Vida3D.instrument, a etiqueta 'tocar'), nunca pelo ofício nem pelo povo; e a rodada da taverna nas mãos é desenhada
 // como as canecas do inventário (G.Inv.roundOf), não como carga

@@ -46,6 +46,7 @@
     vender: { s: 'pregao', q: 'curso', cada: 6, v: 0.55, alc: 1.1, fam: 'troca' },
     comprar: still('o freguês olha a banca; a fala dele é a do regateio (pechinchar)'),
     comer: still('come de boca fechada'),
+    comerMesa: still('come à mesa da taverna, de boca fechada'), // (P7, D-769: the plate on the table, the hand to the mouth)
     sentar: still('quem está sentado não soa'),
     banhar: { s: 'slosh', q: 'curso', cada: 2.6, v: 0.4, alc: 0.6, fam: 'banho' },
     assistir: still('a plateia assiste calada: soa quem está no palco'),
