@@ -26,7 +26,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -2021,5 +2021,53 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   if (/\b(?:k|h|b|T|G)\.[\w.]+\s*=[^=]|\bG\.Depot\.move\(/.test(f)) fails.push('a riqueza da taverna: o In.tavernStep escreve no mundo (D-724)');
   if (!/rec\.q = w\.to; rec\.r\+\+; fact\(b, 'riqueza', String\(w\.to\)\);/.test(ir)) fails.push('a riqueza da taverna: o degrau muda sem a reforma do registro e o fato (D-724)');
   for (const f2 of files) if (f2 !== 'interiors.js' && /^(int-|act-)/.test(f2)) (src[f2] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:rec|ip|b\.ip)\.q\s*=[^=]/.test(c)) fails.push(`a riqueza da taverna: ${f2}:${k + 1} escreve o degrau do registro (só o interiors.js: D-724)`); }); }
+// 290. "o que o prédio mostra só se lê" (D-740, D-651): o G.Atmos.within (o within e o withinOf do atmos.js) só lê o mundo — nenhuma
+// atribuição a um campo do mundo (do prédio, da pessoa, do povo, da operação), nenhum movimento do livro (G.Depot.move / take / put)
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('At.within = function (b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!f || !/function withinOf\(b\)/.test(f)) fails.push('o que o prédio mostra só se lê: o atmos.js sem o G.Atmos.within e o withinOf (D-740)');
+  f.split('\n').forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:b|v|f|h|op|m|S|G\.S|I)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c) || /\bG\.Depot\.(?:move|take|put|give)\(|\bD\.(?:move|take|put|give)\(/.test(c)) fails.push(`o que o prédio mostra só se lê: atmos.js (within) escreve no mundo: ${c.trim().slice(0, 90)} (D-740)`); }); }
+// 291. "a decoração tem causa, nunca sorteio" (D-651, D-741): no within e no dentro3d.js nenhum acaso — nem o do mundo (G.R, rr, ri,
+// pick, chance, shuffle) nem o do que só se vê (G.VR, vrr, vri, vpick, vchance, vshuffle), nem Math.random —; a escolha entre jeitos
+// verdadeiros é do G.hash do id
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('At.within = function (b) {'), j = at.indexOf('// ------------------------------ in words', i);
+  const parts = [['atmos.js (within)', i < 0 ? '' : at.slice(i, j)], ['dentro3d.js', (src['dentro3d.js'] || []).join('\n')]];
+  for (const [n, f] of parts) f.split('\n').forEach(l => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(?:R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`a decoração tem causa, nunca sorteio: ${n} tira de um acaso: ${c.trim().slice(0, 90)} (D-741)`); });
+  if (!/\bG\.hash\(/.test(parts[1][1])) fails.push('a decoração tem causa, nunca sorteio: o dentro3d.js não escolhe pelo G.hash do id (D-741)'); }
+// 292. "o dentro3d.js só desenha" (D-742): ele não escreve no mundo (nenhum campo de um prédio, de uma pessoa, da planta, de uma peça
+// nem do G.S) e chega ao que o prédio tem só pelo G.Atmos.within — nunca lê o livro, o armazém nem a origem por conta própria
+{ const dt = src['dentro3d.js'] || [];
+  dt.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(?:b|v|p|it|pl|q|W|G\.S)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o dentro3d.js só desenha: dentro3d.js:${k + 1} escreve num campo do mundo ou da planta (D-742)`);
+    if (/\bG\.(?:Depot|Origem|Eco)\.|\.inv\b|\.pantry\b|f\.stock\b/.test(c)) fails.push(`o dentro3d.js só desenha: dentro3d.js:${k + 1} lê o que o prédio tem por conta própria, fora do G.Atmos.within (D-742)`); });
+  if (!dt.some(l => /G\.Atmos\.within\(b\)/.test(l))) fails.push('o dentro3d.js só desenha: o dentro3d.js não pergunta ao G.Atmos.within (D-742)'); }
+// 293. "a coisa pela porta" (D-743): só o dentro3d.js lê as coisas da decoração pelo nome ('deco-…'); o resto pergunta ao G.Dentro3D
+for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]deco-/.test(c)) fails.push(`a coisa pela porta: ${f}:${k + 1} lê uma coisa da decoração pelo nome (é do G.Dentro3D, D-743)`); }); }
+// 294. "as coisas são do Blender" (D-743, D-745): o js/decomesh.js é escrito pelo arte/blender/deco.py — o cabeçalho o diz, o script
+// existe e cada linha de modelo é como ele a escreve
+{ const dm = src['decomesh.js'] || []; const root = path.resolve(dir, '..');
+  if (!dm.length) fails.push('as coisas são do Blender: falta o js/decomesh.js (D-743)');
+  if (!fs.existsSync(path.join(root, 'arte', 'blender', 'deco.py'))) fails.push('as coisas são do Blender: falta o arte/blender/deco.py que escreve o js/decomesh.js (D-743)');
+  if (dm.length && !/made in Blender by arte\/blender\/deco\.py/.test(dm.slice(0, 4).join('\n'))) fails.push('as coisas são do Blender: o js/decomesh.js sem o cabeçalho de quem o gera (D-743)');
+  dm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["deco-[\w-]+(@1)?"\] = \{.*\};$/.test(l)) fails.push(`as coisas são do Blender: decomesh.js:${k + 1} não é a linha de uma coisa como o deco.py a escreve (D-743)`); });
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'); const iM = html.indexOf('src="js/mesh3d.js"'), iD = html.indexOf('src="js/decomesh.js"'), iT = html.indexOf('src="js/dentro3d.js"');
+  if (!(iM >= 0 && iM < iD && iD < iT)) fails.push('as coisas são do Blender: o index.html não carrega o decomesh.js entre o mesh3d.js e o dentro3d.js (D-743)'); }
+// 295. "a decoração entra pelo desenho dos móveis" (D-742): o build3d.js põe as coisas pelo G.Dentro3D.draw no grupo dos móveis (com
+// as malhas deles: vão juntas) e pede o redesenho pelo G.Dentro3D.step a cada quadro de um interior aberto — nada mais da decoração ali
+{ const b3 = (src['build3d.js'] || []).join('\n');
+  if (!/if \(G\.Dentro3D && G\.Dentro3D\.draw\) G\.Dentro3D\.draw\(o, grp, meshes\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: o makeItems do build3d.js não chama o G.Dentro3D.draw(o, grp, meshes) (D-742)');
+  if (!/stepOpen\(o, rdt, focus\); if \(G\.Dentro3D && G\.Dentro3D\.step\) G\.Dentro3D\.step\(o\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: o insideTick do build3d.js não pede o redesenho ao G.Dentro3D.step(o) (D-742)'); }
+// 296. "coisa nova chega com a sua causa" (D-744): toda coisa do arte/blender/deco.py tem a sua regra de causa no verificador
+// (qa/dentro-inv.js, CAUSA) — uma coisa sem causa conferida não entra
+{ const root = path.resolve(dir, '..'); const py = fs.existsSync(path.join(root, 'arte', 'blender', 'deco.py')) ? fs.readFileSync(path.join(root, 'arte', 'blender', 'deco.py'), 'utf8') : '';
+  const inv = fs.existsSync(path.join(root, 'qa', 'dentro-inv.js')) ? fs.readFileSync(path.join(root, 'qa', 'dentro-inv.js'), 'utf8') : '';
+  const i = inv.indexOf('const CAUSA = {'), j = inv.indexOf('\n  };', i); const causa = i < 0 ? '' : inv.slice(i, j);
+  if (!causa) fails.push('coisa nova chega com a sua causa: o qa/dentro-inv.js sem a tabela CAUSA (D-744)');
+  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
+// 297. "o material é o que o povo teve" (D-440, D-744): o within diz o barro, o metal e o pano pelas portas da origem e da roupa
+// (G.Origem.matOK, artsOf) — nunca pela arte sozinha —, e o dentro3d.js pinta o barro, o metal e o pano pelo que o within diz
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!/O\.matOK\(fid, m, known\)/.test(f) || !/ok\('barro'\)/.test(f) || !/ok\('ferro'\)/.test(f) || !/artsOf\(f\)\.weave/.test(f)) fails.push('o material é o que o povo teve: o within não pergunta o barro, o metal e o pano ao G.Origem.matOK e ao artsOf (D-744)');
+  if (/known\.(?:ferro|bronze)|\.tech\.known\.\w+\s*!==/.test(f)) fails.push('o material é o que o povo teve: o within lê a arte de um metal sozinha (D-744)');
+  const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); if (/\.tech\b|\.matOK\(|G\.Origem\./.test(dt)) fails.push('o material é o que o povo teve: o dentro3d.js decide o material por conta própria, fora do within (D-744)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

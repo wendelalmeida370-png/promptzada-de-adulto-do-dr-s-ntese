@@ -23,7 +23,7 @@
   // (one pass over the people for every question of the same instant of the world: who is inside each building — awake, at
   // the house's fire, cooking —, who has each house for home and their trades)
   let cen = null, cenS = null, cenK = -1, cenN = -1;
-  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); now.clear(); nowS = null; wet.clear(); };
+  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); now.clear(); nowS = null; wet.clear(); win.clear(); winS = null; };
   G.worldHooks.push(drop);
   At.flush = drop; // (for the proofs: the world changed by hand within the same instant)
   function census() {
@@ -266,6 +266,116 @@
   At.odd = id => hh(id, 41) < 0.08;
   // how drunk one is, 0 to 1: the tavern's rounds and the wine of the wells leave v.drunk, the instant it wears off
   At.drunk = function (v) { const S = G.S; if (!S || !v || !(v.drunk > S.clock)) return 0; return G.clamp(0.45 + (v.drunk - S.clock) / 120, 0.45, 1); };
+
+  // ------------------------------ what a building shows inside (the interiors 2.0, the front P5: D-740 to D-749) ------------------------------
+  // The rule above all (the owner, 23/11/2026; D-651): what is seen inside a building is there because the world has it — the
+  // drink is the jars of its book, the food is the parts of its store (G.Origem: the ham where the meat came, the braid where the
+  // garden's came, the bread where the grain is a bread's), the cups and the plates of who sits at the tables are what was
+  // served them, the cloth is a people's that weaves, the metal of a pot a people's that has it, the lamp lit by someone awake in
+  // the dark with something to burn, the rug and the hanging of a house that is rich now, the marks of charcoal on a tavern's wall
+  // the rounds of its years, the cobweb of a house old and uncared for. Each thing with its cause, in words (why) — nothing that
+  // the people could not have (nada vem do nada, D-440). Pure: it reads the world, writes nothing of it, draws on no chance; the
+  // choices between ways that are all true are the drawing's, by the building's id (G.Dentro3D). The same world, the same answer
+  // (a record a building and an instant of the world, kept for that instant).
+  const POURS = ['vinho', 'mel', 'cerveja', 'pulque']; // (what a tavern pours: tavern.js, its people's first)
+  const CEREAL_BREAD = { trigo: 1, cevada: 1, sorgo: 1 }; // (the grains a loaf is baked of; the rice is boiled, the maize made into cakes)
+  // (the vessel each drink stands in on a shelf — tavern.js's names: the amphora of wine, the jar of beer, the pot of mead, the
+  // gourd of pulque —, the one a unit of it is)
+  const VESSEL = { vinho: 'anforeta', cerveja: 'jarra', mel: 'pote', pulque: 'cabaca', azeite: 'anforeta', oleo: 'anforeta' };
+  // (the goods of a house that show, and what they show as: its pots, its cloth, its cheese, its dried meat and fish, its oil, wine
+  // and honey, its pelts)
+  const HOUSE_GOODS = { ceramica: 'potes', tecido: 'pano', queijo: 'queijo', carne_seca: 'presunto', bacalhau: 'peixe-seco', atum: 'peixe-seco', azeite: 'anforeta', vinho: 'anforeta', mel: 'pote', peles: 'pele', pele_rara: 'pele' };
+  const FOODS = Object.freeze(['trigo', 'cevada', 'sorgo', 'arroz', 'milho', 'carne', 'peixe', 'marisco', 'horta', 'fruta', 'ovos', 'leite', 'mel', 'azeite']);
+  // (the dark in which a lamp is lit: the night, and the end of the evening)
+  const darkHour = () => G.isNight() || (G.isEvening() && G.S.time > 0.66);
+  // how rich a building is now (D-661: the wealth inside is today's, never the land's at its founding): 0 poor, 1 middling, 2
+  // rich — a house by its coins and its merchant's flag; a tavern by its keeper's house; the seat of who rules, rich; any other
+  // by the worth of its ground today (G.Urban's portrait of the day). The same thresholds as the furniture's (G.Movel3D.rico)
+  const ofHouse = h => (!h ? 1 : h.elite ? 2 : (h.coin || 0) >= 150 ? 2 : (h.coin || 0) >= 40 ? 1 : 0);
+  At.rich = function (b) {
+    const S = G.S; if (!S || !b) return 1;
+    if (housing(b)) return ofHouse(b);
+    if (G.Casa && G.Casa.isSeat && G.Casa.isSeat(b)) return 2;
+    if (b.type === 'taverna' && G.Taverna && G.Taverna.keeperOf) { const k = G.Taverna.keeperOf(b); return k && k.home ? ofHouse(S.buildings.get(k.home)) : 1; }
+    const U = G.Urban; const sn = U && U.peek ? U.peek(b.set) : null; const c = sn && sn.cells ? sn.cells.get(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) : null;
+    return c ? (c.value >= 62 ? 2 : c.value >= 28 ? 1 : 0) : 1;
+  };
+  const win = new Map(); let winK = -1, winS = null;
+  const NOWITHIN = Object.freeze({ sig: '', civ: 'classico', rico: 1, barro: false, metal: null, weave: false, bebida: NONE, comida: NONE, bens: NONE, louca: null, mesa: NONE, cozinha: null, lenha: null, luz: null, pano: null, rabiscos: 0, teia: null, why: NOINV });
+  At.within = function (b) {
+    const S = G.S; if (!S || !b || !b.built || b.type === 'ruin') return NOWITHIN;
+    if (winS !== S || winK !== S.clock) { win.clear(); winS = S; winK = S.clock; }
+    let o = win.get(b.id); if (o) return o;
+    o = withinOf(b); win.set(b.id, o); if (win.size > 400) win.clear();
+    return o;
+  };
+  function withinOf(b) {
+    const S = G.S, D = G.Depot, O = G.Origem; const why = {};
+    const f = G.Fac && G.Fac.ofSet ? G.Fac.ofSet(b.set) : null; const fid = f ? f.id : 0; const known = f && f.tech ? f.tech.known : null;
+    const civ = b.style || (f && f.civ) || 'classico';
+    const ok = m => (O && O.matOK ? !!O.matOK(fid, m, known) : false);
+    // what the people has had: the potter's ware (a cup of clay, else of turned wood), its metal (iron, else bronze), its leather;
+    // what it weaves (a loom standing, cloth in its stores: the clothes' own reading, artsOf)
+    const barro = ok('barro'), metal = ok('ferro') ? 'ferro' : ok('bronze') ? 'bronze' : null, couro = ok('couro');
+    const weave = f ? artsOf(f).weave : false; const rico = At.rich(b);
+    why.louca = barro ? 'barro: o povo já teve a cerâmica da olaria' : 'madeira torneada: o povo nunca teve cerâmica';
+    if (metal) why.metal = `${metal}: o povo tem a arte e já teve o metal`;
+    why.pano = weave ? 'o povo tece (um tear de pé, ou pano no armazém)' : 'o povo não tece: couro e pele, nenhum pano';
+    why.riqueza = rico === 2 ? 'rica agora (as moedas da casa, a bandeira da casa mercante, a sede)' : rico === 1 ? 'remediada agora' : 'pobre agora';
+    const home = G.Village.bedsOf(b) > 0; const ref = (home ? 'h:' : 'b:') + b.id;
+    // ---- the drink of its book: each whole unit a vessel on the shelf (the amphora pours ten cups, the jar four); a broken one, open
+    const bebida = []; const I = b.inv || NOINV;
+    for (const k of POURS) { const n = D ? D.get(ref, k) : I[k] || 0; if (!(n > EPS)) continue; const whole = Math.floor(n + EPS);
+      bebida.push(Object.freeze({ k, n: Math.min(whole, 12), aberta: n - whole > 0.2 ? 1 : 0, vaso: VESSEL[k], why: `${n.toFixed(2)} de ${k} no livro (${ref})` })); }
+    // ---- the food of its store, by its parts (G.Origem: what each came of)
+    const comida = []; const food = D ? D.get(ref, 'food') : 0;
+    if (food > EPS && O) { const p = O.parts(ref, 'food'); for (const k of FOODS) { const n = p[k] || 0; if (n >= 0.25) comida.push(Object.freeze({ k, n: Math.round(n * 4) / 4, pao: CEREAL_BREAD[k] ? 1 : 0, why: `${n.toFixed(2)} de ${k} na comida do armazém (${ref}, G.Origem)` })); } }
+    // ---- the goods of a house that show
+    const bens = [];
+    if (home) for (const k in HOUSE_GOODS) { const n = D ? D.get(ref, k) : I[k] || 0; if (n >= 1 - EPS) bens.push(Object.freeze({ k, n: Math.min(6, Math.floor(n + EPS)), como: HOUSE_GOODS[k], why: `${Math.floor(n)} de ${k} na casa` })); }
+    // ---- the cups and bowls: a tavern's for its guests, a house's for who lives in it
+    const res = home ? ((census().homes.get(b.id) || NOINV).res || 0) : 0;
+    const louca = b.type === 'taverna' ? Object.freeze({ mat: barro ? 'barro' : 'madeira', de: 'fregueses', n: 0 }) : home && res > 0 ? Object.freeze({ mat: barro ? 'barro' : 'madeira', de: 'casa', n: Math.min(6, res) }) : null;
+    // ---- who sits at the tables of an open tavern, and what was served each: the cup of who has drunk a round and holds none now (the
+    // one drinking holds it: the kit, G.Inv.held), the plate of who is eating (the dish its food is made of)
+    const mesa = []; const T = G.Taverna; const op = b.type === 'taverna' && T && T.dia ? T.dia(b) : null;
+    if (op && op.data && op.data.mesa) for (const id of Object.keys(op.data.mesa).sort((a, c) => a - c)) {
+      const m = op.data.mesa[id]; const v = S.villagers.get(+id); if (!v || v.inside !== b.id) continue;
+      const c = v.carry && v.carry.op === op.id ? v.carry : null; const eating = (m.st === 3 && c && c.k === 'food') || (m.st === 4 && m.k === 'food');
+      const drinking = (m.st === 3 && c && c.k !== 'food') || (m.st === 4 && m.k && m.k !== 'food');
+      const cup = (m.r || 0) >= 1 && !drinking ? (POURS.includes(m.want) ? m.want : T.drinkOn ? T.drinkOn(b) || 'cerveja' : 'cerveja') : null;
+      let prato = null; if (eating) { prato = (O && c ? O.most('v:' + v.id, 'food') : null) || (O ? O.next('b:' + b.id, 'food') : null) || '?'; }
+      if (cup || prato) mesa.push(Object.freeze({ id: v.id, cup, prato, why: `${cup ? `já bebeu ${m.r} rodada(s)` : ''}${cup && prato ? '; ' : ''}${prato ? `comendo ${prato}` : ''} (o dia da taverna, op ${op.id})` }));
+    }
+    // ---- a pot on the fire: the building's fire burning to cook (G.Atmos.fire: the kitchen, the tavern open) with food in it
+    const fire = At.fire(b); const cozinha = fire && (fire.why === 'cozinha' || fire.why === 'taverna') && food >= 1 - EPS ? Object.freeze({ mat: metal || (barro ? 'barro' : null), why: `${fire.txt}, com comida no armazém` }) : null;
+    // ---- the firewood by the hearth: the people's wood in store
+    const wood = f && f.stock ? f.stock.wood || 0 : 0; const lenha = wood >= 1 ? Object.freeze({ why: `${Math.floor(wood)} de madeira no armazém do povo` }) : null;
+    // ---- the lamps: something to burn — the house's oil or wax, else the people's store —, a lamp to burn it in (clay, bronze, the
+    // candle's holder), lit only with someone awake inside in the dark (G.Atmos.lit), never in the New Fire's dark (festivals.js)
+    let luz = null; const has = k => (home && D ? D.get(ref, k) : 0) >= 1 - EPS || ((f && f.stock ? f.stock[k] || 0 : 0) >= 1 - EPS);
+    const comb = ['azeite', 'oleo', 'cera'].filter(has);
+    if (comb.length) {
+      const lit = At.lit(b) && darkHour(); const oil = comb.filter(k => k !== 'cera');
+      luz = Object.freeze({ comb: Object.freeze(comb), oleo: oil.length ? oil[0] : null, cera: comb.includes('cera'), mat: barro ? 'barro' : metal === 'bronze' || ok('bronze') ? 'bronze' : 'pedra', acesa: lit ? 1 : 0, awake: At.awake(b),
+        why: `${comb.join(' e ')} para queimar (${home && comb.some(k => D && D.get(ref, k) >= 1) ? 'na casa' : 'no armazém do povo'})${lit ? `; acesa: ${At.awake(b)} acordado(s) dentro, ${G.isNight() ? 'noite' : 'fim da tarde'}` : '; apagada: ' + (!At.lit(b) ? 'ninguém acordado dentro' : 'ainda é dia')}` });
+    }
+    // ---- the cloth on the walls and the floor: a people that weaves, a house rich now; the dye of who can pay for it (At.deep); the
+    // pelt where the house keeps pelts (the rug of the north, woven or not)
+    const pelts = home && D ? D.get(ref, 'peles') + D.get(ref, 'pele_rara') : 0;
+    const pano = (weave && rico >= 1) || pelts >= 1 ? Object.freeze({ tapete: (weave && rico >= 2) || pelts >= 1 ? 1 : 0, pele: !(weave && rico >= 2) && pelts >= 1 ? 1 : 0, tapecaria: weave && rico >= 1 && (b.type === 'taverna' || rico >= 2) ? 1 : 0,
+      cor: rico >= 2 ? At.deep(b.id, civ) : null, why: `${weave ? 'o povo tece' : ''}${weave && rico ? ' e ' : ''}${rico ? why.riqueza : ''}${pelts >= 1 ? (weave || rico ? '; ' : '') + 'peles na casa' : ''}` }) : null;
+    // ---- the marks of charcoal on a tavern's wall: the rounds of its years (one in every fifteen poured, a dozen at most)
+    const rabiscos = b.type === 'taverna' ? Math.min(12, Math.floor((b.served || 0) / 15)) : 0;
+    if (rabiscos) why.rabiscos = `${b.served} doses servidas: os fregueses de anos riscaram a parede com o carvão do fogo`;
+    // ---- the cobweb: a building old and uncared for (G.Atmos.wear: the years, the care of its quarter, nobody living in it)
+    const w = At.wear(b); const teia = w && w.ageLv >= 3 && w.care === 0 ? Object.freeze({ n: w.ageLv >= 4 ? 2 : 1, why: `${At.years(b)} anos, sem cuidado (G.Atmos.wear)` }) : null;
+    const sig = [civ, rico, barro ? 1 : 0, metal || '-', weave ? 1 : 0,
+      bebida.map(q => q.k + q.n + (q.aberta ? 'a' : '')).join(','), comida.map(q => q.k + Math.min(6, Math.ceil(q.n))).join(','), bens.map(q => q.k + q.n).join(','),
+      louca ? louca.mat + louca.n : '-', mesa.map(q => q.id + (q.cup || '') + (q.prato ? ':' + q.prato : '')).join(','), cozinha ? 'c' + (cozinha.mat || '') : '-', lenha ? 'l' : '-',
+      luz ? luz.comb.join('') + luz.mat + luz.acesa : '-', pano ? `${pano.tapete}${pano.pele}${pano.tapecaria}${pano.cor || ''}` : '-', rabiscos, teia ? teia.n : 0].join('|');
+    return Object.freeze({ sig, civ, rico, barro, metal, couro, weave, bebida: Object.freeze(bebida), comida: Object.freeze(comida), bens: Object.freeze(bens), louca, mesa: Object.freeze(mesa), cozinha, lenha, luz, pano, rabiscos, teia, why: Object.freeze(why) });
+  }
 
   // ------------------------------ in words (the proofs, the developer's panel) ------------------------------
   At.why = function (b) {
