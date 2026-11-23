@@ -127,11 +127,28 @@
     return Math.max(0, Math.round(innerHeight - top));
   }
   IU.compactTouch = () => innerWidth < 600 || innerHeight < 500;
+  // ------------------------------ the screen by the place (the interiors 2.0, D-733) ------------------------------
+  // under a roof with nothing to fight, the run and the fight's three rest (Input3D.CALM): inside the tavern five of the eight
+  // buttons were of a fight. They come back with one — a blow just taken, the aim or a target held, a weapon in the hand, a duel of
+  // the body's, someone coming at it or fighting a few steps off, a beast that threatens. Only read, a few times a second
+  IU.fightNear = function (v) {
+    if (!v) return false; const C3 = G.Cam3D, Cb = G.Combate, A = G.Animals;
+    if (hurt.k > 0.05 || (C3.locked && C3.locked()) || (C3.aiming && C3.aiming())) return true;
+    if (Cb && Cb.weapon) { const w = Cb.weapon(v); if (w.cls !== 'punho' || w.bow) return true; }
+    if (Cb && Cb.duel) { const d = Cb.duel(); if (d && (d.a === v.id || d.o === v.id)) return true; }
+    for (const o of G.S.villagers.values()) if (o !== v && o.task && o.task.type === 'combat' && (o.task.id === v.id || (Math.abs(o.x - v.x) < 6 && Math.abs(o.y - v.y) < 6))) return true;
+    let th = false; if (A && A.near && A.threat) A.near(v.x, v.y, 8, a => { if (!th && A.threat(a)) th = true; });
+    return th;
+  };
+  let calmNow = false; IU.calm = () => calmNow; // (the screen at rest under a roof, as the fingers' buttons last asked)
   function touchFrame(rdt) {
     if (!root || !G.Input3D.touch) return; touchBuild(); tbT -= rdt; if (tbT > 0) return; tbT = 0.25;
     let k = 0; const foot = footBand(), tight = IU.compactTouch();
+    calmNow = !!(G.Cam3D.under && G.Cam3D.under()) && !IU.fightNear(G.Possess.body());
+    // (a phone: the hotbar folded into the bag — the bag and the thing in the hand —, the corner's buttons by their signs: D-733)
+    root.classList.toggle('compact', tight);
     for (const [, q] of tbEls) {
-      const d = q.d; const vis = !d.when || !!d.when();
+      const d = q.d; const vis = (!d.when || !!d.when()) && !(calmNow && G.Input3D.CALM && G.Input3D.CALM[d.a]);
       if (vis !== q.vis) { q.vis = vis; q.el.classList.toggle('hidden', !vis); }
       if (!vis) continue;
       const lab = typeof d.label === 'function' ? d.label() : d.label; if (lab !== q.lab) { q.lab = lab; q.el.textContent = lab; }
@@ -287,6 +304,7 @@
     // (a machine that cannot keep up: said once, with the way out — the lighter picture in the menu)
     if (G.Realm.fps && G.Realm.fps < 22 && G.Realm.q !== 'baixa') { slowT += rdt; if (slowT > 8 && !slowSaid) { slowSaid = true; IU.toast(`O 3D está pesado neste computador (${Math.round(G.Realm.fps)} quadros por segundo): no menu (${G.Input3D.label('menu')}) → Gráficos → Leve.`, 7); } } else slowT = 0;
     upT -= rdt; if (upT > 0) return; upT = 0.1;
+    { const un = !!(G.Cam3D.under && G.Cam3D.under()); if (root._un !== un) { root._un = un; root.classList.toggle('under', un); } } // (under a roof: the news down out of the room's top, D-733)
     // (where one is, as the person can say it: the quarter and the town by name when they know them, else what is seen there)
     const id = G.Possess.identity(v); const w = G.Possess.knows.where(v); const st = G.Avatar.state(); const caps = G.Possess.caps(v);
     $('.ih-name', hud).textContent = id.name + (id.epithet ? ', ' + id.epithet : '');
@@ -320,7 +338,7 @@
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['travar', 'travar a mira'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
+    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['travar', 'travar a mira'], ['vista', 'vista da sala'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,

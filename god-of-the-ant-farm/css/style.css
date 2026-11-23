@@ -1327,6 +1327,21 @@ canvas#game3d { touch-action: none; transition: none; }
   .ih-news div:not(:last-child) { display: none; }
   .ih-news div { font-size: 11px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 }
+/* === os interiores 2.0, P4: a tela pelo lugar (D-733) === */
+/* (under a roof the news step down out of the room's top — on the left, over the calls; a phone: one line over the hotbar, clear of
+   the fingers' buttons) */
+#inc-root.under .ih-news { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); left: calc(14px + env(safe-area-inset-left, 0px)); transform: none; align-items: flex-start; width: min(420px, 40vw); }
+#inc-root.under .ih-news div { text-align: left; background: var(--ih-glass); }
+/* (a phone: the hotbar folded into the bag — the bag and the thing in the hand; the bag opens the rest —, and the corner's two
+   buttons by their signs alone: they sat over the shortcuts 4, 5 and the bag) */
+#inc-root.compact #inc-hud .iv-q:not(.iv-bagbtn):not(.on) { display: none; }
+#inc-root.compact #inc-hud .iv-bagbtn { margin-left: 0; }
+#inc-root.compact .ih-corner span { display: none; }
+#inc-root.compact .ih-corner button { padding: 0 9px; }
+@media (max-width: 599px), (max-height: 499px) {
+  #inc-root.under .ih-news { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); width: calc(100vw - 150px); }
+  #inc-root.under .ih-news div { -webkit-line-clamp: 1; }
+}
 /* (the stick past its ring: the sprint — the ring glows) */
 .ih-stick.run { border-color: rgba(245, 200, 107, .75); box-shadow: 0 0 18px rgba(245, 200, 107, .35); }
 /* (the target held: a gold diamond over it; aiming, the reticle grows into a cross) */

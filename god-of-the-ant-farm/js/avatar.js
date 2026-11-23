@@ -42,6 +42,9 @@
     accel: 15, brake: 19, airAccel: 3.5, turn: 10, gravity: 21, coyote: 0.12, buffer: 0.14, stepUp: 0.6, radius: 0.32,
     runDrain: 20, staminaRegen: 16, jumpCost: 9, sneak: 0.45, wade: 0.58, road: 1.12, hurtFall: 6.5, step: 1 / 60,
     climbMax: 2.6, climbWait: 0.22, stoneStep: 0.35,
+    // (the furniture, D-734: how far the body's circle — the shoulders', 0.32 — may stand in a piece: a hair in a tall one; in one under
+    // pieceLowH, where the hips meet it — half as wide as the shoulders —, the circle's rim beyond them)
+    pieceSlack: 0.03, pieceLow: 0.12, pieceLowH: 1.1,
     // (the gaits, 20b: the jog and the sprint as times the walk of an adult — the young and the old less, Possess.caps.run —;
     // the rates at a standstill and near the sprint's top; the turn's top speed standing and sprinting, rad/s; the sideways
     // part of a change of way, near the top: a curve, not a snap)
@@ -316,8 +319,28 @@
     const r = TUNE.radius;
     const c = solidAt(X, Z, feet); if (c) return c;
     for (const [dx, dz] of RIM) { if (dx * mx + dz * mz <= 0.05) continue; const k = solidAt(X + dx * r, Z + dz * r, feet); if (k) return k; }
+    // (and the furniture by its own outline: a move that takes the body's circle deeper into a piece is stopped — one that takes it
+    // out of it or along it never: it never sticks)
+    if (b && b.inB && b.inP) { const then = pieceDepth(X, Z); if (then > 0 && then > pieceDepth(b.X, b.Z) + 1e-4) return 'wall'; }
     return null;
   }
+  // how deep the body's circle at a point stands in the furniture of the storey it is on past what each piece allows (metres; 0 or
+  // less, as far as it may) — each piece by its rectangle on the plan, as it is drawn (D-734). The plan's grid marks a piece only on
+  // the cells whose middle it covers (a table stands up to 12 cm past them: Interiors' stampItems, the world's own rule, P3's), and the
+  // rim's eight points are 45° apart: the circle went 19 cm into the corner of a table of the tavern#5763, 17–19% of the frames of a
+  // walk round its hall over 5 cm (the agent D). Held to the shoulders' circle at a table's height, the plan's own ways — the cells
+  // the world walks — shut on the body (the hall of the tavern#9358): at the hips the circle's rim is air
+  function pieceDepth(X, Z, raw) {
+    const B = b.inB, p = b.inP, L = TL(), r = TUNE.radius; const x = X - B.x * L, z = Z - B.y * L; let worst = 0;
+    for (const it of p.items) {
+      if (it.lv !== b.lv || it.niche) continue; const R = it.r;
+      if (x < R[0] - r || x > R[2] + r || z < R[1] - r || z > R[3] + r) continue;
+      const dx = Math.max(R[0] - x, 0, x - R[2]), dz = Math.max(R[1] - z, 0, z - R[3]); const d = Math.hypot(dx, dz);
+      const k = (d > 0 ? r - d : r + Math.min(x - R[0], R[2] - x, z - R[1], R[3] - z)) - (raw ? 0 : it.h < TUNE.pieceLowH ? TUNE.pieceLow : TUNE.pieceSlack); if (k > worst) worst = k;
+    }
+    return worst;
+  }
+  Av.pieceDepth = (X, Z, raw) => (b && b.inB && b.inP ? pieceDepth(X, Z, raw) : 0); // (for the proofs: past what the pieces allow — raw: the circle's own depth)
   // the feet's move of one step (metres), sliding: along each axis, a wall stopping the part of the move that goes into it —
   // and, where only the edge of a corner is in the way (a quina, a door's jamb, the end of a stall), the body slips round it
   // sideways instead of stopping dead: the nearest free side within a hand of where it pushes, as far each step as it goes

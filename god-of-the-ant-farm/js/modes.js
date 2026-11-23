@@ -363,6 +363,8 @@
     if (a === 'andar') { G.Input3D.walk = !G.Input3D.walk; G.IncUI.toast(G.Input3D.walk ? 'Andando devagar.' : 'Trotando.', 1.4); return; }
     if (a === 'travar') { if (G.Cam3D.locked()) G.Cam3D.unlock(); else { const t = M3.lockCandidate(true); if (t) G.Cam3D.lockOn(t); else { const p = G.Avatar.pos(); if (p) G.Cam3D.recenter(p.yaw); } } return; }
     if (a === 'ombro') { G.Cam3D.swap(); return; }
+    // (the room from over its cut ceiling, and back — only under a roof: D-731)
+    if (a === 'vista') { if (!G.Cam3D.under()) { G.IncUI.toast('A vista da sala é de dentro de casa.', 1.6); return; } G.IncUI.toast(G.Cam3D.vista() ? `Vista da sala — ${G.Input3D.label('vista')} volta.` : 'De volta ao ombro.', 1.4); return; }
     // (a wave of the hand: those standing near turn to it and wave back — the hello of the people, only seen)
     // (a dance: whoever is free and merry near the body joins in — the world's people, stopping a while to dance with it)
     // (what the world does about it — the deed counted, the people joining — the world does in its step: Possess.apply)
@@ -376,17 +378,28 @@
     }
   };
   // the one the lock-on's key would hold (D-369 — until the second wave chooses its own: Input3D.on('travar')): the nearest person
-  // or beast ahead of the eye, within 18 m and 55° of the middle of the picture, out of doors; asked a few times a second (the
+  // or beast ahead of the eye, within 18 m and 55° of the middle of the picture, seen from the body; asked a few times a second (the
   // fingers' button shows when there is one), at once when the key is pressed. Only read
   let candT = -1, cand = null, cClock = 0;
+  // (never through a wall: the line from the body's head to the other's chest crosses nothing drawn — C3.solidAll, the walls the
+  // fourth wall leaves open to the eye too —: in a tavern it held whoever went by in the street, D-733. And under a roof only one
+  // who comes at the body: a beast that threatens, someone fighting it — a room is no field to pick a target in)
+  // (the other's chest over the floor its feet are on — the body's own rule of the floor: a plan's storey, the ground —; over the bare
+  // ground, one in the tavern was under its floor, and never seen)
+  const seenFrom = (p, o) => { const L = G.Space.TILE, C3 = G.Cam3D; if (!C3.solidAll) return true; const X = o.x * L, Z = o.y * L, Y = (G.Avatar.floorAt ? G.Avatar.floorAt(X, Z) : G.W.groundH(o.x, o.y) * G.Space.HM) + 1.1, Hy = p.Y + 1.5;
+    const d = Math.hypot(X - p.X, Y - Hy, Z - p.Z); for (let s = 0.35; s < d - 0.35; s += 0.2) { const t = s / d; if (C3.solidAll(p.X + (X - p.X) * t, Hy + (Y - Hy) * t, p.Z + (Z - p.Z) * t)) return false; } return true; };
+  M3.hostile = (o, me) => (G.S.animals && G.S.animals.get(o.id) === o ? !!(G.Animals.threat && G.Animals.threat(o)) : !!(o.task && o.task.type === 'combat' && o.task.id === me.id) || !!(G.Combate && G.Combate.dueling && G.Combate.dueling(me, o)));
   M3.lockCandidate = function (now) {
     if (M3.state !== 'INC') return null; if (!now && cClock - candT < 0.25 && candT >= 0) return cand; candT = cClock;
     const p = G.Avatar.pos(), me = G.Possess.body(); if (!p || !me || !G.Animals || !G.Animals.near) return (cand = null);
-    const L = G.Space.TILE, x = p.X / L, y = p.Z / L, yaw = G.Cam3D.yaw; let best = null, bs = 1e9;
-    const consider = o => { const dx = o.x * L - p.X, dz = o.y * L - p.Z, d = Math.hypot(dx, dz); if (d > 18 || d < 0.3) return; let an = Math.atan2(dz, dx) - yaw; while (an > Math.PI) an -= Math.PI * 2; while (an < -Math.PI) an += Math.PI * 2; if (Math.abs(an) > 0.96) return; const sc = d * (1 + Math.abs(an)); if (sc < bs) { bs = sc; best = o; } };
+    const L = G.Space.TILE, x = p.X / L, y = p.Z / L, yaw = G.Cam3D.yaw; const list = []; const under = !!(G.Cam3D.under && G.Cam3D.under());
+    const consider = o => { if (under && !M3.hostile(o, me)) return; const dx = o.x * L - p.X, dz = o.y * L - p.Z, d = Math.hypot(dx, dz); if (d > 18 || d < 0.3) return; let an = Math.atan2(dz, dx) - yaw; while (an > Math.PI) an -= Math.PI * 2; while (an < -Math.PI) an += Math.PI * 2; if (Math.abs(an) > 0.96) return; list.push([d * (1 + Math.abs(an)), o]); };
     G.Animals.near(x, y, 4.6, a => consider(a));
+    // (one inside a building is a target only in the body's own: a fight in the tavern)
     if (G.Animals.nearMan) G.Animals.nearMan(x, y, 4.6, o => { if (o.id !== me.id && !o.inside && !o.aboard && !o.held && !o.air) consider(o); });
-    return (cand = best);
+    if (under && me.inside) for (const o of G.S.villagers.values()) if (o.inside === me.inside && o.id !== me.id && !o.held) consider(o); // (the beasts' grid of people leaves out who is indoors)
+    list.sort((a, c) => a[0] - c[0]); for (const [, o] of list) if (seenFrom(p, o)) return (cand = o);
+    return (cand = null);
   };
   // a key in the god's view: I — live someone near the middle of the screen (the quick way; the panel's button is the main one)
   M3.quick = function () {

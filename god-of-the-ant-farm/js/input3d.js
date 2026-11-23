@@ -33,6 +33,8 @@
     // (the movement's and the second wave's, 20b: the dodge, the target held, the other shoulder; the second verb, the blow, the
     // guard, the weapon put away or drawn — keys that fight nothing: no Ctrl (Ctrl+W shuts the tab), no Alt (it takes the focus))
     ['esquivar', 'Esquivar', ['q']], ['travar', 'Travar a mira num alvo', ['mouse1', 'z']], ['ombro', 'Trocar o ombro da câmera', ['t']],
+    // (the interiors 2.0, D-731: the room seen from over its cut ceiling, asked and given back by the player — Cam3D.vista)
+    ['vista', 'Vista da sala (de cima, dentro de casa)', ['o']],
     ['outra', 'Outra ação (o segundo verbo)', ['f']], ['atacar', 'Atacar', ['mouse0']], ['defender', 'Defender / mirar', ['mouse2']], ['guardar', 'Guardar / sacar a arma', ['r']],
   ];
   // (the controller's buttons, the standard mapping: 0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 8 Back, 9 Start, 10 the left stick
@@ -280,11 +282,17 @@
   };
   In.unbutton = a => { const k = BTN.findIndex(q => q.a === a); if (k >= 0) { BTN.splice(k, 1); In.btnVer++; } };
   // (the movement's own: the jump, the sprint, the crouch, the dodge, the hands, the target — and the menu in the corner)
+  // (under a roof, with nothing to fight — no blow taken, nobody coming at the body, no weapon in its hand —, the run and the
+  // fight's three rest: a room is no place to sprint, and five of the eight buttons over the owner's tavern were of a fight, D-733.
+  // The screen asks IncUI.calm before it shows one of these)
+  In.CALM = { correr: 1, esquivar: 1, atacar: 1, defender: 1 };
   In.button('pular', { label: 'Pular', order: 10 });
   In.button('interagir', { label: () => In.keyLabel('interagir') || 'E', order: 12 });
   In.button('correr', { label: 'Correr', toggle: true, on: () => touchRun, order: 20 });
   In.button('esquivar', { label: 'Esquivar', order: 22, when: () => !!(G.Avatar.state() && G.Avatar.state().ground) });
   In.button('agachar', { label: 'Agachar', toggle: true, on: () => !!(G.Avatar.crouched && G.Avatar.crouched()), order: 30 });
   In.button('travar', { label: 'Travar', toggle: true, on: () => !!(G.Cam3D.locked && G.Cam3D.locked()), order: 40, when: () => !!(G.Cam3D.locked && G.Cam3D.locked()) || !!(G.Modes && G.Modes.lockCandidate && G.Modes.lockCandidate()) });
+  // (the «Vista da sala»: only under a roof — lit while the eye is over the room)
+  In.button('vista', { label: 'Vista', toggle: true, on: () => !!(G.Cam3D.vistaOn && G.Cam3D.vistaOn()), order: 36, when: () => !!(G.Cam3D.under && G.Cam3D.under()) });
   In.button('menu', { label: '☰', slot: 'canto', order: 90 });
 })(window.G);

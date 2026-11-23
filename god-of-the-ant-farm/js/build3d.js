@@ -4749,6 +4749,9 @@ float m3scale(float p) {
     // (one made a frame, at most: a few milliseconds)
     for (const [, b, p] of want.slice(0, OPEN_MAX)) if (!opened.has(b.id) && opened.size < OPEN_MAX) { const o = makeOpen(b, p); if (o) opened.set(b.id, o); break; }
     B3.flames.length = 0; const boxes = []; let ns = 0;
+    // (the eye's own cut first — the fourth wall, D-655, D-730: what of the building the body is in stands between the eye and the
+    // room, G.Cam3D.cutBoxes —, then the doors and courts of the insides drawn)
+    if (G.Modes && G.Modes.inc && G.Modes.inc() && G.Cam3D && G.Cam3D.cutBoxes) for (const c of G.Cam3D.cutBoxes()) if (boxes.length < CUT_MAX) boxes.push(c);
     for (const o of opened.values()) { stepOpen(o, rdt, focus); for (const c of o.cuts) if (boxes.length < CUT_MAX) boxes.push(c);
       for (const c of o.sunk) if (ns < 4) { SUNKU.a.value[ns].set(c[0], c[1], c[2]); SUNKU.b.value[ns].set(c[3], c[4], c[5]); ns++; } }
     setCut(boxes); SUNKU.n.value = ns;
