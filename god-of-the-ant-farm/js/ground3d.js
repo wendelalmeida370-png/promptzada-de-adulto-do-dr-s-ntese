@@ -849,4 +849,134 @@ vec3 m3tint(vec3 t, vec3 base) { float hi = max(base.r, max(base.g, base.b)), lo
 vec2 m3slope(float L, vec2 uv, float h0) { float e = 0.006; return vec2(texture(uTex3, vec3(uv + vec2(e, 0.0), L)).a - h0, texture(uTex3, vec3(uv + vec2(0.0, e), L)).a - h0) / e; }
 `;
   };
+
+  // ------------------------------ the insides' materials in high resolution (P8: arte/tex_alta.py → G.TEX3DA) ------------------------------
+  // On the Alta and the Ultra the materials seen inside are read from pictures of their own (D-770 to D-773): the floors, the walls
+  // and the furniture's wood (tier 1) and the stone, the clay, the mosaic, the frieze, the mat and the rug (tier 2) — photographs of
+  // Poly Haven (CC0) neutralized as the stack's are (the world's colour multiplies them), with the normal of their relief and their
+  // roughness. Two stacks of their own, never the world's 63 layers made bigger: X, the tier 1's brightness, relief and roughness
+  // [luma, nx, ny, rough] at 2048 on the Ultra and 1024 on the Alta; Y, at half that, the tier 1's hue [cr, cb] and the tier 2's two
+  // layers. Loaded only on those two qualities, in the background, a material at a time — its file by a script tag (the game opens
+  // from the disk: a picture fetched would be refused by WebGL), its pictures decoded, its layers sent to the card one by one —; until
+  // a material is in, the stack's 512 draws it as before (uHiOk). Only seen: nothing of the world read, nothing written
+  const HI = G.TEX3DA && Array.isArray(G.TEX3DA.mats) ? G.TEX3DA : null; const HM = HI ? HI.mats : [];
+  const H1 = HM.filter(m => m.t === 1), H2 = HM.filter(m => m.t !== 1);
+  // (where each material's layers are: the tier 1's brightness in X and its hue in Y; the tier 2's both in Y, after the tier 1's hues)
+  const HL = new Map(); H1.forEach((m, k) => HL.set(m.n, { x: 1, a: k, c: k })); H2.forEach((m, j) => HL.set(m.n, { x: 0, a: H1.length + 2 * j, c: H1.length + 2 * j + 1 }));
+  const NX = Math.max(1, H1.length), NY = Math.max(1, H1.length + 2 * H2.length);
+  G3.HI_SIZE = { alta: 1024, ultra: 2048 }; // (the tier 1's side by quality; the tier 2's and the hues', half that — D-772)
+  const UH = { uHiX: { value: null }, uHiY: { value: null }, uHiOk: { value: new Array(Math.max(1, HM.length)).fill(0) } };
+  G3.hiU = () => UH;
+  let hs = null, hiGen = 0; const asked = new Set();
+  // (for the proofs and the menu: the side being loaded, the materials in, the bytes on the card)
+  G3.hiState = () => ({ size: hs ? hs.size : 0, in: HM.filter((m, k) => UH.uHiOk.value[k] > 0.5).map(m => m.n), of: HM.length, bytes: hs ? hiBytes(hs.size) : 0, err: hs ? hs.err.slice() : [] });
+  G3.hiReady = () => !!hs && HM.length > 0 && UH.uHiOk.value.every(v => v > 0.5);
+  const hiBytes = s => Math.round((s * s * NX + (s >> 1) * (s >> 1) * NY) * 4 * 4 / 3); // (with the mipmaps: a third more)
+  function hiDrop() {
+    hiGen++; if (hs) { hs.X.dispose(); hs.Y.dispose(); } hs = null;
+    UH.uHiX.value = UH.uHiY.value = null; UH.uHiOk.value.fill(0);
+  }
+  // the quality's set wanted (its name, or nothing: the Média, the Leve — the cards' memory given back)
+  G3.hiWant = function (q) {
+    const size = (HM.length && typeof document !== 'undefined' && THREE && G3.HI_SIZE[q]) || 0;
+    if (hs && hs.size === size) return; hiDrop(); if (!size) return;
+    const R = G.Realm && G.Realm.renderer && G.Realm.renderer(); if (!R || R.capabilities.maxTextureSize < size) return;
+    const an = (G.Realm.Q ? G.Realm.Q().aniso : 0) || 4;
+    const mk = (s, n) => { const t = new THREE.DataArrayTexture(new Uint8Array(s * s * 4 * n), s, s, n); t.format = THREE.RGBAFormat; t.type = THREE.UnsignedByteType;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = an; return t; };
+    hs = { size, X: mk(size, NX), Y: mk(size >> 1, NY), todo: HM.map(m => m.n), gen: ++hiGen, busy: false, err: [], R };
+    // (two seconds after the 3D opens: the start of the game and of the body never wait for it)
+    const g = hs.gen; setTimeout(() => hiPump(g), 2000);
+  };
+  if (HI) HI.got = () => { if (hs) { const g = hs.gen; setTimeout(() => hiPump(g), 0); } };
+  // (a failure — a file not found, a picture not decoded — is counted where every module's is: G.modErr, a failure of the proofs)
+  function hiErr(m, what) { if (!hs) return; hs.err.push(m.n + ': ' + what); G.modErr.TexAlta = (G.modErr.TexAlta || 0) + 1; console.error('[TexAlta]', m.n, what); }
+  // one step at a time: the next material's file asked, or its pictures made into its layers
+  function hiPump(gen) {
+    if (!hs || hs.gen !== gen || hs.busy) return;
+    const n = hs.todo[0]; if (!n) { hiDone(); return; } const m = HM.find(x => x.n === n);
+    if (!HI.data[n]) {
+      if (asked.has(n)) return; asked.add(n);
+      const s = document.createElement('script'); s.src = m.f;
+      s.onload = () => { s.remove(); if (!HI.data[n] && hs && hs.gen === gen) { hiErr(m, 'o arquivo não trouxe o material'); hs.todo.shift(); hiPump(gen); } };
+      s.onerror = () => { s.remove(); asked.delete(n); if (hs && hs.gen === gen) { hiErr(m, 'o arquivo ' + m.f + ' não abriu'); hs.todo.shift(); hiPump(gen); } };
+      document.head.appendChild(s); return;
+    }
+    hs.busy = true;
+    hiMake(m, gen).then(ok => { if (!hs || hs.gen !== gen) return; hs.busy = false; if (!ok) hiErr(m, 'a figura não abriu'); hs.todo.shift(); setTimeout(() => hiPump(gen), 40); });
+  }
+  // (all in: the copies kept for the card are let go — the card has them; nothing sends them again)
+  function hiDone() { if (!hs || hs.free) return; hs.free = true; hs.X.image.data = null; hs.Y.image.data = null; }
+  const pause = ms => new Promise(r => setTimeout(r, ms || 16));
+  const picture = uri => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = uri; });
+  let cv = null, cx = null;
+  function pixels(im, sx, sw, s) { if (!cv) { cv = document.createElement('canvas'); cx = cv.getContext('2d', { willReadFrequently: true }); }
+    if (cv.width !== s || cv.height !== s) { cv.width = cv.height = s; } cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; cx.clearRect(0, 0, s, s);
+    cx.drawImage(im, sx, 0, sw, im.naturalHeight, 0, 0, s, s); return cx.getImageData(0, 0, s, s).data; }
+  // (the colour's bytes back to the linear ratio, and the brightness to its byte: the stack's gamma 2.2 over ×0.5)
+  const LIN = new Float32Array(256).map((_, v) => Math.pow(v / 255 * 2, 2.2));
+  // (the hue — the red and the blue over the brightness — in log2 from a quarter to four: a step of 1 % near the neutral of the
+  // photographs, and room for the mosaic's red tesserae and the rug's dyes)
+  const HUE = q => Math.max(0, Math.min(255, Math.round((Math.log2(Math.max(q, 1e-3)) + 2) / 4 * 255))); const LUM = new Uint8Array(8192).map((_, i) => Math.round(Math.min(1, Math.pow(i / 2048, 1 / 2.2) * 0.5) * 255));
+  // a material's pictures into its layers: the brightness [r], and the hue [r, g] at the hue's side; the relief and the roughness [g, b, a]
+  async function hiMake(m, gen) {
+    const L = HL.get(m.n), k = HM.indexOf(m), s = hs.size, sA = L.x ? s : s >> 1, sC = s >> 1, A = L.x ? hs.X : hs.Y, C = hs.Y;
+    const d = HI.data[m.n]; const ic = await picture(d.c), ig = await picture(d.g); if (!ic || !ig) return false;
+    const live = () => hs && hs.gen === gen;
+    await pause(); if (!live()) return true;
+    let px = pixels(ic, 0, ic.naturalWidth, sA); const a = A.image.data, oa = L.a * sA * sA * 4;
+    for (let i = 0, j = oa, n = sA * sA; i < n; i++, j += 4) { const q = i * 4; a[j] = LUM[Math.min(8191, ((0.2126 * LIN[px[q]] + 0.7152 * LIN[px[q + 1]] + 0.0722 * LIN[px[q + 2]]) * 2048) | 0)]; }
+    await pause(); if (!live()) return true;
+    px = pixels(ic, 0, ic.naturalWidth, sC); const c = C.image.data, oc = L.c * sC * sC * 4;
+    for (let i = 0, j = oc, n = sC * sC; i < n; i++, j += 4) { const q = i * 4; const r = LIN[px[q]], g = LIN[px[q + 1]], b = LIN[px[q + 2]], l = Math.max(1e-4, 0.2126 * r + 0.7152 * g + 0.0722 * b);
+      c[j] = HUE(r / l); c[j + 1] = HUE(b / l); c[j + 2] = 128; c[j + 3] = 255; }
+    const w3 = ig.naturalWidth / 3;
+    for (let ch = 0; ch < 3; ch++) { await pause(); if (!live()) return true; px = pixels(ig, ch * w3, w3, sA);
+      for (let i = 0, j = oa + 1 + ch, n = sA * sA; i < n; i++, j += 4) a[j] = px[i * 4]; }
+    await pause(); if (!live()) return true;
+    // (to the card, its layers only — three sends what it is told is new: the stacks are made on the card at the first, empty)
+    A.addLayerUpdate(L.a); A.needsUpdate = true; hs.R.initTexture(A);
+    C.addLayerUpdate(L.c); C.needsUpdate = true; hs.R.initTexture(C);
+    UH.uHiX.value = hs.X; UH.uHiY.value = hs.Y; UH.uHiOk.value[k] = 1;
+    return true;
+  }
+  // the GLSL the insides' material reads them with (inside M3HI: the Alta's and the Ultra's only), from the patterns' numbers
+  // (Build3D.PAT): m3hiOf — the material a pattern reads, or -1; m3hiInfo — its layers, whether it is in, the metres its picture
+  // covers, whether its repeat is broken; m3hiRead — its brightness (linear, 1 on average), its relief (the normal's x and y along
+  // the picture's axes) and roughness, its hue; m3hiN — a smooth noise of the eye's own (never the world's chance)
+  G3.hiGLSL = function (PAT) {
+    if (!HM.length) return '';
+    const num = p => PAT[p]; let of = '', info = '';
+    HM.forEach((m, k) => {
+      const ps = m.pats.map(num).filter(v => v !== undefined); const L = HL.get(m.n);
+      if (ps.length) of += `  if (${ps.map(v => `p == ${v}.0`).join(' || ')}) return ${k};\n`;
+      info += `  if (k == ${k}) { A = vec4(${L.x}.0, ${L.a}.0, ${L.c}.0, uHiOk[${k}]); S = vec4(${(1 / m.m[0]).toFixed(5)}, ${(1 / m.m[1]).toFixed(5)}, ${m.anti ? 1 : 0}.0, 0.0); return; }\n`;
+    });
+    const turn = HM.flatMap(m => (m.turn || []).map(num)).filter(v => v !== undefined);
+    // (a piece of furniture reads its wood planed: the hewn beam's picture is the roof's, never the arm of a chair)
+    const piece = HM.map((m, k) => m.movel ? `  if (k == ${k}) return ${HM.findIndex(x => x.n === m.movel)};\n` : '').join('');
+    return `
+#ifdef M3HI
+uniform highp sampler2DArray uHiX; uniform highp sampler2DArray uHiY; uniform float uHiOk[${Math.max(1, HM.length)}];
+int m3hiOf(float p) {
+${of}  return -1;
+}
+int m3hiPiece(int k) {
+${piece}  return k;
+}
+void m3hiInfo(int k, out vec4 A, out vec4 S) {
+  A = vec4(0.0); S = vec4(1.0, 1.0, 0.0, 0.0);
+${info}}
+bool m3hiTurn(float p) { return ${turn.length ? turn.map(v => `p == ${v}.0`).join(' || ') : 'false'}; }
+void m3hiRead(vec4 A, vec2 t, out float lum, out vec2 nxy, out float rough, out vec2 ch) {
+  vec4 a = A.x > 0.5 ? texture(uHiX, vec3(t, A.y)) : texture(uHiY, vec3(t, A.y));
+  vec4 c = texture(uHiY, vec3(t, A.z));
+  lum = pow(a.r * 2.0, 2.2); nxy = a.gb * 2.0 - 1.0; rough = a.a; ch = exp2(c.rg * 4.0 - 2.0);
+}
+float m3hiH(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float m3hiN(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(m3hiH(i), m3hiH(i + vec2(1.0, 0.0)), f.x), mix(m3hiH(i + vec2(0.0, 1.0)), m3hiH(i + vec2(1.0, 1.0)), f.x), f.y); }
+#endif
+`;
+  };
 })(window.G);

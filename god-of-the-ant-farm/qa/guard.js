@@ -2,7 +2,10 @@
 // cada regra protege uma das fundações; uma exceção nova precisa entrar na lista abaixo, com o motivo
 const fs = require('fs'), path = require('path');
 const dir = path.resolve(process.argv[2] || path.join(__dirname, '..'), 'js');
-const files = fs.readdirSync(dir).filter(f => f.endsWith('.js')).sort();
+// (the insides' pictures in high resolution — js/tex3d-alta-<nome>.js, P8 — are only base64 made by arte/tex_alta.py: their size and
+// their form are rule 320's; read line by line here they cost the guard half again its time)
+const TEXA = /^tex3d-alta-.+\.js$/;
+const files = fs.readdirSync(dir).filter(f => f.endsWith('.js') && !TEXA.test(f)).sort();
 const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(dir, f), 'utf8').split('\n')]));
 const fails = [];
 // an allowed spot: the file and a piece of the line (and why it may)
@@ -26,7 +29,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'grupo-clips.js', 'duo-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1990,5 +1993,32 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   if (!f || /'soil'|'slab'|'cobble'/.test(f)) fails.push('o chão de dentro não é o de fora: o floorMat dá a terra lavrada ou as lajes com capim (D-703)');
   const w = b3.indexOf('function inWall(K, plan, w, l) {'), w2 = b3.indexOf('\n  }\n', w); const fw = w < 0 ? '' : b3.slice(w, w2);
   if (!/innerMat\(K, wm\)/.test(fw) || /\binMat\(/.test(fw)) fails.push('o chão de dentro não é o de fora: a parede de dentro não é a do innerMat (D-703)'); }
+// 320. "as texturas altas no orçamento" (P8, D-770, D-772): os materiais de dentro em alta resolução são do arte/tex_alta.py — o
+// js/tex3d-alta.js diz o que há (no index.html, pequeno) e cada js/tex3d-alta-<nome>.js traz um material (fora do index.html: o
+// G.Ground3D os pede só na Alta e na Ultra, nunca no começo do jogo nem no celular) —; cada arquivo até 15 MB (o limite do artefato),
+// todos até 40 MB; nenhum arquivo de material sem a sua linha no manifesto, nenhuma linha sem o seu arquivo; e só o ground3d.js os carrega
+{ const root = path.resolve(dir, '..'); const man = (src['tex3d-alta.js'] || []).join('\n'); const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const m = man.match(/G\.TEX3DA = \{ v: 1, mats: (\[.*\]), data: \{\} \};/); let mats = [];
+  try { mats = m ? JSON.parse(m[1]) : []; } catch (e) { mats = []; }
+  if (!m || !mats.length || !/made by arte\/tex_alta\.py/.test(man)) fails.push('as texturas altas: o js/tex3d-alta.js não é o manifesto que o arte/tex_alta.py escreve (D-770)');
+  if (!fs.existsSync(path.join(root, 'arte', 'tex_alta.py'))) fails.push('as texturas altas: falta o arte/tex_alta.py que as faz (D-770)');
+  if (!/<script src="js\/tex3d-alta\.js"><\/script>/.test(html)) fails.push('as texturas altas: o index.html sem o manifesto js/tex3d-alta.js (D-772)');
+  if (/<script src="js\/tex3d-alta-/.test(html)) fails.push('as texturas altas: um arquivo de material no index.html — carregaria no começo do jogo, também no celular (só o G.Ground3D o pede, na Alta e na Ultra: D-772)');
+  const data = fs.readdirSync(dir).filter(f => TEXA.test(f)); let tot = 0; const names = new Set(mats.map(x => x.n));
+  for (const f of data) { const sz = fs.statSync(path.join(dir, f)).size; tot += sz; const n = f.slice('tex3d-alta-'.length, -3);
+    if (sz > 15e6) fails.push(`as texturas altas: js/${f} tem ${(sz / 1e6).toFixed(1)} MB — passa dos 15 MB de um arquivo (D-772)`);
+    if (!names.has(n)) fails.push(`as texturas altas: js/${f} não está no manifesto js/tex3d-alta.js (D-770)`);
+    const head = fs.readFileSync(path.join(dir, f), 'utf8').slice(0, 400); if (!/arte\/tex_alta\.py — do not edit by hand/.test(head)) fails.push(`as texturas altas: js/${f} sem o cabeçalho do arte/tex_alta.py (D-770)`); }
+  for (const x of mats) if (!data.includes(`tex3d-alta-${x.n}.js`) || x.f !== `js/tex3d-alta-${x.n}.js`) fails.push(`as texturas altas: o material ${x.n} do manifesto sem o seu arquivo js/tex3d-alta-${x.n}.js (D-770)`);
+  if (tot > 40e6) fails.push(`as texturas altas: ${(tot / 1e6).toFixed(1)} MB nos arquivos de material — passa dos 40 MB (D-772)`);
+  for (const f of files) { if (f === 'ground3d.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/TEX3DA\.(data|got)\b|['"`]js\/tex3d-alta-/.test(c) && f !== 'tex3d-alta.js') fails.push(`as texturas altas: ${f}:${k + 1} carrega ou lê os arquivos de material (só o ground3d.js, D-772): ${l.trim().slice(0, 100)}`); }); } }
+// 321. "toda fotografia com a sua licença" (P8, D-771): cada fotografia do Poly Haven que o js/tex3d-alta.js diz ter usado está no
+// arte/LICENCAS.md — o nome, o endereço, o autor, os arquivos e a CC0 —, entre as duas marcas que o arte/tex_alta.py escreve
+{ const root = path.resolve(dir, '..'); const man = (src['tex3d-alta.js'] || []).join('\n'); const m = man.match(/mats: (\[.*\]), data:/); let mats = [];
+  try { mats = m ? JSON.parse(m[1]) : []; } catch (e) { mats = []; }
+  const lic = fs.readFileSync(path.join(root, 'arte', 'LICENCAS.md'), 'utf8'); const a = lic.indexOf('<!-- tex_alta: início -->'), b = lic.indexOf('<!-- tex_alta: fim -->');
+  const blk = a < 0 || b < a ? '' : lic.slice(a, b); if (!blk) fails.push('toda fotografia com a sua licença: o arte/LICENCAS.md sem as marcas do tex_alta (D-771)');
+  for (const x of mats) if (x.src) { const line = blk.split('\n').find(l => l.includes(`polyhaven.com/a/${x.src} `) && l.includes(`\`${x.n}\``));
+    if (!line || !/\*\*CC0\*\*/.test(line) || !/dl\.polyhaven\.org\/file\/ph-assets\/Textures\/jpg\/2k\//.test(line)) fails.push(`toda fotografia com a sua licença: a textura ${x.src} (o material ${x.n}) sem a sua linha no arte/LICENCAS.md — nome, endereço, autor, arquivos, CC0 (D-771)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

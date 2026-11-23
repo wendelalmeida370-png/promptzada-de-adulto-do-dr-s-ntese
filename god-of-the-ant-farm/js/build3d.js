@@ -407,7 +407,8 @@ float m3scale(float p) {
       // (the world's place of a point — a piece drawn as one of many, the furniture of an inside (Movel3D, D-712): its own frame first,
       // then the object's; its normal through the instance as three's own normal is, the stretch undone —, and with M3UV its own
       // coordinates in metres, so a piece's grain runs along it: the leg of a table, the board of a bench, D-709)
-      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n' + sh.vertexShader.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+      // (and, with the insides' high pictures — M3HI, P8 —, a piece of furniture reads them by its own uv too: vM3hi says it is one)
+      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n#ifdef M3HI\nvarying vec2 vM3hu; flat varying float vM3hi;\n#endif\n' + sh.vertexShader.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
  #ifdef USE_INSTANCING
  mat3 pIM = mat3(instanceMatrix); vec3 pIN = objectNormal / vec3(dot(pIM[0], pIM[0]), dot(pIM[1], pIM[1]), dot(pIM[2], pIM[2]));
  vPP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * (pIM * pIN));
@@ -418,10 +419,21 @@ float m3scale(float p) {
  #ifdef M3UV
  vM3uv = uv;
  #endif
+ #ifdef M3HI
+ #ifdef USE_INSTANCING
+ vM3hu = uv; vM3hi = 1.0;
+ #else
+ vM3hu = vec2(0.0); vM3hi = 0.0;
+ #endif
+ #endif
 `);
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n#ifdef M3CUT\nuniform vec3 uCutA[' + CUT_N + ']; uniform vec3 uCutB[' + CUT_N + ']; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n#ifdef M3EYE\nuniform vec3 uEyeA[' + EYE_N + ']; uniform vec3 uEyeB[' + EYE_N + ']; uniform int uEyeN;\n#endif\n' + G.Ground3D.texGLSL() + PFRAG)
+      if (G.Ground3D.hiU) Object.assign(sh.uniforms, G.Ground3D.hiU());
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n#ifdef M3HI\nvarying vec2 vM3hu; flat varying float vM3hi;\n#endif\n#ifdef M3CUT\nuniform vec3 uCutA[' + CUT_N + ']; uniform vec3 uCutB[' + CUT_N + ']; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n#ifdef M3EYE\nuniform vec3 uEyeA[' + EYE_N + ']; uniform vec3 uEyeB[' + EYE_N + ']; uniform int uEyeN;\n#endif\n' + [G.Ground3D.texGLSL(), PFRAG, G.Ground3D.hiGLSL ? G.Ground3D.hiGLSL(PAT) : ''].join('\n'))
         .replace('#include <clipping_planes_fragment>', CUTFRAG + EYEFRAG + '#include <clipping_planes_fragment>').replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
+        #ifdef M3SPEC
+        float m3shin = shininess; float hSpec = 1.0; // (the sheen's sharpness and strength: the high pictures' roughness sets them — P8)
+        #endif
         // (an anchored frieze — Build3D.frisoPat: its foot and its height)
         float fY = -1.0, fH = 1.0;
         if (pp > ${FRISOQ - 0.5}) { float q = pp - ${FRISOQ}.0; fY = mod(q, 256.0) * 0.02; fH = 0.1 + floor(q / 256.0) * 0.01; pp = 47.0; }
@@ -441,6 +453,37 @@ float m3scale(float p) {
           float fade = 1.0 - smoothstep(30.0, 90.0, length(vViewPosition));
           // (the material's picture once the stack is in — mipmapped, so it never shimmers far off; roofs read down the slope)
           float L = m3layer(pp);
+          #ifdef M3HI
+          // (the insides' own pictures, high — P8, D-773: on the Alta and the Ultra, once a material is in. Its brightness and its hue
+          // over the world's colour, its relief by its normal, its sheen by its roughness; a piece of furniture by its own uv along its
+          // grain, the relief by the frame of that uv; where it has no grid — the plaster, the earth, the clay — the repeat broken by a
+          // second read, shifted, blended in; and over all a broad patch lighter or darker, rougher or smoother: the eye never finds
+          // the picture's edge)
+          int hk = m3hiOf(pp); bool hp = vM3hi > 0.5; if (hp && hk >= 0) hk = m3hiPiece(hk); vec4 hA, hS; m3hiInfo(hk, hA, hS);
+          if (hk >= 0 && hA.w > 0.5 && dA.z <= 0.0) {
+            bool hturn = !hp && ((pp > 29.5 && pp < 33.5 && (abs(pn.y) < 0.92 || mod(pp, 2.0) < 0.5)) || m3hiTurn(pp));
+            vec2 hm = hp ? vM3hu : puv; vec2 hu = (hturn ? hm.yx : hm) * hS.xy;
+            if (fY >= 0.0) hu.y = clamp((mod(vPP.y - fY + 0.5, 4.0) - 0.5) / fH, 0.004, 0.996);
+            float lum, rgh; vec2 nxy, ch; m3hiRead(hA, hu, lum, nxy, rgh, ch);
+            if (hS.z > 0.5) { float bw = smoothstep(0.3, 0.7, m3hiN(hm * 0.55 + 7.3));
+              if (bw > 0.004) { float l2, r2; vec2 n2, c2; m3hiRead(hA, hu + vec2(0.437, 0.291), l2, n2, r2, c2); float vn = inversesqrt((1.0 - bw) * (1.0 - bw) + bw * bw);
+                lum = max(0.05, 1.0 + ((lum - 1.0) * (1.0 - bw) + (l2 - 1.0) * bw) * vn); nxy = (nxy * (1.0 - bw) + n2 * bw) * vn; rgh = mix(rgh, r2, bw); ch = mix(ch, c2, bw); } }
+            float mv = m3hiN(hm * 0.21 + 3.1) * 0.6 + m3hiN(hm * 0.53 + 1.7) * 0.4;
+            lum *= 0.9 + mv * 0.2; rgh = clamp(rgh + (mv - 0.5) * 0.16, 0.04, 1.0);
+            pk = lum * vec3(ch.x, (1.0 - 0.2126 * ch.x - 0.0722 * ch.y) / 0.7152, ch.y) * 0.94;
+            if (pp == 13.0 && uTexOn > 0.5) { float fm = frameMask(puv, vPP); vec4 tb = m3raw(M3_BEAM, puv * M3S_BEAM); pk = mix(pk, m3col(tb) * 0.34, fm); nxy *= 1.0 - fm; }
+            diffuseColor.rgb *= pk;
+            vec3 hT = pt, hB = pb;
+            if (hp) { vec3 q1 = dFdx(vPP), q2 = dFdy(vPP); vec2 s1 = dFdx(hm), s2 = dFdy(hm); vec3 q2p = cross(q2, pn), q1p = cross(pn, q1);
+              vec3 T = q2p * s1.x + q1p * s2.x, B = q2p * s1.y + q1p * s2.y; float im = inversesqrt(max(max(dot(T, T), dot(B, B)), 1e-12)); hT = T * im; hB = B * im; }
+            if (hturn) nxy = nxy.yx;
+            float hz = sqrt(max(0.0, 1.0 - dot(nxy, nxy)));
+            normal = normalize(normal * mix(1.0, hz, fade) + (viewMatrix * vec4(hT * nxy.x + hB * nxy.y, 0.0)).xyz * fade); bump = vec2(0.0);
+            #ifdef M3SPEC
+            float hg = 1.0 - rgh; hSpec = 0.75 + 1.25 * hg; m3shin = mix(10.0, 64.0, hg); // (round the pattern's own sheen of before: the joint duller, the worn face brighter)
+            #endif
+          } else
+          #endif
           if (uTexOn > 0.5 && L >= 0.0) {
             bool roof = (pp > 5.5 && pp < 9.5) || pp == 35.0; vec2 tu = puv * m3scale(pp); if (roof) tu.y = -tu.y;
             // (a lying beam or jamb — along X: 30, 32; along Z: 31, 33 — its grain level on every upright face, and along it on top)
@@ -459,7 +502,7 @@ float m3scale(float p) {
           } else diffuseColor.rgb *= mix(vec3(0.88), pk, fade);
           normal = normalize(normal + (viewMatrix * vec4(pt * bump.x + pb * bump.y, 0.0)).xyz * fade);
           #ifdef M3SPEC
-          specularStrength = m3spec(pp);
+          specularStrength = m3spec(pp) * hSpec;
           #endif
         }
         #ifdef M3SPEC
@@ -468,6 +511,8 @@ float m3scale(float p) {
         #ifdef AGUA_WET
         aguaWetSolid(diffuseColor.rgb, vPP, vPN, uAgSky); // (21c: the rain that wets)
         #endif`);
+      // (the Phong's sheen as sharp as the high picture's roughness says: the chunk's own line, the shininess the dress set — P8)
+      if (sh.fragmentShader.includes('#include <lights_phong_fragment>')) sh.fragmentShader = sh.fragmentShader.replace('#include <lights_phong_fragment>', THREE.ShaderChunk.lights_phong_fragment.replace('material.specularShininess = shininess;', '#ifdef M3SPEC\nmaterial.specularShininess = m3shin;\n#else\nmaterial.specularShininess = shininess;\n#endif'));
     };
     mat.needsUpdate = true;
   };

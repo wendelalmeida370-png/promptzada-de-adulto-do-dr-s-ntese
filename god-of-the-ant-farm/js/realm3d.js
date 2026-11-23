@@ -267,6 +267,11 @@
     for (const m of [MAT.solid, MAT.flora, MAT.inner, MAT.innerHi]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
     if (MAT.innerHi) MAT.innerHi.defines.M3SPEC = 1;
     for (const m of [MAT.inner, MAT.innerHi]) if (m) m.defines.M3EYE = 1; // (the inside gives way in the eye's box — the front P4's quarta parede: Build3D.eyeBox)
+    // (the insides' materials in high resolution on the Alta and the Ultra — P8, D-772: loaded in the background by the Ground3D, a
+    // material at a time; on the others the card's memory given back)
+    const hiQ = !!(G.Ground3D.HI_SIZE && G.Ground3D.HI_SIZE[R3.q]) && q.detail !== 0;
+    for (const m of [MAT.inner, MAT.innerHi]) if (m && hiQ) m.defines.M3HI = 1;
+    G.Ground3D.hiWant && G.Ground3D.hiWant(hiQ ? R3.q : null);
     if (MAT.solid) { MAT.solid.defines.M3CUT = 1; MAT.solid.defines.GX_NOVOL = 1; } // (the town's solid gives way where an inside is drawn: Build3D.cuts; and its outer faces are the open air's, never lit as the room behind them — G.Luz3D)
     for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner, MAT.innerHi]) if (m) m.needsUpdate = true;
     G.Build3D && G.Build3D.insideClear && G.Build3D.made && G.Build3D.made() && G.Build3D.insideClear(); // (the insides made again in the material of the quality)
