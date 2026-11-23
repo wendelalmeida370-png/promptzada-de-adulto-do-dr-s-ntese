@@ -3234,6 +3234,7 @@ arquivo, as portas, as peças novas, os números reservados, as provas).
 
 | ID | Tipo | Descrição |
 |---|---|---|
+| L-1860 | bug | **No terreiro da taverna e da olaria, o olho ficava dentro da cabeça.** O corpo no terreiro conta como dentro do prédio (`Space.inBody` inclui o `shell.yard`), e a câmera tratava o prédio como a sala; mas a regra do olho «fora da casca é sólido» (`outRoom` do `cam3d.js`) só conhecia a casca e os anexos — o terreiro inteiro era parede para o olho, que ia para 5 cm atrás do ponto da cabeça (`C3.inside` ligado). Na metrópole, de oito tavernas e olarias com terreiro, **747 de 2.199 quadros** do portão da rua ao salão com o olho dentro do sólido (o agente D: 100% dos quadros no terreiro das tavernas #7968 e #5763). Ninguém acusou: a regra S2 «vista3d» do `qa/qa.js` pulava o corpo dentro de um prédio (feita para quem dorme na cama), e a t7 do `movimento-tela` só anda do lado de fora. **Conserto:** o `outRoom` pergunta ao `G.Space.inBody` (a casca, o anexo e o terreiro do piso, a regra dos pés). **A prova:** `qa/olho-dentro.js` o1 (0 de 2.199) e o o2 (cada tipo com planta: o corpo entra e gira o olho em três inclinações); a regra «vista3d» passa a valer dentro de casa — só o corpo dormindo na cama fica de fora (`QA.eye`) |
 
 ### P5 — A decoração com causa
 

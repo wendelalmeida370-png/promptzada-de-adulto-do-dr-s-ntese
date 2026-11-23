@@ -124,10 +124,12 @@
       if (Math.hypot(body.X - X, body.Z - Z) < Math.max(0.7, h.w / 2 + 0.2)) return true; }
     return false; };
   G.worldHooks.push(() => { room = null; });
+  // (the building's own body as the feet have it — the shell, an annex, the yard on their storey: Space.inBody, the one rule. The
+  // yard left out, the whole yard of a tavern or a pottery was wall to the eye, and it stood in the head from the street door to
+  // the hall, L-1860)
   function outRoom(X, Z) {
-    const b = room.b, sh = room.p.shell, L = G.Space.TILE; const x = X - b.x * L, z = Z - b.y * L;
-    if (sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r : x > sh.r[0] && x < sh.r[2] && z > sh.r[1] && z < sh.r[3]) return false;
-    return !(sh.annex || []).some(a => x > a.r[0] && x < a.r[2] && z > a.r[1] && z < a.r[3]);
+    const b = room.b, L = G.Space.TILE;
+    return !G.Space.inBody(room.p.shell, room.lv || 0, X - b.x * L, Z - b.y * L);
   }
   // what stops the eye: the ground (and the water's face), the bodies of buildings, walls — and, with the body indoors, the
   // outside of its building
