@@ -2117,5 +2117,46 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   if (!/O\.matOK\(fid, m, known\)/.test(f) || !/ok\('barro'\)/.test(f) || !/ok\('ferro'\)/.test(f) || !/artsOf\(f\)\.weave/.test(f)) fails.push('o material é o que o povo teve: o within não pergunta o barro, o metal e o pano ao G.Origem.matOK e ao artsOf (D-744)');
   if (/known\.(?:ferro|bronze)|\.tech\.known\.\w+\s*!==/.test(f)) fails.push('o material é o que o povo teve: o within lê a arte de um metal sozinha (D-744)');
   const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); if (/\.tech\b|\.matOK\(|G\.Origem\./.test(dt)) fails.push('o material é o que o povo teve: o dentro3d.js decide o material por conta própria, fora do within (D-744)'); }
+// === 23, os interiores 2.0 — P7, a vida da taverna no mundo ===
+// 310. "o lugar tomado é do repartidor" (D-762): o lugar que uma pessoa toma e guarda (t.lugar: a peça e o lugar dela) só o
+// interiors.js escreve — In.hold, In.holdAt, In.unhold —; quem senta ou deita pede por essas portas, nunca escreve o lugar à mão
+{ for (const f of files) { if (f === 'interiors.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.lugar\s*=(?!=)|delete\s+[\w.]*\.lugar\b/.test(c)) fails.push(`o lugar tomado é do repartidor: ${f}:${k + 1} escreve o lugar guardado à mão (In.hold, D-762): ${l.trim().slice(0, 110)}`); }); }
+  const ir = (src['interiors.js'] || []).join('\n');
+  if (!/const h = v\.task && v\.task\.lugar; if \(!Array\.isArray\(h\)\) continue;/.test(ir)) fails.push('o lugar tomado é do repartidor: o In.places não dá primeiro a cada um o lugar que tomou (assign 1c, D-762)'); }
+// 311. "entra e sai andando" (D-765): a caminhada da porta ao lugar (t.inW) e do lugar à porta (v.saiT) só o villagers.js escreve —
+// G.Vg.enter e o leave com a caminhada —, e o passo de quem está saindo espera a caminhada (o laço das pessoas)
+{ for (const f of files) { if (f === 'villagers.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.(saiT|inW)\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`entra e sai andando: ${f}:${k + 1} escreve a caminhada da porta à mão (G.Vg.enter, D-765): ${l.trim().slice(0, 110)}`); }); }
+  const vg = (src['villagers.js'] || []).join('\n');
+  if (!/if \(s > 0\) \{ v\.saiT = G\.S\.clock \+ s; exitOf\.set\(v\.id, v\.inside\);/.test(vg) || !/if \(v\.saiT\) \{\n\s+v\.moving = false; v\.scan -= vdt;/.test(vg)) fails.push('entra e sai andando: o villagers.js sem a caminhada até a porta, ou sem a espera dela no passo (D-765)'); }
+// 312. "a noite da taverna sem sorteio" (D-760): quem vai à taverna hoje é a vontade de cada um e a sorte do dia pelo G.hash da pessoa
+// e do dia — T.wish, T.lot, T.hourOf, T.leaveOf, T.pick, T.urge e T.stays não tiram do acaso do mundo nem do que só se vê
+{ const tv = (src['act-taverna.js'] || []).join('\n'); const body = (a, b) => { const i = tv.indexOf(a), j = b ? tv.indexOf(b, i + 1) : -1; return i < 0 ? null : tv.slice(i, j < 0 ? undefined : j); };
+  const parts = [['T.lot', 'T.lot = ', 'T.hourOf = '], ['T.hourOf', 'T.hourOf = ', 'T.WORK = '], ['T.leaveOf', 'T.leaveOf = ', 'function fond('], ['T.wish', 'T.wish = ', 'const keeps = '], ['T.pick', 'T.pick = ', 'T.urge = '], ['T.urge', 'T.urge = ', 'T.stays = '], ['T.stays', 'T.stays = ', 'T.visitTask = ']];
+  for (const [n, a, b] of parts) { const f = body(a, b); if (!f) { fails.push(`a noite da taverna sem sorteio: o act-taverna.js sem o ${n} (D-760)`); continue; } if (/\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(f)) fails.push(`a noite da taverna sem sorteio: o ${n} sorteia (a sorte do dia é o G.hash: D-760)`); }
+  if (!/T\.lot = v => G\.hash\(/.test(tv)) fails.push('a noite da taverna sem sorteio: a sorte do dia de cada um não é o G.hash da pessoa e do dia (D-760)'); }
+// 313. "a caneca vai à mesa pelo livro" (D-763): quem serve enche a caneca da prateleira para as mãos dele (o livro, 'taverna-caneca',
+// a carga presa à prateleira), entrega à mesa das mãos dele à do freguês, paga ali ('taverna', pelo serve), e a que ninguém tomou volta
+// à prateleira ('taverna-volta'); a ronda dele é uma perna da operação do dia (as mãos ocupadas, D-094)
+{ const tv = (src['act-taverna.js'] || []).join('\n');
+  if (!/D\.move\('b:' \+ b\.id, 'v:' \+ v\.id, t\.k, n, \{ op: op\.id, code: 'taverna-caneca', by: v\.id, to: 'b:' \+ b\.id,/.test(tv)) fails.push('a caneca vai à mesa pelo livro: o taverneiro não enche a caneca da prateleira para as mãos pelo livro (D-763)');
+  if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
+  if (!/code: 'taverna-volta'/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a caneca que ninguém tomou não volta à prateleira pelo livro (D-763)');
+  if (!/leg\(op, v\) \{ const t = v\.task; return t && t\.type === 'atender' && t\.op === op\.id && t\.st >= 2 && t\.st <= 5 \? 'servir' : null; \}/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a ronda de quem serve não é uma perna da operação do dia (D-094, D-763)'); }
+// 314. "o bebê no colo em todo prédio" (D-660): o repartidor dá ao bebê de colo o colo de quem o carrega em todo prédio, antes de
+// qualquer lugar da planta — nunca o fogão, o banco ou a piscina para um bebê sozinho
+{ const ir = (src['interiors.js'] || []).join('\n');
+  if (!/for \(const v of people\) \{ if \(done\(v\) \|\| !\(v\.age < 2\) \|\| \(T\.use === 'casa' && v\.sleeping\)\) continue; const c = v\.carrier && S\.villagers\.get\(v\.carrier\);[^\n]*else if \(c && c\.inside === b\.id && c\.id !== v\.id\) withM\.set\(v\.id, c\.id\);/.test(ir)) fails.push('o bebê no colo em todo prédio: o repartidor sem o colo do bebê antes dos lugares (assign 1b, D-660)'); }
+// 315. "a porta abre para quem passa" (D-766): a porta de fora do caminho de entrada fica aberta enquanto alguém passa por ela
+// (In.passage), e a regra de cada uso (In.doorRule: a taverna aberta na hora dela) vem antes da do tempo
+{ const ir = (src['interiors.js'] || []).join('\n'), tv = (src['act-taverna.js'] || []).join('\n');
+  if (!/if \(d\.outer && p\.entrance && p\.entrance\.door === id\) for \(const v of insideOf\(b\.id\)\) if \(In\.passage\(v\)\) return \{ state: 'aberta', by: 'passagem' \};/.test(ir)) fails.push('a porta abre para quem passa: o In.doorState não abre a porta para quem está passando (D-766)');
+  if (!/G\.Interiors\.doorRule\('taverna', b => \(T\.aberta\(b\) \? 'aberta' : null\)\)/.test(tv)) fails.push('a porta abre para quem passa: a porta da taverna não fica aberta enquanto o dia dela está (D-766)'); }
+// 316. "o instrumento tem origem" (D-764, D-440): o instrumento do músico é uma coisa do catálogo do material do bicho (o couro e a
+// tripa: lira, tambor), feita do couro e da madeira do armazém (G.Itens.feitoDe), e chega às mãos de quem toca pelo kit (ACT_TOOL.play,
+// o do povo) — nunca uma coisa sem material
+{ const it = (src['itens.js'] || []).join('\n'), iv = (src['inventario.js'] || []).join('\n');
+  for (const k of ['lira', 'tambor']) if (!new RegExp(`\\b${k}: \\{[^\\n]*tags: \\['tocar'\\], mats: \\['couro'\\]`).test(it)) fails.push(`o instrumento tem origem: o ${k} do catálogo sem a etiqueta «tocar» e o material do bicho (D-764)`);
+  if (!/const BEAST = \{ lira: \{ couro: [\d.]+, wood: [\d.]+ \}, tambor: \{ couro: [\d.]+, wood: [\d.]+ \} \};/.test(it)) fails.push('o instrumento tem origem: o instrumento sem o couro e a madeira de que é feito (G.Itens.feitoDe, D-764)');
+  if (!/bound: 'grilhoes', play: 'lira' \};/.test(iv) || !/if \(t === 'lira'\) t = instrumentOf\(v\);/.test(iv)) fails.push('o instrumento tem origem: o kit não dá a quem toca o instrumento do povo (ACT_TOOL.play, D-764)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

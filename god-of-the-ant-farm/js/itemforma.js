@@ -894,6 +894,54 @@
     M.marks.centro = [0, 0.45, 0]; M.marks.ponta = [0, -0.86, 0]; M.marks.pe = [0, -0.86, 0]; M.marks.axila = [0, 0.46, 0];
   };
 
+  // ------------------------------ the instruments (P7, D-764) ------------------------------
+  // the lyre: held by the peg at the foot of its sound box (the origin: the fist round the peg, along Y — the thing of one hand: the
+  // other plucks), the box above it and the arms and the yoke above that (+Y), its face (+Z) where the strings are. The box a rounded
+  // shell of wood with the rawhide stretched over its face; the two arms of dark wood rising from its shoulders and leaning out, the
+  // yoke across their tops; the seven strings of gut from the tailpiece at the foot of the face to the yoke
+  R.lira = (M) => {
+    const q = M.q; const wb = 0.17, yb0 = 0.045, yb1 = 0.235, zb = 0.045;
+    part(M, 'cabo');
+    // (the peg under the box: turned wood, the hand round it)
+    haft(M, -0.05, yb0 + 0.01, 0.014, 0.016, { wood: 'escura', top: false, grip: [-0.04, 0.03] });
+    part(M, 'cabeca');
+    // (the box: a deep rounded rectangle along Z, its back of wood, its face of hide)
+    box(M, [0, (yb0 + yb1) / 2, -0.008], [wb, (yb1 - yb0) / 2, zb - 0.008], 0.05, PAL.madeira, { along: 'z', n: seg(M, 3, 1, 0), f: (k, t) => ({ ao: 0.85 + 0.15 * t }) });
+    if (q < 2) grid(M, 1, 1, (s, t) => [lerp(-wb + 0.02, wb - 0.02, s), lerp(yb0 + 0.02, yb1 - 0.02, t), zb + 0.0015], PAL.cru, { out: [0, 0, 1], f: () => ({ ao: 0.95 }) });
+    // (the arms: from the box's shoulders up and out, a little forward)
+    const na = seg(M, 8, 4, 2); const arm = sx => bez([sx * (wb - 0.03), yb1 - 0.02, 0], [sx * (wb + 0.04), yb1 + 0.12, 0.01], [sx * (wb + 0.02), yb1 + 0.26, 0.02], [sx * (wb - 0.03), yb1 + 0.36, 0.015], na);
+    const L = arm(-1), Rr = arm(1);
+    // (the ends of the arms and of the yoke closed near and mid; far, too small to see)
+    const cp = q < 2;
+    tube(M, L, t => lerp(0.016, 0.011, t), seg(M, 7, 5, 3), PAL.escura, { cap0: cp, cap1: cp });
+    tube(M, Rr, t => lerp(0.016, 0.011, t), seg(M, 7, 5, 3), PAL.escura, { cap0: cp, cap1: cp });
+    // (the yoke across the arms' tops, standing a little past them)
+    const yy = yb1 + 0.33; tube(M, [[L[L.length - 1][0] - 0.02, yy, 0.015], [Rr[Rr.length - 1][0] + 0.02, yy, 0.015]], 0.012, seg(M, 8, 5, 3), PAL.madeira, { cap0: cp, cap1: cp });
+    if (q < 2) { part(M, 'corda');
+      // (the strings: gut, from the tailpiece to the yoke, fanning a little)
+      const ns = seg(M, 7, 5, 0); box(M, [0, yb0 + 0.025, zb + 0.004], [0.05, 0.006, 0.004], 0.002, PAL.couro, { n: 0 }); // (the tailpiece)
+      for (let i = 0; i < ns; i++) { const s = ns > 1 ? i / (ns - 1) : 0.5; const x0 = lerp(-0.045, 0.045, s), x1 = lerp(-0.1, 0.1, s); tube(M, [[x0, yb0 + 0.025, zb + 0.006], [x1, yy - 0.008, 0.028]], 0.0012, 3, PAL.linha, {}); } }
+    M.marks.centro = [0, (yb0 + yb1) / 2, zb]; M.marks.ponta = [0, yy, 0.015]; M.marks.cordas = [0, (yb1 + yy) / 2, 0.03];
+  };
+  // the drum (the huehuetl): held by the carved handle of its foot (the origin: the fist round it, along Y — a thing of one hand),
+  // the body above it (+Y); a log of wood hollowed and carved, its three feet notched out of its foot, the hide stretched over its
+  // mouth and laced with cord below the rim
+  R.tambor = (M) => {
+    const q = M.q; const r = 0.15, y0 = 0.05, y1 = 0.55; const C = [0, 0, 0];
+    part(M, 'cabo');
+    haft(M, -0.05, y0 + 0.01, 0.02, 0.022, { wood: 'escura', top: false, grip: [-0.04, 0.03] });
+    part(M, 'cabeca');
+    const n = seg(M, 16, 10, 6);
+    // (the body: a little waisted, the rim thick; the feet cut from its foot — three tongues where the log is notched)
+    const prof = q === 0 ? [[r * 0.9, y0], [r * 0.95, y0 + 0.12], [r * 0.9, y0 + 0.2], [r * 0.96, y1 - 0.14], [r, y1 - 0.015], [r * 1.02, y1]] : [[r * 0.92, y0], [r * 0.92, y1 - 0.14], [r, y1]];
+    lathe(M, prof, n, PAL.madeira, { at: C, cap0: [0, y0, 0], f: (k, t, j, u, v, p) => ({ ao: 0.72 + 0.28 * sstep(y0, y0 + 0.2, p[1]) }) });
+    if (q === 0) for (let i = 0; i < 3; i++) { const a = (i / 3 + 1 / 6) * TAU; box(M, [Math.cos(a) * r * 0.93, y0 + 0.06, Math.sin(a) * r * 0.93], [0.03, 0.06, 0.008], 0.004, PAL.escura, { n: 0 }); }
+    // (the hide over the mouth, its edge turned down over the rim)
+    grid(M, n, 1, (s, t) => { const a = s * TAU, rr = lerp(0, r * 1.02, t); return [Math.cos(a) * rr, y1 + 0.003 * (1 - t), Math.sin(a) * rr]; }, PAL.cru, { loopU: true, apex0: true, out: [0, 1, 0] });
+    if (q < 2) { part(M, 'amarra'); collar(M, y1 - 0.03, 0.02, r * 1.025, PAL.corda, { at: C, n }); }
+    M.marks.centro = [0, y1, 0]; M.marks.ponta = [0, y1, 0]; M.marks.pe = [0, y0, 0];
+  };
+
   // ------------------------------ building a thing ------------------------------
   // the colour of a vertex: the material's base, its grain (from where the vertex is), its edge, its shade; its shine
   function shade(inf, p, n) {

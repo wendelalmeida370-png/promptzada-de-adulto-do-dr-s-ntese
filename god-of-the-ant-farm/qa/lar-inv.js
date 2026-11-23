@@ -14,7 +14,7 @@
   // the checker's own reading, not the code it checks, L-371)
   const lives = b => housing(b) && b.type !== 'ruin' && (b.built || !!b.upgradeFrom);
   // (what keeps someone in a house: asleep, the evening at home, sheltering from a storm, the end of the day's work, hiding
-  // from an enemy, a secret meeting in a house that is a front, the god's body)
+  // from an enemy, a secret meeting in a house that is a front, the god's body — and the walk out to its door, v.saiT: D-765)
   const IN_OK = { sleep: 1, lar: 1, shelter: 1, goHome: 1, hide: 1, conclave: 1, avatar: 1 };
   // (a pantry changed outside the ledger: S2 — the last two writes by hand, the end of the day at home and the tribute,
   // passed through the ledger in the Patch 2, T-130)
@@ -46,6 +46,8 @@
       // (a baby: in the arms of who carries it, or at home — the house keeps the baby nobody is free to hold, babyUpdate)
       if (v.age < 2) { const c = s.villagers.get(v.carrier); const m = s.villagers.get(v.mother); if (!(c && c.inside === b.id) && v.home !== b.id && !(m && m.home === b.id)) add('lar', 3, `o bebê ${nm} está dentro de ${b.type}#${b.id} sem quem o carrega, e não é a casa dele`, v.id); continue; }
       const t = v.task;
+      // (walking out to the door — the next errand waits there: D-765; never longer than the longest walk, taverna-vida-inv.js)
+      if (v.saiT > s.clock) continue;
       if (!t || !IN_OK[t.type]) { add('lar', 2, `${nm}: dentro de ${b.type}#${b.id} sem motivo (${t ? 'tarefa ' + t.type : 'sem tarefa'})`, v.id); continue; }
       if (t.type === 'lar' && (t.home !== b.id || t.st !== 2 || !Lr.WHAT[t.what])) add('lar', 3, `${nm}: «${t.what}» da casa ${t.home} (passo ${t.st}) dentro de ${b.type}#${b.id}`, v.id);
       if (v.sleeping && t.type !== 'sleep') add('lar', 2, `${nm}: dormindo dentro de ${b.type}#${b.id} na tarefa ${t.type}`, v.id);

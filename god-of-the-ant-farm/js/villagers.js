@@ -68,6 +68,9 @@
   'genoma', 'indole', 'lacos', 'marcas', 'fama', 'sabe',
   // (22b, D-632: the one who raises a child whose parents are gone — only soc-tutela.js writes it)
   'tutor',
+  // (the interiors 2.0, P7: the clock the walk out of a building ends at — still inside till then, Vg.leave, D-765 —; the day of
+  // the last evening at the tavern, which act-taverna.js writes — one a day, D-760)
+  'saiT', 'tavDay',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -205,7 +208,8 @@
     // door is for going out. And the mark of the god's body leaves it where it was taken, in the room: the errand had ended
     // before the mark, and the mark — an errand like any other to «one left in a building with no errand» — put the body
     // out at the door, its inner floor still written, L-741)
-    Vg.endTask(v, v.inside && (t.stay === v.inside || t.type === 'avatar') ? { stay: v.inside } : undefined);
+    // (and the next errand of one inside who is not hurried out — below 3, no force of the world —: the way out walked first, D-765)
+    Vg.endTask(v, v.inside && (t.stay === v.inside || t.type === 'avatar') ? { stay: v.inside } : v.inside && (t.pri || 0) < 3 && !(G.Possess && G.Possess.FORCE && G.Possess.FORCE[t.type]) ? WALK : undefined);
     t.age = 0; if (t.st === undefined) t.st = 0;
     v.task = t; v.act = ''; v.actT = 0;
     return t;
@@ -317,7 +321,7 @@
       if (b && t.counted && t.mat && b.incoming && b.incoming[t.mat] !== undefined) b.incoming[t.mat] = Math.max(0, b.incoming[t.mat] - (t.cn || 0));
       t.counted = false;
     }
-    if (v.inside && !(o && o.stay === v.inside)) leave(v);
+    if (v.inside && !(o && o.stay === v.inside)) leave(v, !!(o && o.walk && WALK_OUT[t.type]));
     v.sleeping = false;
     v.task = null; v.path = null; v.act = '';
   };
@@ -329,7 +333,47 @@
   const IN_R = 3;
   Vg.IN_R = IN_R;
   // (out of a building by its door — the people's door, the plan's)
-  function leave(v) { const b = G.S.buildings.get(v.inside); if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; } v.inside = 0; }
+  function outNow(v) { const b = G.S.buildings.get(v.inside); if (b) { const [dx, dy] = V_door(b); v.x = dx; v.y = dy; } v.inside = 0; v.saiT = 0; }
+  // (walk: the way out walked — from one's place in the plan to its door, in the seconds of one's walk, still inside till then:
+  // the next errand waits at the door, D-765. Out at once: a building with no plan, a cell, the body, a baby in arms, and what
+  // cannot wait — the fire, the panic, a call of 3 and more go out of the door in the same step. Before, everyone stood up and
+  // was at the door in the same step: the drawing saw them jump from their seat to the street, L-1924)
+  Vg.WALK_MAX = 8; // (the seconds of the longest walk out: a palace's hall)
+  // (the errands one walks out of: a stay at a place of the plan — the table, the bed, the evening at home, the prayer, the water,
+  // the scroll, the rows — that ends with one going elsewhere. The day's work at a station steps in and out of its errands by its own
+  // door: walked out between two steps of the same work, the potter would lose the walk at each one)
+  const WALK_OUT = { tavern: 1, atender: 1, lar: 1, sleep: 1, shelter: 1, goHome: 1, pray: 1, termas: 1, ler: 1, teatro: 1, rest: 1, hide: 1, conclave: 1 };
+  Vg.WALK_OUT = WALK_OUT;
+  // (the building each one walking out is leaving: a person put into another one meanwhile is not walked out of it)
+  const exitOf = new Map(); G.worldHooks.push(() => exitOf.clear());
+  function leave(v, walk) {
+    if (walk && v.saiT > G.S.clock && exitOf.get(v.id) === v.inside) return; // (already on the way out)
+    const s = walk ? walkOut(v) : 0;
+    if (s > 0) { v.saiT = G.S.clock + s; exitOf.set(v.id, v.inside); v.moving = false; v.path = null; return; }
+    outNow(v); exitOf.delete(v.id);
+  }
+  function walkOut(v) {
+    const In = G.Interiors; const b = G.S.buildings.get(v.inside);
+    if (!In || !In.walkIn || !b || !b.ip || v.jail || v.age < 2 || (G.S.avatar && G.S.avatar.id === v.id)) return 0;
+    const pl = In.placeOf(v); if (!pl || pl.use === 'saida') return 0;
+    const m = In.walkIn(b, pl); return Number.isFinite(m) && m > 0.05 ? Math.min(Vg.WALK_MAX, m / Vg.walkMS(v)) : 0;
+  }
+  // the pace of one's walk inside, in metres of the world's second: the walk on the street's own measure (move: the speed, the
+  // age, the illness, a leg lost), on a floor with no road
+  Vg.walkMS = v => 4 * (v.speed || 1.3) * (v.sick > 0 ? 0.75 : 1) * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.lost && v.lost.leg ? 0.6 : 1);
+  // in through the door (D-765): one at the door of a building goes in — inside, at its door — and walks from there to the place
+  // the interiors give them, in the seconds of their walk (In.walkIn): the errand's t.inW, the world's clock the walk ends at;
+  // the errand waits for it (Vg.entering). The place is the one given now (a seat taken, In.hold, is given first)
+  Vg.enter = function (v, b, t) {
+    const [dx, dy] = V_door(b); v.x = dx; v.y = dy; v.inside = b.id; v.moving = false; v.path = null; v.saiT = 0;
+    const In = G.Interiors; if (!t || !In || !In.walkIn || !b.ip) return 0;
+    const pl = In.placeOf(v); const m = pl ? In.walkIn(b, pl) : Infinity;
+    const s = Number.isFinite(m) && m > 0.05 ? Math.min(Vg.WALK_MAX, m / Vg.walkMS(v)) : 0;
+    if (s > 0) t.inW = G.S.clock + s; else delete t.inW;
+    return s;
+  };
+  Vg.entering = v => !!(v && v.task && v.task.inW > G.S.clock && v.inside > 0);
+  Vg.leaving = v => !!(v && v.saiT > G.S.clock && v.inside > 0);
   // the door of a building's plan, when the interiors give one (G.Vg.planDoor = b => [x, y] | null, in tiles, outside the
   // door): where people stand to go in is where the plan has its door; with no plan, the first walkable side of the front
   Vg.planDoor = null;
@@ -460,7 +504,7 @@
   Vg.REST = 0.2;
   // (the errands of rest, and the state of each in which the body is at it — the walk there is not)
   const REST_TASK = {
-    tavern: t => t.st >= 2,                      // (seated: waiting to be served, eating, drinking — act-taverna.js)
+    tavern: t => t.st >= 2 && t.st < 7 && !(t.st === 6 && t.mw > G.S.clock), // (seated: waiting, drinking, at the talk, at the stage — act-taverna.js; the walk to the counter or the stage is a walk)
     teatro: t => t.st >= 1,                      // (in the rows — act-lazer.js)
     ler: t => t.st >= 1,                         // (at the table, over the scroll)
     termas: t => t.st === 2,                     // (in the water — act-servicos.js; the pegs are not)
@@ -478,8 +522,10 @@
   Vg.resting = function (v) {
     if (!v || v.sleeping || v.moving) return false;
     const a = G.S.avatar; if (a && a.id === v.id) return !!(a.use && REST_USE[a.use.use]);
-    // (the work of the day tires as work, whatever the gesture: the priest who leads the prayers is at his trade)
-    const t = v.task; if (!t || t.kind === 'work') return false;
+    // (the work of the day tires as work, whatever the gesture: the priest who leads the prayers is at his trade; and the walk
+    // through a door — in to one's place, out to the door, D-765 — is a walk)
+    if (v.saiT > G.S.clock) return false;
+    const t = v.task; if (!t || t.kind === 'work' || t.inW > G.S.clock) return false;
     const f = REST_TASK[t.type]; return !!f && f(t);
   };
 
@@ -829,7 +875,9 @@
     const post = !!(G.Termas && G.Termas.onDuty && G.Termas.onDuty(v));
     if (v.hunger > 50 && !(post && v.hunger <= 85)) opt((v.hunger - 40) / 60 * 1.3 + (v.hunger > 88 ? 1 : 0), v.hunger > 85 ? 2.5 : 1.2, 'eat');
     else if (!post && G.Termas && G.Termas.mealFirst && G.Termas.mealFirst(v)) opt(0.9, 1.2, 'eat');
-    const atTav = cur && cur.type === 'tavern' && v.energy > 20 && S.time > 0.5 && S.time < (cur.st >= 1 ? 0.88 : 0.78); // (at the tavern: seated, served — act-taverna.js st 2, 3; the walk there, st 0)
+    // (at the tavern: on the way there and at the table, while the tavern keeps one — its hours, one's own hour to go home, the
+    // strength left: act-taverna.js G.Taverna.stays, D-760)
+    const atTav = !!(cur && cur.type === 'tavern' && G.Taverna && G.Taverna.stays && G.Taverna.stays(v, cur));
     if (sleepy) opt(0.95 + (100 - v.energy) / 250, atTav ? 0.3 : 1.5, 'sleep');
     else if (v.energy < 22) opt(0.6 + (22 - v.energy) / 30, v.energy < 8 ? 2.5 : 1.2, 'sleep');
     // (at home: ill in bed by day, and after dark awake before one's bed time — the tavern keeps its own until it shuts)
@@ -843,12 +891,14 @@
     // of the kind 'work', goes on — the bed of the night cut it at the first look: L-386)
     // (by day only the loot already in his hands: the theft under way goes on to the shelf past the night's end, L-830)
     const prowl = !watch && v.role === 'contrabandista' && v.energy > 45 && !!(G.Eco && G.Eco.prowls && G.Eco.prowls(v));
-    let wU = night ? (watch || prowl ? 1.4 : 0.05) : prowl ? 1.4 : 0.55 * v.work;
+    // (the tavern's keeper at his post, its hours on: his counter before the evening's choices — G.Taverna.onDuty, D-763)
+    const duty = !watch && !prowl && !!(G.Taverna && G.Taverna.onDuty && G.Taverna.onDuty(v));
+    let wU = duty ? 1.1 : night ? (watch || prowl ? 1.4 : 0.05) : prowl ? 1.4 : 0.55 * v.work;
     // (what weighs the day's work down — the years, the grief, the fear, the evening — does not weigh the night's duty: it comes
     // before the bed while one is not worn out. In mourning it fell under the bed — 0,98 against 0,95 and up —, and the bed
     // cut the theft under way, of priority 1,2, with the loot in the hands: Xântipe of Argos, the last hour of her grief
     // still on her, L-821)
-    if (!(watch || prowl)) {
+    if (!(watch || prowl || duty)) {
       if (elder) wU *= 0.55;
       if (v.mourn > 0) wU *= 0.7;
       if (v.fear > 60) wU *= 0.8;
@@ -857,7 +907,7 @@
     // (the night's little work of one awake with nothing to do never over an evening at the tavern table: of priority 1, it
     // took everyone at the tables at the fall of night, long before the closing and their bed — the tavern keeps its own
     // until it shuts. The watch's torch and the smuggler's errand still call: L-591)
-    if (!(night && atTav) || watch || prowl) opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
+    if (!(night && atTav) || watch || prowl || duty) opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
     if (S.weather.storm > 0 && !night && S.weather.rain > 0.3) { const h = S.buildings.get(v.home); if (G.Village.livable(h)) opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
     if (!night) {
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');
@@ -872,8 +922,6 @@
       if (eve || elder) opt(0.3 * G.R() * (elder ? 2 : 1), 0, 'rest');
       // the working day ends: home, or a cup at the tavern
       if (eve && v.home) opt(0.55 + G.R() * 0.4, 0.45, 'home');
-      // (the stoker of baths still open, the fire not fed to their closing, keeps the furnace: G.Termas.onDuty, D-204)
-      if (eve && G.Eco && G.Eco.byType(v.set, 'taverna').length && !post) opt((v.traits.includes('Sociável') ? 0.62 : 0.4) + G.R() * 0.5 + (v.mourn > 0 ? 0.15 : 0) - (v.traits.includes('Devoto') ? 0.2 : 0) + (G.Harbor && G.Harbor.shoreLeave(v) ? 0.5 : 0), 0.4, 'tavern'); // (home from the sea today: the tavern first, D-155)
       // (the theatre's show of the day, its doors open: an evening out — act-lazer.js)
       if (G.Teatro) { const u = G.Teatro.urge(v, cur); if (u > 0) opt(u, 0.45, 'teatro'); }
       // (the baths in their hours and the library's tables: a pause of one's day, by each one's own wish — act-servicos.js,
@@ -888,6 +936,11 @@
       if (G.Compras) { const u = G.Compras.urge(v); if (u > 0) opt(u, 0.6, 'compras'); }
       if (G.Urban && v.home && G.Urban.gardenDue(v)) opt(((elder ? 0.6 : 0.3) + G.R() * 0.4) * (eve ? 1.4 : S.time < 0.16 ? 1.25 : 0.8), 0.4, 'garden');
     }
+    // (the tavern of one's streets, from the end of one's working day into the night, on the evenings one's wish says so — the
+    // friends there, the coin, the strength left, who one is: act-taverna.js G.Taverna.urge, D-760. It was a choice of the
+    // evening alone, below going home at a draw, and nobody came after dark: the taverns emptied at 0,75, L-1925. The stoker
+    // of baths still open keeps the furnace: G.Termas.onDuty, D-204)
+    if (G.Taverna && G.Taverna.urge && !post) { const u = G.Taverna.urge(v, cur); if (u > 0) opt(u, G.Taverna.priOf(v, cur), 'tavern'); }
     opt(0.04, 0, 'wander');
     // (the wishes of one's own the society registers — Vg.want, D-566 —, asked in the order registered)
     for (let i = 0; i < WANTS.length; i++) { const w = WANTS[i]; const u = w.urge(v, cur, night); if (u > 0) opt(u, w.pri, w.kind); }
@@ -1426,7 +1479,9 @@
   }
 
   // ------------------------------ task runner ------------------------------
-  function end(v) { Vg.endTask(v); v.think = Math.min(v.think, 0.2); }
+  // (an errand that ends of itself — its own run says so —: one inside walks out to the door, D-765)
+  const WALK = { walk: 1 };
+  function end(v) { Vg.endTask(v, WALK); v.think = Math.min(v.think, 0.2); }
   function runTask(v, dt) {
     const S = G.S; const t = v.task;
     t.age += dt;
@@ -1816,7 +1871,11 @@
           if (row) { t.row = target.id; if (!Vg.goto(v, row[0], row[1], false)) { G.Life.rowRelease(v); t.row = 0; if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v); } }
           else if (!Vg.goto(v, fx + G.rr(-0.4, 0.4), fy + G.rr(-0.4, 0.4), true)) return end(v);
           t.st = 1;
-        } else if (t.st === 1) { if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built && atDoor(v, b, IN_R)) v.inside = b.id; else t.inT = 0; if (G.Urban) G.Urban.note(v.x, v.y, 'fe', 1); } } // (away from the door: the prayer where one is)
+        } else if (t.st === 1) {
+          // (in by the door, to a place of prayer kept for one, and the walk to it before kneeling: D-762, D-765)
+          if (move(v, dt)) { t.st = 2; v.actT = 0; const b = t.inT && S.buildings.get(t.inT); if (b && b.built && atDoor(v, b, IN_R)) { if (G.Interiors && G.Interiors.hold) G.Interiors.hold(v, b, t.priest ? ['oficiar', 'rezar', 'sentar'] : ['rezar', 'sentar']); Vg.enter(v, b, t); } else t.inT = 0; if (G.Urban) G.Urban.note(v.x, v.y, 'fe', 1); }
+        } // (away from the door: the prayer where one is)
+        else if (Vg.entering(v)) { v.act = ''; v.actT = 0; }
         else {
           v.act = 'pray';
           const b = S.buildings.get(t.b);
@@ -1916,7 +1975,7 @@
         if (!G.Village.livable(h)) return end(v); // (a house standing or under the works: L-371)
         if (t.st === 0 && v.inside === h.id) { t.st = 2; break; } // (already at home)
         if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!Vg.goto(v, fx, fy, true)) return end(v); t.st = 1; }
-        else if (t.st === 1) { if (move(v, dt, 1.25)) { if (atDoor(v, h, IN_R)) { t.st = 2; v.inside = h.id; } else if ((t.re = (t.re || 0) + 1) <= 2) t.st = 0; else return end(v); } }
+        else if (t.st === 1) { if (move(v, dt, 1.25)) { if (atDoor(v, h, IN_R)) { t.st = 2; Vg.enter(v, h, t); } else if ((t.re = (t.re || 0) + 1) <= 2) t.st = 0; else return end(v); } }
         else if (S.weather.storm <= 0 || S.weather.rain < 0.2 || t.age > 45) end(v);
         break;
       }
@@ -1974,7 +2033,7 @@
   }
   // (the cell is not an errand of 70 s: the prisoner's task ended every 70 s and was given back at his next choice — half a
   // step of a prisoner with no task, every 70 s of every sentence; and the walk to the jail has its own 80 s, L-723)
-  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1, shop: 1, lar: 1, cela: 1, levado: 1, levar: 1 };
+  const LONG = { praia: 1, muster: 1, reembarque: 1, contato: 1, adeus: 1, barco: 1, descarga: 1, expl: 1, naufrago: 1, estaleiro: 1, cais: 1, redes: 1, embark: 1, boardBack: 1, scene: 1, saga: 1, caverna: 1, corpse: 1, water: 1, sleep: 1, migrate: 1, swim: 1, pray: 1, band: 1, escorted: 1, condemned: 1, envoy: 1, trade: 1, escape: 1, hide: 1, assembly: 1, escort: 1, combat: 1, pave: 1, sail: 1, siege: 1, sacrifice: 1, herd: 1, taxes: 1, army: 1, fest: 1, slaughter: 1, carga: 1, ajudar: 1, banca: 1, compra: 1, atacado: 1, devolver: 1, shop: 1, lar: 1, cela: 1, levado: 1, levar: 1, tavern: 1 };
 
   function runBuild(v, t, dt) {
     const S = G.S;
@@ -2049,6 +2108,13 @@
     }
   }
 
+  // (the bed one lies down in is one's own while one sleeps — whoever comes to bed after: In.hold, D-762. Of a house, the bed the
+  // household gives one (In.bedOf); elsewhere, a free one — never a cradle)
+  function holdBed(v, t) {
+    const In = G.Interiors; if (!In || !In.hold || !v.inside || t.hb) return; t.hb = 1; // (once a night: one on the floor is not asked again)
+    const own = In.bedOf ? In.bedOf(v) : null; const mine = own && own.b.id === v.inside ? own : null;
+    In.hold(v, null, ['deitar'], L => (mine && L.find(p => p.item === mine.item.id && p.q === mine.q)) || L.find(p => !p.crib) || null);
+  }
   function runSleep(v, t, dt) {
     const S = G.S;
     const night = G.isNight();
@@ -2084,12 +2150,16 @@
       if (t.home) { const h = S.buildings.get(t.home); if (G.Village.livable(h) && !atDoor(v, h, IN_R)) { if ((t.re = (t.re || 0) + 1) <= 2) { t.st = 0; return; } t.home = 0; } }
       // a path that never came: they climb out of the water before lying down
       if (!t.home && !W.dryXY(v.x, v.y)) { const p = W.nearestLand(v.x, v.y, 3); if (p) { v.x = p[0]; v.y = p[1]; } }
-      t.st = 2; v.sleeping = true;
-      if (t.home) { const h = S.buildings.get(t.home); if (G.Village.livable(h)) v.inside = h.id; }
+      // (in by the door, and the walk to one's bed before lying down in it: D-765)
+      t.st = 2;
+      if (t.home) { const h = S.buildings.get(t.home); if (G.Village.livable(h)) Vg.enter(v, h, t); }
+      if (!Vg.entering(v)) { v.sleeping = true; holdBed(v, t); }
       // conception happens at night when partners share a bed
       if (v.g === 'f') tryConceive(v);
       return;
     }
+    if (Vg.entering(v)) { v.sleeping = false; v.act = ''; return; }
+    if (v.inside) holdBed(v, t);
     v.sleeping = true; v.act = 'sleep';
     if (!v.inside && G.R() < dt * 0.3) emote(v, 'zzz', 1.6);
     // (up at one's own hour, rested — the old before the light, the idle later: G.Lar.clock)
@@ -2418,6 +2488,17 @@
       if (v.carried) { v.carried = false; v.carrier = 0; }
       // (the body the player lives: its needs went on above; its will is the player's — no deciding of its own)
       if (S.avatar && S.avatar.id === v.id) { G.Possess.live(v, vdt); if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; } continue; }
+      // (walking out of a building: the next errand waits at the door till the walk is done — what cannot wait still finds
+      // one, emergency; a building gone, or one put somewhere else meanwhile, ends the walk there: D-765)
+      if (v.saiT) {
+        if (!v.inside || v.inside !== exitOf.get(v.id)) { v.saiT = 0; exitOf.delete(v.id); }
+        else if (S.clock >= v.saiT || !S.buildings.has(v.inside)) { outNow(v); exitOf.delete(v.id); }
+      }
+      if (v.saiT) {
+        v.moving = false; v.scan -= vdt; if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
+        if (v.emo) { v.emo.t -= vdt; if (v.emo.t <= 0) v.emo = null; }
+        continue;
+      }
       v.scan -= vdt;
       if (v.scan <= 0) { v.scan = 0.3 + G.R() * 0.15; emergency(v); }
       v.think -= vdt;

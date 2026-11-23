@@ -2000,11 +2000,12 @@
   // inside the door — as the plan's walk starts —, to the four neighbours a quarter metre away and the diagonal ones (never
   // across a corner), up and down the flights by their length. For each storey the metres to each cell (Infinity where the door
   // does not reach) and the cell it came from (the storey and the cell: the way back)
-  function* walkFieldG(p) {
+  // (from: a point of a storey to walk from — { lv, x, z }, a place the body stands at —, instead of the way in: In.walkBetween)
+  function* walkFieldG(p, from) {
     const n = p.grid.n; const D = {}, FL = {}, FC = {}; let nset = 0;
     // (the metres in doubles: in floats the heap's sums no longer equal what was kept and the cells would be passed over)
     for (const l of p.levels) { D[l.lv] = new Float64Array(n * n).fill(Infinity); FL[l.lv] = new Int8Array(n * n).fill(-99); FC[l.lv] = new Int32Array(n * n).fill(-1); }
-    const e = p.entrance; if (!e) return { n, D, FL, FC };
+    const e = from || p.entrance; if (!e) return { n, D, FL, FC };
     // (a heap of the cells to settle, the nearest on top)
     const hc = [], hl = [], hk = []; const up = i => { while (i) { const j = (i - 1) >> 1; if (hc[j] <= hc[i]) break; for (const A of [hc, hl, hk]) { const t = A[i]; A[i] = A[j]; A[j] = t; } i = j; } };
     const down = i => { for (;;) { const a = 2 * i + 1, c2 = a + 1; let m = i; if (a < hc.length && hc[a] < hc[m]) m = a; if (c2 < hc.length && hc[c2] < hc[m]) m = c2; if (m === i) return; for (const A of [hc, hl, hk]) { const t = A[i]; A[i] = A[m]; A[m] = t; } i = m; } };
@@ -2012,7 +2013,14 @@
     const pass = (lv, x, z) => passable(p, lv, x, z);
     const lv0 = e.lv || 0; const [ex, ez] = cellAt(p, [e.x, e.z]);
     const HG = p.hgt || {}; const onto = (lv, k) => floorStep(HG[lv], k);
-    for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25 && pass(lv0, x, z) && onto(lv0, z * n + x)) push(Math.hypot((x + 0.5) * CS - e.x, (z + 0.5) * CS - e.z), lv0, z * n + x, -100, -1); }
+    // (the first cells: those within 1.25 m the way in sees in a straight line — never round the corner of the doorway's wall: the
+    // first leg of the way drawn from the door went through the jamb, L-1920)
+    // (no cell in sight — a way in on the threshold's own line —: the cells within 1.25 m, as before)
+    const ep = [e.x, e.z];
+    for (const seen of [true, false]) {
+      for (let dz = -5; dz <= 5; dz++) for (let dx = -5; dx <= 5; dx++) { const x = ex + dx, z = ez + dz; if (Math.hypot(dx, dz) * CS <= 1.25 && pass(lv0, x, z) && onto(lv0, z * n + x) && (!seen || dx * dx + dz * dz <= 2 || sight(p, lv0, ep, [(x + 0.5) * CS, (z + 0.5) * CS], In.THRESH))) push(Math.hypot((x + 0.5) * CS - e.x, (z + 0.5) * CS - e.z), lv0, z * n + x, -100, -1); }
+      if (hc.length) break;
+    }
     // (the flights: from a cell beside one end to the other end, the flight's length)
     const lvY = lv => { const l = p.levels.find(q => q.lv === lv); return l ? l.y : 0; };
     const links = p.stairs.filter(s => s.kind !== 'degraus').map(s => ({ s, f: cellAt(p, s.a), t: cellAt(p, s.b), len: Math.hypot(s.dir[0] ? s.r[2] - s.r[0] : s.r[3] - s.r[1], lvY(s.lv1) - lvY(s.lv0)) + 0.8 }));
@@ -2148,8 +2156,23 @@
     // (a jail's cells: each one's room, its bed of straw and the place on it, its grating)
     const cells = p.rooms.filter(m => m.fn === 'cela').map(m => { const bed = p.items.find(i => i.room === m.id && i.places > 0); const door = p.doors.find(d => d.rooms.includes(m.id)); return { room: m.id, lv: m.lv, r: m.r, bed: bed ? bed.id : null, spot: bed ? bed.spots.find(q => q.use === 'deitar') || null : null, door: door ? door.id : null }; });
     const e = p.entrance;
-    return { items: p.items, rows: [...rows.values()], spots, byUse, floor, lie: lie.slice(0, 240), cells, entry: e ? { lv: e.lv || 0, x: e.x, z: e.z } : null };
+    return { items: p.items, rows: [...rows.values()], spots, byUse, floor, lie: lie.slice(0, 240), cells, entry: e ? { lv: e.lv || 0, x: e.x, z: e.z } : null, grp: groupsOf(p) };
   }
+  // (the table each seat is at — the nearest table, the long fire, within GRP_R of the seat's place on its storey —: who sits on
+  // two seats of one group sits at one table; a seat at none is a group of its own. Of the plan, never of the world: D-761)
+  const GRP_R = 0.75;
+  const TABLE_KIND = k => /^mesa/.test(k) || k === 'fogo-comprido';
+  function groupsOf(p) {
+    const out = new Map(); const tabs = p.items.filter(it => TABLE_KIND(it.kind) && it.r);
+    for (const it of p.items) {
+      const sp = it.spots.find(q => q.on && (q.use === 'sentar' || q.use === 'comer')); if (!sp) continue;
+      let best = null, bd = GRP_R;
+      for (const tb of tabs) { if (tb.lv !== it.lv) continue; const R = tb.r; const dx = Math.max(R[0] - sp.x, 0, sp.x - R[2]), dz = Math.max(R[1] - sp.z, 0, sp.z - R[3]); const d = Math.hypot(dx, dz); if (d < bd) { bd = d; best = tb; } }
+      out.set(it.id, best ? best.id : it.id);
+    }
+    return out;
+  }
+  In.groupOf = (b, item) => { const t = b && b.ip ? tableOf(b) : null; return t && t.grp ? t.grp.get(item) || item : item; };
   const floorPts = t => t.floor, liePts = t => t.lie;
   In.walkField = walkField; // (for the proofs)
   // who the world has inside a building, by id: counted fresh in the world's step (once a part during the skip, as the head
@@ -2217,6 +2240,9 @@
   // the household wants (In.placeRule); (5) the rest, the old way — a seat coming home, the fire, a seat —; whoever is left,
   // on the floor: standing, or lying asleep. Never two at one point (half a metre), never on a point that is no place
   const EMPTY = { by: new Map(), with: new Map() };
+  const NEAR_R = 1.6; // (metres: how far from the one served the one serving may stand)
+  // (walking out: G.Vg.leave's walk from one's place to the door, the world's clock it ends at — the person still inside, D-765)
+  const leaving = v => !!v && v.saiT > G.S.clock;
   In.places = function (b) {
     const t = b && b.ip ? tableOf(b) : null; if (!t) return EMPTY;
     if (G.inSim) return assign(b, t);
@@ -2226,8 +2252,9 @@
   // (probe: the uses of one more, given out after everyone: what freePlace answers, by the very same rule — or a function,
   // given the rule's own test of a place free, for the body's places: In.freeNear. nobody: the body left out, its place and
   // the point it stands on — where it could be, once there)
-  function assign(b, t, probe, nobody) {
-    const S = G.S; const T = TYPES[b.ip.t] || {}; const people = insideOf(b.id);
+  // (skip: one person left out — the share-out without them, for the place they would take: In.hold)
+  function assign(b, t, probe, nobody, skip) {
+    const S = G.S; const T = TYPES[b.ip.t] || {}; const people = skip ? insideOf(b.id).filter(v => v.id !== skip) : insideOf(b.id);
     const by = new Map(), withM = new Map(); const used = new Set(); const discs = [], rects = [];
     // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two; and where the
     // body stands, of a piece's places only the one under its feet: walking by a bench, it never puts off who sits on it)
@@ -2252,6 +2279,17 @@
       return false;
     };
     const firstFree = uses => { for (const u of uses) { const L = t.byUse.get(u); if (!L) continue; for (const e of L) if (free(e)) return e; } return null; };
+    // (standing on the floor at the side of a place given out: the nearest point of the floor within NEAR_R of it, on its storey,
+    // free of everyone — the floor's own points, as one stands with no piece)
+    const standBy = (v, o, tk) => {
+      let best = null, bd = NEAR_R;
+      for (const f of floorPts(t)) { if (f.lv !== o.lv) continue; const d = Math.hypot(f.x - o.x, f.z - o.z); if (d < bd && d > 0.3 && !clash(f.lv, f.x, f.z, null, 0)) { bd = d; best = f; } }
+      if (!best) return false;
+      const st = (typeof tk.pose === 'string' && tk.pose) || 'idle';
+      // (one passing by the tables: never puts off who would sit on a seat beside — the body's own measure, a quarter metre)
+      discs.push({ lv: best.lv, x: best.x, z: best.z, it: null, on: 0, body: 1 }); by.set(v.id, { b, lv: best.lv, x: best.x, z: best.z, y: best.y || 0, ry: r2(Math.atan2(o.x - best.x, o.z - best.z)), use: 'de-pe', item: null, it: null, q: -1, st, pose: poseWord(st, 0), near: tk.near });
+      return true;
+    };
     const left = []; const mine = new Set(); const done = v => by.has(v.id) || withM.has(v.id) || mine.has(v.id);
     // (0) the body: the place its hands took holds it; standing in the house, its own point is taken — and awake it is at no
     // place the rules give: only its hands take one (L-286). Asleep, its bed is the household's (2), where its controller lays
@@ -2263,23 +2301,56 @@
       else if (!nobody && !body.sleeping) discs.push({ lv: Number.isFinite(A.lv) ? A.lv : t.entry ? t.entry.lv : 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0, body: 1 });
       if (!body.sleeping) mine.add(body.id);
     }
+    // (0b) who is walking out: from where they were to the way in — no place of the plan, nobody put off by them (D-765): In.placeOf
+    // says the way in. The way in itself is no place given out: two going out at once are both there
+    for (const v of people) if (!done(v) && leaving(v)) mine.add(v.id);
     // (1) the prisoners: a cell each, in the order of the cells; awake, sitting on its straw
     if (T.cells) { const cs = In.cells(b); let k = 0;
       for (const v of people) { if (done(v) || v.jail !== b.id) continue;
         while (k < cs.length) { const c = cs[k++]; const e = c.bed ? t.spots.find(s => s.it.id === c.bed && s.use === 'deitar') : null; if (e && free(e)) { give(v, e, v.sleeping ? 'sleep' : 'rest'); break; } } } }
-    // (2) who sleeps in a house: in the beds the household gives out
-    const beds = T.use === 'casa' && people.some(v => v.sleeping && !done(v)) ? In.beds(b) : null;
+    // (1b) a baby in the arms of who carries it, in every building — never a place of its own at the stove (D-660, L-1921). A
+    // baby asleep in a house is the household's: in the cradle or the mother's bed (2)
+    for (const v of people) { if (done(v) || !(v.age < 2) || (T.use === 'casa' && v.sleeping)) continue; const c = v.carrier && S.villagers.get(v.carrier); if (c && skip && c.id === skip) mine.add(v.id); else if (c && c.inside === b.id && c.id !== v.id) withM.set(v.id, c.id); } // (with the one left out: left out too)
+    // (1c) who holds a place — the seat one sat down on, the bed one lay down in (In.hold, D-762) —: it is theirs while they are at
+    // it, whoever comes after; a place held for what one no longer does there (the drinker gone up to the stage to play) is kept
+    // for them if they said so (hold[2]), else let go. Nobody is put off a place they are on: the share-out of before gave the
+    // places again in the order of the ids at every look, and whoever came in took the seat of the one sitting on it (L-1922)
+    const rule = RULES[T.use];
+    const bedward = v => !v.sleeping && !!v.task && v.task.type === 'sleep' && v.task.inW > S.clock; // (walking in to bed)
+    const usesOf = v => {
+      if (v.sleeping || bedward(v)) return ['deitar'];
+      const tk = v.task; if (tk && tk.use) return [tk.use];
+      const w = rule ? rule(b, v) : null; return w && w.use ? (Array.isArray(w.use) ? w.use : [w.use]) : null;
+    };
+    const stOf = (v, e) => {
+      if (v.sleeping || bedward(v)) return v.sick > 0 ? 'sick' : 'sleep';
+      const tk = v.task; if (tk && tk.use) return (typeof tk.pose === 'string' && tk.pose) || e.it.st || USE_ST[e.use] || 'interact';
+      const w = rule ? rule(b, v) : null; return (w && w.st) || e.it.st || USE_ST[e.use] || 'idle';
+    };
+    for (const v of people) {
+      if (done(v)) continue; const h = v.task && v.task.lugar; if (!Array.isArray(h)) continue;
+      const e = t.spots.find(s => s.it.id === h[0] && s.q === h[1] && s.ok); if (!e || used.has(e.k)) continue;
+      const u = usesOf(v);
+      if (!u || u.includes(e.use)) { if (free(e)) give(v, e, stOf(v, e)); }
+      else if (h[2] && free(e)) { used.add(e.k); discs.push({ lv: e.lv, x: e.x, z: e.z, it: e.it.id, on: e.on }); } // (kept for them)
+    }
+    // (2) who sleeps in a house: in the beds the household gives out — and who is walking in to bed, to the bed they will lie in
+    const beds = T.use === 'casa' && people.some(v => (v.sleeping || bedward(v)) && !done(v)) ? In.beds(b) : null;
     if (beds) for (const v of people) {
-      if (done(v) || !v.sleeping) continue;
+      if (done(v) || !(v.sleeping || bedward(v))) continue;
       const w = beds.with.get(v.id); if (w && people.some(o => o.id === w)) { withM.set(v.id, w); continue; }
       const pl = beds.by.get(v.id); const e = pl ? t.spots.find(s => s.it.id === pl.it.id && s.q === pl.q) : null;
       if (e && free(e)) { give(v, e, v.sick > 0 ? 'sick' : 'sleep'); continue; }
+      // (its own bed held by one already in it: another bed free, before the floor — L-1922)
+      const o = pl ? firstFree(['deitar']) : null; if (o && !(ITEMS[o.it.kind] || {}).crib) { give(v, o, v.sick > 0 ? 'sick' : 'sleep'); continue; }
       // (no bed of one's own free there — the household has fewer, its own cannot be got to, the floor by choice —: lying on it)
       onFloor(v, true, v.sick > 0 ? 'sick' : 'sleep');
     }
     // (3) who works: at the place the task names, else another of its use; at a station of the trade where one works
     for (const v of people) {
       if (done(v) || v.sleeping) continue; const tk = v.task; let e = null;
+      // (at someone's side: the one who serves at the table stands on the floor nearest the one served — D-763)
+      if (tk && tk.near) { const o = by.get(tk.near); if (o && standBy(v, o, tk)) continue; }
       if (tk && (tk.item || tk.use)) {
         if (tk.item) e = t.spots.find(s => s.it.id === tk.item && (!tk.use || s.use === tk.use) && !APPROACH[s.use] && free(s)) || null;
         if (!e && tk.use) e = firstFree([tk.use]);
@@ -2289,7 +2360,7 @@
     }
     // (4) what the household wants — the more pressing first (pri, the rule's: the cook at the fire before who only sits), then
     // by id
-    const rule = RULES[T.use]; const wants = [];
+    const wants = [];
     for (const v of people) if (!done(v)) wants.push([v, rule ? rule(b, v) : null]);
     wants.sort((a, c) => ((c[1] && c[1].pri) || 0) - ((a[1] && a[1].pri) || 0) || a[0].id - c[0].id);
     for (const [v, w] of wants) {
@@ -2319,8 +2390,11 @@
   In.placeOf = function (v) {
     if (!v || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); if (!b || !b.ip || !TYPES[b.ip.t]) return null;
     const P = In.places(b); const pl = P.by.get(v.id); if (pl) return pl;
-    const w = P.with.get(v.id); const o = w && P.by.get(w); if (o) return Object.assign({}, o, { with: w });
     const t = tableOf(b); const e = (t && t.entry) || (In.plan(b) || {}).entrance;
+    // (walking out: the way in, where the walk ends — D-765 —; a baby in the arms of one walking out, there with them)
+    const out = e ? { b, lv: e.lv || 0, x: e.x, z: e.z, y: 0, ry: 0, use: 'saida', item: null, it: null, q: -1, st: 'idle', pose: 'de pé' } : null;
+    const w = P.with.get(v.id); const o = w && (P.by.get(w) || (out && leaving(G.S.villagers.get(w)) ? out : null)); if (o) return Object.assign({}, o, { with: w });
+    if (out && leaving(v)) return out;
     return e ? { b, lv: e.lv || 0, x: e.x, z: e.z, y: 0, ry: 0, use: '', item: null, it: null, q: -1, st: 'idle', pose: 'de pé' } : null;
   };
   // the place one more wanting a use would have there now (a use or a list, the first wanted first): the step asks it before
@@ -2329,6 +2403,57 @@
     const t = b && b.ip ? tableOf(b) : null; if (!t) return null;
     const e = assign(b, t, Array.isArray(use) ? use : [use]).probe;
     return e ? { b, lv: e.lv, x: e.x, z: e.z, ry: e.ry, use: e.use, item: e.it.id, it: e.it, q: e.q, din: e.din } : null;
+  };
+  // the place one sits down on, kept for them (D-762): of the free places of these uses there now — the share-out without them, so
+  // their own is among them —, the one choose picks (a list of { item, q, use, lv, x, z, grp, din }: grp the table the seat is at,
+  // In.groupOf) or the first; stamped on their errand (t.lugar: the piece and its place — keep, the place stays theirs while they
+  // are at something else of the same errand). The share-out gives it to them while it is free and of what they do there, whoever
+  // comes in after (assign 1c). b: the building they are going into (or the one they are in). In the world's step only; the place
+  // or null — the errand's hold let go
+  In.hold = function (v, b, uses, choose, keep) {
+    if (!G.inSim || !v || !v.task) return null;
+    b = b || G.S.buildings.get(v.inside); const t = b && b.ip && TYPES[b.ip.t] ? tableOf(b) : null; if (!t) return null;
+    const U = [].concat(uses || []);
+    const list = assign(b, t, free => { const out = []; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) out.push(e); } return out; }, false, v.id).probe || [];
+    if (!list.length) { delete v.task.lugar; return null; }
+    let e = list[0];
+    // (choose saying none: no place held — the floor is no place one keeps)
+    if (choose) { const c = choose(list.map(q => ({ item: q.it.id, q: q.q, use: q.use, lv: q.lv, x: q.x, z: q.z, grp: (t.grp && t.grp.get(q.it.id)) || q.it.id, din: q.din, crib: (ITEMS[q.it.kind] || {}).crib ? 1 : 0 }))); e = c ? list.find(q => q.it.id === c.item && q.q === c.q) : null; if (!e) { delete v.task.lugar; return null; } }
+    v.task.lugar = keep ? [e.it.id, e.q, 1] : [e.it.id, e.q];
+    return bodyPlace(b, e, 0);
+  };
+  // how many places of these uses are free there now, after the share-out of everyone inside (the places kept for one at
+  // something else counted taken): what a door asks before letting one more in. Null for a building with no plan
+  In.freeCount = function (b, uses) {
+    const t = b && b.ip && TYPES[b.ip.t] ? tableOf(b) : null; if (!t) return null; const U = [].concat(uses || []);
+    return assign(b, t, free => { let n = 0; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) n++; } return n; }).probe;
+  };
+  // (the same place again — a save that sat one at a table: the piece and its place, when it is one of the plan's still; the
+  // world's step and the load's own hooks)
+  In.holdAt = function (v, b, item, q, keep) {
+    if (!v || !v.task || !b) return false; const t = b.ip && TYPES[b.ip.t] ? tableOf(b) : null; const e = t && spotOf(t, item, q); if (!e) return false;
+    v.task.lugar = keep ? [item, q, 1] : [item, q]; return true;
+  };
+  In.unhold = v => { if (G.inSim && v && v.task && v.task.lugar) delete v.task.lugar; };
+  // the metres of the walk between two places of a building (two of In.places' or In.freePlace's — the standing point of each —),
+  // the plan's walk for a body from the first (In.walkIn's own, from there instead of the way in); Infinity where it does not
+  // reach. The fields kept a few for each plan: the counter's is asked at every round
+  const bfields = new WeakMap();
+  In.walkBetween = function (b, a, c) {
+    const p = b && b.ip && TYPES[b.ip.t] ? In.plan(b) : null; if (!p || !p.ok || !p.grid || !a || !c) return Infinity;
+    let M = bfields.get(p); if (!M) { M = new Map(); bfields.set(p, M); }
+    const key = (a.lv || 0) + ':' + r2(a.x) + ':' + r2(a.z); let W = M.get(key);
+    if (!W) { W = run(walkFieldG(p, { lv: a.lv || 0, x: a.x, z: a.z })); M.set(key, W); if (M.size > 24) M.delete(M.keys().next().value); }
+    return walkTo(W, c.lv || 0, c.x, c.z, 0.35);
+  };
+  // who is passing the way in now (D-765): walking in from the door to their place (the errand's t.inW, the clock the walk ends
+  // at) or out from their place to the door (v.saiT, G.Vg.leave) — { b, out, until } or null. The door opens for them; the
+  // drawing walks them along In.pathIn
+  In.passage = function (v) {
+    if (!v || !(v.inside > 0)) return null; const S = G.S;
+    if (v.saiT > S.clock) return { b: v.inside, out: 1, until: v.saiT };
+    const t = v.task; if (t && t.inW > S.clock) return { b: v.inside, out: 0, until: t.inW };
+    return null;
   };
   // the places the body could take about a point of a storey (metres of the lot), within R — usable where a body is, free of
   // everyone else the world has inside (the share-out's own test, the body left out: where it would be, once there) —, the
@@ -2386,7 +2511,11 @@
   // for a body), the flights from their foot to their top; and its metres. Null where the door does not reach it
   const fields = new WeakMap();
   const fieldOf = p => { let W = fields.get(p); if (!W) { W = walkField(p); fields.set(p, W); } return W; };
-  function sight(p, lv, a, c) { const d = Math.hypot(c[0] - a[0], c[1] - a[1]); const n = Math.max(1, Math.ceil(d / 0.1)); for (let k = 0; k <= n; k++) { const x = a[0] + (c[0] - a[0]) * k / n, z = a[1] + (c[1] - a[1]) * k / n; if (!passable(p, lv, Math.floor(x / CS), Math.floor(z / CS))) return false; } return true; }
+  // (skip: the metres from a not asked — the threshold the way in stands on, a doorway the body passes and does not stand in)
+  function sight(p, lv, a, c, skip) { const d = Math.hypot(c[0] - a[0], c[1] - a[1]); const n = Math.max(1, Math.ceil(d / 0.1)); for (let k = 0; k <= n; k++) { if (skip && d * k / n < skip) continue; const x = a[0] + (c[0] - a[0]) * k / n, z = a[1] + (c[1] - a[1]) * k / n; if (!passable(p, lv, Math.floor(x / CS), Math.floor(z / CS))) return false; } return true; }
+  In.sight = sight; // (for the proofs: the plan's straight walk between two points of a storey)
+  In.THRESH = 0.4; // (the metres of the threshold from the way in: the first leg's own measure, L-1920)
+  In.STAND = 0.35; // (and of the standing point at a piece, the last leg's: the feet's rule there, not the walk's)
   In.pathIn = function (b, pl) {
     const p = b && b.ip && TYPES[b.ip.t] ? In.plan(b) : null; if (!p || !p.ok || !p.grid || !pl || !p.entrance) return null;
     const W = fieldOf(p); const n = W.n;
@@ -2395,7 +2524,12 @@
     if (pl.it) { let best = Infinity; for (const sp of pl.it.spots) { if (sp.on) continue; const f = fitStand(p, pl.it.lv, sp.x, sp.z, pl.it.niche ? null : pl.it.r); if (!f) continue; const d = walkTo(W, pl.it.lv, f[0], f[1], 0.35); if (d < best) { best = d; goal = f; } } if (!(pl.it.spots[pl.q] || {}).on) goal = [pl.x, pl.z]; }
     // (the cell the walk ends at, near it; then back cell by cell to the door)
     const D = W.D[pl.lv]; if (!D) return null; const gx = Math.floor(goal[0] / CS), gz = Math.floor(goal[1] / CS); let end = -1, eb = Infinity;
-    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) { const X = gx + dx, Z = gz + dz; if (X < 0 || Z < 0 || X >= n || Z >= n) continue; const m = D[Z * n + X]; if (m === Infinity) continue; const s = m + Math.hypot((X + 0.5) * CS - goal[0], (Z + 0.5) * CS - goal[1]); if (s < eb) { eb = s; end = Z * n + X; } }
+    // (a cell the place is seen from in a straight line first — the last leg, as the first, never round a corner: L-1920)
+    // (and a cell a little farther that sees it, before one that does not: a standing point wedged between two pieces)
+    for (const [seen, R] of [[true, 2], [true, 3], [false, 2]]) {
+      for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) { const X = gx + dx, Z = gz + dz; if (X < 0 || Z < 0 || X >= n || Z >= n) continue; const m = D[Z * n + X]; if (m === Infinity) continue; const s = m + Math.hypot((X + 0.5) * CS - goal[0], (Z + 0.5) * CS - goal[1]); if (s < eb && (!seen || (dx * dx + dz * dz <= 2) || sight(p, pl.lv, goal, [(X + 0.5) * CS, (Z + 0.5) * CS], In.STAND))) { eb = s; end = Z * n + X; } }
+      if (end >= 0) break;
+    }
     if (end < 0) return null;
     const back = []; let lv = pl.lv, k = end; for (let g = 0; g < n * n * 4 && k >= 0; g++) { back.push([lv, k]); const fl = W.FL[lv][k], fc = W.FC[lv][k]; if (fl === -100) break; lv = fl; k = fc; }
     back.reverse();
@@ -2419,13 +2553,21 @@
   };
   // the doors as the world has them now: a rule of the world (time and who is in), or what someone made of them today
   const DS = ['fechada', 'aberta', 'trancada', 'bloqueada'];
+  // the rules of the outer doors of a use, beside the time's (D-766): fn(b, id) → a state ('aberta', 'fechada', 'trancada') or
+  // null — the tavern's door open while its day is (act-taverna.js). Pure, as the rest of the door: asked by the step and the frame
+  const DOOR_RULES = {};
+  In.doorRule = function (use, fn) { if (typeof fn === 'function') DOOR_RULES[use] = fn; else delete DOOR_RULES[use]; };
   In.doorState = function (b, id) {
     const p = In.plan(b); if (!p) return null; const d = p.doors[id]; if (!d) return null;
     const S = G.S; const rec = b.ip;
     if (S.fire && S.fire[b.y * N + b.x] > 0.2) return { state: 'bloqueada', by: 'fogo' };
+    // (someone passing the way in — in from it or out to it —: the door open for them as they go through, D-766. It stayed shut,
+    // and the drawing walked them through the leaf, L-1923)
+    if (d.outer && p.entrance && p.entrance.door === id) for (const v of insideOf(b.id)) if (In.passage(v)) return { state: 'aberta', by: 'passagem' };
     if (rec.dr && rec.dr[id] !== undefined && rec.dr[id] !== null) return { state: DS[rec.dr[id]] || 'fechada', by: 'pessoa' };
     const T = TYPES[rec.t] || {}; const night = G.isNight && G.isNight();
     if (!d.outer) return { state: d.kind === 'vao' ? 'aberta' : 'fechada', by: 'regra' };
+    const R = DOOR_RULES[T.use]; if (R) { const s = R(b, id); if (s && DS.includes(s)) return { state: s, by: 'regra' }; }
     if (T.use === 'casa') { let home = 0, out = 0; for (const v of S.villagers.values()) if (v.home === b.id) { if (v.inside === b.id) home++; else out++; } return { state: night && home && !out ? 'trancada' : 'fechada', by: 'regra' }; }
     if (T.open && !night) { for (const v of S.villagers.values()) if (v.job === b.id && v.inside === b.id) return { state: 'aberta', by: 'regra' }; return { state: 'fechada', by: 'regra' }; }
     return { state: night && T.lockNight ? 'trancada' : 'fechada', by: 'regra' };

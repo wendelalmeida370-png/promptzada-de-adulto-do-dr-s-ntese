@@ -127,7 +127,7 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 | **pedra** | a pedra e a madeira do armazém (o machado: ½ + ½; a lança: ¼ de pedra e ¾ de madeira; a faca: ¼ de pedra…) | sempre |
 | **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
 | **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼; a bola de vime: 0,1; os grilhões de corda: 0,1) | sempre |
-| **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15) | **só quem teve couro** (caçou ou abateu) |
+| **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15); os instrumentos (P7, D-764), o couro e a madeira (a lira: 0,1 de couro — a caixa coberta e as cordas de tripa — e 0,3 de madeira; o tambor: 0,3 de couro e 0,6 de madeira) | **só quem teve couro** (caçou ou abateu: o couro e a tripa são do mesmo bicho) |
 | **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
 
@@ -140,6 +140,12 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   a bola de couro onde houve couro; senão a madeira, a corda e o vime de sempre. Nenhuma é arma. A caneca e os grilhões são **do
   lugar** (a casa onde se bebe, quem leva o preso), não da pessoa: passam também a quem tem coisas de verdade — o corpo do deus —,
   no mesmo material (`PLACE_TOOL`, L-1778); a ferramenta do ofício, não (D-426).
+- **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
+  instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a
+  **lira** (os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa) dos outros — do couro e da tripa do
+  bicho que o povo teve (o material `couro`, `O.matOK`) e da madeira; um povo que nunca caçou nem abateu não tem instrumento, e o
+  músico canta. Nenhum é arma, e nenhum entra no armazém como coisa: o que custa é o couro e a madeira (`G.Itens.feitoDe`). O corpo do
+  deus, que tem coisas de verdade, toca o que tiver na mochila (o instrumento não está no `PLACE_TOOL`).
 - **O kit** (o que o 3D desenha de cada um, `G.Inv.kit`, puro) e **as coisas do ofício que viram de verdade** (`Inv.realize`) usam o
   melhor material **que o povo teve** (`O.matOK`). Um povo do bronze que nunca teve cobre e estanho desenha os guerreiros de lança de
   pedra e escudo de madeira; sem couro nem metal, sem elmo. O tido é para sempre: a lança de bronze do guerreiro não vira de pedra
