@@ -177,7 +177,7 @@ def cadeira(style):
         r = w / 2 - 0.012; n = 12 if M.lod == 0 else 6
         def shell(u, v):
             a = math.pi * (0.08 + 0.84 * u); x = -math.cos(a) * r; z = -math.sin(a) * (d * 0.42) + d * 0.06
-            top = 0.94 - 0.1 * (abs(u - 0.5) * 2) ** 2
+            top = 0.92 - 0.1 * (abs(u - 0.5) * 2) ** 2
             return (x, h + (top - h) * v, max(-d / 2 + 0.006, z))
         lamina(M, 'madeira', shell, n, 4, both=True, uvs=(w * 1.4, 0.5))
         tubo(M, 'madeira2', [shell(u / 10, 1.0) for u in range(11)], 0.012, seg=6)
@@ -202,7 +202,7 @@ def cadeira(style):
         # (the Norse chair: square posts, the back posts rising to carved knobs, a plank seat, a carved board across the back)
         m = 0.03; s = 0.05
         for x, z in quatro(w, d, m + s / 2 - 0.022):
-            top = 0.9 if z < 0 else h - 0.03
+            top = 0.875 if z < 0 else h - 0.03
             caixa(M, 'madeira', (x - s / 2, 0, z - s / 2), (x + s / 2, top, z + s / 2), ch=0.008, grain='y')
             if z < 0: ovo(M, 'madeira', x, top + 0.02, z, 0.024, 0.03, seg=8)
         aventais(M, 'madeira2', w, d, h - 0.1, h - 0.03, 0.022, m + 0.012)
@@ -219,9 +219,9 @@ def cadeira(style):
         n = 9 if M.lod == 0 else 5
         for k in range(n):
             x = -hw + 0.02 + (2 * hw - 0.04) * k / (n - 1)
-            tubo(M, 'palha', [(x, h - 0.04, -hd + 0.05), (x * 1.02, 0.93, -d / 2 + 0.013)], 0.013, seg=5)
+            tubo(M, 'palha', [(x, h - 0.04, -hd + 0.05), (x * 1.02, 0.915, -d / 2 + 0.013)], 0.013, seg=5)
         zb = lambda y: (-hd + 0.05) + ((-d / 2 + 0.013) - (-hd + 0.05)) * (y - (h - 0.04)) / (0.93 - (h - 0.04))
         for y in (0.62, 0.84):
             tubo(M, 'pintura', [(-hw, y, zb(y) - 0.012), (hw, y, zb(y) - 0.012)], 0.011, seg=5) if zb(y) - 0.024 > -d / 2 else tubo(M, 'pintura', [(-hw, y, zb(y) + 0.012), (hw, y, zb(y) + 0.012)], 0.011, seg=5)
-        for s in (-1, 1): tubo(M, 'madeira', [(s * hw, 0.04, -hd + 0.06), (s * hw * 1.0, 0.94, -d / 2 + 0.014)], 0.014, seg=6)
+        for s in (-1, 1): tubo(M, 'madeira', [(s * hw, 0.04, -hd + 0.06), (s * hw * 1.0, 0.92, -d / 2 + 0.014)], 0.014, seg=6)
     return {'klismos': klismos, 'catedra': catedra, 'egipcio': egipcio, 'nordico': nordico, 'icpalli': icpalli}[style]

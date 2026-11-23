@@ -11,6 +11,7 @@ from moveis_bar import balcao, balcao_alvenaria, prateleira_bar, anforeira, anfo
 from moveis_fogo import lareira, chamine, forno_barro, fogao_comal, fogo_comprido
 from moveis_quarto import estrado, lampadario, cama, arca
 from moveis_porta import folha
+from moveis_casa import mesa_terreiro, talha, jarros, fogao, lar, esteira
 
 ALL = ['romano', 'classico', 'grego', 'egipcio', 'nordico', 'asteca']
 TABLE = [
@@ -23,7 +24,7 @@ TABLE = [
     ('balcao', [(1.80, 0.60, 1.00)], {'painel': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'tabuas': ['nordico'], 'asteca': ['asteca']}, balcao),
     ('balcao-alvenaria', [(2.40, 1.60, 1.00)], {'termopolio': ALL}, balcao_alvenaria),
     ('prateleira-bar', [(1.80, 0.40, 1.90)], {'estante': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'asteca': ['asteca']}, prateleira_bar),
-    ('anforeira', [(1.20, 0.50, 1.10)], {'suporte': ['romano', 'classico', 'egipcio', 'nordico'], 'grego': ['grego'], 'asteca': ['asteca']}, anforeira),
+    ('anforeira', [(1.20, 0.50, 1.10)], {'suporte': ['romano', 'classico', 'grego', 'egipcio', 'nordico'], 'asteca': ['asteca']}, anforeira),
     ('barril', [(0.60, 0.60, 0.90)], {'aduelado': ['romano', 'classico', 'grego', 'nordico'], 'jarra': ['egipcio', 'asteca']}, barril),
     ('lareira', [(1.40, 0.60, 1.20)], {'focus': ['romano', 'asteca'], 'chamine': ['classico', 'nordico'], 'eschara': ['grego', 'egipcio']}, lareira),
     ('forno-barro', [(1.00, 1.00, 1.10)], {'colmeia': ['egipcio', 'romano', 'classico', 'grego', 'nordico', 'asteca']}, forno_barro),
@@ -38,6 +39,14 @@ TABLE = [
     ('cama', [(0.90, 1.95, 0.50)], {'lectus': ['romano', 'classico', 'grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'asteca': ['asteca']}, cama),
     ('cama-casal', [(1.40, 1.95, 0.55)], {'lectus': ['romano', 'classico', 'grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'asteca': ['asteca']}, cama),
     ('arca', [(0.90, 0.50, 0.55)], {'romano': ['romano', 'classico'], 'grego': ['grego'], 'egipcio': ['egipcio'], 'nordico': ['nordico'], 'petlacalli': ['asteca']}, arca),
+    # ---- what the tavern of today still has (the plan's pieces of before, int-moveis.js: also the houses') ----
+    ('mesa-terreiro', [(2.20, 1.70, 0.75)], {'tabuas': ['romano', 'classico', 'egipcio'], 'grego': ['grego'], 'cavalete': ['nordico'], 'asteca': ['asteca']}, mesa_terreiro),
+    ('talha', [(0.60, 0.60, 1.20)], {'pithos': ['romano', 'classico', 'grego', 'nordico'], 'zir': ['egipcio'], 'olla': ['asteca']}, talha),
+    ('jarros', [(0.90, 0.50, 0.75)], {'tres': ALL}, jarros),
+    ('fogao', [(1.20, 0.60, 0.90)], {'parede': ALL}, fogao),
+    ('lar', [(0.80, 1.20, 0.25), (4.00, 1.00, 0.25)], {'pedras': ALL}, lar),
+    ('esteira', [(0.72, 1.80, 0.06)], {'junco': ['romano', 'classico', 'grego', 'egipcio', 'asteca'], 'pele': ['nordico']}, esteira),
+    ('esteira-casal', [(1.25, 1.85, 0.08)], {'junco': ['romano', 'classico', 'grego', 'egipcio', 'asteca'], 'pele': ['nordico']}, esteira),
     # ---- the parts the 3D adds ----
     ('anfora', [(0.30, 0.30, 1.00)], {'classica': ['romano', 'classico', 'grego', 'nordico'], 'egipcia': ['egipcio'], 'olla': ['asteca']}, anfora),
     ('chamine', [(0.50, 0.34, 1.00)], {'cano': ALL}, chamine),

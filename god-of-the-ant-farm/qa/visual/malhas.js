@@ -2,7 +2,7 @@
 // (the counts, the index inside the points, no NaN, unit normals, the box, the parts), and the art bible's budget (§6, §8):
 // each file ≤ 60 KB, all ≤ 1 MB, the triangles of each, every one loaded by a <script> of index.html. And the library of the
 // furniture of the interiors (js/movelmesh.js, made by arte/blender/moveis.py, read by js/movel3d.js — the interiors 2.0, the
-// front P2, D-715): a category of its own, as the people's and the beasts' meshes are — its whole file ≤ 4 MB, each model ≤ 70 KB
+// front P2, D-715): a category of its own, as the people's and the beasts' meshes are — its whole file ≤ 5 MB, each model ≤ 70 KB
 // of the file, loaded by index.html before js/movel3d.js; and G.Movel3D.check(): every model of the vocabulary's parts, inside its
 // rectangle and on its floor, ≤ 1,500 triangles (the hero pieces ≤ 3,000), its middle level ≤ 45 % of it (or ≤ 260 triangles),
 // its anchors within it, every people with a model of every kind:
@@ -32,7 +32,7 @@ console.log(`MALHAS — ${ROOT} · ${files.length} arquivos, ${total.toFixed(0)}
 for (const l of info) console.log('  ' + l);
 
 // ------------------------------ the furniture's library (D-715) ------------------------------
-const LIB = 'movelmesh.js', LIB_MB = 4, LIB_KB = 70;
+const LIB = 'movelmesh.js', LIB_MB = 5, LIB_KB = 70;
 {
   const before = new Set(Object.keys(ctx.G.MESH3D || {}));
   try { vm.runInContext(fs.readFileSync(js(LIB), 'utf8'), ctx, { filename: LIB }); vm.runInContext(fs.readFileSync(js('movel3d.js'), 'utf8'), ctx, { filename: 'movel3d.js' }); } catch (e) { fails.push(`${LIB} ou movel3d.js não carrega: ${e.message}`); }

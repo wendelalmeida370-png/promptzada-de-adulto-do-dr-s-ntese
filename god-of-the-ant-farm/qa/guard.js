@@ -1875,9 +1875,9 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
 // G.Movel3D (pick, paint, parts, partGeo, anchorsOf) — nunca pelo G.MESH3D direto
 for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]movel-/.test(c)) fails.push(`o móvel pela porta: ${f}:${k + 1} lê um modelo dos móveis pelo nome (é do G.Movel3D, D-712)`); }); }
 // 262. "o modelo antes da caixa" (D-712): no B3.interior cada peça pergunta primeiro ao G.Movel3D (o modelo do povo dela, no
-// tamanho dela, a rica da casa rica) e só sem modelo cai nas caixas do FURN
+// tamanho dela, a rica da casa rica) e só sem modelo — ou com um que não cabe sob o teto do cômodo — cai nas caixas do FURN
 { const b3 = (src['build3d.js'] || []).join('\n');
-  if (!/const mv = MVL && G\.Movel3D\.pick\(it\.kind, MVL\.civ, it\.w, it\.d, it\.h, MVL\.rico >= 2 \? 'rico' : ''\);/.test(b3) || !/else \{ const f = FURN\[it\.kind\]; if \(f\) f\(F, it, \{ ceil, fill/.test(b3)) fails.push('o modelo antes da caixa: o B3.interior não pergunta ao G.Movel3D antes do FURN (D-712)'); }
+  if (!/let mv = MVL && G\.Movel3D\.pick\(it\.kind, MVL\.civ, it\.w, it\.d, it\.h, MVL\.rico >= 2 \? 'rico' : ''\);/.test(b3) || !/else \{ const f = FURN\[it\.kind\]; if \(f\) f\(F, it, \{ ceil, fill/.test(b3)) fails.push('o modelo antes da caixa: o B3.interior não pergunta ao G.Movel3D antes do FURN (D-712)'); }
 // 263. "o material é o que o povo tem" (D-440, D-714): o que cada parte de um móvel é vem do G.Movel3D.paint — o metal (o ferro,
 // o bronze, ou o vime), o couro e o barro pelo G.Origem.matOK do povo do prédio, o pano pelo tear que ele tem —, e o build3d.js pinta
 // as partes de um modelo só por ela

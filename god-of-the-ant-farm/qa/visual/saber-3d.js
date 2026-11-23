@@ -56,7 +56,8 @@ for (const st of STY) {
   if (shut || twice || !wins || !gn) v4.push(`${st}: de ${wins} janelas, ${shut} com algo sólido diante do vão e ${twice} com uma vidraça antes da face da parede (${gn} triângulos de vidraça)`); if (gn > 0) withWin++; say.v4.push(`${st} ${wins} vãos livres`);
   // (the inside: every piece of the plan drawn)
   const ins = plan && plan.ok ? B3.interior(plan, b, { fine: true }) : null; const kinds = {}; let none = 0;
-  if (ins) for (const it of plan.items) { if (it.form) continue; const R = ins.item[it.id]; kinds[it.kind] = (kinds[it.kind] || 0) + 1; if (!R || R[2] <= R[1]) none++; }
+  // (a piece drawn by its boxes has its points in the storey's geometry; one modelled — Movel3D, D-712 — its instance: R[3])
+  if (ins) for (const it of plan.items) { if (it.form) continue; const R = ins.item[it.id]; kinds[it.kind] = (kinds[it.kind] || 0) + 1; if (!R || (R[3] === undefined && R[2] <= R[1])) none++; }
   if (!ins || none || !(kinds['mesa-leitura'] >= 8) || !(kinds['mesa-escriba'] >= 3) || !(kinds.estante >= 8)) v5.push(`${st}: ${ins ? `${none} peças sem desenho; mesas de leitura ${kinds['mesa-leitura'] || 0}, de escriba ${kinds['mesa-escriba'] || 0}, estantes ${kinds.estante || 0}` : 'sem planta ou sem desenho'}`);
   say.v5.push(`${st} ${Object.values(kinds).reduce((a, x) => a + x, 0)} peças`);
   F.drop(b);

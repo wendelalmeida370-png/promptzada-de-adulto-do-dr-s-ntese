@@ -65,6 +65,8 @@
     }
     return best;
   };
+  // (how high a picked model stands over its foot, stretched as it is: the top of its box)
+  V.top = p => { const d = G.MESH3D && G.MESH3D[p.name]; return d ? d.box[4] * p.sy : 0; };
   // is there a model for this kind of piece, for this people, at this size?
   V.has = (kind, civ, w, d, h) => !!V.pick(kind, civ, w, d, h);
   // the model's geometry (the whole of it: its parts are its groups), at a level of detail — or null
@@ -175,7 +177,7 @@
   // every people with a model of every kind the file has (its own or the one it borrows)
   // (the near level of a piece ≤ 1,500 triangles, a hero's ≤ 3,000; the middle one ≤ 45 % of it — or ≤ 260, a small piece's: D-715)
   V.BUDGET = { peca: 1500, heroi: 3000, meio: 0.45, meioMin: 260 };
-  V.HERO = { 'balcao-alvenaria': 1, lareira: 1, 'fogo-comprido': 1, pipas: 1, cama: 1, 'cama-casal': 1 };
+  V.HERO = { 'balcao-alvenaria': 1, lareira: 1, 'fogo-comprido': 1, pipas: 1, cama: 1, 'cama-casal': 1, lar: 1 };
   V.check = function () {
     const bad = []; const M = G.MESH3D || {}; const I = index();
     for (const kind in I) for (const tag in I[kind]) for (const e of I[kind][tag]) {
@@ -193,5 +195,5 @@
     for (const kind in I) for (const c of civs) if (!tagOf(kind, c)) bad.push(`${kind}: o povo ${c} sem modelo`);
     return bad;
   };
-  G.worldHooks && G.worldHooks.push(() => { /* (the models are the file's: nothing of a world is kept here) */ });
+  // (nothing of a world is kept here: the index and the shapes are the file's — the same for every world)
 })(window.G = window.G || {});

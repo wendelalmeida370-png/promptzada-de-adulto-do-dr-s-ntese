@@ -120,8 +120,21 @@ def count():
     print(f'{len(old)} modelos, {tot / 1024:.0f} KB')
 
 # ------------------------------ the pictures (Cycles, on the processor) ------------------------------
-def to_blender(M, at=(0, 0, 0), name='m'):
-    """the model as Blender objects, one a part, each in the colour the game would paint it (PC.COR), its normals its own"""
+# (each people's colours as the game paints its pieces — js/movel3d.js V.WOOD, V.PAINT, V.CLAY and the palette's walls and stones,
+# sRGB; the sheet shows the people as the game will)
+CIV_COR = {
+    'classico': {'madeira': (122, 88, 58), 'madeira2': (88, 62, 42), 'pintura': (128, 78, 52), 'reboco': (204, 190, 160), 'pedra': (160, 154, 142), 'barro': (176, 102, 66)},
+    'romano': {'madeira': (130, 86, 54), 'madeira2': (84, 52, 34), 'pintura': (130, 52, 50), 'reboco': (196, 168, 124), 'pedra': (189, 180, 163), 'barro': (178, 96, 60)},
+    'grego': {'madeira': (150, 116, 78), 'madeira2': (100, 74, 50), 'pintura': (72, 104, 150), 'reboco': (212, 206, 190), 'pedra': (231, 224, 205), 'barro': (186, 108, 66)},
+    'egipcio': {'madeira': (172, 130, 86), 'madeira2': (64, 48, 36), 'pintura': (60, 128, 122), 'reboco': (196, 172, 128), 'pedra': (224, 207, 167), 'barro': (168, 112, 72)},
+    'nordico': {'madeira': (112, 84, 58), 'madeira2': (72, 54, 38), 'pintura': (140, 62, 48), 'reboco': (110, 92, 70), 'pedra': (142, 135, 123), 'barro': (150, 96, 66)},
+    'asteca': {'madeira': (138, 96, 62), 'madeira2': (94, 64, 42), 'pintura': (150, 62, 50), 'reboco': (208, 198, 172), 'pedra': (205, 193, 168), 'barro': (162, 86, 58)},
+}
+def lin(c): c = c / 255.0; return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+def to_blender(M, at=(0, 0, 0), name='m', civ=None):
+    """the model as Blender objects, one a part, each in the colour the game would paint it (its people's, CIV_COR; or PC.COR),
+    its normals its own"""
     import bpy
     obs = []
     for pname, q in M.parts.items():
@@ -132,22 +145,22 @@ def to_blender(M, at=(0, 0, 0), name='m'):
         for t in q.T:
             for i in t: n = q.N[i]; loops.append((n[0], -n[2], n[1]))
         for p in me.polygons: p.use_smooth = True
-        try: me.normals_split_custom_set(loops)
-        except Exception: pass
+        me.normals_split_custom_set(loops)
         col = me.color_attributes.new('ao', 'FLOAT_COLOR', 'CORNER')
         k = 0
         for t in q.T:
             for i in t: a = q.C[i]; col.data[k].color = (a, a, a, 1.0); k += 1
-        mat = bpy.data.materials.get('mv-' + pname)
+        mkey = 'mv-' + (civ or '') + '-' + pname; mat = bpy.data.materials.get(mkey)
         if mat is None:
-            mat = bpy.data.materials.new('mv-' + pname); mat.use_nodes = True; nt = mat.node_tree
+            mat = bpy.data.materials.new(mkey); mat.use_nodes = True; nt = mat.node_tree
             bsdf = nt.nodes.get('Principled BSDF'); attr = nt.nodes.new('ShaderNodeAttribute'); attr.attribute_name = 'ao'
             mix = nt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs['Factor'].default_value = 1.0
-            rgb = PC.COR.get(pname, (0.6, 0.5, 0.4)); mix.inputs[6].default_value = (*rgb, 1)
+            cc = CIV_COR.get(civ, {}).get(pname)
+            rgb = tuple(lin(v) for v in cc) if cc else PC.COR.get(pname, (0.6, 0.5, 0.4)); mix.inputs[6].default_value = (*rgb, 1)
             nt.links.new(attr.outputs['Color'], mix.inputs[7]); nt.links.new(mix.outputs[2], bsdf.inputs['Base Color'])
             bsdf.inputs['Roughness'].default_value = PC.RUGO.get(pname, 0.75)
             if pname in ('ferro', 'bronze'): bsdf.inputs['Metallic'].default_value = 0.8
-            if pname == 'brasa': bsdf.inputs['Emission Color'].default_value = (1.0, 0.35, 0.08, 1); bsdf.inputs['Emission Strength'].default_value = 2.0
+            if pname == 'brasa': bsdf.inputs['Emission Color'].default_value = (1.0, 0.3, 0.06, 1); bsdf.inputs['Emission Strength'].default_value = 0.7
         me.materials.append(mat)
         ob = bpy.data.objects.new(f'{name}-{pname}', me); bpy.context.scene.collection.objects.link(ob); obs.append(ob)
     return obs
@@ -160,8 +173,7 @@ def scene_setup(px_w, px_h, samples=24):
     fill = bpy.data.lights.new('fogo', 'SUN'); fill.energy = 0.7; fill.color = (1.0, 0.72, 0.45); fo = bpy.data.objects.new('fogo', fill); sc.collection.objects.link(fo); fo.rotation_euler = (math.radians(70), 0, math.radians(140))
     sc.render.engine = 'CYCLES'; sc.cycles.samples = samples; sc.cycles.device = 'CPU'; sc.render.resolution_x = px_w; sc.render.resolution_y = px_h
     sc.view_settings.view_transform = 'Standard'
-    try: sc.cycles.use_denoising = True
-    except Exception: pass
+    sc.cycles.use_denoising = True
     return sc
 
 def floor_plane(x0, x1, y0, y1):
@@ -180,7 +192,7 @@ def label(text, x, y, z=0.002, size=0.12):
 def camera(sc, target, d, elev, azim, ortho):
     import bpy
     from mathutils import Vector
-    cam = bpy.data.cameras.new('cam'); cam.type = 'ORTHO'; cam.ortho_scale = ortho; co = bpy.data.objects.new('cam', cam); sc.collection.objects.link(co); sc.camera = co
+    cam = bpy.data.cameras.new('cam'); cam.type = 'ORTHO'; cam.ortho_scale = ortho; cam.sensor_fit = 'HORIZONTAL'; co = bpy.data.objects.new('cam', cam); sc.collection.objects.link(co); sc.camera = co
     e, a = math.radians(elev), math.radians(azim); dv = Vector((math.cos(e) * math.sin(a), -math.cos(e) * math.cos(a), math.sin(e)))
     co.location = Vector(target) + dv * d; co.rotation_euler = (Vector(target) - co.location).to_track_quat('-Z', 'Y').to_euler()
     return co
@@ -230,12 +242,21 @@ def folha(pasta, civs, lod):
             for cx, s in r: placed.append((cx, y + dep / 2, s))
             y += dep + 0.75
         W = maxw; H = y
+        def of(kind, h=None):
+            own = al.get(kind, {}).get(civ, civ); sel = [q for q in specs if q['kind'] == kind and q['civ'] == own]
+            if not sel: return None
+            q = dict(sel[0]); q['h'] = h or q['h']; q['nome'] += '-folha'; return q
         for cx, cy, s in placed:
-            M = build(s, lod); to_blender(M, at=(cx - W / 2, 0, cy - H / 2), name=s['nome'])
+            M = build(s, lod); at = (cx - W / 2, 0, cy - H / 2); to_blender(M, at=at, name=s['nome'], civ=civ)
+            # (what goes with the piece in the game: the flue over a hood, the amphorae in the rack — Build3D's modelled)
+            for a in M.anc:
+                q = of('chamine', 0.9) if a['k'] == 'chamine' else of('anfora') if a['k'] == 'nicho' and s['kind'] == 'anforeira' else None
+                if q: to_blender(build(q, lod), at=(at[0] + a['x'], a['y'] - (0.04 if q['kind'] == 'anfora' else 0), at[2] + a['z']), name=q['nome'], civ=civ)
             label(s['kind'] + (' · ' + s['var'] if s.get('var') else ''), cx - W / 2, -(cy - H / 2 + s['d'] / 2 + 0.22), size=0.11)
-        floor_plane(-W / 2 - 1, W / 2 + 1, -H / 2 - 1, H / 2 + 1)
-        sc = scene_setup(2000, int(2000 * (H + 1.5) / (W + 1.5) * 0.95), samples=28)
-        camera(sc, (0, 0, 0.35), 30, 52, 18, max(W, H) + 1.4)
+        floor_plane(-W / 2 - 2, W / 2 + 2, -H / 2 - 2, H / 2 + 2)
+        el = 50.0; vert = H * math.sin(math.radians(el)) + 2.3 * math.cos(math.radians(el))
+        sc = scene_setup(2000, int(2000 * vert / (W + 1.0)), samples=20)
+        camera(sc, (0, 0.25 * math.cos(math.radians(el)), 0.75), 30, el, 0, W + 1.0)
         f = os.path.join(pasta, f'moveis-{civ}{"-lod1" if lod else ""}.png'); sc.render.filepath = f; bpy.ops.render.render(write_still=True)
         print('folha', civ, len(placed), 'peças →', f)
 

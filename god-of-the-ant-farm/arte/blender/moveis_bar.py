@@ -179,7 +179,7 @@ def prateleira_bar(style):
 # ------------------------------ a anforeira and the amphora ------------------------------
 SLOTS_ANFORA = 3
 def anforeira(style):
-    def suporte(M, w, d, h, pintado=False, palha=False):
+    def suporte(M, w, d, h, pintado=True, palha=False):
         # (the rack of the pointed amphorae: two end frames, a top board with a ring for each amphora's body, a low board with a
         # cup for each one's point; the amphorae are the tavern's — the rack shows one in each place its store fills: anchors)
         zb, zf = -d / 2 + 0.004, d / 2 - 0.004; n = SLOTS_ANFORA
@@ -196,8 +196,7 @@ def anforeira(style):
             torno(M, 'madeira', [(0.06, 0.06), (0.1, 0.065), (0.11, 0.055), (0.11, 0.035), (0.06, 0.03)], seg=10, x=x, cap0=False, cap1=False)
             tabua(M, 'madeira2', (x - 0.02, 0.07, zb + 0.05), (x + 0.02, 0.1, zf - 0.05), grain='z', seed=1020)
             M.anchor('nicho', x, 0.1, 0, 0.3, 0.3)
-    if style == 'grego': return lambda M, w, d, h: suporte(M, w, d, h, pintado=True)
-    if style == 'asteca': return lambda M, w, d, h: suporte(M, w, d, h, pintado=True, palha=True)
+    if style == 'asteca': return lambda M, w, d, h: suporte(M, w, d, h, palha=True)
     return {'suporte': suporte}[style]
 
 def anfora(style):

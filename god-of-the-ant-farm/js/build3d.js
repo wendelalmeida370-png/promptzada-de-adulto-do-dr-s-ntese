@@ -3838,7 +3838,9 @@ float m3scale(float p) {
         const ceil = (CP ? l.y + l.h : Math.min(l.y + l.h, sh.eave)) - foot;
         // (a piece with a model of its people — Movel3D, D-712 — is one of the inside's instances: its own frame, its parts' colours;
         // the rest the boxes of FURN, in the storey's geometry. item: [storey, first point, past the last, its first instance])
-        const mv = MVL && G.Movel3D.pick(it.kind, MVL.civ, it.w, it.d, it.h, MVL.rico >= 2 ? 'rico' : '');
+        let mv = MVL && G.Movel3D.pick(it.kind, MVL.civ, it.w, it.d, it.h, MVL.rico >= 2 ? 'rico' : '');
+        // (a hearth whose hood would not stand under this room's ceiling — a low loft —: the boxes, which keep the hood under it)
+        if (mv && mv.e.anc.some(a => a.k === 'chamine') && G.Movel3D.top(mv) > ceil + 0.005) mv = null;
         if (mv) { out.item[it.id] = [l.lv, from, from, out.inst.length]; modelled(out, K, it, l.lv, foot, mv, MVL, ceil, fill ? fill[it.id] : undefined); }
         else { const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
           out.item[it.id] = [l.lv, from, g.p.length / 3]; }
@@ -4894,14 +4896,12 @@ float m3scale(float p) {
     for (const k in out.lv) add(out.lv[k]); add(out.roof);
     // (the furniture modelled: one instanced mesh a model's part and pattern, every piece of that model one instance of it, its
     // colour the instance's — D-712. The building the body is in, or at its door, at the near level; the others, the middle one)
-    const lod = furnLod(b); const groups = new Map();
-    for (const q of out.inst) for (const [pt, col, pat] of q.parts) { const name = lod ? q.lod1 : q.name; const key = name + '/' + pt + '/' + pat;
-      let G0 = groups.get(key); if (!G0) groups.set(key, G0 = { name, pt, pat, list: [] }); G0.list.push([q.m, col]); }
+    const lod = furnLod(b); const meshes = [];
     const MT = new THREE.Matrix4(), CL = new THREE.Color();
-    for (const G0 of groups.values()) { const geo = G.Movel3D.partGeo(G0.name, G0.pt, G0.pat); if (!geo) continue;
+    for (const G0 of instGroups(out, lod)) { const geo = G.Movel3D.partGeo(G0.name, G0.pt, G0.pat); if (!geo) continue;
       const m = new THREE.InstancedMesh(geo, MI, G0.list.length); m.name = 'movel:' + G0.name + '/' + G0.pt; m.castShadow = true; m.receiveShadow = true; m.matrixAutoUpdate = false;
       G0.list.forEach(([e, col], k) => { MT.fromArray(e); m.setMatrixAt(k, MT); const L = R3.lin(col); m.setColorAt(k, CL.setRGB(L[0], L[1], L[2])); });
-      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); grp.add(m); }
+      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); grp.add(m); meshes.push(m); }
     const piece = (f, order) => { const geo = f.g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.rotation.order = order || 'XYZ'; m.position.set(f.at[0], f.at[1], f.at[2]); m.rotation.y = f.yaw; grp.add(m); return m; };
     const leaves = out.leaf.map(f => ({ f, m: piece(f), cur: 0, was: undefined }));
     const lids = out.hatch.map(f => ({ f, m: piece(f, 'YXZ'), cur: 0 }));
@@ -4909,8 +4909,17 @@ float m3scale(float p) {
     // (the floors under the street — a sunken one, a cellar: the ground over them given way, from their floor to the plinth's top)
     const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const sunk = [];
     for (const l of p.levels) if (l.y < -0.05 && l.area) sunk.push([X0 + l.area[0] + 0.02, Y0 + l.y - 0.1, Z0 + l.area[1] + 0.02, X0 + l.area[2] - 0.02, Y0 - 0.01, Z0 + l.area[3] - 0.02]);
-    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: fillSig(fill), fillT: G.S.clock, lod, look: out.look };
+    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: fillSig(fill), fillT: G.S.clock, lod, look: out.look, meshes };
   }
+  // (the instanced meshes an inside's furniture makes: one a model's part and pattern — at a level —, each with its pieces' frames and
+  // colours: the draw calls the furniture costs. For the proofs too)
+  function instGroups(out, lod) {
+    const groups = new Map();
+    for (const q of out.inst) for (const [pt, col, pat] of q.parts) { const name = lod ? q.lod1 : q.name; const key = name + '/' + pt + '/' + pat;
+      let G0 = groups.get(key); if (!G0) groups.set(key, G0 = { name, pt, pat, list: [] }); G0.list.push([q.m, col]); }
+    return [...groups.values()];
+  }
+  B3.instGroups = instGroups;
   // (the level the furniture of an inside is drawn at: near where the qualities carry detail and the body is in it or by its door;
   // the middle level otherwise — the other insides open round it, the lean qualities)
   function furnLod(b) {
@@ -4918,7 +4927,8 @@ float m3scale(float p) {
     if (v0.inside === b.id) return 0; const L = TL(); const X = v0.x * L, Z = v0.y * L;
     return Math.hypot(Math.max(b.x * L - X, 0, X - (b.x + b.w) * L), Math.max(b.y * L - Z, 0, Z - (b.y + b.h) * L)) < 3 ? 0 : 1;
   }
-  function dropOpen(o) { if (o.grp.parent) o.grp.parent.remove(o.grp); for (const g of o.geos) g.dispose(); }
+  // (the furniture's shapes are shared — Movel3D.partGeo —, never thrown away; each instanced mesh's own frames and colours are)
+  function dropOpen(o) { if (o.grp.parent) o.grp.parent.remove(o.grp); for (const g of o.geos) g.dispose(); for (const m of o.meshes || []) m.dispose(); }
   function stepOpen(o, rdt, focus) {
     const In = G.Interiors, b = o.b; const k = 1 - Math.exp(-7 * rdt);
     // (the leaves: open as the world has its doors; a creak and a knock as one turns, as loud as it is near)
