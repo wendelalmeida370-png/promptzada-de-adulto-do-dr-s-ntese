@@ -198,7 +198,7 @@ def tapete(seed=481):
     u = (x * k) % 1.0; v = (y * k) % 1.0; du = np.abs(u - 0.5); dv = np.abs(v - 0.5)
     step = np.floor((du + dv) * 10) / 10
     loz = step < 0.36; inner = step < 0.18; hook = (np.abs(du - dv) < 0.03) & (du + dv > 0.38) & (du + dv < 0.48)
-    a = hexc('#8a2e24'); b = hexc('#2e3e5a'); c = hexc('#d8c8a0')
+    a = hexc('#8e4434'); b = hexc('#3e4c62'); c = hexc('#a08c6c')
     col = np.where(loz[..., None], np.where(inner[..., None], c, b), a); col = np.where(hook[..., None], c, col)
     h, which, ids = weave(S, 120, 120, 'plain', seed, slub=0.05, gap=0.06)
     knots = value_noise(S, 160, seed + 1); col = col * (0.82 + knots[..., None] * 0.22) * (0.8 + 0.2 * h[..., None])

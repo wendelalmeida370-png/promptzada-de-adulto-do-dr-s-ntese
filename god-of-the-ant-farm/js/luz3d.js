@@ -254,9 +254,12 @@
   L.frame = function (list, opt) {
     const R3 = G.Realm; const GX = R3.GX; if (!tex || !GX || !GX.gxVol) return;
     opt = opt || {}; const t = now() / 1000; let budget = L.BUDGET;
-    const want = list.slice(0, SLOTS); const ids = new Set(want.map(o => o.b.id));
+    // (the ones open, and the ones about to open — baked ahead with the time left, so an inside never shows a frame of the open sky
+    // before its light is ready: opt.pre, their doors as the plan has them shut)
+    const want = list.slice(0, SLOTS); const pre = (opt.pre || []).filter(o => !want.some(q => q.b.id === o.b.id)).slice(0, 2);
+    const ids = new Set(want.concat(pre).map(o => o.b.id));
     for (const id of [...kept.keys()]) if (!ids.has(id)) kept.delete(id);
-    for (const o of want) {
+    for (const o of want.concat(pre)) {
       const src = L.sources(o.b, o.p); const op = o.open ? [...o.open].sort((a, c) => a - c).join('.') : ''; const sig = L.sig(src, op);
       let e = kept.get(o.b.id); if (!e || e.p !== o.p) { e = { p: o.p, vol: null, sig: null, job: null, jsig: null, src }; kept.set(o.b.id, e); }
       if (sig !== e.sig && sig !== e.jsig) { e.job = L.job(o.p, src, o.open); e.jsig = e.job ? sig : null; e.at = G.S.clock; }

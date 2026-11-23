@@ -4909,7 +4909,8 @@ float m3scale(float p) {
     setCut(boxes); SUNKU.n.value = ns;
     // (the light of the insides open: baked from their plans, the one the body is in first — G.Luz3D)
     if (G.Luz3D && G.Luz3D.frame) { const list = [...opened.values()].sort((a, c) => (c.b.id === (inB && inB.id)) - (a.b.id === (inB && inB.id)) || dRect(a.b) - dRect(c.b));
-      G.Luz3D.frame(list.map(o => ({ b: o.b, p: o.p, open: o.open })), { shadows: !!R3.Q().shadows, lit: G.FX3D && G.FX3D.litIn }); }
+      const pre = want.filter(w => !opened.has(w[1].id) && G.Space.planMade(w[1])).map(w => ({ b: w[1], p: w[2], open: null }));
+      G.Luz3D.frame(list.map(o => ({ b: o.b, p: o.p, open: o.open })), { shadows: !!R3.Q().shadows, lit: G.FX3D && G.FX3D.litIn, pre }); }
   };
   // (how full each keeping piece of a building is, as the world says — Interiors.state —, and its signature by the ninth: what is
   // shown on its shelves, in its bays and bins; drawn again when a ninth changes, and only then)
