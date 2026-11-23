@@ -23,6 +23,9 @@
   const MAXR = 96; // (rows: People3D's MAX — the bodies drawn whole, the living and the dead)
   let D = null, NB = 0, PB = 0, TW = 0, buf = null, tex = null, mat = null, depth = null, TU = null, JIDX = null;
   B3.rim = { value: 0.2 }; // (the edge light's strength: People3D sets it from the sky of the hour)
+  // (the body the player lives in, in a weave of holes when the eye comes near its head — a stair, a loft, a gap: G.Cam3D.bodyFade,
+  // D-736 —: its row, found by its look in B3.put, and how much of it goes. Only seen: the shadow keeps the whole body)
+  B3.fadeRow = { value: -10 }; B3.fade = { value: 0 };
   const MESH = {}; // name → { mesh, geo, rows (Float32Array), n }
   // (22a, D-553: the face's bones, at the end of the list — the jaw, the upper and the lower lid of each eye — turned from the head)
   const FACE_BONES = ['jaw', 'lidUL', 'lidUR', 'lidLL', 'lidLR'];
@@ -515,6 +518,7 @@ vec3 b3paint() {
     mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
     mat.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U; sh.uniforms.uMorph = B3.U2; sh.uniforms.uMorphH = B3.U3; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind; sh.uniforms.uRim = B3.rim;
+      sh.uniforms.uFadeRow = B3.fadeRow; sh.uniforms.uFade = B3.fade;
       if (TEX) Object.assign(sh.uniforms, G.Ground3D.U3());
       sh.vertexShader = pb + SKIN + CLOTH + VARY + sh.vertexShader
         .replace('#include <beginnormal_vertex>', `vec3 b3P, b3N; b3skin(b3morph(position, 0, B3_NT), normal, b3P, b3N);
@@ -528,13 +532,15 @@ vec3 b3paint() {
       // steps off, the first photos; and less red: even at 0.08 the second sheet kept a blush on the pale cheeks)
       const LC = THREE.ShaderChunk.lights_lambert_pars_fragment, LA = 'vec3 irradiance = dotNL * directLight.color;';
       const LIGHT = LC.indexOf(LA) >= 0 ? LC.replace(LA, LA + '\n\tfloat b3nl = dot( geometryNormal, directLight.direction );\n\treflectedLight.directDiffuse += directLight.color * material.diffuseColor * vec3( 1.0, 0.68, 0.52 ) * ( b3sk * 0.05 * smoothstep( -0.35, 0.02, b3nl ) * ( 1.0 - smoothstep( 0.02, 0.35, b3nl ) ) );\n\tif ( b3sw > 0.0 ) { vec3 b3h = normalize( directLight.direction + geometryViewDir ); reflectedLight.directDiffuse += directLight.color * ( b3sw * 0.45 * pow( max( dot( geometryNormal, b3h ), 0.0 ), 36.0 ) ); }') : LC;
-      sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim;\n' + VARY + PAINT + sh.fragmentShader.replace('#include <lights_lambert_pars_fragment>', LIGHT)
+      sh.fragmentShader = pb + (TEX ? G.Ground3D.texGLSL() : '#define B3_NOTEX\n') + 'uniform highp sampler2D uBody; uniform float uRim; uniform float uFadeRow; uniform float uFade;\n' + VARY + PAINT + sh.fragmentShader.replace('#include <lights_lambert_pars_fragment>', LIGHT)
+        // (the weave: a hole where the screen's noise is under the fade — the same pixels from frame to frame, no shimmer)
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n  if (uFade > 0.0 && float(vRowI) == uFadeRow && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < uFade * 0.85) discard;\n')
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = b3paint(); diffuseColor.rgb *= mix(1.0, max(vAO, b3fk > 0.5 ? 0.8 : 0.6), 0.75);\n  vec4 b3chS = b3T(B3_CH_SWEAT_T); b3sw = b3sk * clamp(b3chS[B3_CH_SWEAT_C], 0.0, 1.0); diffuseColor.rgb *= 1.0 - 0.06 * b3sw;')
         // (a soft light on the edges, as the old figures had: the people read against the ground — as bright as the sky of
         // the hour: at night it does not glow)
         .replace('#include <opaque_fragment>', 'outgoingLight += diffuseColor.rgb * pow(1.0 - abs(dot(normal, normalize(vViewPosition))), 3.0) * uRim + vec3(0.92, 0.94, 1.0) * b3gl * 0.45;\n#include <opaque_fragment>');
     };
-    mat.customProgramCacheKey = () => 'body3d-v9';
+    mat.customProgramCacheKey = () => 'body3d-v10';
     depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     depth.onBeforeCompile = sh => {
       sh.uniforms.uBody = B3.U; sh.uniforms.uTime = TU.time; sh.uniforms.uWind = TU.wind;
@@ -665,13 +671,14 @@ vec3 b3paint() {
 
   // ------------------------------ a frame ------------------------------
   const K = { m: null, c: null };
-  B3.begin = function () { for (const k in MESH) MESH[k].n = 0; B3.rows = 0; };
+  B3.begin = function () { for (const k in MESH) MESH[k].n = 0; B3.rows = 0; B3.fadeRow.value = -10; B3.fade.value = 0; };
   // a person in row `row`: R the rig's frames (world), pose and look; which meshes they wear
   const AT = []; // (where each row's person stands, for the verifier: X, Y, Z, size)
   const WORN = []; // (what each row's person wears, for the verifier: their clothes, their skin)
   B3.put = function (row, R, pose, L, X, Y, Z) {
     if (!K.m) { K.m = new THREE.Matrix4(); K.c = new THREE.Color(); }
     AT[row] = [X, Y, Z, L.s || 1, R[0].elements[12], R[0].elements[13], R[0].elements[14]];
+    { const av = G.People3D && G.People3D.avatar; const f = av && L === av.look && G.Cam3D && G.Cam3D.bodyFade ? G.Cam3D.bodyFade() : 0; if (f > 0) { B3.fadeRow.value = row; B3.fade.value = f; } }
     const o = row * TW * 4; WORN[row] = [L.out || DEF, L.skin];
     const fv = faceOf(pose, L); // (the face as the drawing turns it: the lids and the jaw, the channels)
     const fe = L.fe || null; weightsOf(fe, fv);

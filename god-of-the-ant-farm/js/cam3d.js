@@ -38,7 +38,7 @@
   // (out to 16 m: before a monument's front of 20 m and more, and in an arena of 20, the eye stands back to see it — it was 11)
   const PMIN = -1.05, PMAX = 1.2, DMIN = 1.4, DMAX = 16;
   C3.DMAX = DMAX;
-  let piv = null, lookT = -1e9, zoomT = -1e9, fovNow = 58, clock = 0;
+  let piv = null, lookT = -1e9, zoomT = -1e9, fovNow = 58, clock = 0, poCap = 2; // (poCap: the orbit's highest tilt under a ceiling, eased)
   // (the target held, the aim, the shoulder as it is now, the time the eye last came in, a turn asked of it — recentre)
   let lockGet = null, lockPt = null, aiming = false, aimK = 0, shNow = 0.32, inT = -1e9, turnAsk = null;
   let talkK = 0, talkPt = null, talkVeto = 0; // (22a wave 2, D-644: the conversation's framing — how far in, the other's face; a talk the player took the eye from)
@@ -54,7 +54,7 @@
   };
   C3.trauma = () => trauma; // (for the proofs)
 
-  C3.attach = function (pos, yaw) { C3.yaw = yaw; C3.pitch = 0.26; C3.dist = G.clamp(OPT.dist, DMIN, DMAX); C3.cur = C3.dist; piv = { X: pos.X, Y: pos.Y + 1.5, Z: pos.Z }; lookT = -1e9; fovNow = OPT.fov; lockGet = null; lockPt = null; C3.lock = null; aiming = false; aimK = 0; turnAsk = null; shNow = 0.32 * (OPT.side < 0 ? -1 : 1); };
+  C3.attach = function (pos, yaw) { C3.yaw = yaw; C3.pitch = 0.26; C3.dist = G.clamp(OPT.dist, DMIN, DMAX); C3.cur = C3.dist; piv = { X: pos.X, Y: pos.Y + 1.5, Z: pos.Z }; lookT = -1e9; fovNow = OPT.fov; lockGet = null; lockPt = null; C3.lock = null; aiming = false; aimK = 0; turnAsk = null; shNow = 0.32 * (OPT.side < 0 ? -1 : 1); freshIn(); };
   // the mouse turns it (pixels of movement) — not while a target is held: the eye keeps it in front
   C3.look = function (dx, dy) {
     lookT = clock; if (lockPt) { flick += dx; return; } // (held: the mouse's sideways push is kept for the fight's change of target — 20f, C3.flick)
@@ -137,13 +137,16 @@
       if (Math.hypot(body.X - X, body.Z - Z) < Math.max(0.7, h.w / 2 + 0.2)) return true; }
     return false; };
   // ------------------------------ the fourth wall (the interiors 2.0, D-655, D-730) ------------------------------
-  // With the body under the roof of a building — its shell, an annex —, the eye does not stay shut in the room: the walls, the
-  // ceilings and the roof of that building are no wall to it, and it stands where the player put it, at the player's distance, as
-  // out of doors. It is still stopped by the floor of the body's storey (all over the building's lot), by the other buildings —
-  // their rooms too, while the body is in one —, by the ground and the water. What of the building stands between the eye and the
-  // room is not drawn: the cut (C3.cutBoxes — the boxes the town's material, and the inside's, give way in: Build3D.insideTick puts
-  // them first in its list). Shut in the room, the eye stood a hand from the back wall, the head half the picture and the room
-  // unseen (the agent D: in the tavern's hall a median of 0,88 m from the shoulder, 54% of the frames under a metre).
+  // With the body under the roof of a building — its shell, an annex —, the eye keeps to the room's own volume (D-738): under its
+  // ceiling — the slab of the storey over it, or the roof's underside where the room goes up to it — by C3.CEIL_GAP, and past its
+  // walls by no more than C3.BEYOND (the thickness of the wall between it and the body, and a hand); over its storey's floor. The
+  // wall it backs into is not drawn: the cut (C3.cutBoxes — the boxes the town's material, and the inside's, give way in:
+  // Build3D.insideTick puts them first in its list), up to a little over the eye — the far walls and the ceiling drawn whole, the
+  // outside seen only by the windows and the doors. Out over the roof, the sky, the sea and the hill's town stood over the far wall
+  // and the room was a box seen from above (the owner's phone, an Egyptian tavern); shut in the room before the fourth wall, the eye
+  // stood a hand from the back wall, the head half the picture (the agent D: a median of 0,88 m from the shoulder in a tavern's hall).
+  // The ceiling a little over the body lowers the eye's tilt instead of bringing it in (the orbit's tilt under the ceiling, eased);
+  // the player's tilt down is the look's, from where the eye is. The other buildings stop it — their rooms too —, the ground, the water.
   // · the yard is open sky: a body in it has the eye of out of doors, and the building is a building to it (L-1860);
   // · a storey under the ground — a cellar — keeps the room of before: the eye in its rooms, under the earth (its walls are earth);
   // · the building just left stays open to the eye while the eye is still through it (the line from the body to the eye crosses
@@ -174,7 +177,15 @@
     // throne room's height, and over the room it was a lid the cut left)
     const up = p.levels.filter(q => q.y > l.y + 0.05).sort((a, c) => a.y - c.y)[0]; let top = l.y + (l.h || 2.6);
     if (up) top = Math.min(top, up.y - (up.slab || 0.2) - 0.02); else if (p.shell.kind !== 'aberta' && p.shell.eave > 0) top = Math.min(top, p.shell.eave - 0.6);
-    return { b, p, lv: inn.lv, fy: Math.min(y0 + l.y, body.Y), fc: y0 + Math.max(l.y + 1.9, top), rm: rm ? rm.r : (was && was.b === b ? was.rm : null), X0: b.x * L, Z0: b.y * L, X1: (b.x + b.w) * L, Z1: (b.y + b.h) * L };
+    // (the room's box the eye keeps to — the plan's room the body is in, else inside the shell's walls —, and the ceiling of the slab
+    // over the storey, where there is one: as the eye's own solid has it, planSolid)
+    const sh = p.shell; const t = sh.t || 0.3; const box = rm ? rm.r : (was && was.b === b && was.rm) ? was.rm : sh.kind === 'round' ? [sh.cx - sh.r + t, sh.cz - sh.r + t, sh.cx + sh.r - t, sh.cz + sh.r - t] : sh.r ? [sh.r[0] + t, sh.r[1] + t, sh.r[2] - t, sh.r[3] - t] : [0, 0, b.w * L, b.h * L];
+    // (and over the hole of that slab — the hatch a flight comes up through, an open height —, the storey over it: its own slab
+    // over, or its height — the body on the flight had its head over the slab, and the eye was inside its own pivot)
+    const up2 = up && p.levels.filter(q => q.y > up.y + 0.05).sort((a, c) => a.y - c.y)[0];
+    return { b, p, lv: inn.lv, y0, fy: Math.min(y0 + l.y, body.Y), fc: y0 + Math.max(l.y + 1.9, top), ceilUp: up ? y0 + up.y - (up.slab || 0.2) - 0.02 : null, lyMin: y0 + l.y + 1.9,
+      upLv: up ? up.lv : null, upTop: up ? (up2 ? y0 + up2.y - (up2.slab || 0.2) - 0.02 : null) : null, upMin: up ? y0 + up.y + 1.9 : null,
+      rm: rm ? rm.r : (was && was.b === b ? was.rm : null), box, X0: b.x * L, Z0: b.y * L, X1: (b.x + b.w) * L, Z1: (b.y + b.h) * L };
   }
   // (does the line from the body to the eye cross a building's lot — the eye still through it)
   function through(o, A, P) {
@@ -183,12 +194,38 @@
       let u = (lo[k] - a[k]) / d[k], v = (hi[k] - a[k]) / d[k]; if (u > v) { const w = u; u = v; v = w; } t0 = Math.max(t0, u); t1 = Math.min(t1, v); if (t0 > t1) return false; }
     return true;
   }
-  // (a point of the open building's lot: solid only under its storey's floor — the walls, the ceilings, the roof are the cut's)
-  function openSolid(X, Y, Z) {
-    const S = G.S, L = G.Space.TILE; const x = X / L, y = Z / L; if (!W.inb(x, y)) return null;
-    if (S.occ[W.idx(x, y)] !== eb.b.id) return null;
-    return Y < eb.fy + C3.EYE_FLOOR;
+  C3.CEIL_GAP = 0.2; C3.BEYOND = 0.65; // (metres: the eye a hand under the ceiling; past the room's walls no further than this)
+  // (the ceiling over a point of the open building, world metres: the slab of the storey over it; the top storey's, the roof's
+  // underside — the band the eye's solid has under the roof (planSolid) —; out of the shell, the shell's edge's nearest — the eaves:
+  // the storey's lowest there dropped the eye backing out past a wall by a metre in a frame)
+  function ceilAt(o, X, Z, noHole) {
+    const p = o.p, sh = p.shell; let x = X - o.X0, z = Z - o.Z0;
+    if (sh.kind === 'round') { const dx = x - sh.cx, dz = z - sh.cz, d = Math.hypot(dx, dz), m = sh.r - 0.01; if (d > m) { x = sh.cx + dx * m / d; z = sh.cz + dz * m / d; } }
+    else if (sh.r) { x = G.clamp(x, sh.r[0] + 0.01, sh.r[2] - 0.01); z = G.clamp(z, sh.r[1] + 0.01, sh.r[3] - 0.01); }
+    if (o.ceilUp !== null) { const c = G.Space.cellIn(p, o.upLv, x, z), C = G.Interiors.CELL;
+      if (noHole || (c !== C.HATCH && c !== C.VOID)) return Math.max(o.lyMin, o.ceilUp);
+      return Math.max(o.upMin, o.upTop !== null ? o.upTop : o.y0 + roofIn(p, x, z) - 0.3); } // (over the slab's hole)
+    return Math.max(o.fc, o.y0 + roofIn(p, x, z) - 0.3);
   }
+  // (a point under the shell's roof or its eaves — m past its walls —, not over the yard: the open sky)
+  function underRoof(o, X, Z, m) { const sh = o.p.shell, x = X - o.X0, z = Z - o.Z0; return sh.kind === 'round' ? Math.hypot(x - sh.cx, z - sh.cz) < sh.r + m : !!sh.r && x > sh.r[0] - m && x < sh.r[2] + m && z > sh.r[1] - m && z < sh.r[3] + m; }
+  // (how far a point stands out of the room's box, along the ground, metres)
+  const outOfBox = (o, X, Z) => { const r = o.box, x = X - o.X0, z = Z - o.Z0; return Math.hypot(Math.max(r[0] - x, 0, x - r[2]), Math.max(r[1] - z, 0, z - r[3])); };
+  // (the room's volume to the eye: over the floor of its storey (all over the lot), under its ceiling, never further out of its walls
+  // than C3.BEYOND — the building just left, only under its ceiling: the eye comes out with the body. allowH, allowV: what a body
+  // come into a room gives the eye that was out of it, shrinking — it glides in, never thrown in a frame)
+  let allowH = 0, allowV = 0, boxKey = '';
+  function openSolid(X, Y, Z) {
+    const o = eb, S = G.S, L = G.Space.TILE; const x = X / L, y = Z / L; const lot = W.inb(x, y) && S.occ[W.idx(x, y)] === o.b.id;
+    if (o !== kept) { if (outOfBox(o, X, Z) > C3.BEYOND + allowH) return true; if (Y > ceilAt(o, X, Z) - C3.CEIL_GAP + allowV) return true; }
+    else if (lot && underRoof(o, X, Z, 0.5) && Y > ceilAt(o, X, Z) - C3.CEIL_GAP + allowV) return true; // (the building just left: its ceiling only under its roof — over its yard, the sky: the eye was brought in 0,6 m in a frame there)
+    if (!lot) return null;
+    return Y < o.fy + C3.EYE_FLOOR;
+  }
+  // (for the proofs and the verifier: the eye's highest at a point — the ceiling less the gap, and what is left of a glide in —, or
+  // null with no building open to it)
+  C3.ceilAt = (X, Z) => (eb ? ceilAt(eb, X, Z) - C3.CEIL_GAP + allowV : null);
+  C3.roomBox = () => (eb ? { box: eb.box, X0: eb.X0, Z0: eb.Z0, out: (X, Z) => outOfBox(eb, X, Z), allow: allowH, glide: allowV, kept: eb === kept } : null);
   // what stops the eye: the ground (and the water's face), the bodies of buildings, walls — and, with the body indoors, only the
   // floor of its storey there (the fourth wall), or, in a cellar, the outside of its rooms. all: nothing open to the eye — what is
   // drawn before the cut (C3.solidAll: who is seen through a wall, the proofs of the eye)
@@ -304,72 +341,109 @@
     return sg * Math.max(0, Math.min(Math.abs(s), cast(p.X, p.Y, p.Z, d, Math.abs(s) + 0.15, 0, 0, 0) - 0.15));
   }
   // ------------------------------ the lens, the «Vista da sala», the cut, the weave ------------------------------
-  C3.SIDE_FOV = 50; C3.FOV_MAX = 100; C3.IN_FOV = 6; // (degrees: the least across, the most up and down, the more under a roof)
+  C3.SIDE_FOV = 50; C3.FOV_MAX = 100; C3.IN_FOV = 10; // (degrees: the least across, the most up and down, the more under a roof)
+  C3.IN_DIST = 3.4; // (metres: under a roof the eye no farther than this from the shoulder — the player's nearer, kept)
   let inK = 0;
-  // the «Vista da sala» (D-655, D-731): asked by the player — the action 'vista', its key and its button —, the eye goes up over the
-  // cut ceiling and looks down on the whole room, at the vista's tilt (57°) or the player's if higher; asked again, back. Never by
-  // itself, only under a roof (out of it, it ends), and it writes neither the yaw nor the player's tilt (the rule 124)
-  C3.VISTA = { pitch: 1.0, k: 3.5 };
-  let vistaOn = false, vistaK = 0;
-  C3.vista = function (on) { vistaOn = on === undefined ? !vistaOn : !!on; if (vistaOn && !(eb && eb !== kept)) vistaOn = false; return vistaOn; };
-  C3.vistaOn = () => vistaOn; C3.vistaK = () => vistaK;
+  // the «Vista da sala» (D-655, D-731, D-739): asked by the player — the action 'vista', its key and its button —, the eye goes to a
+  // corner of the room, a hand under its ceiling — the free corner that sees the most of the room's floor (the plan's, with what stands
+  // on it), the farther from the body of two that see as much —, and looks at the room's middle with the lens as wide as the room's
+  // four corners need (up to C3.FOV_MAX); asked again, back to the shoulder. Never over the ceiling, never by itself, only under a roof
+  // (out of it, it ends); it writes neither the yaw nor the player's tilt (the rule 124). Over the roof, the room was a box seen from
+  // above with the sky, the sea and the town over its far wall
+  C3.VISTA = { inset: 0.35, k: 3.5 };
+  let vistaOn = false, vistaK = 0, vistaMemo = null;
+  C3.vista = function (on) { vistaOn = on === undefined ? !vistaOn : !!on; if (vistaOn && !(eb && eb !== kept)) vistaOn = false;
+    if (vistaOn) { vistaMemo = null; const q = C3.last ? C3.last.body : null; if (q && vistaPoseOf(eb, { X: q[0], Z: q[2] }).none) vistaOn = false; } return vistaOn; }; // (a room with no free corner: none)
+  C3.vistaOn = () => vistaOn; C3.vistaK = () => vistaK; C3.vistaPose = () => vistaMemo; // (for the proofs: { E, A, fov, seen } of the corner)
   C3.under = () => !!(eb && eb !== kept); // (the body under a roof the eye is open to: the screen by the place, the vista's button)
   let aspNow = 16 / 9; // (the screen's proportion, as the last frame had it)
-  // (how far up over the room the vista stands: as far as the room's four corners on its floor are all in the lens — a tenth of it to
-  // spare —, looked at from the vista's tilt and the player's yaw, its middle at the shoulder's height: from its half diagonal over
-  // the lens's narrower half, out by steps)
-  function vistaFit(o, pitch, hy) {
-    const r = o.rm || (o.p.shell.r ? o.p.shell.r : [0, 0, 4, 4]); const R = Math.hypot(r[2] - r[0], r[3] - r[1]) / 2; const tv = Math.tan(fovNow * Math.PI / 360) * 0.9, th = tv * aspNow;
-    const C = [o.X0 + (r[0] + r[2]) / 2, o.Z0 + (r[1] + r[3]) / 2]; const f = fwd(C3.yaw, pitch); const rx = -Math.sin(C3.yaw), rz = Math.cos(C3.yaw); const up = [-rz * f[1], rz * f[0] - rx * f[2], rx * f[1]]; // (the lens's right and up)
-    let d = G.clamp(R / Math.min(tv, th) + 0.6, 4, 16);
-    for (let k = 0; k < 6; k++) { const E = [C[0] - f[0] * d, hy - f[1] * d, C[1] - f[2] * d]; let fits = true;
-      for (const [i, j] of [[0, 1], [2, 1], [0, 3], [2, 3]]) { const P = [o.X0 + r[i] - E[0], o.fy - E[1], o.Z0 + r[j] - E[2]]; const df = P[0] * f[0] + P[1] * f[1] + P[2] * f[2];
-        if (df < 0.2 || Math.abs((P[0] * rx + P[2] * rz) / df) > th || Math.abs((P[0] * up[0] + P[1] * up[1] + P[2] * up[2]) / df) > tv) { fits = false; break; } }
-      if (fits) break; d = Math.min(16, d * 1.15); }
-    return d;
+  // (the corner of the vista, for the room the body is in: of the room's four, a hand in from its walls, a hand under its ceiling, the
+  // one whose line to the most of the room's floor — points 0,4 m apart, a hand over it — crosses nothing drawn; the look at the
+  // room's middle; the lens up and down as wide as the three far corners of its floor need, across as the screen is)
+  const clear = (E, T) => { const d = [T[0] - E[0], T[1] - E[1], T[2] - E[2]]; const n = Math.hypot(d[0], d[1], d[2]); for (let s = 0.15; s < n - 0.25; s += 0.2) if (solid(E[0] + d[0] * s / n, E[1] + d[1] * s / n, E[2] + d[2] * s / n, true)) return false; return true; };
+  function vistaPoseOf(o, body) {
+    const r = o.box; const key = o.b.id + ':' + o.lv + ':' + r.join(',') + ':' + aspNow.toFixed(2);
+    if (vistaMemo && vistaMemo.key === key) return vistaMemo;
+    let best = null; const sx = Math.max(0.4, (r[2] - r[0]) / 9), sz = Math.max(0.4, (r[3] - r[1]) / 9);
+    // (the doors of the storey, along their openings — a corner by one has its leaf in the picture: the solid of the plan has an open
+    // door free, and the leaf swung into the corner of the Egyptian tavern filled half the picture)
+    const dp = []; for (const d of o.p.doors) { const w = o.p.walls[d.wall]; if (!w || (w.lv || 0) !== (o.lv || 0)) continue; const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
+      for (const t of [d.at - d.w / 2, d.at, d.at + d.w / 2, d.at + d.w]) { const u = G.clamp(t, 0, L) / L; dp.push([w.a[0] + (w.b[0] - w.a[0]) * u, w.a[1] + (w.b[1] - w.a[1]) * u]); } }
+    for (const [i, j] of [[0, 1], [2, 1], [0, 3], [2, 3]]) for (const IN of [C3.VISTA.inset, 2 * C3.VISTA.inset]) {
+      const X = o.X0 + r[i] + (i === 0 ? IN : -IN), Z = o.Z0 + r[j] + (j === 1 ? IN : -IN); const E = [X, ceilAt(o, X, Z, true) - C3.CEIL_GAP - 0.05, Z]; // (under its storey's own ceiling: over an open height, the way there crossed the slab)
+      if (solid(E[0], E[1], E[2], true) || E[1] < o.fy + 1.6) continue; // (a corner in a wall, a piece, a flight; a ceiling too low)
+      let n = 0, m = 0; for (let x = r[0] + sx / 2; x < r[2]; x += sx) for (let z = r[1] + sz / 2; z < r[3]; z += sz) { m++; if (clear(E, [o.X0 + x, o.fy + 0.15, o.Z0 + z])) n++; }
+      const byDoor = dp.some(q => Math.hypot(q[0] - (X - o.X0), q[1] - (Z - o.Z0)) < 1.3);
+      const sc = n / Math.max(1, m) + 0.004 * Math.hypot(X - body.X, Z - body.Z) - (byDoor ? 0.6 : 0);
+      if (!best || sc > best.sc) best = { sc, E, seen: n / Math.max(1, m) };
+      break; // (the nearer the corner the better: the inset twice only where the first is not clear)
+    }
+    if (!best) { vistaMemo = { key, none: true }; return vistaMemo; }
+    const A = [o.X0 + (r[0] + r[2]) / 2, o.fy + 0.7, o.Z0 + (r[1] + r[3]) / 2], E = best.E;
+    let f = [A[0] - E[0], A[1] - E[1], A[2] - E[2]]; const fl = Math.hypot(f[0], f[1], f[2]) || 1; f = f.map(q => q / fl);
+    let rt = [-f[2], 0, f[0]]; const rl = Math.hypot(rt[0], rt[2]) || 1; rt = rt.map(q => q / rl); const up = [rt[1] * f[2] - rt[2] * f[1], rt[2] * f[0] - rt[0] * f[2], rt[0] * f[1] - rt[1] * f[0]];
+    let need = 0; for (const [i, j] of [[0, 1], [2, 1], [0, 3], [2, 3]]) { const d = [o.X0 + r[i] - E[0], o.fy - E[1], o.Z0 + r[j] - E[2]]; if (Math.hypot(d[0], d[2]) < 1.2) continue; const df = Math.max(0.2, d[0] * f[0] + d[1] * f[1] + d[2] * f[2]);
+      need = Math.max(need, Math.abs(d[0] * up[0] + d[1] * up[1] + d[2] * up[2]) / df, Math.abs(d[0] * rt[0] + d[2] * rt[2]) / df / aspNow); }
+    const fov = G.clamp(2 * Math.atan(need * 1.06) * 180 / Math.PI, 40, C3.FOV_MAX);
+    vistaMemo = { key, E, A, fov, seen: best.seen }; return vistaMemo;
   }
-  // the cut (D-655, D-730): the boxes of the open building that give way to the eye — [x0, y0, z0, x1, y1, z1], world metres —, from
-  // its storey's floor up, inside its lot (and its eaves): the walls of the body's room and of the shell that face the eye, a slab
-  // each; what stands on the line from the eye to a little short of the body (C3.CUT_NEAR), as wide as the shoulder and a hand; and,
-  // with the eye over the storey's ceiling (or over the room), all over it. Build3D.insideTick puts them first in its list (the
-  // town's material gives way there; the inside's, P1 — the contract, §3); the furniture by the body and beyond it is never in them
-  C3.CUT_MAX = 6; C3.CUT_NEAR = 0.45; C3.CUT_W = 0.75;
+  // the cut (D-655, D-730, D-738): the boxes of the open building that give way to the eye — [x0, y0, z0, x1, y1, z1], world metres —,
+  // from its storey's floor up to a little over the eye and the head (the wall over them drawn: no sky over the cut), inside its lot
+  // (and its eaves): the walls of the body's room and of the shell that the eye stands past, a slab each; what stands on the line
+  // from the eye to a little short of the body (C3.CUT_NEAR), as wide as the shoulder and a hand — not in the vista, whose corner is
+  // inside the room. Build3D.insideTick puts them first in its list (the town's material and the inside's give way there); the
+  // furniture by the body and beyond it is never in them
+  C3.CUT_MAX = 6; C3.CUT_NEAR = 0.45; C3.CUT_W = 0.75; C3.CUT_SPAN = 1.3; // (metres: the shell's wall cut so far each way of the eye)
   const NONE = []; let cuts = NONE;
   C3.cutBoxes = () => cuts;
   C3.cutBox = () => (cuts.length ? cuts[0] : null); // (the contract's port: the first — the line from the eye to the body —, or null)
   C3.inCut = (X, Y, Z) => cuts.some(c => X > c[0] && Y > c[1] && Z > c[2] && X < c[3] && Y < c[4] && Z < c[5]);
   function cutFor(o, P, body, piv) {
-    const out = []; const pad = 0.3; const y0 = o.fy + 0.02, top = o.fc + 80; const lot = [o.X0 - pad, o.Z0 - pad, o.X1 + pad, o.Z1 + pad];
+    // (up to a little over the eye and the head, never into the ceiling drawn over them — the slab's underside, the roof's: over the
+    // body and where the eye came into the room, the box's nearest point)
+    const nb = [G.clamp(P.X, o.X0 + o.box[0], o.X0 + o.box[2]), G.clamp(P.Z, o.Z0 + o.box[1], o.Z0 + o.box[3])]; const dc = (X, Z) => ceilAt(o, X, Z) + (o.ceilUp !== null ? 0.02 : 0.3);
+    const out = []; const pad = 0.3; const y0 = o.fy + 0.02, top = Math.min(Math.max(P.Y, piv.Y) + 0.3, Math.min(dc(piv.X, piv.Z), dc(nb[0], nb[1])) - 0.03 + allowV); const lot = [o.X0 - pad, o.Z0 - pad, o.X1 + pad, o.Z1 + pad];
     const push = c => { if (out.length >= C3.CUT_MAX) return; c[0] = Math.max(c[0], lot[0]); c[2] = Math.max(c[2], lot[1]); c[3] = Math.min(c[3], lot[2]); c[5] = Math.min(c[5], lot[3]); if (c[0] < c[3] - 0.01 && c[2] < c[5] - 0.01 && c[1] < c[4]) out.push(c); };
     // (a rectangle's sides that face the eye — the eye past its inner face —: a slab from the wall's outer face — out — to a hair
-    // inside the inner one; along the side and past its corners)
-    const sides = (r, ins, outw) => { const X0 = o.X0 + r[0], Z0 = o.Z0 + r[1], X1 = o.X0 + r[2], Z1 = o.Z0 + r[3]; const m = outw + 0.1;
-      if (P.X < X0 + ins) push([X0 - outw, y0, Z0 - m, X0 + ins + 0.04, top, Z1 + m]);
-      if (P.X > X1 - ins) push([X1 - ins - 0.04, y0, Z0 - m, X1 + outw, top, Z1 + m]);
-      if (P.Z < Z0 + ins) push([X0 - m, y0, Z0 - outw, X1 + m, top, Z0 + ins + 0.04]);
-      if (P.Z > Z1 - ins) push([X0 - m, y0, Z1 - ins - 0.04, X1 + m, top, Z1 + outw]); };
-    if (o.rm) sides(o.rm, 0, 0.6);
-    // (the line from the eye to the body: one box, or two hugging it when it runs aslant)
+    // inside the inner one; along the side, only so far each way of the eye (sp: C3.CUT_SPAN) — the shell's wall cut whole
+    // along a side the eye grazed showed the street beside a body walked along it)
+    const sides = (r, ins, outw, sp) => { const X0 = o.X0 + r[0], Z0 = o.Z0 + r[1], X1 = o.X0 + r[2], Z1 = o.Z0 + r[3]; const m = outw + 0.1;
+      const za = Math.max(Z0 - m, P.Z - sp), zb = Math.min(Z1 + m, P.Z + sp), xa = Math.max(X0 - m, P.X - sp), xb = Math.min(X1 + m, P.X + sp);
+      if (P.X < X0 + ins) push([X0 - outw, y0, za, X0 + ins + 0.04, top, zb]);
+      if (P.X > X1 - ins) push([X1 - ins - 0.04, y0, za, X1 + outw, top, zb]);
+      if (P.Z < Z0 + ins) push([xa, y0, Z0 - outw, xb, top, Z0 + ins + 0.04]);
+      if (P.Z > Z1 - ins) push([xa, y0, Z1 - ins - 0.04, xb, top, Z1 + outw]); };
+    if (o.rm) sides(o.rm, 0, 0.6, C3.CUT_SPAN);
+    // (the line from the eye to the body: one box, or two hugging it when it runs aslant — kept inside a wall of the shell that neither
+    // the eye nor the body stands past (the one past it is the slab's below, round the eye; the body's, its door's): the box of a line
+    // run near a wall cut it metres away from the eye, and the street was seen beside the body)
+    const sh = o.p.shell, st = sh.t || 0.3; const inner = sh.kind !== 'round' && sh.r ? [o.X0 + sh.r[0] + st, o.Z0 + sh.r[1] + st, o.X0 + sh.r[2] - st, o.Z0 + sh.r[3] - st] : null;
+    const pushIn = c => { if (inner) { const ins = (k, lo) => (lo ? P[k] > inner[k === 'X' ? 0 : 1] && body[k] > inner[k === 'X' ? 0 : 1] : P[k] < inner[k === 'X' ? 2 : 3] && body[k] < inner[k === 'X' ? 2 : 3]);
+      if (ins('X', 1)) c[0] = Math.max(c[0], inner[0] - 0.04); if (ins('Z', 1)) c[2] = Math.max(c[2], inner[1] - 0.04); if (ins('X', 0)) c[3] = Math.min(c[3], inner[2] + 0.04); if (ins('Z', 0)) c[5] = Math.min(c[5], inner[3] + 0.04); } push(c); };
     const ex = P.X - body.X, ez = P.Z - body.Z, eh = Math.hypot(ex, ez);
-    if (eh > C3.CUT_NEAR + 0.1) { const ux = ex / eh, uz = ez / eh, nx = -uz, nz = ux, w = C3.CUT_W;
+    if (eh > C3.CUT_NEAR + 0.1 && vistaK < 0.5) { const ux = ex / eh, uz = ez / eh, nx = -uz, nz = ux, w = C3.CUT_W;
       const E = [body.X + ux * C3.CUT_NEAR, body.Z + uz * C3.CUT_NEAR], A = [P.X + ux * 0.3, P.Z + uz * 0.3]; const parts = Math.min(ux * ux, uz * uz) > 0.12 ? 2 : 1;
       for (let k = 0; k < parts; k++) { const a = [G.lerp(E[0], A[0], k / parts), G.lerp(E[1], A[1], k / parts)], b = [G.lerp(E[0], A[0], (k + 1) / parts), G.lerp(E[1], A[1], (k + 1) / parts)];
         const xs = [a[0] + nx * w, a[0] - nx * w, b[0] + nx * w, b[0] - nx * w], zs = [a[1] + nz * w, a[1] - nz * w, b[1] + nz * w, b[1] - nz * w];
-        push([Math.min(xs[0], xs[1], xs[2], xs[3]), y0, Math.min(zs[0], zs[1], zs[2], zs[3]), Math.max(xs[0], xs[1], xs[2], xs[3]), top, Math.max(zs[0], zs[1], zs[2], zs[3])]); } }
-    // (the eye over the storey's ceiling, or over the room: all of the building over it — the ceiling, the storeys above, the roof)
-    if (P.Y > o.fc - 0.15 || vistaK > 0.02) push([lot[0], o.fc - 0.05, lot[1], lot[2], top, lot[3]]);
+        pushIn([Math.min(xs[0], xs[1], xs[2], xs[3]), y0, Math.min(zs[0], zs[1], zs[2], zs[3]), Math.max(xs[0], xs[1], xs[2], xs[3]), top, Math.max(zs[0], zs[1], zs[2], zs[3])]); } }
     // (the shell's sides that face the eye; a round one, the part of its ring on the eye's side)
-    const sh = o.p.shell;
     if (sh.kind === 'round') { const cx = o.X0 + sh.cx, cz = o.Z0 + sh.cz, r = sh.r; if (Math.hypot(P.X - cx, P.Z - cz) > r - (sh.t || 0.3)) { const ax = Math.abs(P.X - cx) >= Math.abs(P.Z - cz);
-      if (ax) { const s = Math.sign(P.X - cx); push([s > 0 ? cx + r * 0.35 : cx - r - 0.6, y0, cz - r - 0.6, s > 0 ? cx + r + 0.6 : cx - r * 0.35, top, cz + r + 0.6]); }
-      else { const s = Math.sign(P.Z - cz); push([cx - r - 0.6, y0, s > 0 ? cz + r * 0.35 : cz - r - 0.6, cx + r + 0.6, top, s > 0 ? cz + r + 0.6 : cz - r * 0.35]); } } }
-    else if (sh.r) sides(sh.r, sh.t || 0.3, 0.6);
+      const sp = C3.CUT_SPAN; if (ax) { const s = Math.sign(P.X - cx); push([s > 0 ? cx + r * 0.35 : cx - r - 40, y0, Math.max(cz - r - 0.6, P.Z - sp), s > 0 ? cx + r + 40 : cx - r * 0.35, top, Math.min(cz + r + 0.6, P.Z + sp)]); }
+      else { const s = Math.sign(P.Z - cz); push([Math.max(cx - r - 0.6, P.X - sp), y0, s > 0 ? cz + r * 0.35 : cz - r - 40, Math.min(cx + r + 0.6, P.X + sp), top, s > 0 ? cz + r + 40 : cz - r * 0.35]); } } }
+    else if (sh.r) sides(sh.r, sh.t || 0.3, 40, C3.CUT_SPAN); // (out to the lot's edge, the eaves': what hangs on the cut wall goes with it — a tavern's sign, L-1867)
     return out;
   }
   // the body in a weave of holes when the eye comes this near its head — a stair, a loft, a gap —: 0 whole, 1 the most (the people's
   // drawing reads it: People3D, the body's own line)
   C3.FADE_NEAR = 0.8; C3.FADE_SPAN = 0.45;
   let fade = 0; C3.bodyFade = () => fade;
+  // (a body attached, a world made or opened: no building open to the eye from before — the one just left of another body held the
+  // eye under its ceiling a frame, then let it fly up 0,55 m a frame)
+  // (lastOk: the eye of the frame before is this body's — after another body's, put in a room, the eye glided in from the last
+  // building of the other body, metres away, for a minute: the photos of the house#3582)
+  function freshIn() { eb = null; kept = null; room = null; vistaOn = false; vistaK = 0; vistaMemo = null; allowH = allowV = 0; boxKey = ''; poCap = 2; lastOk = false; }
+  let lastOk = false;
+  G.worldHooks.push(() => { freshIn(); inK = 0; fade = 0; });
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
     clock += rdt; let inn = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null;
@@ -390,11 +464,15 @@
       // (its floor follows the feet down — the steps of a podium out of its walls: the eye thrown in to the shoulder, the temple#5087)
       if (kept) kept.fy = Math.min(kept.fy, body.Y);
       eb = kept; }
+    // (a new room for the eye — come in, gone from one to another —: what the eye had out of its box glides in)
+    { const key = eb ? eb.b.id + ':' + eb.lv + ':' + (eb === kept ? 'k' : eb.box.join(',')) : '';
+      if (key !== boxKey) { boxKey = key; allowH = allowV = 0; if (eb && C3.last && lastOk) { const q = C3.last.pos; allowH = Math.max(0, outOfBox(eb, q[0], q[2]) - C3.BEYOND) + 0.4; allowV = Math.max(0, q[1] - (ceilAt(eb, q[0], q[2]) - C3.CEIL_GAP)) + 0.2; } } // (and the eye's sphere round it)
+      else { allowH = Math.max(0, allowH - 3 * rdt); allowV = Math.max(0, allowV - 4 * rdt); } }
     // (the «Vista da sala» ends out of the roof it was asked under; the lens opens a little under a roof, slowly)
     if (!open) vistaOn = false;
     vistaK += ((vistaOn ? 1 : 0) - vistaK) * (1 - Math.exp(-C3.VISTA.k * rdt)); if (vistaK < 1e-3) vistaK = 0;
     inK += ((open ? 1 : 0) - inK) * (1 - Math.exp(-1.6 * rdt)); if (inK < 1e-3) inK = 0;
-    const pit = vistaK > 0 ? G.lerp(C3.pitch, Math.max(C3.pitch, C3.VISTA.pitch), vistaK) : C3.pitch; // (the tilt the eye has: the player's — over the room, at least the vista's)
+    const pit = C3.pitch; // (the player's tilt)
     const head = body.head !== undefined ? body.head : (body.h || 1.75) * 0.86;
     // (the world moved the body — a building rose where it stood, a scene, a load: the eye goes with it at once;
     // easing after it would fly through the houses on the way, and a pivot inside a house leaves the eye there — L-106)
@@ -431,21 +509,28 @@
     // tilts up as asked (below); down the orbit it met the ground and came in to a metre behind the head, and the top of a front of
     // 21 m stayed out of the picture 9 m before it)
     let dist = G.lerp(G.lerp(C3.dist, Math.min(C3.dist, 1.9), aimK), Math.min(C3.dist, 1.25), talkK * (1 - aimK));
-    // (over the room: far enough up to see all of it — its own size —, never nearer than the player's)
-    if (vistaK > 0 && eb) dist = G.lerp(dist, Math.max(C3.dist, vistaFit(eb, Math.max(C3.pitch, C3.VISTA.pitch), piv.Y)), vistaK);
-    const poAt = dd => Math.max(pit, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, dd))));
+    dist = G.lerp(dist, Math.min(dist, C3.IN_DIST), inK); // (under a roof, nearer: the room is small to the eye — D-738)
+    // (under a ceiling the orbit's tilt goes no higher than the boom's end a hand under it at the distance asked — the eye stays as far,
+    // lower, the look less steep —, eased in and out; the player's tilt down is then the look's, below)
+    // (the ceiling over the boom — at a third, two thirds, its end and the sweep's margin past it, and a hand to each side of the end
+    // as the eye's sphere has them; the building just left, only near its roof: the end alone, swept under the eaves, brought the eye
+    // in 0,6 m at once), a little under the eye's highest: its sphere — the probes over the boom, 0,11 m — keeps clear of it
+    { let want = PMAX + 0.4; if (eb) { const ch = Math.cos(Math.min(poCap, pit)) * dist, T = G.Space.TILE, cy = Math.cos(C3.yaw), sy = Math.sin(C3.yaw);
+        if (eb !== kept) want = Math.asin(G.clamp((ceilAt(eb, piv.X, piv.Z) - C3.CEIL_GAP + allowV - 0.18 - piv.Y) / Math.max(0.6, dist), -0.35, 1));
+        for (const [f, sd] of [[0.35, 0], [0.7, 0], [1, 0], [1, 0.2], [1, -0.2], [1.06, 0]]) { const ex = piv.X - cy * ch * f - sy * sd, ez = piv.Z - sy * ch * f + cy * sd;
+          if (eb === kept && !(W.inb(ex / T, ez / T) && G.S.occ[W.idx(ex / T, ez / T)] === eb.b.id && underRoof(eb, ex, ez, 0.8))) continue;
+          want = Math.min(want, Math.asin(G.clamp((ceilAt(eb, ex, ez) - C3.CEIL_GAP + allowV - 0.18 - piv.Y) / Math.max(0.6, dist * f), -0.35, 1))); } }
+      poCap = want < poCap ? want : poCap + (want - poCap) * (1 - Math.exp(-4 * rdt)); } // (down at once — the glide in is the allowance's —, up eased)
+    const poAt = dd => Math.min(poCap, Math.max(pit, -Math.asin(Math.min(1, Math.max(0.2, piv.Y - (body.Y + 0.45)) / Math.max(0.5, dd)))));
     // over the shoulder — the right or the left, crossing over in a moment —, closer in, nearer the middle; aiming, farther out
     const shW = (OPT.side < 0 ? -1 : 1) * G.lerp(0.32 * G.clamp(C3.cur / 4, 0.3, 1), 0.58, aimK); shNow += (shW - shNow) * (1 - Math.exp(-7 * rdt));
     const rx = -Math.sin(C3.yaw), rz = Math.cos(C3.yaw); const sh = sideFree(piv, shNow);
     const Q = { X: piv.X + rx * sh, Y: piv.Y + 0.08 * aimK, Z: piv.Z + rz * sh }; // (the shoulder: the boom starts there)
-    // (over the room, the orbit's middle the room's: all of it in the picture, the body in it — the yaw the player's)
-    const cen = vistaK > 0 && eb && eb.rm ? [eb.X0 + (eb.rm[0] + eb.rm[2]) / 2, eb.Z0 + (eb.rm[1] + eb.rm[3]) / 2] : null;
-    if (cen) { Q.X += (cen[0] - Q.X) * vistaK; Q.Z += (cen[1] - Q.Z) * vistaK; }
     let po = poAt(dist), d = fwd(C3.yaw, po), free = reach(Q, d, dist);
     // (and with something behind the body before the orbit's end — a house, a market —, down to a hand over the feet at the
     // distance the eye has, not the one asked: held up the orbit of the 11 m asked, 0.95 m over the feet at the 5.8 m a market left
     // it, the look up was the weaker, and the top of the colossal's front, 26 m, stayed out of the picture — L-755)
-    if (free < dist - 0.05 && po > pit + 1e-6) { po = poAt(free); d = fwd(C3.yaw, po); free = reach(Q, d, free); }
+    if (free < dist - 0.05 && po > Math.min(pit, poCap) + 1e-6) { po = poAt(free); d = fwd(C3.yaw, po); free = reach(Q, d, free); }
     // (in at once to the exact distance when something comes in the way; out again gently, a moment after the last time it came
     // in — no step of 20 cm, no shrinking by a quarter each frame: L-1140)
     if (free < C3.cur) { C3.cur = free; inT = clock; } else if (clock - inT > 0.25) C3.cur += Math.min((free - C3.cur) * (1 - Math.exp(-2.6 * rdt)), 2.4 * rdt); // (at most 2,4 m a second)
@@ -468,16 +553,18 @@
     // (the lens by the screen, D-732: never narrower than C3.SIDE_FOV degrees across — a phone held upright opens up and down, it was
     // a spyglass of 29° across —, a few degrees more under a roof, coming in slowly; the talk narrows it only out of doors: D-644)
     const asp = aspNow = cam.aspect > 0 ? cam.aspect : 16 / 9; const base = Math.max(OPT.fov, Math.min(C3.FOV_MAX, 2 * Math.atan(Math.tan(C3.SIDE_FOV * Math.PI / 360) / asp) * 180 / Math.PI));
-    fovNow += (base + 7 * spK + C3.IN_FOV * inK - 12 * aimK - 10 * talkK * (1 - inK) - fovNow) * (1 - Math.exp(-3.5 * rdt));
+    fovNow += (Math.min(C3.FOV_MAX, base + 7 * spK + C3.IN_FOV * inK) - 12 * aimK - 10 * talkK * (1 - inK) - fovNow) * (1 - Math.exp(-3.5 * rdt));
     // (the far end of the view where the haze of the quality has already hidden everything: nothing past it is drawn)
     cam.fov = fovNow; cam.near = 0.12; cam.far = G.Realm && G.Realm.viewFar ? G.Realm.viewFar() : 1600; cam.updateProjectionMatrix();
     cam.position.set(P.X, P.Y, P.Z);
     // (the tilt up the orbit could not give: the look raised over the head, as far as asked, the head kept in the lower part of the
     // picture — four fifths of the way down from its middle at most —, never past 77° up)
     const aim = [piv.X + rx * shD, piv.Y + 0.08 * aimK, piv.Z + rz * shD];
-    if (cen) { aim[0] += (cen[0] - aim[0]) * vistaK; aim[2] += (cen[1] - aim[2]) * vistaK; }
+    // (and the tilt down the orbit could not give under a ceiling: the look lowered from where the eye is, as far as asked, the head
+    // kept in the upper part of the picture)
     { const hd = Math.hypot(aim[0] - P.X, aim[2] - P.Z), e0 = Math.atan2(aim[1] - P.Y, hd), want = -pit;
-      if (want > e0 + 0.02 && hd > 0.05) aim[1] = P.Y + hd * Math.tan(Math.min(want, e0 + 0.8 * fovNow * Math.PI / 360, 1.35)); }
+      if (want > e0 + 0.02 && hd > 0.05) aim[1] = P.Y + hd * Math.tan(Math.min(want, e0 + 0.8 * fovNow * Math.PI / 360, 1.35));
+      else if (want < e0 - 0.02 && hd > 0.05 && eb) aim[1] = P.Y + hd * Math.tan(Math.max(want, e0 - 0.8 * fovNow * Math.PI / 360, -1.35)); }
     // (a target held: the look between the body and it, so both are in the picture)
     if (lockPt) { const k = 0.35; aim[0] += (lockPt.X - aim[0]) * k * 0.4; aim[2] += (lockPt.Z - aim[2]) * k * 0.4; aim[1] += (lockPt.Y - aim[1]) * k * 0.25; }
     // (a talk: the look between the body's face and the other's, so both are in the picture — the eye does not turn for it)
@@ -489,11 +576,15 @@
       const sx = (Math.sin(t) + Math.sin(t * 2.3 + 1.7) * 0.5) * 0.11 * k, sy = (Math.sin(t * 1.7 + 0.6) + Math.sin(t * 3.1) * 0.4) * 0.09 * k, sz = Math.sin(t * 1.3 + 2.4) * 0.1 * k;
       if (!solid(P.X + sx, P.Y + sy, P.Z + sz)) { P.X += sx; P.Y += sy; P.Z += sz; cam.position.set(P.X, P.Y, P.Z); } // (never into a wall for it)
       aim[0] += sx * 0.5; aim[1] += sy * 0.6; aim[2] += sz * 0.5; trauma = Math.max(0, trauma - rdt * 1.8); }
+    // (the «Vista da sala»: to the corner's eye and look and lens, as far as it has come)
+    const vp = vistaK > 0 && eb ? vistaPoseOf(eb, body) : null; if (vp && vp.none) vistaOn = false; // (no clear corner: no vista)
+    if (vp && !vp.none) { for (let i = 0; i < 3; i++) aim[i] = G.lerp(aim[i], vp.A[i], vistaK);
+      P.X = G.lerp(P.X, vp.E[0], vistaK); P.Y = G.lerp(P.Y, vp.E[1], vistaK); P.Z = G.lerp(P.Z, vp.E[2], vistaK); cam.position.set(P.X, P.Y, P.Z); cam.fov = G.lerp(fovNow, vp.fov, vistaK); cam.updateProjectionMatrix(); }
     cam.lookAt(aim[0], aim[1], aim[2]);
     // (the cut of the fourth wall, and the body in a weave when the eye is at its head)
     cuts = eb ? cutFor(eb, P, body, piv) : NONE;
     { const dH = Math.hypot(P.X - piv.X, P.Y - piv.Y, P.Z - piv.Z); fade = G.clamp((C3.FADE_NEAR - dH) / C3.FADE_SPAN, 0, 1); }
-    C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: fovNow, cur: C3.cur, sh: shD, piv: [piv.X, piv.Y, piv.Z], body: [body.X, body.Y, body.Z] };
+    C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: cam.fov, cur: C3.cur, sh: shD, piv: [piv.X, piv.Y, piv.Z], body: [body.X, body.Y, body.Z] }; lastOk = true;
   };
   // the pose the camera has right now (for the flight back up to the god)
   C3.pose = () => C3.last || null;

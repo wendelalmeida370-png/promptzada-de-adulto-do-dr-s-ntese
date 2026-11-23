@@ -574,10 +574,13 @@
   // the eye never ends a frame inside the ground, the water, a building or a wall of the town — L-106 —, indoors as out of doors
   // (in a yard, a room, a storey): only the body asleep in its bed is left out. What is wrong, as the verifier's lines (the rule
   // «vista3d» of QA.check asks it while the body is lived; the Node proofs of the eye ask it each frame — qa/olho-dentro.js)
-  // · with the body under a roof the eye goes through the walls, the ceilings and the roof of that building (the fourth wall, D-655):
-  //   there it is never under the floor of the body's storey, and never inside what is drawn of the building — a wall, a ceiling, a
-  //   roof, a piece — where the cut does not take it away (C3.cutBoxes); nor stands any of it, uncut, on the line from the eye to the
-  //   head (but for the body's own half metre: C3.CUT_NEAR) — the eye's collision and the cut say the same thing
+  // · with the body under a roof the eye keeps to the room's volume (the fourth wall, D-655, D-738): never over its ceiling less the
+  //   gap (C3.ceilAt — and so never over the roof of the body's building), never further out of the room's walls than C3.BEYOND
+  //   (C3.roomBox; the glide in of a body just come in is allowed, shrinking), never under the floor of the body's storey, never
+  //   inside what is drawn of the building — a wall, a ceiling, a roof, a piece — where the cut does not take it away
+  //   (C3.cutBoxes); nor stands any of it, uncut, on the line from the eye to the head (but for the body's own half metre:
+  //   C3.CUT_NEAR; and not in the «Vista da sala», whose corner looks at the room, not at the head) — the eye's collision and the cut
+  //   say the same thing
   QA.eye = function () {
     const C3 = G.Cam3D, v = G.Possess && G.Possess.body(); if (!C3 || !v || !C3.last || v.sleeping) return [];
     const l = C3.last, P = l.pos; const at = () => P.map(n => n.toFixed(1)).join(', '); const out = [];
@@ -586,7 +589,9 @@
     const L = G.Space.TILE, S = G.S; const inLot = (X, Z) => { const x = X / L, y = Z / L; return G.W.inb(x, y) && S.occ[G.W.idx(x, y)] === o.b.id; };
     if (inLot(P[0], P[2]) && P[1] < o.fy + 0.2) out.push(`o olho debaixo do piso do corpo no ${o.b.type}#${o.b.id} (${at()})`);
     else if (inLot(P[0], P[2]) && C3.solidAll(P[0], P[1], P[2]) && !C3.inCut(P[0], P[1], P[2])) out.push(`o olho dentro do que se desenha do ${o.b.type}#${o.b.id} sem o corte (${at()})`);
-    if (l.piv && l.body) { const H = l.piv, B = l.body; const d = Math.hypot(H[0] - P[0], H[1] - P[1], H[2] - P[2]); const near = (C3.CUT_NEAR || 0.45) + 0.05;
+    if (!o.kept && C3.ceilAt) { const c = C3.ceilAt(P[0], P[2]); if (c !== null && P[1] > c + 0.03) out.push(`o olho acima do teto do ${o.b.type}#${o.b.id}: ${(P[1] - c).toFixed(2)} m sobre o mais alto que ele pode (${at()})`); }
+    if (!o.kept && C3.roomBox) { const r = C3.roomBox(); const d = r ? r.out(P[0], P[2]) : 0; if (r && d > C3.BEYOND + r.allow + 0.03) out.push(`o olho a ${d.toFixed(2)} m fora da sala do corpo no ${o.b.type}#${o.b.id} (${at()})`); }
+    if (l.piv && l.body && !(C3.vistaK && C3.vistaK() > 0.5)) { const H = l.piv, B = l.body; const d = Math.hypot(H[0] - P[0], H[1] - P[1], H[2] - P[2]); const near = (C3.CUT_NEAR || 0.45) + 0.05;
       for (let s = 0.1; s < d; s += 0.1) { const X = P[0] + (H[0] - P[0]) * s / d, Y = P[1] + (H[1] - P[1]) * s / d, Z = P[2] + (H[2] - P[2]) * s / d;
         if (Math.hypot(X - B[0], Z - B[2]) < near) break; // (the body's own half metre, round it: the cut keeps out of it)
         if (inLot(X, Z) && C3.solidAll(X, Y, Z) && !C3.inCut(X, Y, Z)) { out.push(`entre o olho e o corpo, o ${o.b.type}#${o.b.id} sem o corte a ${s.toFixed(1)} m do olho (${[X, Y, Z].map(n => n.toFixed(1)).join(', ')})`); break; } } }
