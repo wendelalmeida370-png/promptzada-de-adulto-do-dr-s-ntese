@@ -26,7 +26,7 @@ def alpha_of(h, sigma=0.75): return H0 + (1 - H0) * np.clip(blur(np.clip(h, 0, 1
 # height; q, the WebP quality)
 OPTS = {'px': 512, 'hblur': 0.75, 'q': 86}
 def opts_of(m): o = dict(OPTS); o.update(m[4] if len(m) > 4 else {}); return o
-BUDGET = 6.0e6   # (bytes of base64 for the whole stack: arte/ESTUDIO.md)
+BUDGET = 7.5e6   # (bytes of base64 for the whole stack: arte/ESTUDIO.md — 6 MB until the insides' materials came, D-702)
 
 # ---------------------------------------------------------------- walls and roofs
 def planks(seed=11, vertical=True):

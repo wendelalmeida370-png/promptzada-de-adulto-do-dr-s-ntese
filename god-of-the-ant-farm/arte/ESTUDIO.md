@@ -37,7 +37,7 @@ uma construção. Trocar a escala. Introduzir outro motor. Depender de internet/
   carregou (`uTexOn == 0`), cada material desenha como antes (o padrão procedural) — esse é o fallback, não removam.
   Material novo: um arquivo `arte/mat_<area>.py` com uma lista `MATS` no mesmo formato de `arte/texturas.py`
   (`(nome, função, metros, descrição)`); o `texturas.py` junta todos. Rodar `python3 arte/texturas.py` regenera
-  `js/tex3d.js` (≈3 min). Orçamento: 512×512 por material, ≤ 6 MB de base64 no total.
+  `js/tex3d.js` (≈3 min). Orçamento: 512×512 por material, ≤ 7,5 MB de base64 no total (6 MB até os materiais de dentro, `arte/mat_dentro.py`: D-702).
 - **Malhas feitas fora** (Blender como módulo Python, em `/tmp/.../scratchpad/venv`, `bpy` instalado): exportadas para um
   `js/<nome>.js` de dados (sem `fetch`: o jogo abre por `file://`, e o WebGL não aceita imagens/arquivos de outra origem).
   Formato: `G.MESH3D.<nome> = { pos: base64(Float32), nor: base64(Int8 normalizado), idx: base64(Uint16|Uint32),

@@ -251,18 +251,36 @@
   let lamps = [];
   // (how many real lights the quality gives the flames: none in the lightest — the painted light carries them all there)
   const lampsOf = q => G.clamp(q && Number.isFinite(q.lights) ? q.lights | 0 : 2, 0, 6);
-  const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36];
+  const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36], CANDLE = [1, 0.76, 0.46];
   // (the houses whose windows the night lights, and how bright their doorways are)
   const LIT = { hut: 0.8, house: 1, sobrado: 1, insula: 1, quarteirao: 1, barraco: 0.5, taverna: 1.5, workshop: 0.8, forja: 1.3, olaria: 0.8, temple: 1.1, palacio: 1.3, paco: 1.2, administracao: 0.8, biblioteca: 0.8, cadeia: 0.6, quartel: 0.8, banhos: 0.9 };
   // (a real light falls off as the painted one does — with the square of the distance — and is as bright as it two metres
   // off: a flame handed from the painted light to a lamp, or back, keeps the size of its pool; a campfire lights the ring
   // round it, not the square beyond)
   const LAMP = F3.LAMP = { decay: 2, k: 1.4 }; // (dials, for the photos that compare)
+  // (the first of them, in the Alta and the Ultra, with a picture of the shadows of what stands in the insides — the walls, the
+  // pieces, the leaves: their meshes on the layer of the insides, G.Luz3D.LAYER —, only for a flame of an inside, made again when
+  // its flame changes, a leaf turns or a fifth of a second has gone by, never more: D-707)
   F3.quality = function (q) {
-    if (!scene) return; const n = lampsOf(q);
-    while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, LAMP.decay); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0 }; l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
-    while (lamps.length > n) { const l = lamps.pop(); scene.remove(l); l.dispose(); }
+    if (!scene) return; const n = lampsOf(q); const ns = Math.min(n, (q && q.shadows ? q.lshadow | 0 : 0));
+    // (the lights with their pictures first — three.js orders them so: the masks follow its order — and as many as the quality says,
+    // always: a picture more or less makes every material again)
+    if (lamps.length !== n || lamps.filter(l => l.castShadow).length !== ns) { while (lamps.length) { const l = lamps.pop(); scene.remove(l); l.dispose(); } }
+    while (lamps.length < n) { const l = new THREE.PointLight(0xffa04a, 0, 16, LAMP.decay); l.userData = { key: '', cur: 0, want: 0, X: 0, Y: -1e4, Z: 0, sh: lamps.length < ns };
+      if (l.userData.sh) { l.castShadow = true; l.shadow.mapSize.set(512, 512); l.shadow.camera.near = 0.05; l.shadow.camera.far = 14; l.shadow.bias = -0.003; l.shadow.normalBias = 0.02; l.shadow.radius = 2; l.shadow.autoUpdate = false; l.shadow.needsUpdate = false;
+        l.shadow.camera.layers.set(G.Luz3D ? G.Luz3D.LAYER : 6); }
+      l.position.set(0, -1e4, 0); scene.add(l); lamps.push(l); }
   };
+  let shadeT = 0;
+  // (a light's picture of the shadows made again: when its flame or its place changed, when a leaf of a door turns, five times a second)
+  function shadeLamps(rdt) {
+    shadeT += rdt; const due = shadeT > 0.2 || (G.Build3D && G.Build3D.leavesMoving && G.Build3D.leavesMoving()); if (due) shadeT = 0;
+    for (const l of lamps) { if (!l.castShadow) continue; const u = l.userData; const moved = u.shKey !== u.key || Math.abs((u.shX || 0) - u.X) + Math.abs((u.shZ || 0) - u.Z) > 0.02;
+      if ((moved || due) && l.intensity > 0) { u.shDue = true; u.shKey = u.key; u.shX = u.X; u.shZ = u.Z; } }
+  }
+  // (the lights whose picture of the shadows is due this frame — the realm draws them in a pass of their own, with only the insides'
+  // meshes casting: three.js's own pass would take the whole town round each light six times)
+  F3.shadeDue = () => lamps.filter(l => l.castShadow && l.userData.shDue);
   F3.lamps = () => lamps.map(l => ({ key: l.userData.key, i: +l.intensity.toFixed(2), at: [+l.position.x.toFixed(1), +l.position.y.toFixed(1), +l.position.z.toFixed(1)] }));
   // the sources of this frame ([score, key, X, Y, Z, intensity, reach, colour, flicker]) to the lamps
   function lightUp(src, dt) {
@@ -270,14 +288,32 @@
     // (a lamp keeps its source while it is still among the strongest — a torch that moved a little is the same torch)
     for (const l of lamps) { const u = l.userData; if (!u.key) continue;
       let m = top.find(s => !used.has(s) && s[1] === u.key); if (!m && u.key[0] === 't') m = top.find(s => !used.has(s) && s[1][0] === 't' && (s[2] - u.X) ** 2 + (s[4] - u.Z) ** 2 < 2.5);
-      if (m) { used.add(m); u.key = m[1]; u.X = m[2]; u.Y = m[3]; u.Z = m[4]; u.want = m[5]; u.fl = m[8]; l.distance = m[6]; l.color.setRGB(m[7][0], m[7][1], m[7][2]); } else u.want = 0; }
+      if (m) { used.add(m); u.key = m[1]; u.X = m[2]; u.Y = m[3]; u.Z = m[4]; u.want = m[5]; u.fl = m[8]; u.bid = m[9] || 0; u.spill = m[10] || 0; l.distance = m[6]; l.color.setRGB(m[7][0], m[7][1], m[7][2]); } else u.want = 0; }
     // (the new ones to the lamps that are free — a lamp still fading out of its old place waits)
-    for (const s of top) { if (used.has(s)) continue; const l = lamps.find(q => !q.userData.key || (q.userData.want === 0 && q.userData.cur < 0.05)); if (!l) break;
-      const u = l.userData; used.add(s); u.key = s[1]; u.X = s[2]; u.Y = s[3]; u.Z = s[4]; u.cur = 0; u.want = s[5]; u.fl = s[8]; l.distance = s[6]; l.color.setRGB(s[7][0], s[7][1], s[7][2]); }
+    for (const s of top) { if (used.has(s)) continue; const free = q => !q.userData.key || (q.userData.want === 0 && q.userData.cur < 0.05);
+      const l = s[9] ? lamps.find(q => q.userData.sh && free(q)) || lamps.find(q => !q.userData.sh && free(q)) : lamps.find(q => !q.userData.sh && free(q)); if (!l) continue;
+      const u = l.userData; used.add(s); u.key = s[1]; u.X = s[2]; u.Y = s[3]; u.Z = s[4]; u.cur = 0; u.want = s[5]; u.fl = s[8]; u.bid = s[9] || 0; u.spill = s[10] || 0; l.distance = s[6]; l.color.setRGB(s[7][0], s[7][1], s[7][2]); }
     const k = 1 - Math.exp(-9 * dt);
     for (const l of lamps) { const u = l.userData; u.cur += (u.want - u.cur) * k; if (u.want === 0 && u.cur < 0.02) { u.cur = 0; u.key = ''; }
       l.position.set(u.X, u.Y, u.Z); l.decay = LAMP.decay; l.intensity = u.cur > 0.01 ? u.cur * LAMP.k * (1 + (G.VR() - 0.5) * 2 * (u.fl || 0)) : 0; }
+    lampMasks(); shadeLamps(dt);
   }
+  // (each point light of the scene says where its light may go — the sky's gxLamp, in three.js's own order of the lights: those
+  // with a picture of the shadows first, then as they stand in the scene: a flame of an inside lights its own rooms, never the
+  // street nor another building; every other light is of the open air, and comes into a room only through its openings —
+  // G.Luz3D, D-701. And which insides have a real light on one of their flames: the baked fill carries less of their fire there)
+  F3.litIn = new Set();
+  function lampMasks() {
+    const GX = R3.GX; if (!GX || !GX.gxLamp) return; const M = GX.gxLamp.value; const Lz = G.Luz3D; F3.litIn.clear();
+    const pts = []; for (const o of scene.children) if (o.isPointLight) pts.push(o);
+    pts.sort((a, c) => (c.castShadow ? 1 : 0) - (a.castShadow ? 1 : 0)); // (stable: three.js's own order)
+    M.fill(-1); for (let k = 0; k < pts.length && k < 8; k++) { const u = pts[k].userData || {}; const s = u.bid && Lz && Lz.slotOf ? Lz.slotOf(u.bid) : -1;
+      M[k * 4] = u.mask = u.bid ? (s >= 0 ? s : 9) : -1; M[k * 4 + 1] = pts[k].castShadow ? 1 : 0; if (u.bid && u.cur > 0.3) F3.litIn.add(u.bid);
+      // (the light a lit doorway or window throws on the street is its room's light going out: never back in through its own openings)
+      const sp = u.spill && Lz && Lz.slotOf ? Lz.slotOf(u.spill) : -1; M[k * 4 + 2] = sp; }
+  }
+  // (for the verifier: the flames' lights, the building each burns in and the volume its mask says)
+  F3.lampsIn = () => lamps.map(l => ({ bid: l.userData.bid || 0, i: l.intensity, mask: l.userData.mask, sh: !!l.castShadow }));
   // ------------------------------ the light of every flame, painted ------------------------------
   // (every flame and lit doorway round the body lights what is round it — the pool of warm light round a campfire, the
   // street before a lit door, the wall by a torch — without a light of its own, which every material would pay for: their
@@ -294,6 +330,8 @@
     const x0 = (Math.round(focus.X / s) - n / 2) * s, z0 = (Math.round(focus.Z / s) - n / 2) * s, yr = (focus.Y || 0) + 1; // (heights kept from a little over the body's: LSPAN/2 above and below)
     let any = 0; const A = lmAcc;
     if (F3.lmOn && R3.scene().scale.y > 0.98) for (const q of src) {
+      if (q[9]) continue; // (a flame of an inside: its light is the inside's own, baked with its walls — G.Luz3D)
+      if (q[10] && G.Luz3D && G.Luz3D.slotOf(q[10]) >= 0) continue; // (the light out of a lit doorway or window of an inside drawn: its room's own, on the street the real lights carry it)
       let I = q[5]; for (const l of lamps) if (l.userData.key === q[1]) I -= l.userData.cur;
       I *= 1 + (G.VR() - 0.5) * 2 * q[8] * 0.6; if (I < 0.03) continue;
       const X = q[2], Z = q[4], c = q[7], R = q[6] * 0.85, R2 = R * R, dy = q[3] - yr;
@@ -401,9 +439,9 @@
     // night of the New Fire, when every flame of the town is out; and at night the doorways of the houses round the body,
     // where the light of the hearth comes out)
     for (const b of S.buildings.values()) {
-      if (nightK > 0.05 && b.built && F3.doorLit(b)) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 2100) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03]);
+      if (nightK > 0.05 && b.built && F3.doorLit(b)) { const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; const d2 = near2(X, Z); if (d2 < 2100) { const dr = G.Vg.door(b); const DX = dr[0] * L, DZ = dr[1] * L; const k = LIT[b.type] * nightK; src.push([2.6 * k / (1 + near2(DX, DZ) / 70), 'w' + b.id, DX + (DX - X) * 0.08, W.hAt(dr[0], dr[1]) * H + 1.7, DZ + (DZ - Z) * 0.08, 2.6 * k, 11, HEARTH, 0.03, 0, b.id]);
         // (and its lit windows, where the drawing of the houses says they are: [X, Y, Z, out x, out z] of each pane)
-        const ps = G.Build3D && G.Build3D.lamps && G.Build3D.lamps.get(b.id); if (ps) for (let q = 0; q < ps.length && q < 8; q++) { const p = ps[q]; src.push([0.9 * k / (1 + near2(p[0], p[2]) / 40), 'p' + b.id + ':' + q, p[0] + p[3] * 0.35, p[1], p[2] + p[4] * 0.35, 0.9 * k, 7, HEARTH, 0.02]); halo(p[0] + p[3] * 0.08, p[1], p[2] + p[4] * 0.08, 1.1, 0.28 * k, b.id * 13 + q); } } }
+        const ps = G.Build3D && G.Build3D.lamps && G.Build3D.lamps.get(b.id); if (ps) for (let q = 0; q < ps.length && q < 8; q++) { const p = ps[q]; src.push([0.9 * k / (1 + near2(p[0], p[2]) / 40), 'p' + b.id + ':' + q, p[0] + p[3] * 0.35, p[1], p[2] + p[4] * 0.35, 0.9 * k, 7, HEARTH, 0.02, 0, b.id]); halo(p[0] + p[3] * 0.08, p[1], p[2] + p[4] * 0.08, 1.1, 0.28 * k, b.id * 13 + q); } } }
       if (b.type !== 'campfire' || !b.built || n >= MAXF - 2 || (G.Atmos && !G.Atmos.fire(b))) continue; const X = (b.x + b.w / 2) * L, Z = (b.y + b.h / 2) * L; if ((X - focus.X) ** 2 + (Z - focus.Z) ** 2 > 3600) continue;
       const gY = W.hAt(b.x + b.w / 2, b.y + b.h / 2) * H + 0.55;
       // (four tongues: the tall one in the middle with the core, three lower round it — each trembling, now taller, now shorter)
@@ -421,11 +459,14 @@
     // fires of camps and pyres, the hearths of the houses drawn open round the body — each a flame, a spark now and then,
     // and the nearest one lights round it)
     F3.torches = 0; let ti = 0;
+    const inB = G.Possess && G.Possess.body && G.Possess.body() ? G.Possess.body().inside || 0 : 0;
     for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames, G.Build3D && G.Build3D.flames]) if (fs) for (const q of fs) {
       if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
       tongue(n, q[0], q[1], q[2], 0.26 * k, 0.55 * k * fl, G.hash(ti * 13 + 5), true); n++; F3.torches++;
       halo(q[0], q[1] + 0.18 * k, q[2], 1.5 * k, 0.75, ti);
-      src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
+      // (a flame of an inside — Build3D's: its building and its own key —: the strongest lights go first to the room the body is in)
+      if (q[4]) { src.push([8 * k / (1 + near2(q[0], q[2]) / 40) * (q[4] === inB ? 6 : 1), q[5], q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 14, k < 0.4 ? CANDLE : HEARTH, k < 0.4 ? 0.06 : 0.12, q[4]]); ti++; }
+      else src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
       if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
     }
     flame.count = glow.count = n; flame.instanceMatrix.needsUpdate = glow.instanceMatrix.needsUpdate = true; flame.geometry.attributes.aSeed.needsUpdate = true; F3.fires = n;

@@ -59,7 +59,16 @@
     // gxFlash: (the light of a lightning flash now r, g, b; -)
     gxAirMap: { value: null }, gxShade: { value: null }, gxCloudN: { value: null }, gxAirB: v4(0.25, 1 / 129, 0, 1), gxAirK: v4(0, 0, 0, 0.012),
     gxCl0: v4(0, 0, 0.5, 0.5), gxCl1: v4(0.5, 0.5, 0, 1.4), gxCl2: v4(353, 1 / 2200, 0.36, 0), gxShadeK: v4(0, 0, 0, 0), gxKeyW: v4(0, 1, 0, 0),
-    gxCanopy: v4(0.28, 0.36, 0.22, 18), gxSunBox: v4(0, 0, 0, 0), gxFlash: v4(0, 0, 0, 0) };
+    gxCanopy: v4(0.28, 0.36, 0.22, 18), gxSunBox: v4(0, 0, 0, 0), gxFlash: v4(0, 0, 0, 0),
+    // the light inside a building (the interiors 2.0, D-700 — G.Luz3D, js/luz3d.js): gxVol, gxVolD — the volumes of the insides the
+    // 3D has open, three slots of one picture (R the sky that comes in, G the fire, B the light thrown back, A in a room; and where
+    // the fire's light comes from) · gxVolA[3]: (each slot's corner x, y, z in the world [m], 1 / its voxel's side) · gxVolB[3]: (its
+    // voxels along x, y, z, 1 / its voxel's height) · gxVolF[3]: (its fire's colour × strength now r, g, b; the share the baked
+    // fill carries) · gxVolK: (any volume on, the sun's picture of the shadows on, how far along its normal a face reads [m], the
+    // sky's gain inside) · gxLamp[8]: each point light of the scene, in three.js's own order — (the slot of the inside it burns in,
+    // -1 the open air; whether it has its picture of the shadows; -; -): FX3D sets them
+    gxVol: { value: null }, gxVolD: { value: null }, gxVolA: { value: new Float32Array(12) }, gxVolB: { value: new Float32Array(12) }, gxVolF: { value: new Float32Array(12) },
+    gxVolK: v4(0, 0, 0.22, 3), gxLamp: { value: new Float32Array(32).fill(-1) } };
   R3.GX = GX;
   // the pieces of shader of the air of each place, for every material that is lit or lies in the air — declared once whichever
   // piece comes first: gxMapUV (a point of the land to the maps), gxCloud (the clouds' stuff over a point of their plane),
@@ -94,6 +103,37 @@ void gxLightAt( vec3 wp, out float ks, out vec3 sk ) {
 				ks *= mix( 1.0, smoothstep( c - 0.07, c + 0.07, lf ), cano * below * ( 1.0 - inBox ) );
 			} }
 	}
+}
+#endif`;
+  // the light inside a building (D-700): the volume baked from its plan — G.Luz3D — read at a point of the world, a little along
+  // its normal into the room it faces (so a wall's inner face reads its room, never the street behind it): in, how much it is in
+  // a room (0 the open air); v the sky, the fire, the light thrown back (their roots), d where the fire's light comes from and how
+  // much from one side; s the slot. gxLampK: how much of a point light reaches a point — a light of the open air reaches a room
+  // only through its openings, the light of a room never the street nor another building, nor, without its picture of the
+  // shadows, past the walls its fire does not pass
+  const GXVOL = `#ifndef GX_VOL
+#define GX_VOL
+uniform sampler3D gxVol; uniform sampler3D gxVolD;
+uniform vec4 gxVolA[ 3 ]; uniform vec4 gxVolB[ 3 ]; uniform vec4 gxVolF[ 3 ]; uniform vec4 gxVolK; uniform vec4 gxLamp[ 8 ];
+float gxVolAt( vec3 wp, vec3 nW, out vec4 v, out vec4 d, out float s ) {
+	v = vec4( 1.0, 0.0, 0.0, 0.0 ); d = vec4( 0.5, 0.5, 0.5, 0.0 ); s = - 1.0;
+	if ( gxVolK.x < 0.5 ) return 0.0;
+	vec3 q = wp + nW * gxVolK.z;
+	for ( int k = 0; k < 3; k ++ ) {
+		vec4 A = gxVolA[ k ]; vec4 B = gxVolB[ k ];
+		if ( B.x < 0.5 ) continue;
+		vec3 p = ( q - A.xyz ) * vec3( A.w, B.w, A.w );
+		if ( p.x < 0.0 || p.y < 0.0 || p.z < 0.0 || p.x > B.x || p.y > B.y || p.z > B.z ) continue;
+		vec3 u = ( clamp( p, vec3( 0.5 ), B.xyz - 0.5 ) + vec3( 0.0, 0.0, float( k ) * 64.0 ) ) / vec3( 64.0, 32.0, 192.0 );
+		v = texture( gxVol, u ); d = texture( gxVolD, u ); s = float( k );
+		return v.a;
+	}
+	return 0.0;
+}
+float gxLampK( vec4 lp, float inn, float s, float outv, float fire ) {
+	if ( lp.x < - 0.5 ) return lp.z > - 0.5 && abs( s - lp.z ) < 0.5 ? 1.0 - inn : outv;
+	if ( abs( s - lp.x ) > 0.5 ) return 0.0;
+	return inn * ( lp.y > 0.5 ? 1.0 : clamp( fire * 4.0, 0.0, 1.0 ) );
 }
 #endif`;
   // (the haze of the horizon in a direction: shared by the sky's dome and the air in front of everything, so the far land
@@ -190,9 +230,15 @@ vec3 gxGrade( vec3 c ) {
 				vec4 lm2 = texture2D( gxLM2, lmU );
 				vec3 lmL = vec3( ( lm2.r - 0.5 ) * gxLMY.z, ( gxLMY.x + ( lm2.b - 0.5 ) * gxLMY.z ) * gxLMB.w - lmW.y, ( lm2.g - 0.5 ) * gxLMY.z );
 				float lmD = dot( lmL, lmL ); lmL *= inversesqrt( max( lmD, 1e-4 ) );
-				irradiance += lm1.rgb * lm1.rgb * gxLMY.y * saturate( dot( ( vec4( geometryNormal, 0.0 ) * viewMatrix ).xyz, lmL ) * 0.8 + 0.2 ) / ( 1.0 + lmD * 0.45 );
+				irradiance += lm1.rgb * lm1.rgb * gxLMY.y * saturate( dot( ( vec4( geometryNormal, 0.0 ) * viewMatrix ).xyz, lmL ) * 0.8 + 0.2 ) / ( 1.0 + lmD * 0.45 ) * gxOut;
 			}
 		}
+	}
+	// (the fire of the room a point is in, baked with the walls between — G.Luz3D: warmer on the faces turned to it)
+	if ( gxIn > 0.004 ) {
+		vec4 gxF = gxVS < 0.5 ? gxVolF[ 0 ] : gxVS < 1.5 ? gxVolF[ 1 ] : gxVolF[ 2 ];
+		vec3 gxFd = gxVD.xyz * 2.0 - 1.0; float gxFl = length( gxFd ); float gxFw = gxFl > 0.05 ? dot( gxNW, gxFd / gxFl ) : 0.0;
+		irradiance += gxF.rgb * gxF.w * gxV.g * gxV.g * mix( 1.0, saturate( gxFw * 0.75 + 0.45 ), gxVD.a ) * gxIn;
 	}
 #endif`;
     SC.lights_pars_begin += '\nuniform sampler2D gxLM; uniform sampler2D gxLM2; uniform vec4 gxLMB; uniform vec4 gxLMY; uniform vec4 gxAmb;';
@@ -201,8 +247,23 @@ vec3 gxGrade( vec3 c ) {
     // sky's light is hidden by the woods' canopy over what stands under it. gxWP, gxKS and gxSK are there for the rest of the
     // material's main: a light of its own a material makes — the sun through the leaves — can take them)
     SC.lights_pars_begin += '\n' + GXAIR;
+    SC.lights_pars_begin += '\n' + GXVOL;
+    // (and inside a building, its light — G.Luz3D: the sky only as much as comes in through its openings, with the light it throws
+    // back; the key light only where its picture of the shadows lets it, or, without one, as the openings do; the light of the
+    // open air — the painted flames, the real lights out of doors — as the openings let it: gxOut)
     rep('lights_fragment_begin', 'vec3 geometryPosition = - vViewPosition;', `vec3 geometryPosition = - vViewPosition;
 vec3 gxWP = cameraPosition + ( vec4( geometryPosition, 0.0 ) * viewMatrix ).xyz; float gxKS; vec3 gxSK; gxLightAt( gxWP, gxKS, gxSK );`);
+    rep('lights_fragment_begin', 'IncidentLight directLight;', `vec3 gxNW = normalize( ( vec4( geometryNormal, 0.0 ) * viewMatrix ).xyz ); vec4 gxV; vec4 gxVD; float gxVS; float gxIn = 0.0;
+#ifdef GX_NOVOL
+gxV = vec4( 1.0, 0.0, 0.0, 0.0 ); gxVD = vec4( 0.5, 0.5, 0.5, 0.0 ); gxVS = - 1.0;
+#else
+gxIn = gxVolAt( gxWP, gxNW, gxV, gxVD, gxVS );
+#endif
+float gxOut = mix( 1.0, clamp( gxV.r * 1.5, 0.0, 1.0 ), gxIn );
+gxSK *= mix( vec3( 1.0 ), clamp( gxV.r * gxV.r * gxVolK.w + gxV.b * gxV.b, 0.05, 1.1 ) * vec3( 1.05, 0.98, 0.88 ), gxIn );
+gxKS *= gxVolK.y > 0.5 ? 1.0 : gxOut;
+IncidentLight directLight;`);
+    rep('lights_fragment_begin', 'getPointLightInfo( pointLight, geometryPosition, directLight );', 'getPointLightInfo( pointLight, geometryPosition, directLight ); directLight.color *= gxLampK( gxLamp[ i ], gxIn, gxVS, gxOut, gxV.g );');
     rep('lights_fragment_begin', 'getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight ); directLight.color *= gxKS;');
     rep('lights_fragment_begin', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal );', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal ) * gxSK;');
     // (a lightning flash: the whole sky lights up for an instant — what is under the canopy less)
@@ -707,6 +768,9 @@ ${GXAIR}`;
   const LT = { air: [1, 1, 1], sun: [0, 0, 0], zen: [0, 0, 0], hor: [0, 0, 0], glow: [0, 0, 0], belt: [0, 0, 0], fill: [0, 0, 0], sky: [0, 0, 0], bounce: [0, 0, 0], key: [0, 0, 0] };
   R3.LT = LT;
   let _sd = null, _md = null, _cf = null, shadowKey = '', shadowTick = 0; let lastVT = -1; let MU = null, MV = null, MQ = null, MAX = null; const MOON = {}; const DR = {}, SKY = { band: [0, 0, 0, 0], halo: [0, 0, 0, 0], shadow: [0, 0], under: [0, 0, 0] };
+  // (the eye inside: how far it opens — EYE.k over the light where it is, never past max —, how fast going into the dark and out of it)
+  const EYE = Ce3.EYE = { k: 0.8, lo: 0.3, max: 2.0, dark: 1.1, light: 2.6, cur: 1, t: -1, at: null };
+  G.worldHooks.push(() => { EYE.cur = 1; EYE.t = -1; EYE.at = null; });
   // the light of the frame: G.Ceu's light of the hour given to the lights, the dome and the air; the sun's picture of the
   // shadows over the ground round the focus. Gives the light (G.Ceu.L) — the water and the others read it
   Ce3.light = function (focus) {
@@ -787,7 +851,17 @@ ${GXAIR}`;
     // (the eye opens under a closed canopy, as it does stepping into the woods — the canopy over the eye, from the map of the
     // air, read where the eye is and eased over the metres round it, never by the frames: the same eye, the same light)
     // (by day only: at night the eye is open already — and the exposure never past what the verifier allows)
-    L.expPlace = 1 + (placeExp(camera.position) - 1) * L.dayL; renderer.toneMappingExposure = Math.min(2.9, L.exp * L.expPlace);
+    L.expPlace = 1 + (placeExp(camera.position) - 1) * L.dayL;
+    // (and it opens in a room, as it does stepping out of the sun into a house — how much light the volume of the inside has where
+    // the eye is, G.Luz3D: the sky that comes in, the light thrown back, the fire —, slower going into the dark than out of it, as
+    // ours does; a jump of the eye is met at once. Only seen: the eye's own clock)
+    { const cp = camera.position; const inn = G.Luz3D && G.Luz3D.at ? G.Luz3D.at(cp.x, cp.y, cp.z) : null; let want = 1;
+      if (inn && inn.dentro > 0.5) { const lvl = Math.min(1, inn.ceu * G.Luz3D.SKY_GAIN + inn.rebate) * L.dayL + Math.min(1, inn.fogo * 0.35); want = G.clamp(EYE.k / Math.max(EYE.lo, lvl), 1, EYE.max); }
+      const rdt = Math.max(0, Math.min(0.5, U.time.value - (EYE.t < 0 ? U.time.value : EYE.t))); EYE.t = U.time.value;
+      const jump = EYE.at ? Math.hypot(cp.x - EYE.at[0], cp.y - EYE.at[1], cp.z - EYE.at[2]) : 1e9; EYE.at = [cp.x, cp.y, cp.z];
+      EYE.cur = jump > 6 ? want : EYE.cur + (want - EYE.cur) * (1 - Math.exp(-rdt * (want > EYE.cur ? EYE.dark : EYE.light)));
+      L.expEye = EYE.cur; }
+    renderer.toneMappingExposure = Math.min(2.9, L.exp * L.expPlace * L.expEye);
     G.Build3D && G.Build3D.night(G.clamp((night - 0.25) * 1.6, 0, 1)); // (the windows light up as the dark comes)
     // the dome and the stars go with the eye; the key light's picture of the shadows over the ground round the body
     skyMesh.position.copy(camera.position); stars.position.copy(camera.position);

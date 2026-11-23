@@ -4,7 +4,7 @@
 //   the 3D drawing from the world's chance (G.R, rr, ri, pick, chance); a file of the 3D writing a list of the god's view it
 //   draws too (the words over the heads, G.Talk.list; the texts and particles of G.FX: only read, L-211); the internet at run time (fetch, XMLHttpRequest,
 //   a URL to load — the game opens by file://, no CDN); a <script> of index.html that does not exist; the texture stack over
-//   its budget (arte/ESTUDIO.md §2: 512×512 a material, 6 MB of base64 in all)
+//   its budget (arte/ESTUDIO.md §2: 512×512 a material, 7.5 MB of base64 in all — D-702)
 //   AVISO: a file of the 3D that seems to write the world (G.S.x = …), a new file of js/ no <script> loads, the weight of
 //   the 3D's own data files (textures, meshes)
 const fs = require('fs'), path = require('path');
@@ -62,8 +62,8 @@ if (src['tex3d.js']) {
   const T = [...src['tex3d.js'].matchAll(/^\s*([\w]+): \{ m: ([\d.]+),[^\n]*?src: '(data:image\/(\w+);base64,([^']+))'/gm)];
   let total = 0; const big = [];
   for (const m of T) { total += m[5].length; const d = dims(m[5]); if (!d) warns.push(`[A1] tex3d.js: ${m[1]} — não deu para ler o tamanho da figura (${m[4]})`); else if (d[0] > 512 || d[1] > 512) big.push(`${m[1]} ${d[0]}×${d[1]}`); }
-  info.push(`tex3d.js: ${T.length} materiais, ${(total / 1048576).toFixed(2)} MB de base64 (orçamento 6 MB), arquivo ${(src['tex3d.js'].length / 1048576).toFixed(2)} MB`);
-  if (total > 6 * 1048576) fails.push(`[A1] tex3d.js: ${(total / 1048576).toFixed(2)} MB de base64 — acima do orçamento de 6 MB (arte/ESTUDIO.md §2)`);
+  info.push(`tex3d.js: ${T.length} materiais, ${(total / 1048576).toFixed(2)} MB de base64 (orçamento 7,5 MB), arquivo ${(src['tex3d.js'].length / 1048576).toFixed(2)} MB`);
+  if (total > 7.5e6) fails.push(`[A1] tex3d.js: ${(total / 1048576).toFixed(2)} MB de base64 — acima do orçamento de 7,5 MB (arte/ESTUDIO.md §2, D-702)`);
   if (big.length) fails.push(`[A1] tex3d.js: figuras maiores que 512×512 (orçamento por material): ${big.join(', ')}`);
   if (!T.length) warns.push('[A1] tex3d.js: nenhum material reconhecido (o formato mudou?)');
 }
