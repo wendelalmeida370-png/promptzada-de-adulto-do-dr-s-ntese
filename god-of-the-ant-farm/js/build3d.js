@@ -5091,7 +5091,7 @@ float m3scale(float p) {
     if (eyeWant && eyes.length < EYE_N) eyes.push(eyeWant);
     eyes.forEach((c, k) => { boxes.push(c); EYEU.a.value[k].set(c[0], c[1], c[2]); EYEU.b.value[k].set(c[3], c[4], c[5]); }); EYEU.n.value = eyes.length;
     // (the one the body is in first: its cut is never the one left out)
-    for (const o of [...opened.values()].sort((a, c) => (c.b.id === (inB && inB.id)) - (a.b.id === (inB && inB.id)))) { stepOpen(o, rdt, focus); for (const c of o.cuts) if (boxes.length < CUT_MAX) boxes.push(c);
+    for (const o of [...opened.values()].sort((a, c) => (c.b.id === (inB && inB.id)) - (a.b.id === (inB && inB.id)))) { stepOpen(o, rdt, focus); if (G.Dentro3D && G.Dentro3D.step) G.Dentro3D.step(o); for (const c of o.cuts) if (boxes.length < CUT_MAX) boxes.push(c);
       for (const c of o.sunk) if (ns < 4) { SUNKU.a.value[ns].set(c[0], c[1], c[2]); SUNKU.b.value[ns].set(c[3], c[4], c[5]); ns++; } }
     setCut(boxes); SUNKU.n.value = ns;
     // (the light of the insides open: baked from their plans, the one the body is in first — G.Luz3D)
@@ -5136,6 +5136,7 @@ float m3scale(float p) {
       const m = new THREE.InstancedMesh(geo, o.MI, G0.list.length); m.name = 'movel:' + G0.name + '/' + G0.pt; m.receiveShadow = true; o.shade(m); m.matrixAutoUpdate = false;
       G0.list.forEach(([e, col], k) => { MT.fromArray(e); m.setMatrixAt(k, MT); const L = R3.lin(col); m.setColorAt(k, CL.setRGB(L[0], L[1], L[2])); });
       m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); grp.add(m); meshes.push(m); }
+    if (G.Dentro3D && G.Dentro3D.draw) G.Dentro3D.draw(o, grp, meshes); // (what the building shows, with its cause: its own meshes among these — P5, D-740)
     if (o.items) { o.grp.remove(o.items.grp); for (const g of o.items.geos) g.dispose(); for (const m of o.items.meshes) m.dispose(); }
     o.grp.add(grp); o.items = { grp, geos, meshes, item: out.item }; o.fill = fillSig(fill); o.fillT = G.S.clock; o.look = out.look; o.lod = lod;
   }
