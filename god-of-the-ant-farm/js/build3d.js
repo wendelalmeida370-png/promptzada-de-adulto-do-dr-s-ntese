@@ -3934,6 +3934,15 @@ float m3scale(float p) {
     g.pat = 0; return g.empty ? null : g;
   }
   B3.leafModel = leafModel; // (for the proofs)
+  // (a piece of a yard drawn from the street: its model's middle level put into the town's own geometry, part by part — a yard has
+  // a few pieces, and what is out of doors goes into its chunk, BIBLIA §6 —; false where it has no model, or none whose hood fits)
+  function yardModel(K, q, foot, look) {
+    const MV = G.Movel3D; if (!look || !G.Mesh3D) return false; const p = MV.pick(q.kind, look.civ, q.w, q.d, q.h, look.rico >= 2 ? 'rico' : '');
+    if (!p || p.e.anc.some(a => a.k === 'chamine')) return false;
+    const m = R3.mat(K.x0 + q.x, K.y0 + foot, K.z0 + q.z, (q.ry || 0) + (p.rot ? HALF : 0), p.sx, p.sy, p.sz).clone();
+    for (const pt of MV.parts(p.name)) { const geo = G.Mesh3D.part(p.lod1, pt), pp = MV.paint(pt, look, q.k | 0); if (!geo || !pp) continue; K.as(pp.p, () => K.g.put(geo, m, K.c(pp.c))); }
+    return true;
+  }
   // (the points of a modelled piece in the world, for the proofs: the model's own, through its instance's frame — lod 1, the middle
   // level)
   B3.instPts = function (q, lod) {
@@ -4253,9 +4262,12 @@ float m3scale(float p) {
     }
     // (what stands in the yard: the kiln, the racks, the tables, the barrels — the plan's pieces, as the inside draws them; the
     // kiln's smoke out of its top)
+    // (the yard's pieces seen from the street by their people's models too, at the middle level — the same piece the inside draws
+    // when it opens, D-712 —; the boxes where there is none)
+    const LK = (S.yard || []).length && G.Movel3D && G.MESH3D ? G.Movel3D.look(K.b) : null;
     for (const it of S.yard || []) {
       const r = it.r, side = Math.abs(Math.sin(it.rot || 0)) > 0.5; const q = { k: +String(it.id).split(':').pop() || 0, kind: it.kind, x: (r[0] + r[2]) / 2, z: (r[1] + r[3]) / 2, w: side ? r[3] - r[1] : r[2] - r[0], d: side ? r[2] - r[0] : r[3] - r[1], h: it.h, ry: it.rot || 0 };
-      const F = piece(K, q, y + FLOOR_UP); const f = FURN[it.kind]; if (f) f(F, q, { ceil: 9 }); else F.box(0, 0, 0, q.w, q.h, q.d, IWOOD, 'plankH');
+      if (!yardModel(K, q, y + FLOOR_UP, LK)) { const F = piece(K, q, y + FLOOR_UP); const f = FURN[it.kind]; if (f) f(F, q, { ceil: 9 }); else F.box(0, 0, 0, q.w, q.h, q.d, IWOOD, 'plankH'); }
       if (it.fire && it.kind === 'forno-olaria') B3.chim.set(K.b.id, [K.x0 + q.x, K.y0 + y + q.h + 0.1, K.z0 + q.z]);
     }
   }
