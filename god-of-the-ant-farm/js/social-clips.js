@@ -107,16 +107,17 @@
   // (P6, D-758: the song of the tavern with the instrument in the hands — the inventory's, G.Inv.held: the lyre, the drum of the Aztecs,
   // P7's, D-764; never mimed —, the top of the body only: on one's feet on the stage, or over the seat. The instrument is held by the
   // peg of its foot in the right hand, upright, as the cup is — the right hand of everyone: no twin, as the cup's)
-  // (the lyre: the fist round its peg before the belly, the box at the chest, the arms and the yoke to the chin; the left hand over the
-  // strings, plucking — the fingers open and close, the wrist lifts —, the head bent to them)
-  const LYRE_R = at(1, 'barriga', { elR: -12, shRp: -8 }), PLUCK = (e, g) => mix(at(-1, 'peito', { shLp: -24, elL: -38 + e }), { gripL: g });
+  // (the lyre: the fist round its peg before the middle of the belly, the box at the chest, the arms and the yoke to the chin; the left
+  // hand 6 cm before the strings, plucking — the fingers open and close, the hand lifts a little —, the head bent to them. The arms'
+  // angles found on the rig: the fist at the belly's middle, the left hand at the strings' middle, 0.42 m over the fist)
+  const LYRE_R = { shRp: 2, shRr: -6, elR: 72, shRy: 56, grip: 1 }, PLUCK = (p, e, g) => ({ shLp: p, shLr: 12, elL: e, shLy: -47, gripL: g });
   c('tocar-lira', 1.6, U, loopOf(
-    mix(LYRE_R, PLUCK(0, 0.25), { grip: 1, neck: 12, headR: -6, lean: 3 }), mix(LYRE_R, PLUCK(6, 0.65), { grip: 1, neck: 14, headR: -8 }),
-    mix(LYRE_R, PLUCK(-4, 0.3), { grip: 1, neck: 12, headR: -5, twist: 3 }), mix(LYRE_R, PLUCK(8, 0.7), { grip: 1, neck: 13, headR: -7, twist: -2 })), { item: { hand: 'mao' }, noMirror: true });
-  // (the drum: the fist round its foot low before the right hip, the hide at the chest; the left hand comes down on the hide and up
-  // again, twice a beat, the trunk with it)
-  const DRUM_R = { shRp: -14, shRr: -12, elR: 24, shRy: 18, grip: 1 }, BEAT = (h, k) => mix(at(-1, 'peito', { shLp: -18 - h, elL: -30 - h * 0.6, shLy: -12 }), { gripL: 0.15, lean: 4 + k, neck: 8 });
-  c('tocar-tambor', 0.9, U, [[0, mix(DRUM_R, BEAT(18, 0))], [0.18, mix(DRUM_R, BEAT(0, 2))], [0.32, mix(DRUM_R, BEAT(12, 1))], [0.5, mix(DRUM_R, BEAT(0, 2))], [0.75, mix(DRUM_R, BEAT(18, 0))], [1, mix(DRUM_R, BEAT(18, 0))]], { item: { hand: 'mao' }, noMirror: true, events: { contact: 0.18 } });
+    mix(LYRE_R, PLUCK(-40, 100, 0.25), { neck: 12, headR: -6, lean: 3 }), mix(LYRE_R, PLUCK(-38, 96, 0.7), { neck: 14, headR: -8 }),
+    mix(LYRE_R, PLUCK(-40, 101, 0.3), { neck: 12, headR: -5, twist: 3 }), mix(LYRE_R, PLUCK(-37, 95, 0.75), { neck: 13, headR: -7, twist: -2 })), { item: { hand: 'mao' }, noMirror: true });
+  // (the drum: the fist round its foot low before the middle of the body, the hide at the chest; the left hand up, then down onto the
+  // hide — 2 cm over it — twice a beat, the trunk with it. The angles found on the rig)
+  const DRUM_R = { shRp: -18, shRr: 30, elR: 0, shRy: -28, grip: 1 }, BEAT = (p, k) => ({ shLp: p, shLr: 8, elL: 92, shLy: -58, gripL: 0.15, lean: 4 + k, neck: 10 });
+  c('tocar-tambor', 0.9, U, [[0, mix(DRUM_R, BEAT(-56, 0))], [0.18, mix(DRUM_R, BEAT(-42, 2))], [0.32, mix(DRUM_R, BEAT(-52, 1))], [0.5, mix(DRUM_R, BEAT(-42, 2))], [0.75, mix(DRUM_R, BEAT(-56, 0))], [1, mix(DRUM_R, BEAT(-56, 0))]], { item: { hand: 'mao' }, noMirror: true, events: { contact: 0.18 } });
   // (the brawl of the tavern with the fists (P6, D-759): on guard, the right jab, the guard, the left jab, the hook, the weight going
   // with each — the blows of the fists of the combat, of no weapon: the world's 'shove' between two at a table, drawn so)
   const GUARD = { shRp: -66, shRr: -8, elR: 132, shLp: -68, shLr: 10, elL: 132, grip: 1, gripL: 1, lean: 12, neck: 10, twist: -6 };
@@ -124,7 +125,7 @@
     [0.7, mix(GUARD, { shRp: -60, shRr: -62, elR: 92, twist: -32 })], [0.8, mix(GUARD, { shRp: -86, shRr: 22, elR: 85, twist: 32, lean: 16 })], [0.92, GUARD], [1, GUARD]], { events: { contact: 0.12 } });
   // (the keeper with the round's cups in the hands, on his way to the table: both forearms before the belly, the fists up — the arms
   // only, over the stride)
-  c('levar-canecas', 2, ARMS, loopOf({ shRp: -24, shRr: -6, elR: 86, grip: 1, shLp: -24, shLr: 6, elL: 86, gripL: 1 }, { shRp: -26, shRr: -6, elR: 84, shLp: -26, shLr: 6, elL: 84 }));
+  c('levar-canecas', 2, ARMS, loopOf({ shRp: 8, shRr: 6, elR: 82, shRy: 2, grip: 1, shLp: 8, shLr: -6, elL: 82, shLy: -2, gripL: 1 }, { shRp: 6, shRr: 6, elR: 84, shRy: 2, shLp: 6, shLr: -6, elL: 84, shLy: -2 }));
   // (the child at play between two runs: the arms swinging loose, the head turning to the others, a little hop of the shoulders)
   c('brincar', 1.4, U, loopOf({ shLp: -30, shRp: 20, shLr: 24, shRr: -24, elL: 40, elR: 30, lean: -4, neck: -8, lookY: -16, twist: 10 }, { shLp: 20, shRp: -30, shLr: 24, shRr: -24, elL: 30, elR: 40, lean: 2, neck: -4, lookY: 16, twist: -10 }));
   // ============================== the society's own acts, posed alone for now ==============================
