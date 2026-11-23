@@ -364,7 +364,17 @@ float m3scale(float p) {
       sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
       if (G.Agua3D && mat === (G.Realm.mats && G.Realm.mats().solid)) { Object.assign(sh.uniforms, G.Agua3D.wetU()); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Agua3D.solidGLSL()).replace('#include <opaque_fragment>', 'outgoingLight += gAgSheen;\n#include <opaque_fragment>'); } // (21c: the rain wets the roofs and the walls out of doors)
       Object.assign(sh.uniforms, { uCutA: CUTU.a, uCutB: CUTU.b, uCutN: CUTU.n, uCutLo: CUTU.lo, uCutHi: CUTU.hi });
-      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal); vPat = aP;');
+      // (a piece drawn as one of many — the furniture of an inside, Movel3D, D-712 —: its own frame first, then the object's; its
+      // normal through the instance as three's own normal is, the stretch undone)
+      sh.vertexShader = 'attribute float aP; varying vec3 vPP; varying vec3 vPN; flat varying float vPat;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+ #ifdef USE_INSTANCING
+ mat3 pIM = mat3(instanceMatrix); vec3 pIN = objectNormal / vec3(dot(pIM[0], pIM[0]), dot(pIM[1], pIM[1]), dot(pIM[2], pIM[2]));
+ vPP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * (pIM * pIN));
+ #else
+ vPP = (modelMatrix * vec4(transformed, 1.0)).xyz; vPN = normalize(mat3(modelMatrix) * objectNormal);
+ #endif
+ vPat = aP;
+`);
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3CUT\nuniform vec3 uCutA[16]; uniform vec3 uCutB[16]; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n' + G.Ground3D.texGLSL() + PFRAG)
         .replace('#include <clipping_planes_fragment>', CUTFRAG + '#include <clipping_planes_fragment>').replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
@@ -3449,10 +3459,73 @@ float m3scale(float p) {
         const n = Math.max(2, Math.round((top - bot) / 0.28)); for (let k = 1; k < n; k++) { const f = k / n; const p = at(ta + (tb - ta) * f, -wid / 2 + 0.06, bot + (top - bot) * f), q = at(ta + (tb - ta) * f, wid / 2 - 0.06, bot + (top - bot) * f); K.log(p, q, 0.02, IDARK); } });
       return;
     }
-    // (steps: solid, each from the lower floor up to its tread — the last one the floor it reaches)
-    const rise = y1 - y0; const n = Math.max(2, Math.round(Math.abs(rise) / 0.19)); const run = len / n; const lo = Math.min(y0, y1);
-    const stone = s.kind === 'degraus' && !(y1 > 0.6); const [pat, col] = stone ? ['stone', ISTONE] : ['plankH', IWOOD];
-    K.as(pat, () => { for (let k = 0; k < n; k++) { const tr = y0 + rise * (k + 1) / n; const hh = tr - lo; if (hh < 0.01) continue; const c = at(run * (k + 0.5), 0, lo); K.box(c[0], c[1], c[2], run + 0.002, hh + FLOOR_UP, wid, col, ry); } });
+    const rise = y1 - y0; const n = Math.max(2, Math.round(Math.abs(rise) / 0.19)); const run = len / n; const lo = Math.min(y0, y1), hi = Math.max(y0, y1);
+    const put = (c, sx, sy, sz, col, ch) => K.g.put(bevelGeo(sx, sy, sz, ch), R3.mat(K.x0 + c[0], K.y0 + c[1], K.z0 + c[2], ry), K.c(col));
+    // (the low flight of stone to a door: solid, each block from the floor up to its tread — the last one the floor it reaches —,
+    // its edges eased)
+    if (s.kind === 'degraus' && !(y1 > 0.6)) {
+      K.as('stone', () => { for (let k = 0; k < n; k++) { const tr = y0 + rise * (k + 1) / n; const hh = tr - lo; if (hh < 0.01) continue; put(at(run * (k + 0.5), 0, lo), run + 0.002, hh + FLOOR_UP, wid, ISTONE, 0.02); } });
+      return;
+    }
+    // (a stair of wood — between the storeys, up to a floor on posts — is open, D-713: its two strings along the slope, a tread for
+    // each step housed between them, the room seen under the treads, a rail with its posts on the side no wall stands along; the
+    // rail stays under the floor above where a lid shuts the hole it comes up through)
+    const WD = (G.Movel3D && G.Movel3D.WOOD[K.st]) || [IWOOD, IDARK]; const S = 0.055, D = 0.26;
+    const nose = t => y0 + rise / n + rise * t / len; // (the line over the treads' upper corners)
+    const along = dx ? [dx, 0, 0] : [0, 0, dz], across = dx ? [0, 0, 1] : [1, 0, 0];
+    const clipY = (poly, yv, above) => { const o = []; for (let i = 0; i < poly.length; i++) { const p = poly[i], q = poly[(i + 1) % poly.length]; const pin = above ? p[1] >= yv - 1e-6 : p[1] <= yv + 1e-6, qin = above ? q[1] >= yv - 1e-6 : q[1] <= yv + 1e-6; if (pin) o.push(p); if (pin !== qin) { const f = (yv - p[1]) / (q[1] - p[1]); o.push([p[0] + (q[0] - p[0]) * f, yv]); } } return o; };
+    // (a board of the profile poly — [t along, y up] —, from a0 to a1 across: its two faces and its rim)
+    const prism = (poly, a0, a1, col) => {
+      if (poly.length < 3) return; const P0 = poly.map(([t, y]) => at(t, a0, y)), P1 = poly.map(([t, y]) => at(t, a1, y));
+      for (let i = 1; i + 1 < poly.length; i++) { K.tri(P0[0], P0[i], P0[i + 1], col, across.map(v => -v)); K.tri(P1[0], P1[i], P1[i + 1], col, across); }
+      const ct = poly.reduce((s2, p) => s2 + p[0], 0) / poly.length, cy = poly.reduce((s2, p) => s2 + p[1], 0) / poly.length;
+      for (let i = 0; i < poly.length; i++) { const j = (i + 1) % poly.length; const et = poly[j][0] - poly[i][0], ey = poly[j][1] - poly[i][1]; let nt = ey, ny = -et;
+        if (nt * ((poly[i][0] + poly[j][0]) / 2 - ct) + ny * ((poly[i][1] + poly[j][1]) / 2 - cy) < 0) { nt = -nt; ny = -ny; }
+        K.quad(P0[i], P0[j], P1[j], P1[i], col, [along[0] * nt, ny, along[2] * nt]); }
+    };
+    // (the strings' top a hair under the line of the treads' fronts: the treads ride over them, and no foot finds them higher)
+    K.as('beam', () => { for (const sd of [-1, 1]) { const a = sd * (wid / 2 - S / 2);
+      let poly = [[0, nose(0) - 0.005], [len, nose(len) - 0.005], [len, nose(len) - 0.005 - D], [0, nose(0) - 0.005 - D]];
+      poly = clipY(clipY(poly, lo, true), hi, false); prism(poly, a - S / 2, a + S / 2, WD[1]); } });
+    // (the treads: a board each over its step's run — never over the next one's: the foot finds each step where the plan has it —;
+    // the one that would lie on the floor below — a stair down — is that floor)
+    K.as('plankH', () => { for (let k = 0; k < n; k++) { const tr = y0 + rise * (k + 1) / n; if (Math.abs(tr - lo) < 0.01) continue;
+      put(at(run * (k + 0.5), 0, tr - 0.045), run + 0.002, 0.045 + FLOOR_UP, wid - 2 * S + 0.012, WD[0], 0.008); } });
+    // (the hand-rail, on the side a wall stands along — the plan's grid just past the side, along the flight —: a rail on its brackets
+    // out of the wall, where the body never is (the plan keeps it a body's half off a wall). The open side has none: the plan lets the
+    // body walk to that edge, and nothing is drawn where it can stand — T-1720)
+    const g = plan.grid, C = G.Interiors && G.Interiors.CELL, lg = g && C && g.lv[rise >= 0 ? s.lv0 : s.lv1];
+    const walled = sd => { if (!lg) return false; let n2 = 0; for (const f of [0.2, 0.5, 0.8]) { const p = at(len * f, sd * (wid / 2 + 0.15), 0); const i = Math.floor(p[0] / g.cs), j = Math.floor(p[2] / g.cs);
+      if (i < 0 || j < 0 || i >= g.n || j >= g.n) continue; const c = lg[j * g.n + i]; if (c === C.WALL) n2++; } return n2 >= 2; };
+    const lid = s.hole && !grandWell(s); const top = lid ? hi - 0.15 : hi + 2;
+    let ta = 0.1, tb = len - 0.1; const railY = t => nose(t) + 0.88;
+    if (rise >= 0) tb = Math.min(tb, (top - 0.88 - y0 - rise / n) * len / rise); else ta = Math.max(ta, (top - 0.88 - y0 - rise / n) * len / rise);
+    if (tb - ta > 0.45) K.as('beam', () => { for (const sd of [-1, 1]) { if (!walled(sd)) continue; const a = sd * (wid / 2 - 0.06), aw = sd * (wid / 2 - 0.005);
+      K.log(at(ta, a, railY(ta)), at(tb, a, railY(tb)), 0.024, WD[0]);
+      const m = Math.max(1, Math.round((tb - ta) / 0.9)); for (let q = 0; q <= m; q++) { const t = ta + (tb - ta) * q / m; K.log(at(t, aw, railY(t) - 0.05), at(t, a, railY(t) - 0.01), 0.012, IIRON); } } });
+  }
+  // (a box of a size, its edges eased ch wide — the faces' normals their own, the chamfer bending the light from one face to the
+  // next: no raw box, BIBLIA §1 —, centred on x and z, its foot at 0: made once a size)
+  const BEV = new Map();
+  function bevelGeo(sx, sy, sz, ch) {
+    const key = sx.toFixed(3) + '|' + sy.toFixed(3) + '|' + sz.toFixed(3) + '|' + ch; let gg = BEV.get(key); if (gg) return gg;
+    ch = Math.max(0, Math.min(ch, sx * 0.3, sy * 0.3, sz * 0.3)); const h = [sx / 2, sy / 2, sz / 2], c = [0, sy / 2, 0]; const P = [], Nn = [];
+    const oth = a => (a === 0 ? [1, 2] : a === 1 ? [0, 2] : [0, 1]);
+    const pt = (a, sg) => { const b = oth(a); const p = [0, 0, 0]; p[a] = c[a] + sg[a] * h[a]; p[b[0]] = c[b[0]] + sg[b[0]] * (h[b[0]] - ch); p[b[1]] = c[b[1]] + sg[b[1]] * (h[b[1]] - ch); return p; };
+    const nrm = (a, s) => { const n = [0, 0, 0]; n[a] = s; return n; };
+    const tri = (A, B, Cc, nA, nB, nC, out) => { const u = [B[0] - A[0], B[1] - A[1], B[2] - A[2]], v = [Cc[0] - A[0], Cc[1] - A[1], Cc[2] - A[2]];
+      if ((u[1] * v[2] - u[2] * v[1]) * out[0] + (u[2] * v[0] - u[0] * v[2]) * out[1] + (u[0] * v[1] - u[1] * v[0]) * out[2] < 0) { const t = B; B = Cc; Cc = t; const tn = nB; nB = nC; nC = tn; }
+      P.push(A[0], A[1], A[2], B[0], B[1], B[2], Cc[0], Cc[1], Cc[2]); Nn.push(nA[0], nA[1], nA[2], nB[0], nB[1], nB[2], nC[0], nC[1], nC[2]); };
+    const sg3 = (a, s, e1, e2) => { const b = oth(a); const sg = [0, 0, 0]; sg[a] = s; sg[b[0]] = e1; sg[b[1]] = e2; return sg; };
+    for (let a = 0; a < 3; a++) for (const s of [-1, 1]) { const n = nrm(a, s); const q = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([e1, e2]) => pt(a, sg3(a, s, e1, e2))); tri(q[0], q[1], q[2], n, n, n, n); tri(q[0], q[2], q[3], n, n, n, n); }
+    if (ch > 0) {
+      for (let a = 0; a < 3; a++) for (let b = a + 1; b < 3; b++) { const t = 3 - a - b; for (const sa of [-1, 1]) for (const sb of [-1, 1]) {
+        const sg = st => { const q = [0, 0, 0]; q[a] = sa; q[b] = sb; q[t] = st; return q; };
+        const A0 = pt(a, sg(-1)), A1 = pt(a, sg(1)), B0 = pt(b, sg(-1)), B1 = pt(b, sg(1)); const nA = nrm(a, sa), nB = nrm(b, sb); const out = sg(0);
+        tri(A0, A1, B1, nA, nA, nB, out); tri(A0, B1, B0, nA, nB, nB, out); } }
+      for (const x of [-1, 1]) for (const y of [-1, 1]) for (const z of [-1, 1]) { const sg = [x, y, z]; tri(pt(0, sg), pt(1, sg), pt(2, sg), nrm(0, x), nrm(1, y), nrm(2, z), sg); }
+    }
+    gg = { attributes: { position: { array: new Float32Array(P) }, normal: { array: new Float32Array(Nn) } }, index: null }; BEV.set(key, gg); return gg;
   }
   // a piece of furniture in its own frame: a across its front, n out of it (its users stand at +n), y up from its foot
   function piece(K, it, y0) {
@@ -3734,7 +3807,9 @@ float m3scale(float p) {
   B3.interior = function (plan, b, o) {
     o = o || {}; if (!plan || !plan.levels || !plan.levels.length || !plan.shell) return null;
     const levels = plan.levels.slice().sort((p, q) => p.y - q.y); const fine = o.fine !== undefined ? !!o.fine : undefined; const fill = o.fill || null;
-    const out = { lv: {}, roof: null, leaf: [], hatch: [], item: {}, light: [], cut: null, box: null, tris: 0 };
+    const out = { lv: {}, roof: null, leaf: [], hatch: [], item: {}, inst: [], light: [], cut: null, box: null, tris: 0, look: null };
+    // (what this building's pieces are made of: its people, its metals, its cloth, its wealth — Movel3D.look, read from the world)
+    const MVL = G.Movel3D && G.Movel3D.look && G.MESH3D ? G.Movel3D.look(b) : null; out.look = MVL ? MVL.sig : null;
     const Ks = {}; let K0 = null;
     for (const l of levels) { const g = R3.Geo(); const K = kit(g, b, undefined, undefined, fine); g.ao = null; Ks[l.lv] = K; out.lv[l.lv] = g; if (!K0) K0 = K; }
     out.at = [K0.x0, K0.y0, K0.z0]; // (the plan's origin in the world: the lot's corner, the plinth's top)
@@ -3761,8 +3836,12 @@ float m3scale(float p) {
         // (the ceiling a piece reaches up to from its foot — a hood, a flue: the storey's own, or the eaves; in a closed part of a
         // ground open to the sky, its storey's)
         const ceil = (CP ? l.y + l.h : Math.min(l.y + l.h, sh.eave)) - foot;
-        const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
-        out.item[it.id] = [l.lv, from, g.p.length / 3];
+        // (a piece with a model of its people — Movel3D, D-712 — is one of the inside's instances: its own frame, its parts' colours;
+        // the rest the boxes of FURN, in the storey's geometry. item: [storey, first point, past the last, its first instance])
+        const mv = MVL && G.Movel3D.pick(it.kind, MVL.civ, it.w, it.d, it.h, MVL.rico >= 2 ? 'rico' : '');
+        if (mv) { out.item[it.id] = [l.lv, from, from, out.inst.length]; modelled(out, K, it, l.lv, foot, mv, MVL, ceil, fill ? fill[it.id] : undefined); }
+        else { const f = FURN[it.kind]; if (f) f(F, it, { ceil, fill: fill ? fill[it.id] : undefined }); else F.box(0, 0, 0, it.w, it.h, it.d, IWOOD, 'plankH');
+          out.item[it.id] = [l.lv, from, g.p.length / 3]; }
         if (it.fire) out.light.push([K.x0 + it.x, K.y0 + l.y + (it.y || 0) + Math.min(it.h, 0.6), K.z0 + it.z, FIRE_K[it.kind] || 0.5]);
       }
       // (a temple's pieces inside its cella — the papyrus columns of the hypostyle hall, the hof's rows of posts —: solid in the
@@ -3793,7 +3872,7 @@ float m3scale(float p) {
       { const m = plan.rooms.find(q => q.id === d.rooms[0]); if (m) { const cx = (m.r[0] + m.r[2]) / 2 - (w.a[0] + w.b[0]) / 2, cz = (m.r[1] + m.r[3]) / 2 - (w.a[1] + w.b[1]) / 2; sg = cx * nx + cz * nz >= 0 ? 1 : -1; } }
       // (turning by +θ carries the free end along (uz, −ux): toward the room, or the other way — leafPose; the foot at the sill)
       const hole = plan.holes.find(h => h.door === d.id); const ps = leafPose(w, Object.assign({}, d, { sill: hole ? hole.sill || 0 : d.sill || 0 }), l, sg);
-      out.leaf.push({ id: d.id, lv: w.lv, at: [b.x * TLm + ps.hx, K0.y0 + ps.y, b.y * TLm + ps.hz], yaw: ps.yaw, swing: ps.swing, w: d.w, h: d.h, g: d.kind === 'grade' ? gradeGeo(d.w, d.h) : leafGeo(d.w, d.h, (K0.P && K0.P.door) || '#5a3b25') });
+      out.leaf.push({ id: d.id, lv: w.lv, at: [b.x * TLm + ps.hx, K0.y0 + ps.y, b.y * TLm + ps.hz], yaw: ps.yaw, swing: ps.swing, w: d.w, h: d.h, g: d.kind === 'grade' ? gradeGeo(d.w, d.h) : leafModel(d.w, d.h, K0, MVL, fine === false ? 1 : 0) || leafGeo(d.w, d.h, (K0.P && K0.P.door) || '#5a3b25') });
     }
     // the lids over the holes the stairs come up through, shut — hinged along the hole's edge at the stair's top (a grand
     // stair's well open: its rail round it, wellRail)
@@ -3811,6 +3890,54 @@ float m3scale(float p) {
     if (round) { const ri = sh.r - sh.t; out.cut = { round: 1, at: [X0 + sh.cx, Z0 + sh.cz], r: ri - 0.02, y: [Y0 + ylo, Y0 + sh.eave + 0.05] }; out.box = [X0 + sh.cx - sh.r, Y0 + ylo, Z0 + sh.cz - sh.r, X0 + sh.cx + sh.r, Y0 + yhi, Z0 + sh.cz + sh.r]; }
     else { const I = [sh.r[0] + sh.t, sh.r[1] + sh.t, sh.r[2] - sh.t, sh.r[3] - sh.t]; out.cut = { at: [X0 + I[0] + 0.02, Y0 + ylo, Z0 + I[1] + 0.02, X0 + I[2] - 0.02, Y0 + sh.eave + 0.05, Z0 + I[3] - 0.02] }; out.box = [X0 + sh.r[0], Y0 + ylo, Z0 + sh.r[1], X0 + sh.r[2], Y0 + yhi, Z0 + sh.r[3]]; }
     for (const k in out.lv) out.tris += out.lv[k].p.length / 9; out.tris += out.roof.p.length / 9; for (const f of out.leaf.concat(out.hatch)) out.tris += f.g.p.length / 9;
+    for (const q of out.inst) out.tris += q.tris;
+    return out;
+  };
+  // ------------------------------ the furniture modelled (Movel3D, D-710 to D-714) ------------------------------
+  // a piece of the plan drawn by its model: one instance of the model — its frame in the world (where the plan stands it, turned
+  // as it is, the model turned a quarter where it lies the other way, stretched to its rectangle) and each part's colour and
+  // pattern, by what the building's people has (Movel3D.paint) and the house's soot (K.c). And what goes with it: the flue of a
+  // hearth's hood up to the ceiling there (ceil: the room's height over the piece's foot), the amphorae in the rack's places as
+  // the store fills them (told nothing, as a piece is told: a full rack). Pure: the plan and the world in, the records out
+  const HALF = Math.PI / 2;
+  function modelled(out, K, it, lv, foot, mv, look, ceil, fill) {
+    const MV = G.Movel3D; const c = Math.cos(it.ry || 0), s = Math.sin(it.ry || 0);
+    const at = (a, n) => [K.x0 + it.x + a * c + n * s, K.z0 + it.z - a * s + n * c];
+    const rec = (p, a, n, y, ry, sx, sy, sz, k) => {
+      const q = at(a, n); const m = R3.mat(q[0], K.y0 + foot + y, q[1], (it.ry || 0) + ry + (p.rot ? HALF : 0), sx, sy, sz);
+      const parts = []; for (const pt of MV.parts(p.name)) { const pp = MV.paint(pt, look, k); if (pp) parts.push([pt, K.c(pp.c), PAT[pp.p] || 0]); }
+      out.inst.push({ id: it.id, lv, name: p.name, lod1: p.lod1, m: Array.from(m.elements), parts, tris: MV.tris(p.name) });
+    };
+    rec(mv, 0, 0, 0, 0, mv.sx, mv.sy, mv.sz, it.k | 0);
+    for (const a of MV.anchorsOf(mv)) {
+      if (a.k === 'chamine') {
+        // (the flue: from the hood's top to the ceiling, against the wall behind)
+        const fl = MV.pick('chamine', look.civ, a.w, a.d, 1); const hh = ceil - a.y; if (fl && hh > 0.05) rec(fl, a.x, a.z, a.y, 0, fl.sx, hh / fl.e.h, fl.sz, (it.k | 0) + 1);
+      } else if (a.k === 'nicho' && it.kind === 'anforeira') {
+        const am = MV.pick('anfora', look.civ, 0.3, 0.3, 1.0); if (!am) continue; const slots = MV.anchorsOf(mv).filter(q => q.k === 'nicho');
+        const i = slots.indexOf(a), n = Number.isFinite(fill) ? Math.round(G.clamp(fill, 0, 1) * slots.length) : slots.length; if (i >= n) continue;
+        rec(am, a.x, a.z, a.y - 0.04, TAU * G.hash((it.k | 0) * 17 + i), 1, 1, 1, (it.k | 0) * 5 + i);
+      }
+    }
+  }
+  // (the door's leaf by its people's model — the plank door, the panelled one painted, the Norse one strapped with iron, the Aztec's mat
+  // on its frame —, stretched to its opening, in its own frame as leafGeo makes it: from the hinge across +X, its foot at 0; its wood
+  // the people's door's colour. Null where there is no model)
+  function leafModel(w, h, K, look, lod) {
+    const MV = G.Movel3D; if (!MV || !look || !G.Mesh3D) return null; const p = MV.pick('folha', look.civ, 1, 0.14, 2); if (!p) return null;
+    const name = lod ? p.lod1 : p.name; const g = R3.Geo(); const door = (K.P && K.P.door) || '#5a3b25';
+    const sx = (w - 0.03) / 0.97, sy = (h - 0.02) / 1.98; const m = R3.mat(w / 2, 0.01 - 0.01 * sy, 0, 0, sx, sy, 1).clone();
+    for (const pt of MV.parts(p.name)) { const geo = G.Mesh3D.part(name, pt); const pp = MV.paint(pt, look, 7); if (!geo || !pp) continue;
+      const col = pt === 'madeira' ? rgbOf(door) : pt === 'madeira2' ? dim(door, 0.78) : pp.c; g.pat = PAT[pp.p] || 0; g.put(geo, m, K.c(col)); }
+    g.pat = 0; return g.empty ? null : g;
+  }
+  B3.leafModel = leafModel; // (for the proofs)
+  // (the points of a modelled piece in the world, for the proofs: the model's own, through its instance's frame — lod 1, the middle
+  // level)
+  B3.instPts = function (q, lod) {
+    const geo = G.Mesh3D && G.Mesh3D.geo(lod ? q.lod1 : q.name); if (!geo) return [];
+    const P = geo.attributes.position.array, e = q.m, out = new Float32Array(P.length);
+    for (let k = 0; k < P.length; k += 3) { const x = P[k], y = P[k + 1], z = P[k + 2]; out[k] = e[0] * x + e[4] * y + e[8] * z + e[12]; out[k + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]; out[k + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]; }
     return out;
   };
   // ------------------------------ the outside from the shell ------------------------------
@@ -4744,7 +4871,9 @@ float m3scale(float p) {
     // (those gone far, gone, or with another plan now: given back; those whose keeping pieces hold another share now — a second of
     // the world apart —: drawn again)
     for (const [id, o] of opened) { const b = S.buildings.get(id); const p = b && G.Space.planMade(b);
-      let refill = false; if (b && S.clock - o.fillT >= 1) { o.fillT = S.clock; refill = B3.fillSig(b) !== o.fill; }
+      // (and drawn again when what its furniture is made of has changed — the people's metal, its loom, the house's wealth: Movel3D.look —,
+      // or the body came in, the furniture wanted at the near level)
+      let refill = false; if (b && S.clock - o.fillT >= 1) { o.fillT = S.clock; refill = B3.fillSig(b) !== o.fill || (!!o.look && G.Movel3D.look(b).sig !== o.look) || furnLod(b) !== o.lod; }
       if (!b || p !== o.p || refill || (!keep.has(id) && (dRect(b) > CLOSE_R || opened.size > OPEN_MAX))) { dropOpen(o); opened.delete(id); } }
     // (one made a frame, at most: a few milliseconds)
     for (const [, b, p] of want.slice(0, OPEN_MAX)) if (!opened.has(b.id) && opened.size < OPEN_MAX) { const o = makeOpen(b, p); if (o) opened.set(b.id, o); break; }
@@ -4763,6 +4892,16 @@ float m3scale(float p) {
     const grp = new THREE.Group(); grp.matrixAutoUpdate = false; const geos = [];
     const add = g => { if (!g || g.empty) return; const geo = g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.matrixAutoUpdate = false; grp.add(m); };
     for (const k in out.lv) add(out.lv[k]); add(out.roof);
+    // (the furniture modelled: one instanced mesh a model's part and pattern, every piece of that model one instance of it, its
+    // colour the instance's — D-712. The building the body is in, or at its door, at the near level; the others, the middle one)
+    const lod = furnLod(b); const groups = new Map();
+    for (const q of out.inst) for (const [pt, col, pat] of q.parts) { const name = lod ? q.lod1 : q.name; const key = name + '/' + pt + '/' + pat;
+      let G0 = groups.get(key); if (!G0) groups.set(key, G0 = { name, pt, pat, list: [] }); G0.list.push([q.m, col]); }
+    const MT = new THREE.Matrix4(), CL = new THREE.Color();
+    for (const G0 of groups.values()) { const geo = G.Movel3D.partGeo(G0.name, G0.pt, G0.pat); if (!geo) continue;
+      const m = new THREE.InstancedMesh(geo, MI, G0.list.length); m.name = 'movel:' + G0.name + '/' + G0.pt; m.castShadow = true; m.receiveShadow = true; m.matrixAutoUpdate = false;
+      G0.list.forEach(([e, col], k) => { MT.fromArray(e); m.setMatrixAt(k, MT); const L = R3.lin(col); m.setColorAt(k, CL.setRGB(L[0], L[1], L[2])); });
+      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); grp.add(m); }
     const piece = (f, order) => { const geo = f.g.build(true); geos.push(geo); const m = new THREE.Mesh(geo, MI); m.receiveShadow = true; m.rotation.order = order || 'XYZ'; m.position.set(f.at[0], f.at[1], f.at[2]); m.rotation.y = f.yaw; grp.add(m); return m; };
     const leaves = out.leaf.map(f => ({ f, m: piece(f), cur: 0, was: undefined }));
     const lids = out.hatch.map(f => ({ f, m: piece(f, 'YXZ'), cur: 0 }));
@@ -4770,7 +4909,14 @@ float m3scale(float p) {
     // (the floors under the street — a sunken one, a cellar: the ground over them given way, from their floor to the plinth's top)
     const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const sunk = [];
     for (const l of p.levels) if (l.y < -0.05 && l.area) sunk.push([X0 + l.area[0] + 0.02, Y0 + l.y - 0.1, Z0 + l.area[1] + 0.02, X0 + l.area[2] - 0.02, Y0 - 0.01, Z0 + l.area[3] - 0.02]);
-    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: fillSig(fill), fillT: G.S.clock };
+    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: fillSig(fill), fillT: G.S.clock, lod, look: out.look };
+  }
+  // (the level the furniture of an inside is drawn at: near where the qualities carry detail and the body is in it or by its door;
+  // the middle level otherwise — the other insides open round it, the lean qualities)
+  function furnLod(b) {
+    const q = R3.Q(); if (!q.detail) return 1; const v0 = G.Possess && G.Possess.body && G.Possess.body(); if (!v0) return 0;
+    if (v0.inside === b.id) return 0; const L = TL(); const X = v0.x * L, Z = v0.y * L;
+    return Math.hypot(Math.max(b.x * L - X, 0, X - (b.x + b.w) * L), Math.max(b.y * L - Z, 0, Z - (b.y + b.h) * L)) < 3 ? 0 : 1;
   }
   function dropOpen(o) { if (o.grp.parent) o.grp.parent.remove(o.grp); for (const g of o.geos) g.dispose(); }
   function stepOpen(o, rdt, focus) {

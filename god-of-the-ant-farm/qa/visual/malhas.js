@@ -1,6 +1,11 @@
 // malhas: the meshes made outside (js/mesh-*.js, read by js/mesh3d.js) checked without a browser — G.Mesh3D.check() itself
 // (the counts, the index inside the points, no NaN, unit normals, the box, the parts), and the art bible's budget (§6, §8):
-// each file ≤ 60 KB, all ≤ 1 MB, the triangles of each, every one loaded by a <script> of index.html:
+// each file ≤ 60 KB, all ≤ 1 MB, the triangles of each, every one loaded by a <script> of index.html. And the library of the
+// furniture of the interiors (js/movelmesh.js, made by arte/blender/moveis.py, read by js/movel3d.js — the interiors 2.0, the
+// front P2, D-715): a category of its own, as the people's and the beasts' meshes are — its whole file ≤ 4 MB, each model ≤ 70 KB
+// of the file, loaded by index.html before js/movel3d.js; and G.Movel3D.check(): every model of the vocabulary's parts, inside its
+// rectangle and on its floor, ≤ 1,500 triangles (the hero pieces ≤ 3,000), its middle level ≤ 45 % of it (or ≤ 260 triangles),
+// its anchors within it, every people with a model of every kind:
 //   node qa/visual/malhas.js [PASTA_DO_JOGO]         → exit 1 if something fails (a FALHA line)
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
@@ -25,6 +30,27 @@ if (M && typeof M.check === 'function') {
 } else fails.push('G.Mesh3D.check não existe');
 console.log(`MALHAS — ${ROOT} · ${files.length} arquivos, ${total.toFixed(0)} KB (orçamento: 60 KB cada, 1 MB juntas)`);
 for (const l of info) console.log('  ' + l);
+
+// ------------------------------ the furniture's library (D-715) ------------------------------
+const LIB = 'movelmesh.js', LIB_MB = 4, LIB_KB = 70;
+{
+  const before = new Set(Object.keys(ctx.G.MESH3D || {}));
+  try { vm.runInContext(fs.readFileSync(js(LIB), 'utf8'), ctx, { filename: LIB }); vm.runInContext(fs.readFileSync(js('movel3d.js'), 'utf8'), ctx, { filename: 'movel3d.js' }); } catch (e) { fails.push(`${LIB} ou movel3d.js não carrega: ${e.message}`); }
+  const src = fs.readFileSync(js(LIB), 'utf8'); const mb = src.length / 1048576;
+  const names = Object.keys(ctx.G.MESH3D || {}).filter(n => !before.has(n));
+  if (!/made in Blender by arte\/blender\/moveis\.py/.test(src.split('\n').slice(0, 4).join('\n'))) fails.push(`${LIB}: sem o cabeçalho de quem o gera (arte/blender/moveis.py)`);
+  if (mb > LIB_MB) fails.push(`${LIB}: ${mb.toFixed(2)} MB (a biblioteca dos móveis ≤ ${LIB_MB} MB)`);
+  const iL = html.indexOf(`src="js/${LIB}"`), iV = html.indexOf('src="js/movel3d.js"'), iM = html.indexOf('src="js/mesh3d.js"');
+  if (iL < 0 || iV < 0 || !(iM < iL && iL < iV)) fails.push(`${LIB}: o index.html não o carrega entre o mesh3d.js e o movel3d.js`);
+  let tris = 0, big = 0;
+  for (const l of src.split('\n')) { const m = l.match(/^ {2}M\["([^"]+)"\] = /); if (!m) continue; const kb = l.length / 1024; if (kb > LIB_KB) { fails.push(`${m[1]}: ${kb.toFixed(0)} KB (cada modelo ≤ ${LIB_KB} KB)`); big++; } }
+  for (const n of names) { if (!/^movel-[\w~-]+-\d+x\d+x\d+(@1)?$/.test(n)) fails.push(`${LIB}: o nome ${n} não é movel-<peça>-<povo>-<larg>x<fundo>x<alt>`); tris += (ctx.G.MESH3D[n].t || 0); }
+  const V = ctx.G.Movel3D;
+  if (V && typeof V.check === 'function') for (const e of V.check()) fails.push('Movel3D.check(): ' + e); else fails.push('G.Movel3D.check não existe');
+  // (the Mesh3D proof over the library too: every model decodes to what its file says)
+  if (M && typeof M.check === 'function') for (const e of M.check()) if (/^movel-/.test(e)) fails.push('Mesh3D.check(): ' + e);
+  console.log(`MÓVEIS — ${LIB}: ${names.length} modelos (os dois níveis), ${tris} triângulos, ${mb.toFixed(2)} MB (orçamento: ${LIB_MB} MB, ${LIB_KB} KB cada) · ${V ? V.kinds().length : 0} tipos`);
+}
 for (const f of fails) console.log('FALHA: ' + f);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

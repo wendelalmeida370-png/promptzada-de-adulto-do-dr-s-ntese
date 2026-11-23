@@ -1864,5 +1864,46 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
     if (/writeFileSync\([^)]*oldsave_/.test(c)) fails.push(`o save antigo das provas é fixo: qa/${f}:${k + 1} escreve um oldsave_ dentro de qa/ (o qa/oldsave_7.json é só lido: L-1715)`); });
   let o = null; try { o = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8')); } catch (e) { fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json não abre (' + e.message.slice(0, 60) + ')'); }
   if (o && (o.oresV || (o.ores || []).some(q => q.kind === 'cobre' || q.kind === 'estanho'))) fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json já tem as jazidas do bronze — um save novo no lugar do antigo (L-1715; o de antes está no 580a920)'); }
+// ------------------------------ os interiores 2.0, a frente P2: os móveis modelados (D-710 a D-719; as regras 260 a 269) ------------------------------
+// 260. "os móveis são do Blender" (D-711): o js/movelmesh.js é escrito pelo arte/blender/moveis.py — o cabeçalho o diz, o script
+// existe, e cada modelo é uma linha só (M["movel-…"] = {…};), refeita por comando, nunca à mão
+{ const mm = src['movelmesh.js'] || []; const root = path.resolve(dir, '..');
+  if (!fs.existsSync(path.join(root, 'arte', 'blender', 'moveis.py'))) fails.push('os móveis são do Blender: falta o arte/blender/moveis.py que escreve o js/movelmesh.js (D-711)');
+  if (!/made in Blender by arte\/blender\/moveis\.py/.test(mm.slice(0, 4).join('\n'))) fails.push('os móveis são do Blender: o js/movelmesh.js sem o cabeçalho de quem o gera (D-711)');
+  mm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["movel-[\w~@-]+"\] = \{.*\};$/.test(l)) fails.push(`os móveis são do Blender: movelmesh.js:${k + 1} não é a linha de um modelo como o moveis.py a escreve (D-711)`); }); }
+// 261. "o móvel pela porta" (D-712): só o movel3d.js lê os modelos dos móveis pelo nome ('movel-…'); o 3D chega a eles pela porta
+// G.Movel3D (pick, paint, parts, partGeo, anchorsOf) — nunca pelo G.MESH3D direto
+for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]movel-/.test(c)) fails.push(`o móvel pela porta: ${f}:${k + 1} lê um modelo dos móveis pelo nome (é do G.Movel3D, D-712)`); }); }
+// 262. "o modelo antes da caixa" (D-712): no B3.interior cada peça pergunta primeiro ao G.Movel3D (o modelo do povo dela, no
+// tamanho dela, a rica da casa rica) e só sem modelo cai nas caixas do FURN
+{ const b3 = (src['build3d.js'] || []).join('\n');
+  if (!/const mv = MVL && G\.Movel3D\.pick\(it\.kind, MVL\.civ, it\.w, it\.d, it\.h, MVL\.rico >= 2 \? 'rico' : ''\);/.test(b3) || !/else \{ const f = FURN\[it\.kind\]; if \(f\) f\(F, it, \{ ceil, fill/.test(b3)) fails.push('o modelo antes da caixa: o B3.interior não pergunta ao G.Movel3D antes do FURN (D-712)'); }
+// 263. "o material é o que o povo tem" (D-440, D-714): o que cada parte de um móvel é vem do G.Movel3D.paint — o metal (o ferro,
+// o bronze, ou o vime), o couro e o barro pelo G.Origem.matOK do povo do prédio, o pano pelo tear que ele tem —, e o build3d.js pinta
+// as partes de um modelo só por ela
+{ const mv = (src['movel3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  if (!/const metal = ok\('ferro'\) \? 'ferro' : ok\('bronze'\) \? 'bronze' : null;/.test(mv) || !/O\.matOK\(fid, m, arts\)/.test(mv) || !/bronze: ok\('bronze'\), couro: ok\('couro'\), barro: ok\('barro'\)/.test(mv)) fails.push('o material é o que o povo tem: o G.Movel3D.look não lê o metal, o couro e o barro pelo G.Origem.matOK (D-440, D-714)');
+  if (!/case 'ferro': return look\.metal === 'ferro'/.test(mv) || !/case 'barro': return look\.barro \?/.test(mv)) fails.push('o material é o que o povo tem: o G.Movel3D.paint não resolve o ferro pelo metal do povo e o barro pelo barro que ele teve (D-714)');
+  const i = b3.indexOf('function modelled('), j = b3.indexOf('\n  }', i); const fm = i < 0 ? '' : b3.slice(i, j);
+  if (!/const pp = MV\.paint\(pt, look, k\); if \(pp\) parts\.push\(\[pt, K\.c\(pp\.c\), PAT\[pp\.p\] \|\| 0\]\)/.test(fm)) fails.push('o material é o que o povo tem: o build3d.js pinta as partes de um móvel modelado sem o G.Movel3D.paint (D-714)'); }
+// 264. "o móvel só se vê" (D-712): o movel3d.js só lê o mundo — nenhuma escrita num prédio, numa pessoa, num povo ou no G.S; a
+// escolha é do G.hash do id (o sorteio já é a regra 3)
+(src['movel3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:b|v|f|it|S|G\.S|look)\.[A-Za-z_]\w*\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o móvel só se vê: movel3d.js:${k + 1} escreve no mundo (D-712)`); });
+// 265. "a geometria compartilhada" (D-712): os móveis de um interior são instâncias — um InstancedMesh por modelo, parte e padrão,
+// a cor de cada peça a da instância —; nenhum modelo de móvel juntado ponto a ponto na geometria do andar (só a folha da porta,
+// que gira sozinha, é feita da parte do modelo: leafModel)
+{ const all = (src['build3d.js'] || []).join('\n'); const body = (a, z) => { const i = all.indexOf(a), j = all.indexOf(z, i + 1); return i < 0 ? '' : all.slice(i, j < 0 ? undefined : j); };
+  for (const [nm, f] of [['o B3.interior', body('B3.interior = function', '\n  };')], ['o modelled', body('function modelled(', '\n  }\n')]]) if (/G\.Mesh3D\.(?:part|geo)\(|\.put\(G\.Movel3D/.test(f)) fails.push(`a geometria compartilhada: ${nm} junta um modelo de móvel ponto a ponto (os móveis são instâncias, D-712)`);
+  if (!/new THREE\.InstancedMesh\(geo, MI, G0\.list\.length\)/.test(all)) fails.push('a geometria compartilhada: o makeOpen não desenha os móveis por instâncias (D-712)'); }
+// 266. "o sombreador sabe da instância" (D-712): o material de dentro põe o desenho do padrão onde a peça está — a matriz da
+// instância antes da do objeto, a normal pela instância como a do three
+{ const b3 = (src['build3d.js'] || []).join('\n');
+  if (!/#ifdef USE_INSTANCING\n mat3 pIM = mat3\(instanceMatrix\);/.test(b3) || !/vPP = \(modelMatrix \* instanceMatrix \* vec4\(transformed, 1\.0\)\)\.xyz;/.test(b3)) fails.push('o sombreador sabe da instância: o B3.dress não leva a matriz da instância ao padrão (D-712)'); }
+// 267. "a escada aberta" (D-713, T-1720): a escada de madeira é aberta — as duas pernas ao longo do lanço, um degrau por passo, nada
+// debaixo dos degraus —, e o corrimão só do lado da parede (walled): no lado aberto a planta deixa o corpo pisar até a borda, e nada
+// se desenha onde o corpo pode ficar
+{ const b3 = (src['build3d.js'] || []).join('\n'); const i = b3.indexOf('function inStair('), j = b3.indexOf('\n  }', i); const f = i < 0 ? '' : b3.slice(i, j);
+  if (!/prism\(poly, a - S \/ 2, a \+ S \/ 2, WD\[1\]\)/.test(f) || !/put\(at\(run \* \(k \+ 0\.5\), 0, tr - 0\.045\)/.test(f)) fails.push('a escada aberta: o inStair não desenha as pernas e os degraus da escada de madeira (D-713)');
+  if (!/if \(!walled\(sd\)\) continue;/.test(f)) fails.push('a escada aberta: o corrimão fora do lado da parede (T-1720)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

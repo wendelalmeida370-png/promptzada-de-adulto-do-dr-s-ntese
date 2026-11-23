@@ -20,7 +20,9 @@
 //      (the roof, or a solid under it: the Acropolis's entablature, T-1111), no wall of its rooms over it, and one face over
 //      it — never the inside's ceiling in the plane of the form's own underside (L-795)
 //   6. the furniture: each piece with a size, within its own rectangle and on its floor, every kind of the catalogue drawn
-//      (the pieces a building's form draws — marked form, D-093: the square's — are the form's, outside)
+//      (the pieces a building's form draws — marked form, D-093: the square's — are the form's, outside); a piece modelled
+//      (Movel3D, D-712) by its instances' points — its model's, at the near level and the middle one, and what goes with it:
+//      the flue of a hearth up to the ceiling, the amphorae of the rack — as the boxes by the storey's geometry
 //   7. the doors' leaves: shut, in their opening; opened, into their first room. The lids: opened, up off their hole
 //   8. pure: the same plan, the same picture; no draw on the world's chance nor on the eye's; the world untouched — the
 //      outside's too
@@ -164,7 +166,9 @@ for (const [b, plan, own] of jobs) {
   G.rngWatch = watch0;
   if (!out) { bad.pure.push(`${tag}: sem desenho`); continue; }
   // 8. pure
-  { const sum = o => { let s2 = 0, n = 0; for (const g of Object.values(o.lv).concat([o.roof], o.leaf.map(f => f.g), o.hatch.map(f => f.g))) for (let k = 0; k < g.p.length; k += 7) { s2 = (s2 + g.p[k] * (k % 13 + 1)) % 1e9; n++; } return n + ':' + s2.toFixed(3); };
+  // (the furniture modelled, D-712: each instance's model, frame and colours in the sum too)
+  { const sum = o => { let s2 = 0, n = 0; for (const g of Object.values(o.lv).concat([o.roof], o.leaf.map(f => f.g), o.hatch.map(f => f.g))) for (let k = 0; k < g.p.length; k += 7) { s2 = (s2 + g.p[k] * (k % 13 + 1)) % 1e9; n++; }
+      return n + ':' + s2.toFixed(3) + '|' + JSON.stringify((o.inst || []).map(q => [q.name, q.m.map(v => +v.toFixed(5)), q.parts])); };
     if (sum(out) !== sum(again)) bad.pure.push(`${tag}: duas vezes, dois desenhos`);
     if (JSON.stringify(S.rng) !== rng0) bad.pure.push(`${tag}: o acaso do mundo mudou`);
     if (JSON.stringify(b, (k, v) => (k === '_dock' ? undefined : v)) !== bj0) bad.pure.push(`${tag}: o prédio mudou`); }
@@ -338,14 +342,20 @@ for (const [b, plan, own] of jobs) {
   for (const it of plan.items) {
     if (it.form && FMb) continue; // (the form's own, drawn outside: the fidelity proof measures it)
     if (CPb && !CPb.at(it.lv, (it.r[0] + it.r[2]) / 2, (it.r[1] + it.r[3]) / 2)) continue; // (an open ground's, out of its closed part: the outside's — 9 to 11)
-    nItem++; if (!B3.FURN[it.kind]) bad.kind.add(it.kind);
+    nItem++; const R = out.item[it.id]; const inst = R && R[3] !== undefined; if (!B3.FURN[it.kind] && !inst) bad.kind.add(it.kind);
     // (a piece with a size: the plan's — one of no length was drawn as a sliver turned inside out, and its sleepers had no
     // place: the Norse inn's bench-bed, L-578)
     if (it.r[2] - it.r[0] < 0.01 || it.r[3] - it.r[1] < 0.01) bad.item.push(`${tag} ${it.kind} ${it.id}: sem tamanho (${(it.r[2] - it.r[0]).toFixed(2)} × ${(it.r[3] - it.r[1]).toFixed(2)} m, a planta)`);
-    const R = out.item[it.id]; if (!R || R[2] <= R[1]) { bad.item.push(`${tag} ${it.kind}: nada desenhado`); continue; }
-    const g = out.lv[R[0]]; const l = lvOf(it.lv); const foot = l.y + (it.y || 0); const ceil = (CPb ? l.y + l.h : Math.min(l.y + l.h, plan.shell.eave)) + 0.01;
-    const roof = it.kind === 'fogao' || it.kind === 'forja-fogo'; let worst = 0, wy = 0;
-    for (let k = R[1]; k < R[2]; k++) { const x = g.p[k * 3] - X0, y = g.p[k * 3 + 1] - Y0, z = g.p[k * 3 + 2] - Z0;
+    if (!R || (!inst && R[2] <= R[1])) { bad.item.push(`${tag} ${it.kind}: nada desenhado`); continue; }
+    const l = lvOf(it.lv); const foot = l.y + (it.y || 0); const ceil = (CPb ? l.y + l.h : Math.min(l.y + l.h, plan.shell.eave)) + 0.01;
+    // (what reaches up to the ceiling: a hood and its flue — the hearth modelled, its flue a piece of its own to the ceiling)
+    const roof = it.kind === 'fogao' || it.kind === 'forja-fogo' || it.kind === 'lareira'; let worst = 0, wy = 0;
+    // (its points: the storey's geometry's — the boxes —, or its model's through each of its instances: the piece's and what goes
+    // with it, the flue, the amphorae; the near level and the middle one, both)
+    const pts = [];
+    if (inst) { const qs = out.inst.filter(q => q.id === it.id); if (!qs.length) { bad.item.push(`${tag} ${it.kind}: a instância sumiu`); continue; } for (const q of qs) for (const lod of [0, 1]) pts.push(B3.instPts(q, lod)); }
+    else { const g = out.lv[R[0]]; pts.push(g.p.slice(R[1] * 3, R[2] * 3)); }
+    for (const P of pts) for (let k = 0; k < P.length; k += 3) { const x = P[k] - X0, y = P[k + 1] - Y0, z = P[k + 2] - Z0;
       worst = Math.max(worst, it.r[0] - x, x - it.r[2], it.r[1] - z, z - it.r[3]); if (y < foot - 0.01 || y > (roof ? ceil : foot + it.h + 0.5)) wy++; }
     if (worst > 0.045 || wy) bad.item.push(`${tag} ${it.kind}: ${worst > 0.045 ? (worst * 100).toFixed(0) + ' cm fora do seu retângulo' : ''}${wy ? ' ' + wy + ' pontos fora da altura' : ''}`);
   }
