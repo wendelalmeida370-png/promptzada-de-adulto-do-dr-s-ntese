@@ -1022,7 +1022,7 @@
   A.fleeTarget = (a, x, y, d) => fleeTarget(a, x, y, d);
   A.pickNear = (a, r, hab) => pickNear(a, r, hab);
   A.startClimb = (a, t, fast) => startClimb(a, t, fast);
-  A.deepSpot = a => deepSpot(a);
+  A.deepSpot = a => { distances(); return deepSpot(a); }; // (asked by the save's load too — the croc's hold, fauna-luta.js — before any step made the maps: L-1933)
   A.waterD = i => (dWater ? dWater[i] : 99);
   A.seaD = i => (dSea ? dSea[i] : 99); // (how far from the sea — the band of the seal, the walrus, the penguin)
   A.riverNear = i => riverNear(i);

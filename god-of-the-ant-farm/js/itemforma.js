@@ -839,6 +839,33 @@
     M.marks.centro = [xc, 0.005, 0]; M.marks.boca = [xc, y1, 0]; M.marks.ponta = [xc, y1, 0];
   };
 
+  // the plate (P7, D-768): held by the lug of its rim (the origin: the fist round the lug), the plate toward +X — the palm's side, as
+  // the cup's body —, flat, its face up (+Y), the meal on it: a mound of cooked grain and a few bits of what went in with it. Of wood:
+  // turned on the lathe, the grain round it; of fired clay: thrown on the wheel, a dark slip band on its rim
+  const COMIDA = { c: hex('#d6c08f'), c2: hex('#b39660'), grain: 'pebble', g: 0.1 };
+  const PEDACO = [{ c: hex('#7a4026'), c2: hex('#5e2f1b'), grain: 'pebble', g: 0.12 }, { c: hex('#5f6f2e'), c2: hex('#4a5822'), grain: 'pebble', g: 0.1 }];
+  R.prato = (M, mat) => {
+    const q = M.q, clay = mat === 'barro'; const pal = clay ? PAL.barro : PAL.clara; const rim = clay ? PAL.barroE : pal;
+    const Rr = 0.085, xc = 0.011 + Rr; const C = [xc, 0, 0];
+    part(M, 'cabo');
+    // (the lug: a short tab out of the rim toward −X, the fist round it)
+    if (q < 2) box(M, [0.004, -0.0005, 0], [0.012, 0.0035, 0.015], 0.003, pal);
+    part(M, 'cabeca');
+    const n = seg(M, 22, 12, 8);
+    // (the outside, from the foot ring to the rim; the inside, the wall's thickness down to the floor, darker toward it)
+    const out = q === 0 ? [[0.040, -0.016], [0.046, -0.0145], [0.050, -0.012], [0.066, -0.007], [0.080, 0.0], [Rr, 0.005], [Rr - 0.0015, 0.0068]]
+      : q === 1 ? [[0.044, -0.016], [0.066, -0.008], [Rr, 0.005]] : [[0.05, -0.014], [Rr, 0.005]];
+    lathe(M, out, n, pal, { at: C, cap0: [xc, out[0][1], 0], cap1: q === 2 ? [xc, 0.005, 0] : undefined, m: k => (clay && out[k] && out[k][1] > 0.001 ? rim : pal), f: (k, t, j, u, v, p) => ({ ao: 0.8 + 0.2 * sstep(-0.016, 0.0, p[1]) }) });
+    if (q < 2) { const yi = -0.0075; const ins = q === 0 ? [[Rr - 0.005, 0.0066], [0.074, 0.0], [0.058, -0.0055], [0.040, yi]] : [[Rr - 0.005, 0.005], [0.05, yi]];
+      lathe(M, ins, n, pal, { at: C, cap1: [xc, yi, 0], dir: c => [xc - c[0], 0, -c[2]], m: k => (clay && k === 0 ? rim : pal), f: (k, t, j, u, v, p) => ({ ao: 0.55 + 0.45 * sstep(yi, 0.006, p[1]) }) }); }
+    // (the meal: a mound of the grain, the bits of the stew half sunk in it)
+    part(M, 'enfeite');
+    ball(M, [xc, -0.004, 0], [0.056, 0.026, 0.056], seg(M, 14, 8, 6), COMIDA, { f: (k, t, j, u, v, p) => ({ ao: 0.72 + 0.28 * sstep(-0.006, 0.02, p[1]) }) });
+    if (q === 0) for (let i = 0; i < 4; i++) { const a = 0.3 + i * 1.55, r = 0.024; const y = -0.004 + 0.026 * Math.sqrt(1 - (r / 0.056) ** 2) - 0.003;
+      ball(M, [xc + Math.cos(a) * r, y, Math.sin(a) * r], 0.0095 + 0.002 * (i % 2), 6, PEDACO[i % 2], { f: () => ({ ao: 0.9 }) }); }
+    M.marks.centro = [xc, 0.0, 0]; M.marks.boca = [xc, 0.022, 0]; M.marks.ponta = [xc + Rr, 0.005, 0];
+  };
+
   // the ball: held in the palm (the origin: the grip, a little inside the ball), the ball toward +X — the palm's side. Of
   // wicker: woven withies; of leather: panels sewn over a stuffing, the seams standing out
   R.bola = (M, mat) => {

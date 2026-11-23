@@ -1023,8 +1023,10 @@
     const own = G.Anim3D.resolve(s.st); const a = b.act; if (!a) return own;
     const an = G.Anim3D.resolve(a.anim);
     if (!SEATED_ST[own] && !LOW_ST[own]) return an;
-    return SEATED_ST[own] && SEATED_ST[an] ? an : own;
+    return SEATED_ST[own] && seatedClip(an) ? an : own;
   }
+  // (a seated gesture: the household's, or a clip made on the seat — base 'sit': the meal and the sip at a tavern's table, P7 D-769)
+  const seatedClip = st => !!SEATED_ST[st] || !!(G.Anim3D.CLIPS && G.Anim3D.CLIPS[st] && G.Anim3D.CLIPS[st].base === 'sit');
   // the animation the body is in: from what it really does (Part 25: no walking in place, no sliding in idle) — its state, for the
   // world's proofs, the camera and the sounds. The pose is no longer made here, on the fixed step: the body's animator makes it in
   // every frame drawn, from the motion of that frame (People3D → Anim3D.drive, the same as for everyone: 20a, D-345)

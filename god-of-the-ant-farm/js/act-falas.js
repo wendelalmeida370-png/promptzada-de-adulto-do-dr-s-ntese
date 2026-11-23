@@ -65,6 +65,11 @@
       cheia: ['Está lotado! Volte mais tarde.', 'Não cabe mais ninguém hoje.'],
       fechando: ['Vamos fechar! Todo mundo para casa.', 'Última rodada já foi. Boa noite a todos!'],
       sem_servico: ['Ninguém vem servir... vou embora.', 'Cansei de esperar.'],
+      // (the keeper at the god's body's table, D-767: the menu, what ran out, the order taken, the menu let be)
+      carta_taverna: ['{nome} O que vai ser hoje?', '{nome} Hoje temos {bem}. O que vai querer?', 'Boa noite! Temos {bem}. O que lhe sirvo?'],
+      carta_falta: ['{bem}: acabou, sinto muito. Quer outra coisa?', 'Não tem mais {bem}. Escolha outra coisa, que eu trago.'],
+      pedido_ok: ['É pra já!', 'Um momento, já trago.', '{bem}, saindo!'],
+      carta_depois: ['Quando quiser, é só chamar.', 'Fico no balcão. É só chamar.'],
       // the baths (act-servicos.js)
       banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
       banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
@@ -79,11 +84,13 @@
       pregao: ['Olha o {bem}! Melhor que o de Corinto!', '{bem} da ágora! Quem vai querer?'],
       recusar_caro: ['Caro demais, nem em Atenas se paga isso.', 'Não vale isso. Vou ver na outra banca.'],
       agradecer: ['Khaire! Volte sempre.', 'Bom negócio, amigo.'],
+      carta_taverna: ['{nome} Vinho da casa, ou outra coisa?', '{nome} Temos {bem}. O que lhe trago?'],
     },
     romano: {
       pregao: ['{bem} do fórum! Bom e barato!', 'Olha o {bem}, cidadão!'],
       contrapropor: ['{oferta}? Nem pensar. {contra}, palavra de romano.', 'Por {contra}, e o negócio é seu.'],
       paga: ['Teu salário: {preco}.', 'Aqui estão os teus {preco}.'],
+      carta_taverna: ['{nome} O que deseja hoje?', '{nome} Hoje há {bem}. O que deseja?'],
     },
     egipcio: {
       pregao: ['{bem} do cais! Chegou com a cheia!', 'Olha o {bem}, irmão!'],
@@ -92,6 +99,7 @@
     nordico: {
       pedir_taverna: ['Mais {bem}, taverneiro!', 'Enche o meu corno: {bem}!'],
       fechando: ['Fora, todos! O salão fecha.', 'Chega de hidromel por hoje. Para casa!'],
+      carta_taverna: ['{nome} Senta aí. O que vai ser?', '{nome} Tem {bem} no salão. O que te trago?'],
       pedir_ajuda: ['Ei! Uma mão nesta caixa de {bem}, que pesa como um touro.', 'Preciso de outro braço aqui!'],
       pregao: ['{bem}! Pesado na balança, honesto no preço!', 'Olha o {bem}, trazido pelo mar!'],
       preco: ['{bem}? {preco}, pesadas na balança.', '{preco}. Pode pesar.'],
@@ -100,6 +108,7 @@
       pregao: ['{bem} no tianguis! Venham ver!', 'Olha o {bem}, bom de verdade!'],
       preco: ['{bem}? {preco}.', 'Custa {preco}, senhor.'],
       agradecer: ['Que os deuses te guardem. Volte.', 'Bom negócio, senhor.'],
+      carta_taverna: ['{nome} O que deseja hoje?', '{nome} Hoje temos {bem}. O que lhe sirvo?'],
     },
   };
   // the people of a speaker (and so its pack, its money, its greeting)

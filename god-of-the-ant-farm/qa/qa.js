@@ -3948,7 +3948,9 @@
 //   · ninguém passando pela porta por mais que a caminhada mais longa (G.Vg.WALK_MAX: S3);
 //   · o bebê dentro de um prédio onde está quem o carrega fica no colo dele, em todo prédio (S3, D-660);
 //   · a caneca de um dia da taverna só nas mãos de quem está às mesas dele ou de quem serve nele (S3);
-//   · o músico do dia está às mesas, no estrado (S3); a porta da taverna aberta enquanto o dia dela está (S4).
+//   · o músico do dia está às mesas, no estrado (S3); a porta da taverna aberta enquanto o dia dela está (S4);
+//   · o corpo do deus às mesas (D-767): a entrada dele num estado que a taverna conhece, o pedido com o que foi pedido, quem o
+//     atende vivo e capaz, o que lhe serviram nas mãos enquanto a entrada diz «servido» (S2, S3).
 (function () {
   if (!window.QA || !QA.more) return;
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
@@ -3989,6 +3991,15 @@
       // (the cups of the day: in the hands of who is at its tables or of who serves in it)
       for (const v of s.villagers.values()) { const c = v.carry; if (!c || c.op !== op.id || !(c.n > 1e-6)) continue; const t = v.task;
         if (!(d.mesa && d.mesa[v.id]) && !(t && t.type === 'atender' && t.op === op.id)) add('taverna', 3, `${v.name} #${v.id}: com ${c.k} do dia da taverna #${op.at} nas mãos, sem estar às mesas nem servindo nela`); }
+      // (the god's body at the tables — D-767)
+      for (const id in d.mesa || {}) {
+        const m = d.mesa[id]; if (!m || !m.corpo) continue; const v = s.villagers.get(+id); const nm = v ? `${v.name} #${v.id}` : `#${id}`;
+        if (!v) { add('taverna', 2, `taverna #${op.at}: a entrada do corpo ${nm} sem a pessoa (D-767)`); continue; }
+        if (!(T.CV && T.CV[m.cv])) add('taverna', 2, `taverna #${op.at}: o corpo ${nm} às mesas num estado que a taverna não conhece («${m.cv}»: D-767)`);
+        if (m.cv === 'pedido' && !(m.pedido && m.pedido.k)) add('taverna', 2, `taverna #${op.at}: o pedido do corpo ${nm} sem o que foi pedido (D-767)`);
+        if (m.srv > 0) { const k = s.villagers.get(m.srv); if (!k || !G.Act.able(k)) add('taverna', 3, `taverna #${op.at}: o pedido do corpo ${nm} com quem já não pode atender (#${m.srv}: D-767)`); }
+        if (m.cv === 'servido' && !(v.carry && v.carry.op === op.id && v.carry.n > 1e-6)) add('taverna', 3, `taverna #${op.at}: o corpo ${nm} «servido» de mãos vazias (D-767)`);
+      }
       if (d.mus) { const m = d.mesa && d.mesa[d.mus]; const v = s.villagers.get(d.mus); if (!m || m.st !== 6 || !v || !v.task || v.task.type !== 'tavern' || v.task.st !== 6) add('taverna', 3, `taverna #${op.at}: o músico #${d.mus} não está no estrado`); }
       if (T.aberta(b) && b.ip && In.doorState && In.plan(b) && In.plan(b).entrance) { const ds = In.doorState(b, In.plan(b).entrance.door); if (ds && ds.state !== 'aberta' && ds.state !== 'bloqueada') add('taverna', 4, `taverna #${op.at}: aberta, e a porta ${ds.state} (D-766)`); }
     }
