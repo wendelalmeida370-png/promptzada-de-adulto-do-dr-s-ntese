@@ -1046,6 +1046,7 @@
   A.moveTo = moveTo; A.fearOf = fearCheck;
   // deep water a little way from the shore, for the drowning
   function deepSpot(a) {
+    distances(); // (the shore's distances may not be built yet: a held prey given back at a load asks first — L-1909)
     const S = G.S; let best = null, bd = -1;
     for (let k = 0; k < 12; k++) { const ang = k / 12 * 6.28; const x = a.x + Math.cos(ang) * 1.6, y = a.y + Math.sin(ang) * 1.6; if (!W.inb(x, y)) continue; const i = W.idx(x, y); if (S.type[i] > T.RIVER) continue; const d = dLand[i]; if (d > bd) { bd = d; best = [x, y]; } }
     return best;
