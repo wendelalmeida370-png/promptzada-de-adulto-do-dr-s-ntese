@@ -2,7 +2,7 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 14,
+  "day": 13,
   "pop": 132,
   "peoples": 4,
   "towns": 4,
@@ -10,32 +10,32 @@ G.Ready.list({
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Hedeby",
+   "name": "Mênfis",
    "tier": 3,
-   "pop": 40
+   "pop": 35
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1160750
+  "bytes": 1125182
  },
  "metropole": {
-  "day": 56,
-  "pop": 652,
+  "day": 60,
+  "pop": 868,
   "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Tenochtitlan",
+   "name": "Mênfis",
    "tier": 4,
-   "pop": 125
+   "pop": 117
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 3475787
+  "bytes": 4173122
  },
  "mega": {
   "day": 83,
