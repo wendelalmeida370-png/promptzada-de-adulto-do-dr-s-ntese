@@ -271,7 +271,8 @@
   P3.held = function (v, civ) {
     // (the round the tavern served at the table is in its cup and its bowl — the cup the inventory's, in the hand that drinks —, never a
     // load set down by the seat: the basket of food drawn on the floor of the tavern by each one who drank, D-751)
-    const c = v.carry && v.carry.n > 0 && !(v.task && v.task.type === 'tavern' && v.carry.op && v.carry.op === v.task.op) ? v.carry : null; const gear = !c && v.gear ? v.gear : null;
+    // (and the cups the keeper carries to the table are the cups in his hands — G.Inv.roundOf —, never a load: D-757)
+    const c = v.carry && v.carry.n > 0 && !(v.task && v.task.type === 'tavern' && v.carry.op && v.carry.op === v.task.op) && !(G.Inv && G.Inv.roundOf && G.Inv.roundOf(v)) ? v.carry : null; const gear = !c && v.gear ? v.gear : null;
     if (!c && !gear) return null;
     const key = c ? c : gear; const m = heldMemo.get(v.id);
     if (m && m.key === key && m.n === (c ? c.n : 0) && m.civ === civ) return m.out;
@@ -1039,7 +1040,7 @@
       fr(R[B.faL + k], R[B.shL + k], 0, -AU0 * AK, 0, -el, 0, 0); fr(R[B.elHL + k], R[B.shL + k], 0, -AU0 * AK, 0, -el / 2, 0, 0);
       fr(R[B.hdL + k], R[B.faL + k], 0, -AF0 * AK, 0, k ? 0 : (pose.wristL || 0), 0, 0);
       const onIt = !!PR || (H && H.hands.includes(k ? 'R' : 'L'));
-      const g = (hold && sd > 0) || (k ? !!kR || pose.tool : !!kL || offW > 0.3) || onIt ? 1 : k ? grip : pose.gripL || grip; // (the hands close on what they hold)
+      const g = (hold && sd > 0) || (k ? !!kR || pose.tool : !!kL || offW > 0.3 || (L.cups >= 2 && !!kR && gR === 'copo')) || onIt ? 1 : k ? grip : pose.gripL || grip; // (the hands close on what they hold)
       fr(R[B.fgL + k], R[B.hdL + k], 0, -RIG.knuckle, 0, 0, 0, -sd * g * 0.95);
       fr(R[B.tbL + k], R[B.hdL + k], -sd * 0.0076, -0.0238, 0.0324, 0, -sd * g * 0.55, -sd * g * 0.25);
       // (the thing in the right hand: through the hole of the closed fist — toward the palm, under the knuckles — along the fist's
@@ -1176,7 +1177,7 @@
   }
   function itemFrames(R, L, pose, yaw, s, kR, gR, kL, gL, free) {
     if (!RX.mao) { RX.mao = new THREE.Matrix4(); RX.outra = new THREE.Matrix4(); RX.costas = new THREE.Matrix4(); RX.cinto = new THREE.Matrix4(); RX.cabeca = new THREE.Matrix4(); RX.corpo = new THREE.Matrix4(); RX.alg = new THREE.Matrix4(); RX.x = new THREE.Vector3(); RX.y = new THREE.Vector3(); RX.z = new THREE.Vector3(); }
-    RX.kR = RX.kL = RX.kB = RX.kC = RX.kH = RX.kT = null; RX.kA = 0; if (L.bind) return;
+    RX.kR = RX.kL = RX.kB = RX.kC = RX.kH = RX.kT = null; RX.kA = 0; RX.nCup = 0; if (L.bind) return;
     const inv = L.inv || NO_INV;
     // (what is worn: the helmet on the head bone, the cuirass on the chest's — each made in its bone's frame for a body of
     // 1.75 m (D-387): the bone's frame, with the body's size and a child's bigger head in it, is the thing's, D-349)
@@ -1189,7 +1190,7 @@
     if (kR && !(gR === 'muleta' && !(CR.ok && CR.k === 1))) {
       RX.kR = kR;
       // (22c: the cup held upright — tipped to the mouth only as the drinking works it, pose.tool —; the crutch on its line; the bonds' left ring on the left wrist)
-      if (gR === 'alca' || gR === 'tocha' || (gR === 'copo' && !pose.tool)) { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); }
+      if (gR === 'alca' || gR === 'tocha' || gR === 'lira' || gR === 'tambor' || (gR === 'copo' && !pose.tool)) { V3.a.set(0.027, -0.076, 0).applyMatrix4(R[B.hdR]); uprightAt(RX.mao, V3.a, yaw, s, gR === 'tocha' ? -0.02 : 0); } // (the lyre and the drum held by the peg of their foot, the sounding part up: P7, D-764)
       else if (gR === 'muleta') RX.mao.copy(CR.F);
       else RX.mao.copy(R[B.tool]);
       if (gR === 'algema') { RX.kA = 1; fr(RX.alg, R[B.hdL], -0.027, -0.076, 0, Math.PI / 2 + (pose.tool ? pose.wristL || 0 : 0), 0, 0); M.b.makeTranslation(CUFF_L[0], CUFF_L[1], CUFF_L[2]); RX.alg.multiply(M.b); }
@@ -1201,6 +1202,12 @@
       else if (gL === 'arco' || gL === 'alca') { V3.a.set(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]); uprightAt(RX.outra, V3.a, yaw, s, 0); }
       else fr(RX.outra, R[B.hdL], -0.027, -0.076, 0, Math.PI / 2 + 1.25, 0, 0);
     }
+    // (the round the keeper carries to the table, D-757: the cups of it — L.cups, the inventory's G.Inv.roundOf —, the first in the right
+    // hand, the second in the left, the third and the fourth held with them by their handles, a cup's breadth out)
+    if (kR && gR === 'copo' && L.cups >= 2 && !kL && free) { RX.kCup = kR; RX.nCup = Math.min(4, L.cups) - 1;
+      if (!RX.cups) RX.cups = [new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4()];
+      V3.a.set(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]); uprightAt(RX.cups[0], V3.a, yaw, s, 0);
+      for (let k = 1; k < RX.nCup; k++) { const M0 = k === 1 ? RX.mao : RX.cups[0], sd = k === 1 ? -1 : 1; RX.cups[k].copy(M0); M.b.makeTranslation(sd * 0.095, 0, 0.02); RX.cups[k].multiply(M.b); } }
     // (stowed: what the body keeps on its back and at its belt — and the thing a load took out of the hand, put there)
     let kB = inv.costas, kC = inv.cinto;
     if (inv.mao && !kR && free && !pose.tool && G.Itens) { if (!kB && G.Itens.fits(inv.mao, 'costas')) kB = inv.mao; else if (!kC && G.Itens.fits(inv.mao, 'cinto')) kC = inv.mao; }
@@ -1244,7 +1251,7 @@
     }
   }
   // the things drawn this frame, by the body's level of detail
-  function itemsPut(L) { const lod = L.lod | 0; if (RX.kR) { if (RX.kA) cuffsPut(RX.kR, Math.max(0, Math.min(2, lod))); else itemPut(RX.kR, lod, RX.mao); } if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
+  function itemsPut(L) { const lod = L.lod | 0; for (let k = 0; k < (RX.nCup || 0); k++) itemPut(RX.kCup, lod, RX.cups[k]); if (RX.kR) { if (RX.kA) cuffsPut(RX.kR, Math.max(0, Math.min(2, lod))); else itemPut(RX.kR, lod, RX.mao); } if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
     if (RX.kH) itemPut(RX.kH, lod, RX.cabeca); if (RX.kT) cuirPut(RX.kT, Math.max(0, Math.min(2, lod)), RX.corpo); }
   // (the cuirass: whole, or its body and each of its tabs turned as the thighs push it — the lifts the rig left in RX.lift)
   function cuirPut(key, lod, F) {
@@ -1486,7 +1493,11 @@
       if (A) for (const q of A.pts.slice(0, -1).reverse()) pts.push(ptOf(b, p, pl.fy, q[0], q[1], q[2])); else { P3.ways.straight++; pts.push(D.E); }
       if (B) for (const q of B.pts.slice(1)) pts.push(ptOf(b, p, pl.fy, q[0], q[1], q[2])); else P3.ways.straight++;
     }
-    pts.push([pl.X, pl.Z, pl.Y, pl.lv, onPiece(pl.q) ? 'sit' : '']); return { kind: 'move', b, p, pts: mend(b, p, pl.fy, clean(pts)) };
+    pts.push([pl.X, pl.Z, pl.Y, pl.lv, onPiece(pl.q) ? 'sit' : '']);
+    // (walking out — the world's place is the doorway while one walks there, D-765 —: on through the door to the point before it, where the
+    // world puts one in the street when the walk is over; the door open while one passes)
+    const door = pl.q && pl.q.use === 'saida'; if (door) pts.push(D.O);
+    return { kind: door ? 'door-out' : 'move', b, p, pts: mend(b, p, pl.fy, clean(pts)) };
   }
   // the way out of a building drawn open, by its door: off the place one is at, the plan's walk back to the doorway — or from where
   // one is drawn by the cells —, the point before the door; then the world's way since (w.hist), caught up
@@ -1529,7 +1540,10 @@
     const ib = v.inside > 0 ? v.inside : 0, S = G.S; let w = s.way;
     // (a way whose building is gone, or whose plan is another now — a fire, a rebuilding —: given up, the world's place a jump)
     if (w && (!S.buildings.has(w.b.id) || (w.p && G.Space.planMade && G.Space.planMade(w.b) !== w.p))) { w = s.way = null; s.snap = 1; P3.ways.gone++; }
-    const mk = f => { const r = f(); if (r) { P3.ways.made++; r.d = 0; r.v = undefined; r.len = 0; } return r; };
+    const mk = f => { const r = f(); if (r) { P3.ways.made++; r.d = 0; r.v = undefined; r.len = 0; r.until = untilOf(v); } return r; };
+    // (at the door, walked out: held at the point before it until the world puts one in the street there — then on from there)
+    if (s.atDoor && !(pl && pl.q && pl.q.use === 'saida' && v.inside === s.atDoor.b)) { const was = s.atDoor; s.atDoor = null; if (!pl && v.inside !== was.b) { s.tr = null; s.wb = 0; s.wk = ''; s.wq = null; s.wAt = false; } }
+    if (s.atDoor) { s.sp = 0; s.vx = s.vz = 0; s.acc = 0; s.wayY = s.atDoor.Y; s.waySeat = ''; return true; }
     if (pl) {
       if (s.wb !== ib || s.wk !== pl.k) w = s.way = mk(() => wayTo(s, pl));
       if (s.wb !== ib || s.wk !== pl.k) { s.wb = ib; s.wk = pl.k; s.wq = pl.q; s.wAt = false; }
@@ -1539,8 +1553,12 @@
       w = s.way = b && p && ib !== s.wb ? mk(() => wayOut(s, v, b, p, fy)) : null; s.wb = 0; s.wk = ''; s.wq = null; s.wAt = false;
     } else if (ib && !w && !s.wb && !s.gone && !openSkyOf(ib)) { const b = S.buildings.get(ib); w = s.way = b ? mk(() => wayDoor(s, b)) : null; }
     if (!w) { s.waySeat = ''; return false; }
-    // (walked at the person's own pace in the body's time; the world's way out kept as it goes, for the catch-up)
-    const sp = Math.max(0.8, (v.speed || 1.35) * G.Space.TILE * G.Space.TIME);
+    // (walked at the pace that ends it when the world ends it — the walk in through the door, out to it, to the counter, to the stage, to
+    // the table: In.passage, the errand's t.ww and t.mw, D-765 —: nobody at the place before the world has them there, nobody in the
+    // middle of the room after; with no clock of the world, at the person's own pace (G.Vg.walkMS) in the body's time. The world's way
+    // out kept as it goes, for the catch-up)
+    const own = Math.max(0.6, (G.Vg && G.Vg.walkMS ? G.Vg.walkMS(v) : (v.speed || 1.35) * G.Space.TILE) * G.Space.TIME); let sp = own;
+    if (w.until && w.len) { const left = w.len - w.d, rs = (w.until - S.clock) / G.Space.TIME; sp = rs > 0.05 ? G.clamp(left / rs, 0.35, 3.2) : Math.max(own, 2.2); }
     if (w.hist) { const h = w.hist[w.hist.length - 1], X = v.x * G.Space.TILE, Z = v.y * G.Space.TILE; if (Math.hypot(X - h[0], Z - h[1]) > 0.12) { w.hist.push([X, Z]); if (w.hist.length > 60) w.hist = w.hist.filter((q, i) => i % 2 === 0 || i === w.hist.length - 1); } }
     const more = Anim.walkWay(s, w, s.waySeat ? Math.min(sp, 0.7) : sp, dt); s.wayY = w.Y;
     { let i = 0; while (i < w.pts.length - 2 && w.cum[i + 1] <= w.d) i++; const lv = w.pts[i][3]; if (lv !== undefined && lv >= 0) s.wlv = lv; s.waySeat = more ? w.pts[i + 1][4] || '' : ''; } // (the storey the drawn place is on; on the step onto a seat or off it: sat down, got up)
@@ -1548,7 +1566,8 @@
     // (the way's end: at the place — the view's drawn place begun again there —; out of the door — on along the world's way since —;
     // at a door not drawn open — not drawn any more)
     s.way = null;
-    if (w.kind === 'out') Anim.trackSeed(s, w.hist.concat([[v.x * G.Space.TILE, v.y * G.Space.TILE]]), sp * 1.5);
+    if (w.kind === 'out') Anim.trackSeed(s, w.hist.concat([[v.x * G.Space.TILE, v.y * G.Space.TILE]]), own * 1.5);
+    else if (w.kind === 'door-out') { const e = w.pts[w.pts.length - 1]; s.atDoor = { b: w.b.id, X: e[0], Z: e[1], Y: e[2] }; s.wayY = e[2]; }
     else if (w.kind === 'door') s.gone = 1;
     else { s.tr = null; s.wAt = true; s.wlv = pl ? pl.lv : s.wlv; }
     return true;
@@ -1562,9 +1581,12 @@
     if (!u) { const a = G.Interiors.standFor ? G.Interiors.standFor(pl.b, pl.q, pl.q.x, pl.q.z) : null; if (!a) return pl; const P = ptOf(pl.b, pl.p, pl.fy, a[0], a[1], pl.lv); u = { X: P[0], Z: P[1], Y: P[2] }; UPS.set(key, u); if (UPS.size > 400) UPS.delete(UPS.keys().next().value); }
     return Object.assign({}, pl, { X: u.X, Z: u.Z, Y: u.Y, k: pl.k + '^', st: 'idle', q: Object.assign({}, pl.q, { it: null, x: u.X - pl.b.x * G.Space.TILE, z: u.Z - pl.b.y * G.Space.TILE }) });
   }
+  function untilOf(v) { const S = G.S; const P = G.Interiors && G.Interiors.passage ? G.Interiors.passage(v) : null; if (P && P.until > S.clock) return P.until;
+    const t = v.task; if (t) { if (t.ww > S.clock) return t.ww; if (t.mw > S.clock) return t.mw; } return 0; }
+  P3.untilOf = untilOf; // (for the proofs)
   const B3open = id => !!(G.Build3D && G.Build3D.isOpen && G.Build3D.isOpen(id));
   const openSkyOf = id => !!(G.Build3D && G.Build3D.openShell && G.Build3D.openShell(id));
-  P3.wayOf = id => { const s = vis.get(id); return s && s.way ? { kind: s.way.kind, b: s.way.b.id, pts: s.way.pts.map(q => q.slice()), d: s.way.d, len: s.way.len } : null; }; // (for the proofs)
+  P3.wayOf = id => { const s = vis.get(id); return s && s.way ? { kind: s.way.kind, b: s.way.b.id, pts: s.way.pts.map(q => q.slice()), d: s.way.d, len: s.way.len, until: s.way.until || 0 } : null; }; // (for the proofs)
   const NEAR = [], NEARP = [], INS = [], DRAWN = [], DRAWNP = []; const byD2 = (a, b) => a[0] - b[0]; let frameNo = 0, vt = 0;
   const IN_REACH = 60; // (metres: how far inside its building someone's place can be from where the world has them — the biggest lot, and more)
   const visAt = id => vis.get(id);
@@ -1700,7 +1722,7 @@
       // (a jump of the world — a teleport, a load — is not a step: the feet stand where they land)
       if (Math.hypot(s.X - pX, s.Z - pZ) > 3) { s.plant[0].on = s.plant[1].on = 0; s.plant[0].step = s.plant[1].step = null; }
       // (at the place: the place's turn — or, standing up to brawl, turned to the other one)
-      const atPl = !!pl && !wayOn && s.sp < 0.2; const foeAt = atPl && s.ap && s.ap.up && s.ap.with ? visAt(s.ap.with) : null;
+      const atPl = !!pl && !wayOn && s.sp < 0.2; const foeAt = atPl && s.ap && s.ap.up && s.ap.with ? visAt(s.ap.with) : atPl && v.task && v.task.type === 'atender' && v.task.near ? visAt(v.task.near) : null; // (the keeper at the table: turned to the one he serves, D-757)
       Anim.face(s, v, foeAt ? { yaw: Math.atan2(foeAt.Z - s.Z, foeAt.X - s.X) } : atPl || (wayOn && s.waySeat === 'sit' && pl) ? pl : null, dt);
       s.t += dt * G.Vida3D.tempo(v); // (the breath and the weight shifts at each one's own pace)
       const Lv = fresh ? lookFill(s.L, v) : s.L; const dtA = fresh ? s.dtA : 0; if (fresh) s.dtA = 0;

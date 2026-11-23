@@ -104,11 +104,27 @@
     { shRp: -54, shRr: -26, elR: 70, shRy: 26, neck: 8, headR: 8, talk: 0.25, lean: 10, twist: -10 },
     { shRp: -36, shRr: -8, elR: 90, shLp: -42, shLr: 22, elL: 58, shRy: 6, neck: 2, headR: -2, talk: 0.7, lean: 6, twist: 4 },
     { shRp: -46, shRr: -18, elR: 74, shLp: -26, shLr: 10, elL: 62, shRy: 14, neck: 10, headR: 6, talk: 0.3, lean: 9, twist: -4 }), { in: 0.45, out: 0.5 });
-  // (the song with an instrument in the hands, seated — the instrument the inventory's, never mimed: P7's; the left hand up its neck,
-  // the right strumming at its belly, the head bent to the strings, a sway)
-  c('tocar-sentado', 1.2, U, loopOf(
-    { shLp: -52, shLr: 6, elL: 74, gripL: 0.8, shRp: -29, shRr: -9, elR: 70, grip: 0.6, neck: 9, lean: 4, twist: -3 },
-    { shLp: -52, shLr: 6, elL: 74, shRp: -31, shRr: -9, elR: 86, neck: 11, lean: 5, twist: 3 }), { item: { hand: 'mao', two: true }, noMirror: true });
+  // (P6, D-758: the song of the tavern with the instrument in the hands — the inventory's, G.Inv.held: the lyre, the drum of the Aztecs,
+  // P7's, D-764; never mimed —, the top of the body only: on one's feet on the stage, or over the seat. The instrument is held by the
+  // peg of its foot in the right hand, upright, as the cup is — the right hand of everyone: no twin, as the cup's)
+  // (the lyre: the fist round its peg before the belly, the box at the chest, the arms and the yoke to the chin; the left hand over the
+  // strings, plucking — the fingers open and close, the wrist lifts —, the head bent to them)
+  const LYRE_R = at(1, 'barriga', { elR: -12, shRp: -8 }), PLUCK = (e, g) => mix(at(-1, 'peito', { shLp: -24, elL: -38 + e }), { gripL: g });
+  c('tocar-lira', 1.6, U, loopOf(
+    mix(LYRE_R, PLUCK(0, 0.25), { grip: 1, neck: 12, headR: -6, lean: 3 }), mix(LYRE_R, PLUCK(6, 0.65), { grip: 1, neck: 14, headR: -8 }),
+    mix(LYRE_R, PLUCK(-4, 0.3), { grip: 1, neck: 12, headR: -5, twist: 3 }), mix(LYRE_R, PLUCK(8, 0.7), { grip: 1, neck: 13, headR: -7, twist: -2 })), { item: { hand: 'mao' }, noMirror: true });
+  // (the drum: the fist round its foot low before the right hip, the hide at the chest; the left hand comes down on the hide and up
+  // again, twice a beat, the trunk with it)
+  const DRUM_R = { shRp: -14, shRr: -12, elR: 24, shRy: 18, grip: 1 }, BEAT = (h, k) => mix(at(-1, 'peito', { shLp: -18 - h, elL: -30 - h * 0.6, shLy: -12 }), { gripL: 0.15, lean: 4 + k, neck: 8 });
+  c('tocar-tambor', 0.9, U, [[0, mix(DRUM_R, BEAT(18, 0))], [0.18, mix(DRUM_R, BEAT(0, 2))], [0.32, mix(DRUM_R, BEAT(12, 1))], [0.5, mix(DRUM_R, BEAT(0, 2))], [0.75, mix(DRUM_R, BEAT(18, 0))], [1, mix(DRUM_R, BEAT(18, 0))]], { item: { hand: 'mao' }, noMirror: true, events: { contact: 0.18 } });
+  // (the brawl of the tavern with the fists (P6, D-759): on guard, the right jab, the guard, the left jab, the hook, the weight going
+  // with each — the blows of the fists of the combat, of no weapon: the world's 'shove' between two at a table, drawn so)
+  const GUARD = { shRp: -66, shRr: -8, elR: 132, shLp: -68, shLr: 10, elL: 132, grip: 1, gripL: 1, lean: 12, neck: 10, twist: -6 };
+  c('briga-socos', 2.4, U, [[0, GUARD], [0.12, mix(GUARD, { shRp: -92, elR: 8, twist: 16, lean: 16 })], [0.24, GUARD], [0.42, mix(GUARD, { shLp: -92, elL: 8, twist: -20, lean: 16 })], [0.54, GUARD],
+    [0.7, mix(GUARD, { shRp: -60, shRr: -62, elR: 92, twist: -32 })], [0.8, mix(GUARD, { shRp: -86, shRr: 22, elR: 85, twist: 32, lean: 16 })], [0.92, GUARD], [1, GUARD]], { events: { contact: 0.12 } });
+  // (the keeper with the round's cups in the hands, on his way to the table: both forearms before the belly, the fists up — the arms
+  // only, over the stride)
+  c('levar-canecas', 2, ARMS, loopOf({ shRp: -24, shRr: -6, elR: 86, grip: 1, shLp: -24, shLr: 6, elL: 86, gripL: 1 }, { shRp: -26, shRr: -6, elR: 84, shLp: -26, shLr: 6, elL: 84 }));
   // (the child at play between two runs: the arms swinging loose, the head turning to the others, a little hop of the shoulders)
   c('brincar', 1.4, U, loopOf({ shLp: -30, shRp: 20, shLr: 24, shRr: -24, elL: 40, elR: 30, lean: -4, neck: -8, lookY: -16, twist: 10 }, { shLp: 20, shRp: -30, shLr: 24, shRr: -24, elL: 30, elR: 40, lean: 2, neck: -4, lookY: 16, twist: -10 }));
   // ============================== the society's own acts, posed alone for now ==============================
