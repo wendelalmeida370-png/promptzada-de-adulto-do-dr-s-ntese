@@ -119,7 +119,7 @@ if (on('d5')) {
   // to the one served —, the musician with the instrument in the hands (and nobody playing without one), the walks in and out by the
   // world's clock (In.passage, the errand's t.ww and t.mw: nobody at the place before the world, nobody mid-room after), the door open
   // for whoever the view draws passing it
-  open(0.665); const b = tavern(); FOCUS = { X: (b.x + b.w / 2) * TL, Z: (b.y + b.h / 2) * TL };
+  open(0.70); const b = tavern(); FOCUS = { X: (b.x + b.w / 2) * TL, Z: (b.y + b.h / 2) * TL };
   const plan = In.plan(b), e = plan.entrance, E = [b.x * TL + e.x, b.y * TL + e.z]; const V3 = G.Vida3D;
   const seen = { keeper: 0, keeperCup: 0, keeperBasket: 0, keeperTurned: 0, keeperAt: 0, music: 0, musicWith: 0, musicMimed: 0, ways: 0, early: 0, late: 0, doorShut: 0, self: 0 }; const W = new Map(), out = [];
   // (and a musician for certain: the proof's hand does what the tavern's night does — one of the tables up to the stage of the plan, a
@@ -141,15 +141,15 @@ if (on('d5')) {
       if (v.inside !== b.id) continue;
       const t = v.task;
       if (t && t.type === 'atender' && G.Inv.roundOf(v)) { seen.keeper++; const cup = s.L.inv && s.L.inv.mao && G.Itens.def(s.L.inv.mao).kind === 'caneca'; if (cup) seen.keeperCup++; if (s.L.held) seen.keeperBasket++;
-        if (t.near && s.ap && !s.way && s.sp < 0.2) { seen.keeperAt++; const o = P3.visOf(t.near); if (o) { let da = Math.atan2(o.Z - s.Z, o.X - s.X) - s.yaw; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI; if (Math.abs(da) < 0.6) seen.keeperTurned++; } } }
+        if (t.near && s.ap && !s.way && s.sp < 0.2) { seen.keeperAt++; if (s.ap.st === "levar-canecas" || s.ap.st === "fam-pedido") seen.keeperHolds = (seen.keeperHolds || 0) + 1; if ((P3.tools() || []).some(q => /^caneca/.test(q[0]))) seen.cupDrawn = (seen.cupDrawn || 0) + 1; const o = P3.visOf(t.near); if (o) { let da = Math.atan2(o.Z - s.Z, o.X - s.X) - s.yaw; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI; if (Math.abs(da) < 0.6) seen.keeperTurned++; } } }
       if (v.act === 'play' && s.ap && !s.way) { const ins = V3.instrument(s.L), g = s.ap.over || s.ap.st; seen.music++; if (ins && (g === 'tocar-lira' || g === 'tocar-tambor')) seen.musicWith++; if (!ins && (g === 'tocar-lira' || g === 'tocar-tambor' || g === 'strum')) seen.musicMimed++; }
       if (t && t.type === 'tavern' && t.st === 7 && s.ap && s.ap.st === 'ato-servir') seen.self++;
     }
   }
-  out.push(`a taverna ${b.id} às ${(G.S.time * 24).toFixed(1)} h: o taverneiro com a rodada ${seen.keeper} amostras — com a caneca na mão ${seen.keeperCup}, com uma carga desenhada ${seen.keeperBasket}; à mesa ${seen.keeperAt}, virado para o freguês ${seen.keeperTurned}`);
+  out.push(`a taverna ${b.id} às ${(G.S.time * 24).toFixed(1)} h: o taverneiro com a rodada ${seen.keeper} amostras — com a caneca na mão ${seen.keeperCup}, com uma carga desenhada ${seen.keeperBasket}; à mesa ${seen.keeperAt}, virado para o freguês ${seen.keeperTurned}, com as canecas diante de si ${seen.keeperHolds || 0}, canecas desenhadas ${seen.cupDrawn || 0}`);
   out.push(`o músico${mus ? " (#" + mus.id + ", pela mão da prova)" : " (nenhum)"} ${seen.music} amostras — tocando o instrumento que tem ${seen.musicWith}, tocando sem ele ${seen.musicMimed}`);
   out.push(`${seen.ways} caminhos com o relógio do mundo: ${seen.early} chegaram antes, ${seen.late} depois; na soleira com a porta fechada ${seen.doorShut} quadros; servindo-se no balcão ${seen.self}`);
-  const good = seen.keeperBasket === 0 && seen.keeperCup === seen.keeper && seen.keeperTurned >= Math.floor(seen.keeperAt * 0.8) && seen.musicMimed === 0 && seen.musicWith >= Math.floor(seen.music * 0.98) && seen.early === 0 && seen.late === 0 && seen.doorShut === 0 && seen.ways > 0 && (!mus || seen.music > 0);
+  const good = seen.keeperBasket === 0 && seen.keeperCup === seen.keeper && seen.keeperTurned >= Math.floor(seen.keeperAt * 0.8) && (seen.keeperHolds || 0) >= Math.floor(seen.keeperAt * 0.8) && (seen.cupDrawn || 0) >= Math.floor(seen.keeperAt * 0.8) && seen.musicMimed === 0 && seen.musicWith >= Math.floor(seen.music * 0.98) && seen.early === 0 && seen.late === 0 && seen.doorShut === 0 && seen.ways > 0 && (!mus || seen.music > 0);
   ok('d5 a taverna da noite no desenho: as canecas do taverneiro, o músico com o instrumento, a caminhada no relógio do mundo, a porta aberta', good, out.join(' · '));
 }
 if (on('d4')) {
