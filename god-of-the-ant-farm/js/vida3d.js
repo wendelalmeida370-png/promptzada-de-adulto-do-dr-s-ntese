@@ -108,8 +108,8 @@
     if (v.act === 'play') { const k = V3.instrument(L); a = k === 'tambor' && has('tocar-tambor') ? 'tocar-tambor' : k && has('tocar-lira') ? 'tocar-lira' : 'ato-atuar'; }
     // (the brawl of the tavern — the world's 'shove' between two of the brawl, D-759 —: the fists, and now and then the shove itself, by the
     // world's clock and the id — the same brawl from any eye)
-    // (the keeper handing the round over at the table: the cups held out to the one served — D-757)
-    if (v.act === 'give' && L && L.cups > 0 && v.task && v.task.type === 'atender' && has('fam-pedido')) a = 'fam-pedido';
+    // (the keeper with the round at the table: the cups before him, and held out to the one served as he hands them over — D-757)
+    if (L && L.cups > 0 && v.task && v.task.type === 'atender') a = v.act === 'give' && has('fam-pedido') ? 'fam-pedido' : has('levar-canecas') ? 'levar-canecas' : a;
     if (v.act === 'shove' && G.Taverna && G.Taverna.brawling && G.Taverna.brawling(v) && has('briga-socos')) a = Math.floor(((G.S.clock || 0) + (v.id % 7) * 0.37) / 2.4) % 3 === 2 && has('ato-empurrar') ? 'ato-empurrar' : 'briga-socos';
     let C = Anim.CLIPS && Anim.CLIPS[a];
     // (the brawl with nothing in the hand is the fists' — a weapon only where the inventory puts one there)

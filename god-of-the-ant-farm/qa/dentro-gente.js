@@ -83,7 +83,7 @@ if (on('d1') || on('d2')) {
   }
 }
 if (on('d3')) {
-  const V3 = G.Vida3D, out = [], bad = [];
+  const V3 = G.Vida3D, out = [], bad = []; if (!G.S || !G.S.villagers) open(0.665); // (alone: the world of the d1)
   // (one grown person, seated at a place of the proof's own, given the round of the house on a copy — the cup is the inventory's:
   // G.Inv.held; a load that is not the round empties the hands, and the gesture is not made)
   const v = [...G.S.villagers.values()].filter(o => o.age >= 18 && o.age < 60 && !o.captive && !o.jail && !o.aboard && !(o.equip && o.equip.kit) && !(o.lost && (o.lost.armL || o.lost.armR))).sort((a, c) => a.id - c.id)[0];
