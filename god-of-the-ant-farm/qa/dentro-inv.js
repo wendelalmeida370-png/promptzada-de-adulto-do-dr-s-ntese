@@ -96,6 +96,9 @@
         } else if (t.on === 'parede') {
           const d = faceDist(p, t.lv, t.x, t.z); if (d > m.d / 2 * sz + 0.1) out.push([3, `${what} longe da parede (${d.toFixed(2)} m)`, b.id]);
           if (d < -0.01) out.push([3, `${what} dentro da parede`, b.id]);
+          // (and clear of the stairs along the wall and of a piece that stands as high as it, before it)
+          if (p.stairs.some(st => (st.lv0 === t.lv || st.lv1 === t.lv) && ovR(R, st.r, -0.02))) out.push([3, `${what} sobre uma escada`, b.id]);
+          for (const it of p.items) if (it.lv === t.lv && !it.fire && ovR(R, it.r, -0.02) && t.y < l.y + (it.y || 0) + it.h - 0.02) { out.push([3, `${what} dentro de ${it.kind}`, b.id]); break; }
         } else if (t.on === 'teto' || t.on === 'canto') {
           let ceil = p.shell && Number.isFinite(p.shell.eave) ? p.shell.eave : Infinity; for (const q of p.levels) if (q.y > l.y + 0.5 && (q.areas || [q.area]).some(r => r && t.x > r[0] && t.x < r[2] && t.z > r[1] && t.z < r[3])) ceil = Math.min(ceil, q.y);
           const top = t.y + m.h * t.s[1]; if (Math.abs(top - ceil) > 0.12) out.push([3, `${what} pendurado a ${top.toFixed(2)} m sem teto ali (${ceil === Infinity ? 'nenhum' : ceil.toFixed(2)})`, b.id]);
