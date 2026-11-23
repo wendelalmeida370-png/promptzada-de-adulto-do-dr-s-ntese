@@ -58,6 +58,8 @@
     L.inv = invOf(v, L);
     // (22a: a hand lost holds nothing — the stump is drawn, D-555; what it held is not drawn floating where the hand was)
     const lo = v.lost; if (lo && (lo.armL || lo.armR)) { const k = L._lostOf; if (!k || k.src !== L.inv) L._lostOf = { src: L.inv, inv: Object.assign({}, L.inv, { mao: lo.armR ? null : L.inv.mao, outra: lo.armL ? null : L.inv.outra }) }; L.inv = L._lostOf.inv; }
+    // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
+    if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
     if (L.held) { if (P3.BUSY_HANDS.has(v.act) || v.sleeping) L.held = P3.setDown(L.held); if (L.held.hands.includes('L')) { L.torch = false; L.lantern = false; } }
     L.reach = null; L.pair = null; L.bind = false;
@@ -116,6 +118,57 @@
   P3.dressOf = v => (G.Atmos && G.Atmos.dress ? G.Atmos.dress(v) : DRESS0);
   const IRIS = ['#4a3020', '#5a3a22', '#3a2a1a', '#4a6a8a', '#5a7a9a', '#6a7a5a', '#7a6a3a'];
   const HAIRS = { m: ['curto', 'curto', 'rabo', 'longo', 'curto'], f: ['trancas', 'coque', 'longo', 'trancas', 'coque'] };
+  // ------------------------------ under a roof, in bed (P6, D-754) ------------------------------
+  // The hat comes off indoors — the sun's straw hat, the cap, the hood one walks in, the helmet — and everything on the head in bed;
+  // a kerchief, a priest's hood and an order's, and the signs of an office (the laurel, the crown, the nemes, the feathers) stay on
+  // awake; the helmet of one at their post (G.Atmos.dress: duty) stays on. What the world says: under a roof (v.inside), asleep
+  const OFF_IN = { chapeu: 1, gorro: 1, capuz: 1, elmo: 1, galea: 1 };
+  const headOff = D => D.bed || (D.inside && !D.duty);
+  Lk.headOff = headOff;
+  function hatIndoors(o, D, v) {
+    if (!o.hatM) return; if (D.bed) { o.hatM = null; return; }
+    if (!D.inside || !OFF_IN[o.hatM]) return;
+    if ((o.hatM === 'elmo' || o.hatM === 'galea') && D.duty) return;
+    if (o.hatM === 'capuz' && (v.robe || v.role === 'sacerdote' || v.role === 'contrabandista')) return; // (an order's hood, the smuggler's)
+    o.hatM = null;
+  }
+  // ------------------------------ the colour of the trade, the house's dye, the hair (P6, D-755, D-756) ------------------------------
+  // The trade shows where it would: the sash at the waist dyed the trade's colour (the god's, Art.CLOTH — a trade the god has no
+  // colour for, one of the old dyes by the trade's name: the madder, the woad, the weld, the walnut, the kermes…), the apron of the
+  // trades of the hands; the linen of the south and of the Nile a little whiter or creamier by the person; and the dye as strong as the
+  // house can pay now (G.Atmos.dress: rich — washed out in a poor house, deep in a rich one, with the woven band and the beads).
+  // The hair: four or five ways of each people, by the age, the standing, the marriage and the work of the hands — the one of those
+  // the person's id picks: never a roll
+  const DYES = ['#a8442e', '#3f5f9a', '#c8a43c', '#6a4a2e', '#8a2a3a', '#4a7a4a', '#b8783a', '#5a4a7a', '#2f7a7a', '#9a6a2a'];
+  const roleDye = role => { if (G.Art && G.Art.CLOTH && G.Art.CLOTH[role]) return G.Art.CLOTH[role]; let h = 0; for (const c of role || '') h = (h * 31 + c.charCodeAt(0)) >>> 0; return DYES[G.hash(h % 100003) * DYES.length | 0]; };
+  Lk.roleDye = roleDye;
+  const WASH = [0.6, 0.4, 0.2, 0.05]; // (how much of the undyed thread shows in the dye, by how well off the house is)
+  const LINEN = ['#f1ead6', '#ece2c8', '#f4efe2', '#e8dcc0', '#efe6d2'];
+  const HANDS_T = new Set(['ferreiro', 'acougueiro', 'taverneiro', 'oleiro', 'feirante', 'salgador', 'foguista', 'apicultor', 'tecelao', 'sericultor', 'salineiro', 'construtor', 'vinhateiro']);
+  // (the ways of the hair, by people and sex: [style, the causes that ask for it — an age band (a: [min, max]), the standing (hi: noble,
+  // merchant, priest; a well-off house), the married (wed), the work of the hands (work)] — those of a person's causes, the id picks)
+  const HAIRWAYS = {
+    egipcio: { f: [['peruca', { hi: 1 }], ['chanel', {}], ['trancas', {}], ['longo', { a: [12, 24] }], ['rabo', { work: 1 }]],
+      m: [['curto', {}], ['chanel', {}], ['peruca', { hi: 1 }], ['careca', { a: [30, 99] }], ['rabo', { a: [14, 26] }]] },
+    grego: { f: [['coque', { wed: 1 }], ['trancas', {}], ['longo', { a: [12, 22] }], ['rabo', { work: 1 }], ['coque', { a: [35, 99] }]],
+      m: [['curto', {}], ['longo', { a: [40, 99] }], ['curto', {}], ['rabo', { a: [14, 28] }]] },
+    romano: { f: [['coque', { wed: 1 }], ['coque', { hi: 1 }], ['trancas', {}], ['longo', { a: [12, 20] }], ['rabo', { work: 1 }]],
+      m: [['curto', {}], ['curto', {}], ['chanel', { a: [14, 24] }]] },
+    classico: { f: [['coque', { wed: 1 }], ['trancas', { a: [12, 28] }], ['longo', { a: [12, 22] }], ['rabo', { work: 1 }], ['coque', {}]],
+      m: [['curto', {}], ['curto', {}], ['rabo', { a: [14, 30] }], ['longo', { a: [40, 99] }]] },
+    nordico: { f: [['trancas', {}], ['longo', { a: [12, 22] }], ['coque', { wed: 1 }], ['rabo', { work: 1 }], ['trancas', { a: [12, 30] }]],
+      m: [['longo', {}], ['rabo', {}], ['curto', {}], ['trancas', { a: [16, 40] }], ['longo', { a: [40, 99] }]] },
+    asteca: { f: [['trancas', {}], ['coque', { wed: 1 }], ['longo', { a: [12, 22] }], ['rabo', { work: 1 }], ['trancas', { a: [12, 30] }]],
+      m: [['chanel', {}], ['chanel', {}], ['longo', { a: [30, 99] }], ['rabo', { a: [16, 40] }]] },
+  };
+  function hairWay(civ, fem, ad, hi, wed, work, k) {
+    const W = HAIRWAYS[civ]; if (!W) return null; const L = W[fem ? 'f' : 'm'];
+    const ok = L.filter(([, c]) => (!c.a || (ad >= c.a[0] && ad <= c.a[1])) && (!c.hi || hi) && (!c.wed || wed) && (!c.work || work));
+    // (a cause of one's own counts double against the plain ways: the married woman's bun, the noble's wig)
+    const w = ok.map(([, c]) => (c.hi || c.wed || c.work ? 2 : 1)); const tot = w.reduce((a, b) => a + b, 0); if (!tot) return null;
+    let x = k * tot; for (let i = 0; i < ok.length; i++) { x -= w[i]; if (x < 0) return ok[i][0]; } return ok[ok.length - 1][0];
+  }
+  Lk.HAIRWAYS = HAIRWAYS;
   function outfitOf(v, L, fac) {
     const S = G.S; const id = v.id || 0; const now = S ? S.clock : 0;
     const civ = (fac && fac.civ) || v._civ || v.civ || 'nordico'; const CV = (G.CIVS && G.CIVS[civ]) || {};
@@ -125,7 +178,7 @@
     // (what the world says besides: the standing, the people's arts, the house's furs and jewels, the cold — one code)
     const D = P3.dressOf(v);
     const inv = L.inv || P3.NO_INV, worn = `${inv.cabeca || ''}/${L.cuir ? inv.corpo : ''}`; // (what the inventory puts on the head and the trunk)
-    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}|${worn}|${D.code}`;
+    const sig = `${v.role}|${Math.floor(v.age)}|${civ}|${v.captive ? 1 : 0}|${ruler ? 1 : 0}|${wealth}|${v.robe || ''}|${v.unmask ? 1 : 0}|${v.g}|${L.cloth}|${L.hair}|${worn}|${v.partner ? 1 : 0}|${D.code}`;
     let o = OUT.get(id); if (o && o.sig === sig) return o;
     o = { sig, t: now };
     const hh = k => G.hash(id * 13 + k * 7919); // (this person's own coin flips, always the same)
@@ -198,6 +251,30 @@
       // (the helmet is of the metal the people forge: bronze, then iron — the Greek's stays of bronze —; before the bronze,
       // no helmet of metal: a cap of hide in the north, a bare head elsewhere)
       if (role === 'guerreiro' && (o.hatM === 'elmo' || o.hatM === 'galea')) { if (D.metal === 0) { o.hatM = civ === 'nordico' ? 'gorro' : null; o.hat = HIDE[Math.floor(hh(47) * HIDE.length)]; } else o.hat = D.metal >= 2 && civ !== 'grego' ? METAL.iron : METAL.bronze; }
+    }
+    // (P6, D-755, D-756: the colour of the trade where it shows, the dye as strong as the house can pay now — where the people weave
+    // and dye at all —, and the hair of the person's causes; one dressed by an office keeps the office's dress)
+    if (!kid && !v.captive) {
+      const office = role === 'sacerdote' || role === 'guerreiro' || role === 'anciao' || role === 'escriba' || !!v.robe;
+      if (!office && D.weave) {
+        const R = D.rich, raw = RAW[Math.floor(hh(44) * RAW.length)], dye = mixHex(wool(roleDye(role)), raw, WASH[R]);
+        // (the linen of the Nile as it comes, whiter or creamier; a house well off dyes it a little — the red, the blue-green of its sheaths)
+        if (civ === 'egipcio') { o.cloth = LINEN[Math.floor(hh(49) * LINEN.length)]; if (R >= 2 && fem) o.cloth = mixHex(o.cloth, ['#b8402a', '#2f8f8a', '#c8a040', '#3a6ab0'][Math.floor(hh(51) * 4)], R >= 3 ? 0.42 : 0.24); }
+        // (the wool and the linen of the south: undyed — the fleece's own cream, grey or brown — in a poor house; the trade's colour as the
+        // house can pay it, deeper the richer)
+        else if (civ === 'grego' || civ === 'romano' || civ === 'classico') o.cloth = R === 0 ? mixHex(raw, CV.cloth || '#efe9dc', 0.35) : mixHex(CV.cloth || '#efe9dc', wool(base), [0, 0.34, 0.5, 0.66][R]);
+        else if (civ === 'nordico') { if (o.overK === 1) o.over = mixHex(o.over, raw, WASH[R]); else o.cloth = mixHex(o.cloth, raw, WASH[R]); }
+        // (the apron of the trades of the hands where nothing is worn over the tunic — the smith's leather and the potter's clay keep theirs —,
+        // the dyed sash of the others)
+        if (HANDS_T.has(role) && o.overK === 0) { o.overK = 2; o.over = dye; o.sleeve = Math.min(o.sleeve, 0.42); }
+        else if (o.overK !== 2 && grp !== 'artesaos') { o.belt = dye; o.beltH = 0.026; } // (narrower than the broad leather belt of the craftsman, D-163)
+        if (R >= 2) o.motif = 1;
+        if (civ === 'egipcio' || civ === 'asteca') o.beads = R >= 1 ? ['#2f8f8a', '#3a6ab0', '#b8402a', '#c8a040'][Math.floor(hh(50) * 4)] : '#8a7a5a';
+      }
+      if (!(civ === 'egipcio' && role === 'sacerdote')) {
+        const hi = (D.rich >= 3 && ad >= 18) || ((grp === 'nobreza' || grp === 'mercadores' || grp === 'sacerdotes') && !odd);
+        const hw = hairWay(civ, fem, ad, hi, !!v.partner, HANDS_T.has(role), hh(48)); if (hw) o.hairM = hw;
+      }
     }
     // (the standing among one's people, within the people's own dress)
     o.rank = 0;
@@ -287,6 +364,7 @@
     // (what is worn over the clothes, from the inventory (G.Inv.held, D-346): a helmet takes the hat's place and the hair under
     // it — every hair of the body would show through a helmet that fits the head, D-350; a cuirass goes over the tunic, and
     // the blouse, the toga and the cloak, whose yokes hug the trunk, are not worn over it)
+    hatIndoors(o, D, v); // (under a roof, in bed: D-754)
     if (inv.cabeca) { o.hatM = null; o.hairM = null; }
     if (L.cuir) { o.topM = null; if (o.cloakM) { o.cloakM = null; o.fur = 0; } }
     // (nobody naked: the hips always under a skirt, a kilt or trousers — and no cloth the colour of its wearer's skin: a linen

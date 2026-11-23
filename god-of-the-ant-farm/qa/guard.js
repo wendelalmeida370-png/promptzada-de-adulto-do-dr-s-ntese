@@ -1864,5 +1864,23 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
     if (/writeFileSync\([^)]*oldsave_/.test(c)) fails.push(`o save antigo das provas é fixo: qa/${f}:${k + 1} escreve um oldsave_ dentro de qa/ (o qa/oldsave_7.json é só lido: L-1715)`); });
   let o = null; try { o = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8')); } catch (e) { fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json não abre (' + e.message.slice(0, 60) + ')'); }
   if (o && (o.oresV || (o.ores || []).some(q => q.kind === 'cobre' || q.kind === 'estanho'))) fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json já tem as jazidas do bronze — um save novo no lugar do antigo (L-1715; o de antes está no 580a920)'); }
+// === os interiores 2.0, P6: as pessoas dentro, no desenho (300–309) ===
+// 300. "dentro, anda-se pela planta" (D-750, D-753): quem o mundo tem dentro de um prédio aberto é desenhado chegando, saindo e
+// trocando de lugar pelo caminho da planta — o caminho da porta (Interiors.pathIn) e o das células pela regra do corpo
+// (Interiors.passable) —, e o Anim.track só anda quem não tem caminho; nenhum desenho de dentro em linha reta pelos móveis e paredes
+{ const p3 = (src['people3d.js'] || []).join('\n');
+  if (!/const wayOn = wayStep\(s, v, pl, dt\); if \(!wayOn\) Anim\.track\(/.test(p3)) fails.push('dentro, anda-se pela planta: o People3D não anda quem tem caminho pelo caminho (wayStep antes do Anim.track, D-750)');
+  if (!/In\.pathIn\(b, pl\.q\)/.test(p3) || !/In\.passable\(p, lv, x, z\)/.test(p3)) fails.push('dentro, anda-se pela planta: o caminho do desenho não é o da planta (Interiors.pathIn, Interiors.passable — D-750)'); }
+// 301. "o ato por cima do lugar" (D-751): o estado de quem está no seu lugar dentro vem do leitor (G.Vida3D.atPlace: o gesto do ato
+// por cima da postura do lugar) — nunca o estado do lugar sozinho —, e um gesto com coisa na mão só se faz com a coisa na mão
+// (G.Inv.held: a caneca, o instrumento — nunca de mentira)
+{ const p3 = (src['people3d.js'] || []).join('\n'), v3 = (src['vida3d.js'] || []).join('\n');
+  if (!/s\.ap = G\.Vida3D\.atPlace\(v, pl, Lv, s\.ap \|\| \{\}\)/.test(p3) || /let st = pl && s\.sp < 0\.2 \? pl\.st/.test(p3)) fails.push('o ato por cima do lugar: o People3D desenha só o lugar de quem está dentro (G.Vida3D.atPlace, D-751)');
+  if (!/if \(C && C\.item && !\(L && L\.inv && L\.inv\[/.test(v3)) fails.push('o ato por cima do lugar: o gesto com coisa na mão não pergunta se a mão tem a coisa (G.Inv.held, D-751)'); }
+// 302. "debaixo de um teto, sem chapéu" (D-754): o que o G.Atmos.dress lê diz se a pessoa está debaixo de um teto, na cama e no seu
+// posto, e a roupa (look3d.js) tira por ele o chapéu, o gorro, o capuz e o elmo — e tudo na cama —, e o elmo do inventário também
+{ const at = (src['atmos.js'] || []).join('\n'), lk = (src['look3d.js'] || []).join('\n');
+  if (!/if \(v\.inside > 0\) c \|= 2048;/.test(at) || !/if \(v\.sleeping\) c \|= 4096;/.test(at)) fails.push('debaixo de um teto, sem chapéu: o G.Atmos.dress não diz o teto e a cama (D-754)');
+  if (!/hatIndoors\(o, D, v\);/.test(lk) || !/L\.inv\.cabeca && headOff\(P3\.dressOf\(v\)\)/.test(lk)) fails.push('debaixo de um teto, sem chapéu: a roupa não tira o chapéu e o elmo debaixo de um teto e na cama (D-754)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
