@@ -883,7 +883,7 @@ ${GXAIR}`;
     const out = []; if (!renderer || !R3.on) return out;
     const bad = v => !Number.isFinite(v);
     for (const k in LT) if (LT[k].some(bad)) out.push(`luz: ${k} não é número`);
-    for (const k in GX) { const v = GX[k].value; if (!v || v.isTexture) continue; if (bad(v.x) || bad(v.y) || bad(v.z) || bad(v.w)) out.push(`ar: ${k} não é número`); } // (the pictures of the flames' light are pictures, not numbers)
+    for (const k in GX) { const v = GX[k].value; if (!v || v.isTexture) continue; if (ArrayBuffer.isView(v) ? v.some(bad) : bad(v.x) || bad(v.y) || bad(v.z) || bad(v.w)) out.push(`ar: ${k} não é número`); } // (the pictures of the flames' light are pictures, not numbers; the insides' slots and lamps are lists of numbers, each one looked at: L-1806)
     const e = renderer.toneMappingExposure; if (bad(e) || e < 0.5 || e > 3) out.push(`exposição fora do lugar: ${e}`);
     if (bad(sun.intensity) || sun.intensity < 0 || sun.intensity > 4) out.push(`luz principal com intensidade ${sun.intensity}`);
     const s = skyU.sunDir.value.y; if (s > 0.1 && skyU.keyDir.value.dot(skyU.sunDir.value) < 0.999) out.push('de dia, a luz principal não é o sol');
