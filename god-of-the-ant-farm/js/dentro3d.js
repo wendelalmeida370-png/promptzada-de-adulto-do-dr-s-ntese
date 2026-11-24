@@ -24,7 +24,11 @@
 //     bakes their light into the inside's: P1);
 //   · D.draw(o, grp, meshes): the things of an inside open, a mesh a
 //     thing's part (instances), into the furniture's group; D.step(o)
-//     draws them again only when their cause changes.
+//     draws them again only when their cause changes;
+//   · D.builder(uso, fn), D.oficio(oficio, fn): what each use and each
+//     trade puts inside, a wave's in a file of its own, with the kit of
+//     the ways of putting things (D.KIT) — the interiors 3, F7 (D-1010;
+//     the manual: planos/interiores-3-decoracao.md).
 //  Nothing here touches the world, nor draws on any chance.
 // ============================================================
 (function (G) {
@@ -247,12 +251,31 @@
     memo.set(b.id, out); if (memo.size > 64) memo.delete(memo.keys().next().value);
     return out;
   };
+  // ------------------------------ the decoration by use (F7, the interiors 3 — D-1010): the builders ------------------------------
+  // What each use puts inside — the tavern's drink on its shelves and what is served at its tables, the house's table, pantry and
+  // chest — is its builder's: G.Dentro3D.builder(uso, fn), fn(ctx, K), registered by whoever makes the use's decoration, in a file of
+  // its own if it likes (the manual: planos/interiores-3-decoracao.md). ctx is the building's: ctx.b, ctx.p (its plan), ctx.W (its
+  // within: every cause), ctx.look (its furniture's look), ctx.near (the body near: every thing; far, only the lamps and the cloth),
+  // ctx.S (the surfaces of its pieces), ctx.put, ctx.wallFree, ctx.wallTake; K the kit of the ways of putting things (D.KIT, below).
+  // The use of a building is its plan's (G.Atmos.usoOf); one with no builder of its own where a household lives (the seat of who
+  // rules) is built as a house. After the builder, the layers every building has: the cloth, the lamps, the cobwebs
+  // (→ the door that puts back the builder there was: for the proofs that try one)
+  const BUILD = new Map();
+  D.builder = function (uso, fn) { if (!uso || typeof fn !== 'function') return () => { }; const was = BUILD.get(uso); BUILD.set(uso, fn); memo.clear();
+    return () => { if (BUILD.get(uso) !== fn) return; if (was) BUILD.set(uso, was); else BUILD.delete(uso); memo.clear(); }; };
+  D.builderOf = b => (b ? BUILD.get(G.Atmos && G.Atmos.usoOf ? G.Atmos.usoOf(b) : b.type) || (G.Village.bedsOf(b) > 0 ? BUILD.get('casa') || null : null) : null);
+  // what a trade shows at its post, wherever it works (the within's W.oficios, G.Atmos.oficioRule): G.Dentro3D.oficio(oficio, fn),
+  // fn(ctx, K, q) puts the things of one entry — after the use's builder (→ the door that puts back the one there was)
+  const OFDRAW = new Map();
+  D.oficio = function (oficio, fn) { if (!oficio || typeof fn !== 'function') return () => { }; const was = OFDRAW.get(oficio); OFDRAW.set(oficio, fn); memo.clear();
+    return () => { if (OFDRAW.get(oficio) !== fn) return; if (was) OFDRAW.set(oficio, was); else OFDRAW.delete(oficio); memo.clear(); }; };
   function build(ctx) {
     const { b, p } = ctx; ctx.S = surfaces(p, ctx.look);
-    if (b.type === 'taverna') tavern(ctx);
-    else if (G.Village.bedsOf(b) > 0) house(ctx);
+    const fn = D.builderOf(b); if (fn) fn(ctx, KIT);
+    for (const q of ctx.W.oficios || NOFS) { const f2 = OFDRAW.get(q.oficio); if (f2) f2(ctx, KIT, q); }
     cloth(ctx); lamps(ctx); webs(ctx);
   }
+  const NOFS = Object.freeze([]);
 
   // ---- the tavern: its drink, its cups, its food, who sits at its tables, its fire, its years
   function tavern(ctx) {
@@ -555,33 +578,43 @@
       for (let i = 0; i < n; i++) { const kk = HANG[k][i % HANG[k].length]; if (kk) items.push({ k: kk, key: k + i, why: q.why }); } }
     for (const q of W.bens) if (q.como === 'presunto' || q.como === 'peixe-seco') for (let i = 0; i < Math.min(2, q.n); i++) items.push({ k: q.como, key: q.k + i, why: q.why });
     if (!items.length) return;
-    const lv = p.entryLv || 0; const l = lvOf(p, lv); if (!l) return;
     // (near the fire and the bar first: the smoke cures what hangs over it)
-    const hot = p.items.filter(it => it.lv === lv && (it.fire || it.kind === 'prateleira-bar' || it.kind === 'balcao' || it.kind === 'fogao' || it.kind === 'despensa'));
+    const lv = p.entryLv || 0;
+    pendura(ctx, items, p.items.filter(it => it.lv === lv && (it.fire || it.kind === 'prateleira-bar' || it.kind === 'balcao' || it.kind === 'fogao' || it.kind === 'despensa')), { lv });
+  }
+  // ---- what hangs from a peg in a wall near some pieces (perto: within o.raio of the nearest — 4.5 m —, the nearest first), else —
+  // o.teto, the default — from the joists of a floor above them: items [{ k, key, why }] on storey o.lv (the hall's), each with its peg,
+  // clear of the openings and of what stands taller there; → what found no place. Two calls never take one place: the wall has an owner
+  // (ctx.wallFree), a joist taken is kept (ctx.teto); o.tag names the keys of a call of its own (the tools of a trade on a wall: F7)
+  function pendura(ctx, items, perto, o) {
+    const { b, p } = ctx; o = o || {}; if (!items.length) return items;
+    const lv = o.lv !== undefined ? o.lv : p.entryLv || 0; const l = lvOf(p, lv); if (!l) return items;
+    const hot = perto || []; const raio = o.raio || 4.5; const tag = o.tag ? o.tag + '/' : ''; const used = ctx.teto || (ctx.teto = new Set());
     const dHot = (x, z) => hot.length ? Math.min(...hot.map(it => Math.hypot(x - it.x, z - it.z))) : 0;
     // the joists: points a hand from a wall under a floor above, low enough to reach, high over the heads and the pieces
-    const R = runs(p, lv, 1.95, 2.0, ctx.look); const spots = [];
-    for (const r of R) for (let s = r.s0 + 0.2; s <= r.s1 - 0.15; s += 0.42) {
+    const spots = [];
+    if (o.teto !== false) for (const r of runs(p, lv, 1.95, 2.0, ctx.look)) for (let s = r.s0 + 0.2; s <= r.s1 - 0.15; s += 0.42) {
       const x = r.x + r.tx * s + r.nx * 0.32, z = r.z + r.tz * s + r.nz * 0.32; const cy = ceilAt(p, l, x, z) - 0.05; if (!(cy - l.y >= 2.45 && cy - l.y <= 3.6)) continue;
-      if (spots.some(q => Math.hypot(q.x - x, q.z - z) < 0.36)) continue; spots.push({ x, z, y: cy, kind: 'teto', ry: Math.atan2(r.nx, r.nz), d: dHot(x, z) });
+      if (spots.some(q => Math.hypot(q.x - x, q.z - z) < 0.36)) continue; spots.push({ x, z, y: cy, kind: 'teto', ry: Math.atan2(r.nx, r.nz), d: dHot(x, z), at: `${r3(x)},${r3(z)}` });
     }
     // the pegs in a wall: 1.9 m up, clear of the openings and of what stands taller there
-    const pegs = []; for (const r of runs(p, lv, 1.3, 1.95, ctx.look)) for (let s = r.s0 + 0.18; s <= r.s1 - 0.18; s += 0.38) { const x = r.x + r.tx * s, z = r.z + r.tz * s; const d = dHot(x, z); if (d < 4.5) pegs.push({ x, z, y: l.y + 1.92, kind: 'parede', r, ry: Math.atan2(r.nx, r.nz), d }); }
+    const pegs = []; for (const r of runs(p, lv, 1.3, 1.95, ctx.look)) for (let s = r.s0 + 0.18; s <= r.s1 - 0.18; s += 0.38) { const x = r.x + r.tx * s, z = r.z + r.tz * s; const d = dHot(x, z); if (d < raio) pegs.push({ x, z, y: l.y + 1.92, kind: 'parede', r, ry: Math.atan2(r.nx, r.nz), d }); }
     // (the pegs first — what hangs there is seen against its wall, whatever the eye cuts away of a ceiling —, then the joists)
     const pool = pegs.sort((a, c) => a.d - c.d).concat(spots.sort((a, c) => a.d - c.d));
     let k = 0;
-    for (const q of items) {
-      const m = MESH(q.k); if (!m) continue; let at = null;
-      while (k < pool.length && !at) { const s = pool[k++]; if (s.kind === 'teto' && s.y - m.h - l.y < 1.95) continue; if (s.kind === 'parede' && !ctx.wallFree(s.x, s.z, Math.max(m.w, 0.12), s.y - m.h, s.y + 0.03)) continue; at = s; }
+    for (let i = 0; i < items.length; i++) {
+      const q = items[i]; const m = MESH(q.k); if (!m) continue; let at = null;
+      while (k < pool.length && !at) { const s = pool[k++]; if (s.kind === 'teto' && (s.y - m.h - l.y < 1.95 || used.has(s.at))) continue; if (s.kind === 'parede' && !ctx.wallFree(s.x, s.z, Math.max(m.w, 0.12), s.y - m.h, s.y + 0.03)) continue; at = s; }
       if (at && at.kind === 'parede') ctx.wallTake(at.x, at.z, Math.max(m.w, 0.12), at.y - m.h, at.y + 0.03);
-      if (!at) break;
-      if (at.kind === 'teto') ctx.put(q.k, at.x, at.y - m.h, at.z, at.ry + (hv(b, 60 + k) - 0.5) * 0.8, { lv, on: 'teto', key: `teto/${r3(at.x)},${r3(at.z)}`, why: `${q.why} — pendurado nas vigas do soalho de cima` });
+      if (!at) return items.slice(i);
+      if (at.kind === 'teto') { used.add(at.at); ctx.put(q.k, at.x, at.y - m.h, at.z, at.ry + (hv(b, 60 + k) - 0.5) * 0.8, { lv, on: 'teto', key: `${tag}teto/${at.at}`, why: `${q.why} — pendurado nas vigas do soalho de cima` }); }
       else {
         const out = Math.max(0.06, m.d / 2 + 0.012); const x = at.x + at.r.nx * out, z = at.z + at.r.nz * out;
-        ctx.put('cavilha', at.x + at.r.nx * 0.04, at.y - 0.015, at.z + at.r.nz * 0.04, at.ry, { lv, on: 'parede', key: `cavilha/${r3(at.x)},${r3(at.z)}`, why: 'a cavilha de onde pende' });
-        ctx.put(q.k, x, at.y - m.h - 0.004, z, at.ry, { lv, on: 'parede', key: `pende/${r3(at.x)},${r3(at.z)}`, why: `${q.why} — pendurado na parede` });
+        ctx.put('cavilha', at.x + at.r.nx * 0.04, at.y - 0.015, at.z + at.r.nz * 0.04, at.ry, { lv, on: 'parede', key: `${tag}cavilha/${r3(at.x)},${r3(at.z)}`, why: 'a cavilha de onde pende' });
+        ctx.put(q.k, x, at.y - m.h - 0.004, z, at.ry, { lv, on: 'parede', key: `${tag}pende/${r3(at.x)},${r3(at.z)}`, why: `${q.why} — pendurado na parede` });
       }
     }
+    return [];
   }
   // ---- the marks of charcoal: on the walls by the tables, at the height of one sitting and drinking
   function marks(ctx) {
@@ -710,6 +743,19 @@
       ctx.put('teia', x, y - m.h, z, c[2], { lv, on: 'canto', key: `teia/${i}`, why: W.teia.why });
     }
   }
+
+  // ------------------------------ the kit of the builders (F7) ------------------------------
+  // the ways of putting things a builder has (each thing with its cause in `why`, never a draw: the place, the side, the turn by the
+  // building's id — K.hv): K.pack (a row along a shelf or a top), K.scatter (about a top, each at the free point nearest its own),
+  // K.beside / K.near / K.byWall (on the floor beside a piece, or against a wall near it), K.pendura (from the pegs of a wall near some
+  // pieces, else the joists: the tools of a trade, what is cured), K.hangFood (the food of the store, by the fire and the bar), K.runs
+  // (the free stretches of a storey's walls between two heights), K.ceilAt, K.floorFree, the plan's frame and cells; the cups, the
+  // vessels and the dishes of each people (K.cupOf, K.vesselOf, K.vesselName, K.dishOf); and the builders of the tavern and of the house
+  // (K.taverna, K.casa), for a use that is one of them and more (the palace: a house of who rules)
+  const KIT = D.KIT = Object.freeze({ pack, scatter, beside, near, byWall, pendura, hangFood, runs, ceilAt, floorFree, surfaces, frame, lvOf, cellAt, inR, ovR, rectsOf, topOf,
+    hv, r3, has: D.has, TABLES, CORE, FLOOR_UP, TAU, HALF, cupOf, vesselOf, vesselName, dishOf, DRINK, DISH, FRUIT, taverna: tavern, casa: house });
+  D.builder('taverna', tavern);
+  D.builder('casa', house);
 
   // ------------------------------ the lights ------------------------------
   // the lamps and candles lit, at the flame of each (its model's anchor), in the lot's frame: [{ x, y, z, cor, forca, raio, tremor,

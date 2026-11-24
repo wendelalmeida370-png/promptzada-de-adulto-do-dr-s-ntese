@@ -4073,6 +4073,8 @@
     if (G.Build3D && G.Build3D.opened && G.Realm && G.Realm.on) for (const o of G.Build3D.opened()) { const b = S.buildings.get(o.id); if (b) list.push(b); }
     if (!list.length && G.Space && G.Space.planMade) { let h = 0; for (const b of S.buildings.values()) { if (list.length >= 14) break; if (!b.built || !G.Space.planMade(b)) continue; if (b.type === 'taverna') list.push(b); else if (h < 6 && G.BDEF[b.type] && G.BDEF[b.type].housing) { list.push(b); h++; } } }
     for (const [sev, msg, id] of QA.dentro(list)) add('dentro', sev, msg, id);
+    // (a rule of a use that says a field no rule declared — refused by the within, counted: G.Atmos.withinErr, F7 D-1010)
+    const E = G.Atmos && G.Atmos.withinErr; if (E) for (const k of Object.keys(E).sort()) add('dentro', 3, `a regra do uso ${k.split('.')[0]} diz o campo «${k.split('.').slice(1).join('.')}», que nenhuma regra declarou (${E[k]} vez(es); campos: …, G.Atmos.withinRule)`, 0);
   });
 })();
   // ---- qa/taverna-vida-inv.js ----

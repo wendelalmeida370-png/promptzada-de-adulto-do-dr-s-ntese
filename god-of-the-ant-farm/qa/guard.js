@@ -3033,5 +3033,28 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
   if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
   if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
+// === os interiores 3 — a frente L: a decoração em módulos e a luz de cada povo (planos/interiores-3-contrato.md; D-1010 a D-1019) ===
+// 500. "a decoração por uso só lê e só desenha" (F7, D-1010): as regras do que um prédio mostra (G.Atmos.withinRule e oficioRule) e os
+// construtores do desenho de dentro (G.Dentro3D.builder e oficio), em qualquer arquivo de uma onda, seguem o within e o dentro3d.js (as
+// regras 290 a 292): nenhum acaso — nem o do mundo nem o do olhar: a escolha entre jeitos verdadeiros é do G.hash do id —, nenhuma escrita
+// num campo do mundo, da planta ou do within, nenhuma porta que muda o mundo; e o arquivo que constrói não lê o livro, o armazém nem a
+// origem por conta própria (a regra lê pelo c: c.D, c.O, c.ler; o construtor, só o W). Os registros são um só, do atmos.js e do
+// dentro3d.js — a taverna e a casa registradas neles como qualquer uso —, e o within é a soma das regras (o withinOf as aplica)
+{ const at = (src['atmos.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n');
+  if (!/At\.withinRule = function \(uso, fn, o\) \{/.test(at) || !/At\.oficioRule = function \(oficio, fn\) \{/.test(at) || !/At\.withinRule\('taverna', tavernWithin, \{/.test(at)) fails.push('a decoração por uso: o atmos.js sem o registro das regras (G.Atmos.withinRule, oficioRule) ou sem a regra da taverna registrada nele (D-1010)');
+  if (!/for \(const r of rules\) \{ const q = r\.fn\(b, c\);/.test(at)) fails.push('a decoração por uso: o withinOf do atmos.js não aplica as regras do uso (D-1010)');
+  if (!/D\.builder = function \(uso, fn\) \{/.test(dt) || !/D\.oficio = function \(oficio, fn\) \{/.test(dt) || !/D\.builder\('taverna', tavern\);/.test(dt) || !/D\.builder\('casa', house\);/.test(dt) || !/const fn = D\.builderOf\(b\); if \(fn\) fn\(ctx, KIT\);/.test(dt)) fails.push('a decoração por uso: o dentro3d.js sem o registro dos construtores (G.Dentro3D.builder, oficio) ou sem a taverna e a casa registradas nele (D-1010)');
+  if (/if \(b\.type === 'taverna'\) tavern\(ctx\)/.test(dt)) fails.push('a decoração por uso: o build do dentro3d.js escolhe a taverna pelo tipo, fora do registro dos construtores (D-1010)');
+  for (const f of files) {
+    const L = src[f] || []; const all = L.map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n');
+    if (f !== 'atmos.js' && /\bAt\.(?:withinRule|oficioRule)\s*=|\bG\.Atmos\.(?:withinRule|oficioRule)\s*=/.test(all)) fails.push(`a decoração por uso: ${f} escreve o registro das regras do within (só o atmos.js, D-1010)`);
+    if (f !== 'dentro3d.js' && /\bG\.Dentro3D\.(?:builder|oficio|KIT)\s*=/.test(all)) fails.push(`a decoração por uso: ${f} escreve o registro dos construtores (só o dentro3d.js, D-1010)`);
+    if (f === 'atmos.js' || f === 'dentro3d.js') continue;
+    const rule = /\bG\.Atmos\.(?:withinRule|oficioRule)\(/.test(all), bld = /\bG\.Dentro3D\.(?:builder|oficio)\(/.test(all); if (!rule && !bld) continue;
+    L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\bG\.(?:R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} tira de um acaso (a escolha é do G.hash do id, D-1010): ${l.trim().slice(0, 100)}`);
+      if (/\b(?:b|v|f|h|op|m|S|G\.S|I|p|it|pl|q|W|ctx\.W)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} escreve num campo do mundo, da planta ou do within (D-1010): ${l.trim().slice(0, 100)}`);
+      if (WORLD_WRITE.test(c) || /\b(?:setTask|Vg\.give|Urban\.(?:note|noteB|mourn|remember)|touchWalk)\s*\(/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} abre uma porta que muda o mundo (D-1010): ${l.trim().slice(0, 100)}`);
+      if (bld && /\bG\.(?:Depot|Origem|Eco)\.|\.inv\b|\.pantry\b|f\.stock\b/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} constrói lendo o livro, o armazém ou a origem por conta própria (a regra do within lê pelo c; o construtor, só o W — D-1010): ${l.trim().slice(0, 100)}`); }); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

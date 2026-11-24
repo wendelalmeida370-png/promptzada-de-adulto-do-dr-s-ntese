@@ -339,7 +339,8 @@ if (want('d15')) {
   const check = (name, c, txt) => { info.push(`${c ? '' : '✗ '}${name}: ${txt}`); if (!c) good = false; };
   // (1) the feast
   const W0 = At.within(b); const civ = W0.civ;
-  b.festa = { motivo: 'a vitória do reino', causa: 'conquista', dia: S0.day, ate: S0.day, prato: { de: ['carne', 'fruta', 'trigo'] },
+  // (the feast in the form the front T1 keeps it — its motive one of TF.MOTIVOS, its bards, its phase —: the save drops any other, T-2151)
+  b.festa = { motivo: 'conquista', causa: 'a vitória do reino', dia: S0.day, ate: S0.day, prato: { de: ['carne', 'fruta', 'trigo'] }, bardos: [], fase: 1,
     enfeites: [{ k: 'guirlanda', de: 'flora' }, { k: 'guirlanda', de: 'horta' }, { k: 'fita', de: 'pano' }, { k: 'estandarte', de: 'pano' }, { k: 'petalas', de: 'flora' }, { k: 'vela', de: 'cera' }, { k: 'fogos', de: 'nada' }] };
   let L = list(); let K = kinds(L); const W1 = At.within(b);
   const plat = L.find(t => /^comida-festa-/.test(t.k)); const shownX = plat ? shown(plat).filter(pt => /^x-/.test(pt)).sort() : [];
@@ -388,6 +389,64 @@ if (want('d15')) {
   delete b2.festa; b2.ip.dr = dr0; L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })();
   check('a festa acabada, a porta como era', !L.some(t => t.festa) && L.some(t => t.k === 'tranca') === bar0, `${L.filter(t => t.festa).length} coisa(s) da festa, ${L.filter(t => t.k === 'tranca').length} tranca(s) (antes: ${bar0 ? 1 : 0}, a regra da casa)`);
   ok('d15 a quarta onda: a festa pelo material e o prato pela receita, a porta trancada e a arrombada, a poça e o molhado que secam, os jogos na mesa, quem desmaiou, o save no meio', good, `taverna#${b.id} — ` + info.join('; '));
+}
+
+// ------------------------------ the decoration by use and by trade (the interiors 3, the front L — F7, D-1010, D-1011) ------------------------------
+if (want('d16')) {
+  // ---- a use's rule and builder and a trade's rule and drawer, registered as a wave's own file would (here, by the proof); the true
+  // readings (what each piece keeps by the book, the trade by the kit and the origin); the bad cases — a field no rule declared, the save
+  // in the middle, the smith who leaves his post, the forge that falls —; and all of it taken away, the forge as it was. Last of the parts:
+  // the vocabulary keeps the fields the proof brought (their empty values)
+  const info = []; let good = true; const check = (name, c, txt) => { info.push(`${c ? '' : '✗ '}${name}: ${txt}`); if (!c) good = false; };
+  const In = G.Interiors, Dp = G.Depot, Of = G.Oficio; const all = [...S().buildings.values()].filter(q => q.built && q.type !== 'ruin' && plan(q));
+  const forges = all.filter(q => q.type === 'forja'); const fb = forges.find(q => At.oficio(q).quem.some(x => x.oficio === 'ferreiro')) || forges[0];
+  const stl = all.filter(q => q.type === 'storehouse' || q.type === 'celeiro' || q.type === 'armazem'); const hs = houses(60);
+  const snap = q => JSON.stringify(D.plan(q, plan(q), true).list.map(t => [t.k, t.x, t.y, t.z, t.ry, t.key, t.why]));
+  if (fb) {
+    const fid = G.Fac.ofSet(fb.set).id; const ofi = At.oficio(fb); const smith = ofi.quem.find(x => x.oficio === 'ferreiro');
+    // (1) the trade by the kit and the origin: the smith's hammer in the best material his people has; the batches; what the shelf keeps
+    const ham = smith ? smith.kit.find(x => x.tipo === 'martelo') : null; const want0 = At.ler.coisa('martelo', fid);
+    const ks = []; for (const p in Of.trade(fb).rx) if (!ks.includes(Of.trade(fb).rx[p].k)) ks.push(Of.trade(fb).rx[p].k);
+    const feitoOk = ks.every(k => { const n = Dp.get('b:' + fb.id, k); const e = ofi.feito.find(x => x.k === k); return n > 1e-6 ? !!e && Math.abs(e.n - Math.round(n * 100) / 100) < 1e-9 && (!G.Origem.kept(k) || !!e.partes) : !e; });
+    check('o ofício pelo kit e pela origem', !!smith && !!ham && ham.k === want0 && ofi.obra.length === Of.batches(fb).length && feitoOk,
+      `forja#${fb.id} ${fb.style}: ${ofi.quem.length} no posto ou em casa (${ofi.quem.map(x => `#${x.v} ${x.oficio}${x.aqui ? ' aqui' : ''}`).join(', ')}); o martelo ${ham ? ham.k : '-'} (o povo faria ${want0}); fornadas ${ofi.obra.length} (${ofi.obra.map(x => x.why).join(' · ') || 'nenhuma'}); na prateleira ${ofi.feito.map(x => x.why).join(' · ') || 'nada do que ela faz'}`);
+  } else check('o ofício pelo kit e pela origem', false, 'nenhuma forja com planta');
+  // (2) what each piece keeps, by the book: a house's pieces as the depot splits its goods; a storehouse's as the share of the people's
+  // store it keeps, never more than the piece holds
+  { let nh = 0, bad = []; for (const h of hs) { const g = At.guardado(h); const sl = Dp.slots('h:' + h.id); for (const s of sl) { if (s.k === 'moedas') continue; const r = g.find(q => q.it === s.m); if (!r || Math.abs((r.bens[s.k] || 0) - s.n) > 1e-6) bad.push(`casa#${h.id} peça ${s.m} ${s.k}`); } nh++; }
+    let ns = 0, over = 0, sum = 0, cap = 0; for (const s of stl) { const g = At.guardado(s).filter(q => q.dep === 'povo'); const sh = Dp.share(s); let tot = 0; for (const k in sh) if (k !== 'moedas') tot += sh[k];
+      const n = g.reduce((a, q) => a + q.n, 0); const c = g.reduce((a, q) => a + q.cap, 0); if (n > Math.min(tot, c) + 1e-6 || g.some(q => q.n > q.cap + 1e-6)) over++; sum += n; cap += c; ns++; }
+    check('o que cada peça guarda, pelo livro', nh > 10 && !bad.length && ns > 0 && !over, `${nh} casas: as peças como o depósito reparte (${bad.length ? 'DIFERENTES ' + bad.slice(0, 3).join(', ') : 'iguais'}); ${ns} armazéns e celeiros: ${sum.toFixed(1)} nas peças de ${cap} de lugar, a parte do armazém do povo que guardam${over ? `; ${over} além do que cabe` : ''}`); }
+  // (3) a use's rule: its field in every within, filled where the use is; a field no rule declared, refused and counted
+  const base = fb ? snap(fb) : ''; const W0 = fb ? JSON.stringify(At.within(fb)) : '';
+  const offR = At.withinRule('forja', (q, c) => { const o = c.ler.oficio(q); return { bigorna: Object.freeze({ n: o.obra.length, why: `${o.obra.length} fornada(s) em curso (G.Oficio)` }), semRegra: 1 }; }, { campos: { bigorna: null } });
+  fresh(); const Wf = fb ? At.within(fb) : null; const Wh = At.within(hs[0]); const ruin = At.within({ built: false });
+  check('a regra do uso', !!Wf && !!Wf.bigorna && Wf.bigorna.n === At.oficio(fb).obra.length && Wh.bigorna === null && ruin.bigorna === null && (G.Atmos.withinErr['forja.semRegra'] | 0) >= 1 && At.VOC().includes('bigorna'),
+    `forja: ${Wf && Wf.bigorna ? Wf.bigorna.why : '-'}; uma casa: ${JSON.stringify(Wh.bigorna)}; o prédio que não está de pé: ${JSON.stringify(ruin.bigorna)}; o campo que ninguém declarou recusado e contado (${JSON.stringify(G.Atmos.withinErr)})`);
+  // (4) a trade's rule and drawer: what the smith's post shows — his hammer, hung on a peg near the forge's fire (K.pendura)
+  const offT = At.oficioRule('ferreiro', (q, e, c) => ({ ferramentas: Object.freeze([c.ler.coisa('martelo', c.fid)].filter(Boolean)), why: `as ferramentas do ferreiro #${e.v} (o kit, no material do povo)` }));
+  const offD = D.oficio('ferreiro', (ctx, K, e) => { K.pendura(ctx, e.ferramentas.map((k, i) => ({ k: 'cavilha', key: k + i, why: e.why })), ctx.p.items.filter(it => it.fire), { tag: 'oficio/' + e.v, teto: false }); });
+  fresh(); let hung = [], near0 = true;
+  if (fb) { const p = plan(fb); hung = D.plan(fb, p, true).list.filter(t => /^oficio\//.test(t.key)); const fires = p.items.filter(it => it.fire); near0 = hung.every(t => t.on === 'parede' && (!fires.length || Math.min(...fires.map(it => Math.hypot(it.x - t.x, it.z - t.z))) < 4.6)); }
+  const Wo = fb ? At.within(fb).oficios : []; const qa1 = fb ? dentroQA(fb) : [];
+  check('a regra e o desenho do ofício', !!fb && Wo.some(x => x.oficio === 'ferreiro' && x.ferramentas.length) && hung.length >= 2 && near0 && !qa1.length && At.within(hs[0]).oficios !== undefined,
+    `${Wo.map(x => `#${x.v} ${x.oficio} (${x.ferramentas.join(', ')})`).join(', ') || 'ninguém'}; ${hung.length} coisa(s) nas cavilhas da forja perto do fogo${qa1.length ? '; ' + qa1.map(q => q[1]).join(' | ') : ''}`);
+  // (5) the save in the middle: the same within and the same things after the load (the rules are code; what they read, the world)
+  if (fb) { const a = JSON.stringify(At.within(fb)) + snap(fb); M.salvarCarregar(); fresh(); const b2 = S().buildings.get(fb.id); const c = JSON.stringify(At.within(b2)) + snap(b2);
+    check('o save no meio', a === c, a === c ? 'iguais depois de salvar e carregar' : 'DIFERENTES depois do load'); }
+  // (6) the smith leaves his post; (7) the forge falls (a ruin: nothing inside, the fields empty, no trade)
+  const fb2 = fb && S().buildings.get(fb.id);
+  if (fb2) { const v = [...S().villagers.values()].find(x => x.job === fb2.id && x.role === 'ferreiro'); const j0 = v ? v.job : 0, h0 = v ? v.home : 0;
+    if (v) { v.job = 0; v.home = 0; } fresh(); const W2 = At.within(fb2); if (v) { v.job = j0; v.home = h0; } fresh();
+    check('o ferreiro que deixa o posto', !!v && !W2.oficios.some(x => x.v === v.id), v ? `#${v.id} fora do posto e de casa → ${W2.oficios.length} no ofício da forja` : 'nenhum ferreiro no posto');
+    const t0 = fb2.type; fb2.type = 'ruin'; fresh(); const Wr = At.within(fb2), Or = At.oficio(fb2), Gr = At.guardado(fb2); fb2.type = t0; fresh();
+    check('a forja que cai', Wr.bigorna === null && Array.isArray(Wr.oficios) && !Wr.oficios.length && !Or.quem.length && !Gr.length, 'a ruína: os campos vazios, nenhum ofício, nada guardado'); }
+  // (8) all taken away: the forge's things as before the rules came
+  offD(); offT(); offR(); fresh();
+  if (fb2) { const after = snap(fb2); check('tudo tirado', after === base && !At.within(fb2).bigorna, after === base ? 'as coisas da forja como eram' : 'as coisas da forja DIFERENTES das de antes'); }
+  check('o kit dos construtores', Object.isFrozen(D.KIT) && ['pack', 'scatter', 'beside', 'near', 'byWall', 'pendura', 'hangFood', 'runs', 'ceilAt', 'floorFree', 'hv', 'casa', 'taverna'].every(k => typeof D.KIT[k] === 'function'), Object.keys(D.KIT).length + ' portas');
+  void W0;
+  ok('d16 a decoração por uso e por ofício: a regra e o construtor de um uso, a regra e o desenho de um ofício, as leituras de verdade, os casos ruins', good, info.join('; '));
 }
 
 const e = M.erros(); if (!M.limpo()) console.log('  erros:', JSON.stringify(e.mod), e.console.slice(0, 5).join(' | '));
