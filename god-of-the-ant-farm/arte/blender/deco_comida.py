@@ -80,7 +80,7 @@ CHIFRE_BASE, CHIFRE_PONTA = (228, 212, 172), (72, 54, 38)
 
 # ------------------------------ the AO of parts that come and go ------------------------------
 import re as _re
-def staged(name): return name in ('vapor', 'nv') or bool(_re.match(r'^([bfnre]|cera)\d$', name))
+def staged(name): return name in ('vapor', 'nv') or name.startswith('x-') or bool(_re.match(r'^([bfnre]|cera)\d$', name))
 def bake(M, rays=16, dist=0.2, lo=0.45):
     """the furniture's ambient light (bake_ao), but each part that comes and goes seen only with what is always there: the broth
     under the broth's other levels, the spine under the fish's flesh — each lit as it is when it shows"""
@@ -183,9 +183,10 @@ def vapor(M, x, z, y0, h=0.14, w=0.05, n=3, seed=0):
         with cor(fade): lamina(M, 'vapor', f, 2, 6 if M.lod == 0 else 3, both=True)
 
 # ------------------------------ the dishes ------------------------------
-def _peixe_assado(M, L=0.21, y=0.016):
+def _peixe_assado(M, L=0.21, y=0.016, P=None, leve=False):
     """a fish grilled whole, lying on its side on the plate: its head and tail and spine (resto) and its flesh in four pieces along
     it (b1 the middle, b2 behind it, b3 by the head, b4 by the tail): eaten, the bones are bared"""
+    P = P or (lambda n: n)  # (the parts: its bites and its bones — or all of it one part, on a feast's platter)
     H = L * 0.21   # (half its height, from back to belly — across the plate, z)
     T = L * 0.075  # (half its thickness — up, y)
     x0 = -L / 2
@@ -197,17 +198,18 @@ def _peixe_assado(M, L=0.21, y=0.016):
         if m < 0.22 and p[1] > y + T * 0.6: c = mix(c, CARVAO, 0.7)
         return mul(c, 0.9 + 0.18 * manchas(p, 70))
     def seg_(a0, a1, part, cap0=True, cap1=True, seg=10):
-        n = (4 if a1 - a0 > 0.18 else 3) if M.lod == 0 else 2; pts = [a0 + (a1 - a0) * k / n for k in range(n + 1)]
+        if leve: seg, cap0, cap1 = 8, False, False  # (whole on a platter: never cut, never eaten by quarters)
+        n = (4 if a1 - a0 > 0.18 else 3) if M.lod == 0 and not leve else 2; pts = [a0 + (a1 - a0) * k / n for k in range(n + 1)]
         def f(u, v):
             a = pts[0] + (pts[-1] - pts[0]) * u; t = v * TAU; r = prof(a)
             return (x0 + a * L, y + T + T * r * math.sin(t) * 0.98, H * r * math.cos(t))
-        with cor(skin): lamina(M, part, f, n, seg)
+        with cor(skin): lamina(M, P(part), f, n, seg)
         # (the flesh where it was cut from its neighbour: a face at each end, facing out of the piece)
         for a, on, sg in ((a0, cap0, -1), (a1, cap1, 1)):
             if not on: continue
             r = prof(a)
             def fc(u, v, a=a, r=r, sg=sg): t = sg * u * TAU; return (x0 + a * L, y + T + T * r * math.sin(t) * 0.98 * v, H * r * math.cos(t) * v)
-            with cor(lambda p: mul(CARNE_PEIXE, 0.9 + 0.12 * manchas(p, 120))): lamina(M, part, fc, seg, 1)
+            with cor(lambda p: mul(CARNE_PEIXE, 0.9 + 0.12 * manchas(p, 120))): lamina(M, P(part), fc, seg, 1)
     # (the head and the tail's root, always; the flesh between in four)
     seg_(0.0, 0.2, 'resto', cap0=False); seg_(0.82, 0.9, 'resto', cap1=False)
     for part, a0, a1 in (('b3', 0.2, 0.36), ('b1', 0.36, 0.52), ('b2', 0.52, 0.67), ('b4', 0.67, 0.82)): seg_(a0, a1, part)
@@ -215,16 +217,17 @@ def _peixe_assado(M, L=0.21, y=0.016):
     def fin(u, v):
         s = (u - 0.5) * 2; along = L * (0.88 + 0.13 * v); spread = H * (0.25 + 0.95 * v) * s
         return (x0 + along, y + T * 1.15, spread)
-    with cor(lambda p: mix(PELE_FLANCO, CARVAO, 0.35 + 0.3 * abs(p[2]) / H)): lamina(M, 'resto', fin, 3, 2, both=True)
-    with cor((20, 18, 16)): ovo(M, 'resto', x0 + L * 0.07, y + T * 1.95, H * 0.22, 0.0065, 0.002, 0.0065, seg=8, nv=3)
-    with cor((236, 230, 214)): ovo(M, 'resto', x0 + L * 0.07, y + T * 1.88, H * 0.22, 0.0095, 0.002, 0.0095, seg=8, nv=3)
+    with cor(lambda p: mix(PELE_FLANCO, CARVAO, 0.35 + 0.3 * abs(p[2]) / H)): lamina(M, P('resto'), fin, 3, 2, both=True)
+    with cor((20, 18, 16)): ovo(M, P('resto'), x0 + L * 0.07, y + T * 1.95, H * 0.22, 0.0065, 0.002, 0.0065, seg=8, nv=3)
+    with cor((236, 230, 214)): ovo(M, P('resto'), x0 + L * 0.07, y + T * 1.88, H * 0.22, 0.0095, 0.002, 0.0095, seg=8, nv=3)
     # (the bones, under the flesh: the spine, and the ribs out from it toward the belly)
+    if leve: return
     with cor(OSSO):
-        tubo(M, 'resto', [(x0 + L * 0.18, y + T * 1.05, H * 0.08), (x0 + L * 0.5, y + T * 1.0, H * 0.12), (x0 + L * 0.84, y + T * 1.05, H * 0.05)], 0.0022, seg=5)
+        tubo(M, P('resto'), [(x0 + L * 0.18, y + T * 1.05, H * 0.08), (x0 + L * 0.5, y + T * 1.0, H * 0.12), (x0 + L * 0.84, y + T * 1.05, H * 0.05)], 0.0022, seg=5)
         for k in range(7 if M.lod == 0 else 4):
             a = 0.24 + 0.075 * k * (7 / (7 if M.lod == 0 else 4)); xa = x0 + L * a; r = prof(a)
-            tubo(M, 'resto', [(xa, y + T * 1.0, H * 0.1), (xa - 0.004, y + T * 0.95, -H * r * 0.45), (xa - 0.008, y + T * 0.8, -H * r * 0.78)], 0.0011, seg=4)
-            tubo(M, 'resto', [(xa, y + T * 1.0, H * 0.14), (xa - 0.003, y + T * 0.98, H * r * 0.7)], 0.0010, seg=4)
+            tubo(M, P('resto'), [(xa, y + T * 1.0, H * 0.1), (xa - 0.004, y + T * 0.95, -H * r * 0.45), (xa - 0.008, y + T * 0.8, -H * r * 0.78)], 0.0011, seg=4)
+            tubo(M, P('resto'), [(xa, y + T * 1.0, H * 0.14), (xa - 0.003, y + T * 0.98, H * r * 0.7)], 0.0010, seg=4)
 
 def comida_peixe(M, w, d, h):
     # (peixe do dia, da pesca do povo: grilled whole on a long plate, its juice under it)

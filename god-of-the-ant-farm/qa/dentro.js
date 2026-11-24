@@ -23,6 +23,11 @@
 //   d12 depois da briga: os cacos (a caneca de madeira não quebra) e a poça de vinho no chão, até alguém limpar (o registro, plantado)
 //   d13 a lousa da porta: o prato do dia pelo que a cozinha tem (o cardápio), o porte da casa, por fora na parede da frente
 //   d14 as mesas vivas: os ossinhos na mesa do jogo (a marca da P7, plantada); os anéis de cerveja pelos anos de doses
+//   d15 a quarta onda (T7, D-880 a D-889; os estados das frentes T1, T2, T4 e T5 plantados na forma do contrato): a festa com os
+//      enfeites pelo material (as guirlandas das flores e da horta, as bandeirolas só onde se tece, o estandarte do povo, as pétalas,
+//      as velas da festa) e o prato do povo pelo que a receita gastou; a porta trancada (a tranca por dentro) e a arrombada (a folha
+//      caída, as lascas); a poça e a roupa molhada que secam; os dados nas faces jogadas, o copo, as cartas e o monte; quem desmaiou
+//      (a caneca caída, a bebida em volta); um save no meio
 //   node qa/dentro.js            ONLY=d1,d2 …
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -196,8 +201,11 @@ if (want('d9')) {
     const cooled = eat.filter(r => r.c - (eat[0].q.t0 || 0) >= At.COOL + 1); const steamGone = !hot0 || (cooled.length ? cooled.every(r => !r.quente && r.steam === 0) : true);
     const steamFirst = !hot0 || (eat[0].steam > 0 && eat.filter(r => r.quente).every((r, i, L) => !i || r.heat <= L[i - 1].heat + 1e-6));
     // (done: the empty plate of the meal on the table while the guest sits on — the round's own; gone with the guest, or with the next round served)
-    const doneOk = !endSeen || !endSeen.q || (endSeen.q.prato === '?' && endSeen.st === 4 && endSeen.t && endSeen.t.k === 'comida-provisao') || !endSeen.q.prato;
-    info = `taverna#${bid}: #${vid} comendo ${f.op.data.mesa[vid] ? '' : ''}(${eat[0] ? eat[0].t && eat[0].t.k : '-'}), achado depois de ${f.w} s do mundo; estágios ${eat.map(r => r.st).join('→')}, comida à vista ${eat.map(r => r.bites).join('→')}; vapor ${hot0 ? `${eat.map(r => r.steam).join('')} (calor ${eat.filter(r => r.steam).map(r => r.heat.toFixed(2)).join('→')})` : 'nenhum (prato frio)'}; save no meio ${saved === null ? 'não houve' : saved ? 'igual' : 'DIFERENTE'}; ao acabar ${endSeen ? (endSeen.q ? `${endSeen.t ? endSeen.t.k + ' st ' + endSeen.st : '-'} (${endSeen.q.why})` : 'levantou-se: a mesa limpa') : 'ainda comendo'}`;
+    // (the empty plate on the table: the world's record of what is left — P7's d.sujo, the dish its own — or, without it, the round's)
+    const leftPlate = endSeen ? D.plan(S().buildings.get(bid), plan(S().buildings.get(bid)), true).list.find(t => /^comida-/.test(t.k) && (t.st | 0) === 4 && (/\/mesa\/s/.test(t.key) || t.key.endsWith(`/mesa/${vid}/prato`))) : null;
+    const gw = S().villagers.get(vid); const doneOk = !endSeen || !!leftPlate || !gw || gw.inside !== bid; // (or the guest gone, and the keeper's hands took it)
+    if (endSeen && leftPlate) endSeen.t = leftPlate;
+    info = `taverna#${bid}: #${vid} comendo ${f.op.data.mesa[vid] ? '' : ''}(${eat[0] ? eat[0].t && eat[0].t.k : '-'}), achado depois de ${f.w} s do mundo; estágios ${eat.map(r => r.st).join('→')}, comida à vista ${eat.map(r => r.bites).join('→')}; vapor ${hot0 ? `${eat.map(r => r.steam).join('')} (calor ${eat.filter(r => r.steam).map(r => r.heat.toFixed(2)).join('→')})` : 'nenhum (prato frio)'}; save no meio ${saved === null ? 'não houve' : saved ? 'igual' : 'DIFERENTE'}; ao acabar ${endSeen ? (endSeen.t ? `${endSeen.t.k} st ${endSeen.t.st | 0} na mesa (${/\/mesa\/s/.test(endSeen.t.key) ? 'o registro do que ficou na mesa, P7' : 'a rodada acabada'})` : endSeen.q ? `- (${endSeen.q.why})` : 'levantou-se: a mesa limpa') : 'ainda comendo'}`;
     good = eat.length >= 3 && mono && fewer && steamFirst && steamGone && saved !== false && doneOk && !dentroQA(b).length;
   } else info = 'nenhuma taverna serviu de comer em 420 s do mundo';
   // (what the guests leave once up, until the keeper's hands take it — P7's record, read when it is kept: the empty cup on the table)
@@ -318,6 +326,68 @@ if (want('d14')) {
     good = good && r0 === 0 && r1 === 3 && r2 >= 6 && r2 <= 10 && !qa2.length && (!Wb.ombro || (!!om && om.parts.length > 0));
   }
   ok('d14 as mesas vivas: os ossinhos na mesa do jogo, os anéis de cerveja pelos anos de doses', good, info);
+}
+
+// ------------------------------ the fourth wave: what is seen of it (the front T7, D-880 to D-889) ------------------------------
+if (want('d15')) {
+  // ---- the feast with its decorations by what each is made of and its platter by what the recipe spent; the door barred and the door
+  // broken in; the spill and the wet clothes that dry; the games at the tables; who fainted; and a save in the middle. The states of the
+  // fronts T1, T2, T4 and T5 planted in the contract's form (planos/taverna-onda4.md), as their fronts will write them
+  let info = [], good = true; const In = G.Interiors; const b = taverns().find(q => plan(q).items.some(it => /^mesa/.test(it.kind))) || taverns()[0];
+  const p = plan(b); const S0 = S(); const list = () => { fresh(); return D.plan(b, plan(b), true).list; };
+  const kinds = L => L.reduce((o, t) => (o[t.k] = (o[t.k] || 0) + 1, o), {});
+  const check = (name, c, txt) => { info.push(`${c ? '' : '✗ '}${name}: ${txt}`); if (!c) good = false; };
+  // (1) the feast
+  const W0 = At.within(b); const civ = W0.civ;
+  b.festa = { motivo: 'a vitória do reino', causa: 'conquista', dia: S0.day, ate: S0.day, prato: { de: ['carne', 'fruta', 'trigo'] },
+    enfeites: [{ k: 'guirlanda', de: 'flora' }, { k: 'guirlanda', de: 'horta' }, { k: 'fita', de: 'pano' }, { k: 'estandarte', de: 'pano' }, { k: 'petalas', de: 'flora' }, { k: 'vela', de: 'cera' }, { k: 'fogos', de: 'nada' }] };
+  let L = list(); let K = kinds(L); const W1 = At.within(b);
+  const plat = L.find(t => /^comida-festa-/.test(t.k)); const shownX = plat ? shown(plat).filter(pt => /^x-/.test(pt)).sort() : [];
+  check('a festa', !!K['guirlanda-flores'] && !!K['guirlanda-horta'] && (W1.weave ? !!K.bandeirolas : !K.bandeirolas) && !!K['estandarte-' + civ] && !!K.petalas && L.some(t => t.k === 'vela' && t.festa) && !!plat && plat.k === 'comida-festa-' + civ && JSON.stringify(shownX) === JSON.stringify(['x-carne', 'x-fruta', 'x-pao']) && !W1.festa.enfeites.some(e => e.k === 'fogos'),
+    `${civ}, ${W1.weave ? 'o povo tece' : 'sem tear'}: guirlanda de flores ${K['guirlanda-flores'] || 0}, da horta ${K['guirlanda-horta'] || 0}, bandeirolas ${K.bandeirolas || 0}, estandarte ${K['estandarte-' + civ] || 0}, pétalas ${K.petalas || 0}, velas da festa ${L.filter(t => t.k === 'vela' && t.festa).length}; o prato ${plat ? plat.k : '-'} com ${shownX.join('+')} (a receita: carne, fruta, trigo); o enfeite sem material conhecido fora`);
+  const qaF = dentroQA(b); check('o verificador na festa', !qaF.length, qaF.length ? qaF.map(q => q[1]).join(' | ') : 'limpo');
+  // (2) the door: barred (the world's own door state: a person made it so, b.ip.dr) and broken in (T1's state, planted by its door)
+  const door = p.entrance ? p.entrance.door : -1; const dr0 = b.ip.dr ? Object.assign({}, b.ip.dr) : null; const bar0 = list().some(t => t.k === 'tranca'); // (the world's own door, before: locked by the house's rule at night, perhaps)
+  b.ip.dr = Object.assign({}, b.ip.dr || {}, { [door]: 2 }); L = list(); const bar = L.find(t => t.k === 'tranca');
+  check('a porta trancada', !!bar && bar.on === 'parede' && In.doorState(b, door).state === 'trancada', bar ? `a tranca atravessada por dentro, a ${bar.y.toFixed(2)} m, ${bar.s[0].toFixed(2)} da largura` : 'sem tranca');
+  // (the save in the middle: the feast, the barred door and a spill as they were — the things in the same places)
+  b.chao = [{ k: 'poca', x: p.entrance ? p.entrance.x : 2, z: p.entrance ? p.entrance.z : 2, lv: 0, bebida: 'vinho', n: 1, t: Math.round(S0.clock * 10) / 10 }];
+  const snap = () => JSON.stringify(D.plan(S().buildings.get(b.id), plan(S().buildings.get(b.id)), true).list.filter(t => t.festa || /^(tranca|poca)$/.test(t.k)).map(t => [t.k, t.x, t.y, t.z, t.de || null]));
+  fresh(); const before = snap(); M.salvarCarregar(); fresh(); const after = snap(); const b2 = S().buildings.get(b.id);
+  check('o save no meio', before === after && before.length > 20, `${JSON.parse(before).length} coisas da festa, da porta e do chão — ${before === after ? 'iguais' : 'DIFERENTES'} depois de salvar e carregar`);
+  // (broken in: the leaf fallen inside, the splinters — the leaf in the doorway not drawn)
+  const ds = In.doorState; In.doorState = (bb, id) => (bb && bb.id === b2.id && id === door ? { state: 'arrombada', by: 'prova' } : ds(bb, id));
+  L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })(); const fallen = L.find(t => t.k === 'porta-caida'), spl = L.find(t => t.k === 'lascas');
+  const qaD = QA.dentro([b2]).filter(q => q[0] <= 3); In.doorState = ds;
+  check('a porta arrombada', !!fallen && !!spl && fallen.solto && !L.some(t => t.k === 'tranca') && !qaD.length, `${fallen ? 'a folha caída dentro' : 'sem folha'}, ${spl ? 'as lascas na soleira' : 'sem lascas'}${qaD.length ? '; ' + qaD.map(q => q[1]).join(' | ') : ''}`);
+  // (3) the spill that dries, the wet clothes that dry
+  const pool = () => { fresh(); const t = D.plan(b2, plan(b2), true).list.find(x => x.k === 'poca' && /^chao\//.test(x.key)); return t ? +t.s[0].toFixed(2) : 0; };
+  b2.chao = [{ k: 'poca', x: 0, z: 0, lv: 0, bebida: 'cerveja', n: 1, t: S().clock }];
+  { const C = In.CELL; let at = null; for (let z = 0.6; z < p.lot.w && !at; z += 0.4) for (let x = 0.6; x < p.lot.w && !at; x += 0.4) if (In.cell(b2, 0, x, z) === C.FLOOR) at = [x, z]; b2.chao[0].x = at[0]; b2.chao[0].z = at[1]; }
+  const p0 = pool(); S().clock += 12; const p1 = pool(); S().clock += 14; const p2 = pool(); S().clock -= 26; delete b2.chao;
+  const v = [...S().villagers.values()].find(q => q.age >= 18 && !q.inside); const mo0 = v.molhado; v.molhado = { t: S().clock, k: 'vinho' };
+  const m0 = At.molhado(v); S().clock += 15; const m1 = At.molhado(v); S().clock += 16; const m2 = At.molhado(v); S().clock -= 31; v.molhado = mo0;
+  check('a poça e o molhado que secam', p0 > p1 && p1 > 0 && p2 === 0 && m0 && m0.n === 1 && m0.k === 'vinho' && m1 && m1.n > 0.4 && m1.n < 0.6 && !m2, `a poça ${p0} → 12 s ${p1} → 26 s ${p2 || 'seca'}; a roupa molhada de vinho ${m0 && m0.n} → 15 s ${m1 && m1.n} → 31 s ${m2 ? m2.n : 'seca'}`);
+  // (4) the games at a table: the dice on the faces thrown, their cup; the tablets of the game of cards and the deck (T4's and T5's
+  // doors, planted)
+  const pj = plan(b2); const tab = pj.items.find(it => /^mesa/.test(it.kind) && D.surfacesOf(b2, pj).some(s => s.it === it && s.k === 'tampo' && s.w > 0.5)); const g0 = tab ? In.groupOf(b2, tab.id) : -1;
+  G.JogoDados = { atMesa: (bb, g) => (bb.id === b2.id && g === g0 ? { dados: [6, 3, 1], copo: 1, mat: 'osso' } : null) };
+  G.Cartas = { atMesa: (bb, g) => (bb.id === b2.id && g === g0 ? { mesa: 3, maos: 2, monte: 12, mat: 'papiro' } : null) };
+  L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })(); const dice = L.filter(t => t.k === 'dado'); const cup = L.find(t => t.k === 'copo-dados'), cards = L.find(t => t.k === 'cartas'), deck = L.find(t => t.k === 'monte');
+  const qaJ = QA.dentro([b2]).filter(q => q[0] <= 3); delete G.JogoDados; delete G.Cartas; L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })();
+  check('os jogos na mesa', dice.length === 3 && JSON.stringify(dice.map(t => t.face)) === '[6,3,1]' && !!dice[0].pre && !dice[2].pre && !!cup && !!cards && cards.cmat === 'papiro' && !!deck && !qaJ.length && !L.some(t => /^(dado|cartas|monte|copo-dados)$/.test(t.k)),
+    `${dice.length} dados nas faces ${dice.map(t => t.face).join(', ')}, o copo ${cup ? 'sim' : 'não'}, as cartas de ${cards ? cards.cmat : '-'} e o monte ${deck ? 'sim' : 'não'}; o jogo acabado → nada na mesa${qaJ.length ? '; ' + qaJ.map(q => q[1]).join(' | ') : ''}`);
+  // (5) who fainted: the cup fallen from the hand, the drink round it
+  const w = [...S().villagers.values()].find(q => q.age >= 18 && !q.inside && !q.aboard); const sv = { inside: w.inside, act: w.act, x: w.x, y: w.y };
+  { const C = In.CELL; let at = null; for (let z = 1.2; z < p.lot.w - 1 && !at; z += 0.3) for (let x = 1.2; x < p.lot.w - 1 && !at; x += 0.3) if (In.cell(b2, 0, x, z) === C.FLOOR && In.cell(b2, 0, x + 0.45, z) === C.FLOOR) at = [x, z];
+    w.inside = b2.id; w.act = 'desmaio'; w.x = b2.x + at[0] / Sp.TILE; w.y = b2.y + at[1] / Sp.TILE; }
+  L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })(); const mug = L.find(t => t.key === `caido/${w.id}/caneca`), sp = L.find(t => t.key === `caido/${w.id}/poca`); const qaC = QA.dentro([b2]).filter(q => q[0] <= 3);
+  Object.assign(w, sv); L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })();
+  check('quem desmaiou', !!mug && !!sp && !qaC.length && !L.some(t => /^caido\//.test(t.key)), `${mug ? 'a caneca caída ao lado' : 'sem caneca'}, ${sp ? 'a bebida no chão em volta' : 'sem poça'}; levantou → ${L.some(t => /^caido\//.test(t.key)) ? 'ficou' : 'nada'}${qaC.length ? '; ' + qaC.map(q => q[1]).join(' | ') : ''}`);
+  // (the feast over: nothing of it left; the door as it was)
+  delete b2.festa; b2.ip.dr = dr0; L = (() => { fresh(); return D.plan(b2, plan(b2), true).list; })();
+  check('a festa acabada, a porta como era', !L.some(t => t.festa) && L.some(t => t.k === 'tranca') === bar0, `${L.filter(t => t.festa).length} coisa(s) da festa, ${L.filter(t => t.k === 'tranca').length} tranca(s) (antes: ${bar0 ? 1 : 0}, a regra da casa)`);
+  ok('d15 a quarta onda: a festa pelo material e o prato pela receita, a porta trancada e a arrombada, a poça e o molhado que secam, os jogos na mesa, quem desmaiou, o save no meio', good, `taverna#${b.id} — ` + info.join('; '));
 }
 
 const e = M.erros(); if (!M.limpo()) console.log('  erros:', JSON.stringify(e.mod), e.console.slice(0, 5).join(' | '));
