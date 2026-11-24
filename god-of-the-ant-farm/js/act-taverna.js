@@ -714,7 +714,7 @@
     if (d.expulsa && d.expulsa.b === v.id) { v.act = 'expulsar'; const k = S.villagers.get(d.expulsa.a); if (k) G.faceTo(v, k.x - v.x, k.y - v.y); return; }
     // (the mourning: no music — D-816; the feast: its bards before anyone, from the opening, playing together — D-822)
     const quiet = !!(TC() && TC().calado(b)); const lead = !quiet && TF() ? TF().lider(op, b) : null;
-    if (lead && !d.mus && S.clock >= (d.musT || 0) && t.st === 5) { if (lead === v) { startSet(v, t, b, op); TF().coro(op, b, v); } }
+    if (lead && !d.mus && S.clock >= (d.musT || 0) && (t.st === 5 || t.st === 2 || t.st === 3)) { if (lead === v) { TF().toStage(op, v); startSet(v, t, b, op); TF().coro(op, b, v); } }
     else if (!quiet && night && !d.mus && S.clock >= (d.musT || 0) && t.st === 5) {
       // (once a look of the musician's own seat: the room of two or more, and the best of who would play there now)
       let n = 0, best = null, bs = T.MUSE;
@@ -965,8 +965,8 @@
     }
     // the god's body at its table (D-767): st 10 come to it, the menu opened with the house's word; 11 waiting there for the order;
     // 12 at the counter, filling what was asked; 13 come back with it; 14 handing it over, paid there — and the walk back, st 5
-    // (st 40: the feast's speech from the counter — taverna-festa.js, D-821)
-    if (t.st === 40) { if (TF() && TF().runKeeper(v, t, b, op, H)) return; t.st = 1; return; }
+    // (st 50: the feast's speech from the counter — taverna-festa.js, D-821)
+    if (t.st === 50) { if (TF() && TF().runKeeper(v, t, b, op, H)) return; t.st = 1; return; }
     if (t.st >= 10 && t.st <= 14) {
       const m = t.corpo ? d.mesa[t.corpo] : null; const c = m ? S.villagers.get(t.corpo) : null;
       const mineM = !!m && !!m.corpo && m.srv === v.id && !!c;

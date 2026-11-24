@@ -56,8 +56,9 @@
   TC.CALMA = 20;      // seconds with no danger at the door: the all clear
   TC.HP_MADEIRA = 30; // the door's strength: its wood, and its bar — of iron where the people had iron, else of wood
   TC.HP_TRANCA = { ferro: 22, madeira: 12 };
-  TC.GOLPE = 1.3;     // seconds between two blows at a door
-  TC.ARROMBA_R = 14;  // tiles a raider looks for a barred door within; at most TC.ARROMBA_N of a band at one door
+  TC.GOLPE = 1.3;     // seconds between two blows at a door, from its doorstep (tiles from the door's own point)
+  TC.AT_DOOR = 0.8;
+  TC.ARROMBA_R = 18;  // tiles a raider looks for a barred door within; at most TC.ARROMBA_N of a band at one door
   TC.ARROMBA_N = 3;
   TC.ARROMBA_P = 0.55; // the share of the raiders who go at it (the hash of the soldier, the door and the moment)
   TC.CONSERTO = 2;    // the wood a door broken in takes to mend, and the hands' seconds at it
@@ -320,7 +321,7 @@
   // the blows; broken in, the looter takes from the shelf, and the hunt goes on by the war's own ways
   const RAID = { saque: 1, captura: 1, massacre: 1 };
   SH.force = function (v, t, band, set, dt, H) {
-    if (!RAID[band.goal] || (v.carry && v.carry.n > EPS) || t.foe) { t.arr = 0; return false; }
+    if (!RAID[band.goal] || (v.carry && v.carry.n > EPS) || t.foe) { t.arr = 0; t.arrAt = 0; return false; }
     const S = S_(); let b = t.arr ? S.buildings.get(t.arr) : null;
     if (b && broken(b) && b.porta.quem === v.id && S.clock - b.porta.t < 2) { if (band.goal !== 'massacre') lootShelf(v, b, band); t.arr = 0; t.dest = null; return false; }
     if (b && !(barred(b) && TC.hiders(b).length)) { t.arr = 0; b = null; }
@@ -335,15 +336,16 @@
         if (!G.W.reaches(v, dr[0], dr[1])) continue;
         b = q; bd = d;
       }
-      if (!b) return false; t.arr = b.id; t.arrW = 0; t.dest = null; t.gT = undefined;
+      if (!b) return false; t.arr = b.id; t.arrGo = 0; t.arrN = 0; t.arrAt = 0; t.dest = null; t.gT = undefined;
     }
-    const dr = G.Vg.door(b);
-    if (G.dist(v.x, v.y, dr[0], dr[1]) > 0.8) {
-      t.arrW = (t.arrW || 0) - dt;
-      if (t.arrW <= 0 || H.arrived(v)) { t.arrW = 0.6; if (!H.goto(v, dr[0], dr[1], true)) { t.arr = 0; t.arrT = r1(S.clock + 10); return false; } }
-      H.move(v, dt, 1.15); v.act = ''; return true;
+    // (the walk to its doorstep — the way the world walks to a door, L-1927 —; there, the blows)
+    const dr = G.Vg.door(b); if (t.arrAt === b.id && G.dist(v.x, v.y, dr[0], dr[1]) > TC.AT_DOOR * 3) t.arrAt = 0; // (pushed off it)
+    if (t.arrAt !== b.id && G.dist(v.x, v.y, dr[0], dr[1]) > TC.AT_DOOR) {
+      if (!t.arrGo) { if (!H.goto(v, dr[0], dr[1], false) && !H.goto(v, dr[0], dr[1], true)) { t.arr = 0; t.arrT = r1(S.clock + 10); return false; } t.arrGo = 1; }
+      if (H.move(v, dt, 1.15)) { t.arrGo = 0; if (G.dist(v.x, v.y, dr[0], dr[1]) < TC.AT_DOOR * 1.6) t.arrAt = b.id; else if (++t.arrN > 3) { t.arr = 0; t.arrT = r1(S.clock + 10); return false; } }
+      v.act = ''; return true;
     }
-    strike(v, b, dt); return true;
+    t.arrAt = b.id; strike(v, b, dt); return true;
   };
   // (whoever comes at someone inside a barred tavern — the war's fight at its door, a massacre —: the door holds him till it gives)
   SH.door = function (v, t, bd, dt, H) { if (!bd || bd.type !== 'taverna' || !barred(bd)) return false; strike(v, bd, dt); return true; };
@@ -355,7 +357,7 @@
   function canKeep(k, b, wasOpen) {
     if (!k || A.isBody(k) || k.captive || k.jail || k.aboard || k.held || k.air || !(k.hp > 0)) return false;
     const t = k.task; if (t && (t.type === 'combat' || t.type === 'band' || t.type === 'escorted' || t.type === 'condemned')) return false;
-    if (t && t.type === 'hide' && t.sh === 'taverna' && t.b === b.id) return false;
+    if (t && t.type === 'hide' && t.sh === 'taverna' && t.b === b.id && t.dono) return false; // (hiding there as anyone: his house's errand instead)
     if (!(wasOpen || insideOf(b).length || k.inside === b.id || (T.onDuty && T.onDuty(k)))) return false;
     const dr = G.Vg.door(b); return k.inside === b.id || G.dist(k.x, k.y, dr[0], dr[1]) < TC.DONO;
   }

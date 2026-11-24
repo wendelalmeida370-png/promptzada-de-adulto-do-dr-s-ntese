@@ -2258,8 +2258,10 @@
   // given the rule's own test of a place free, for the body's places: In.freeNear. nobody: the body left out, its place and
   // the point it stands on — where it could be, once there)
   // (skip: one person left out — the share-out without them, for the place they would take: In.hold)
-  function assign(b, t, probe, nobody, skip) {
-    const S = G.S; const T = TYPES[b.ip.t] || {}; const people = skip ? insideOf(b.id).filter(v => v.id !== skip) : insideOf(b.id);
+  // (fresh: who is inside now, not the step's memo of it — the place one takes is asked by each one who comes in, and two who come in
+  // in the same part of a step of the skip took the same seat: the memo of the part did not have the first, L-1980, T-1903)
+  function assign(b, t, probe, nobody, skip, fresh) {
+    const S = G.S; const T = TYPES[b.ip.t] || {}; const inn = fresh ? insideFresh(b.id) : insideOf(b.id); const people = skip ? inn.filter(v => v.id !== skip) : inn;
     const by = new Map(), withM = new Map(); const used = new Set(); const discs = [], rects = [];
     // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two; and where the
     // body stands, of a piece's places only the one under its feet: walking by a bench, it never puts off who sits on it)
@@ -2429,7 +2431,7 @@
     if (!G.inSim || !v || !v.task) return null;
     b = b || G.S.buildings.get(v.inside); const t = b && b.ip && TYPES[b.ip.t] ? tableOf(b) : null; if (!t) return null;
     const U = [].concat(uses || []);
-    const list = assign(b, t, free => { const out = []; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) out.push(e); } return out; }, false, v.id).probe || [];
+    const list = assign(b, t, free => { const out = []; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) out.push(e); } return out; }, false, v.id, true).probe || [];
     if (!list.length) { delete v.task.lugar; return null; }
     let e = list[0];
     // (choose saying none: no place held — the floor is no place one keeps)

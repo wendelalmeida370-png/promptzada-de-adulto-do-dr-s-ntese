@@ -68,15 +68,15 @@
   TF.MADEIRA = 1;
   TF.LUZ = 0.15;
   TF.RODA = 3;          // dancers for a ring
-  TF.CONC_X = 0.55;     // who takes up the drinking match: of the índole past this
+  TF.CONC_X = 0.5;      // who takes up the drinking match: of the índole past this (and not worn out: T.SPENT)
   TF.CONC_DEPOIS = 25;  // seconds after the speech before a match may start, and between two of its rounds
   TF.CONC_T = 7;
   TF.CONC_MAX = 4;      // at most in a match
   TF.CONC_LIM = 0.85;   // how drunk one gives up at — more, the stubborn
   TF.CONC_TEIMA = 0.45;
-  TF.FORTE = 0.62;      // the arm wrestle: strong past this, of the índole past TF.BRACO_X
-  TF.BRACO_X = 0.5;
-  TF.BRACO_JAN = 40;    // a table's look for one, each this many seconds; its share of the looks, a plain night and a feast
+  TF.FORTE = 0.6;       // the arm wrestle: strong past this, of the índole past TF.BRACO_X
+  TF.BRACO_X = 0.45;
+  TF.BRACO_JAN = 20;    // a table's look for one, each this many seconds; its share of the looks, a plain night and a feast
   TF.BRACO_P = 0.2;
   TF.BRACO_PF = 0.45;
   TF.BRACO_T = 6;       // its seconds, and up to 3 more by the pair
@@ -193,14 +193,25 @@
     if (D.free(ref, 'cera') >= TF.LUZ * 2 - EPS && use(ref, 'cera', TF.LUZ)) out.push({ k: 'vela', de: 'cera' });
     return out;
   }
-  // the bards: the town's own who play — the índole's ext and abe, the sociable (T.muse) —, grown, free, the most of it first
+  // the bards: the town's own who play — the índole's ext and abe, the sociable (T.muse) —, grown, free tonight (not minding the little
+  // ones, not ill in bed, not at a post, not starving nor worn out), the most of it first
+  const POST = { guard: 1, ronda: 1, patrol: 1, watch: 1, cela: 1, levar: 1, fornalha: 1 };
+  const freeTonight = v => !(G.Lar && (G.Lar.minder(v) || G.Lar.bedrest(v))) && !(v.task && POST[v.task.type]) && !(v.hunger > 80) && v.energy > T.SONO + 8;
+  TF.maxBardos = b => { const sz = ({ taberna: 0, taverna: 1, hospedaria: 2 })[b.esc]; return TF.BARDOS[sz === undefined ? 1 : sz]; };
   function bardsOf(b, k) {
-    const S = S_(); const L = []; const sz = ({ taberna: 0, taverna: 1, hospedaria: 2 })[b.esc]; const max = TF.BARDOS[sz === undefined ? 1 : sz];
+    const S = S_(); const L = []; const max = TF.maxBardos(b);
     for (const v of S.villagers.values()) {
-      if (v.set !== b.set || v === k || A.isBody(v) || v.captive || v.jail || v.aboard || v.age < 16 || v.age >= 70 || v.sick > 0 || v.role === 'taverneiro') continue;
+      if (v.set !== b.set || v === k || A.isBody(v) || v.captive || v.jail || v.aboard || v.age < 16 || v.age >= 70 || v.sick > 0 || v.role === 'taverneiro' || !freeTonight(v)) continue;
       const s = T.muse(v); if (s >= T.MUSE) L.push([s, v.id]);
     }
     L.sort((p, q) => q[0] - p[0] || p[1] - q[1]); return L.slice(0, max).map(x => x[1]);
+  }
+  // (at the speech, the band made up by who plays among the guests at the tables, if the town's did not all come)
+  function moreBards(op, b, f) {
+    const S = S_(); const d = op.data; const at = f.bardos.filter(id => d.mesa[id]).length; const max = TF.maxBardos(b); if (at >= Math.min(2, max)) return;
+    const L = []; for (const id of Object.keys(d.mesa)) { const v = S.villagers.get(+id); const m = d.mesa[id]; if (!v || m.body || m.corpo || f.bardos.includes(v.id) || v.age < 16) continue; const s = T.muse(v); if (s >= T.MUSE) L.push([s, v.id]); }
+    L.sort((p, q) => q[0] - p[0] || p[1] - q[1]);
+    for (const [, id] of L) { if (f.bardos.length >= max + 1 || f.bardos.filter(q => d.mesa[q]).length >= max) break; f.bardos.push(id); }
   }
   // (the feast opened with the day: the decorations up, the bards called, the dish chosen — once)
   TF.prep = function (op, b) {
@@ -223,12 +234,12 @@
   TF.fala = function (v, t, b, op) {
     const f = TF.noiteDe(b); if (!f || f.fase !== 1 || f.por !== v.id && T.keeperOf(b) !== v) return false;
     const n = Object.keys(op.data.mesa).length; const h = T.horas(b);
-    if (n < TF.DISCURSO_N && S_().time < h.abre + TF.DISCURSO_ATE) return false;
-    t.st = 40; v.actT = 0; return true;
+    if (!n || (n < TF.DISCURSO_N && S_().time < h.abre + TF.DISCURSO_ATE)) return false;
+    t.st = 50; v.actT = 0; return true;
   };
-  // (st 40: the cup raised, the reason told — the slate, the chronicle that the body hears; at its end the round of the house)
+  // (st 50: the cup raised, the reason told — the slate, the chronicle that the body hears; at its end the round of the house)
   TF.runKeeper = function (v, t, b, op, H) {
-    const S = S_(); const f = TF.noiteDe(b); if (!f || t.st !== 40) return false;
+    const S = S_(); const f = TF.noiteDe(b); if (!f || t.st !== 50) return false;
     v.act = 'discurso';
     if (!t.disc && v.actT >= 0.4) {
       t.disc = 1; say(v, 'festa_discurso', { bem: f.causa }); const set = S.settlements.get(b.set);
@@ -236,7 +247,7 @@
       const o = op.data.atos || (op.data.atos = {}); const e = o.discurso || (o.discurso = {}); e['festa:' + f.motivo] = (e['festa:' + f.motivo] || 0) + 1;
     }
     if (v.actT < TF.DISCURSO_T) return true;
-    f.fase = 2; f.discurso = r1(S.clock); rodada(op, b); t.st = 1; t.disc = 0; v.actT = 0; return true;
+    f.fase = 2; f.discurso = r1(S.clock); moreBards(op, b, f); rodada(op, b); t.st = 1; t.disc = 0; v.actT = 0; return true;
   };
   // (the round of the house: everyone of the world at the tables with the hands free asks for a drink, the keeper's to give — serve()
   // pours it with no coin, «rodada-casa», D-821)
@@ -251,20 +262,22 @@
   }
 
   // ------------------------------ the bards together (D-822) ------------------------------
+  // (a bard to the stage: what is in his hands downed first, out of the queue for a round — he plays, the round waits)
+  TF.toStage = function (op, v) { const d = op.data; if (v.carry && v.carry.op === op.id && v.carry.n > EPS && v.carry.k !== 'food') T.gole(v, op); d.fila = d.fila.filter(q => q !== v.id); const m = d.mesa[v.id]; if (m) delete m.vem; };
   // (a bard at the tables of his feast, the leader at the stage: the others play round it, as long as his set — the same instrument
   // of the people's kit, standing by the stage)
   TF.coro = function (op, b, lead) {
     const S = S_(); const f = TF.noiteDe(b); if (!f) return; const d = op.data; const In = G.Interiors; const lt = lead.task; const mp = In && In.placeOf ? In.placeOf(lead) : null;
     const coro = [];
     for (const id of f.bardos) {
-      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || m.st !== 5 || !v.task || v.task.type !== 'tavern' || m.zz || (v.carry && v.carry.n > EPS)) continue;
-      const t = v.task; m.use = t.use; t.use = 'dancar'; t.near = mp && mp.item ? [mp.item, mp.q] : null; t.st = 6; m.st = 6; t.coro = 1; t.mw = lt.mw; t.me = lt.me; v.actT = 0; coro.push(id);
+      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v)) continue;
+      TF.toStage(op, v); if (v.carry && v.carry.n > EPS) continue; const t = v.task; m.use = t.use; t.use = 'dancar'; t.near = mp && mp.item ? [mp.item, mp.q] : null; t.st = 6; m.st = 6; t.coro = 1; t.mw = lt.mw; t.me = lt.me; v.actT = 0; coro.push(id);
       if (!d.musicos.includes(id)) d.musicos.push(id);
     }
     d.coro = coro; f.tocaram = Array.from(new Set((f.tocaram || []).concat([lead.id], coro)));
   };
   // (the feast's music: the bards before anyone, from the opening — the first of them at the tables)
-  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; if (m && m.st === 5 && !m.zz) return S_().villagers.get(id) || null; } return null; };
+  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; const v = m && S_().villagers.get(id); if (v && (m.st === 5 || m.st === 2 || m.st === 3) && !m.zz && v.task && v.task.type === 'tavern' && v.task.op === op.id && !G.Vg.entering(v) && !(v.carry && v.carry.k === 'food')) return v; } return null; };
 
   // ------------------------------ the drinking match and the arm wrestle (D-823, D-824) ------------------------------
   const compete = v => 0.5 * fac(v, 'ambicioso') + 0.3 * ax(v, 'ext') + 0.2 * (1 - ax(v, 'con'));
@@ -280,6 +293,8 @@
     const r = HEAVY[v.roleBack || v.role] || 0; const hp = Math.max(0, Math.min(1, (v.hp === undefined ? 100 : v.hp) / 100));
     return r2(0.3 + r + yr + 0.12 * hp);
   };
+  // (who drank tonight: a round down, the drink in one — or the cup in the hand now)
+  const drank = (v, m, op) => (m.r || 0) >= 1 || (v.drinks || 0) >= 1 || !!(v.carry && v.carry.op === op.id && v.carry.k !== 'food');
   const seated = (v, m, op) => !!v && !!v.task && v.task.type === 'tavern' && v.task.op === op.id && !m.body && !m.corpo && !m.zz && !(T.brawling && T.brawling(v));
   // (a table's own look: the arm wrestle of two of it — once a while, by the hash of the day, the table and the moment)
   TF.mesa = function (op, b, d, g, L) {
@@ -290,7 +305,7 @@
     const k = Math.floor(S.clock / TF.BRACO_JAN); const jk = d.bk || (d.bk = {}); if (jk[g] === k) return; jk[g] = k;
     const fest = !!TF.noiteDe(b); const gn = T.gk ? T.gk(g) : 0;
     if (G.hash(Math.imul(op.id | 0, 31) + Math.imul(gn, 7) + Math.imul(k, 977) + 11) >= (fest ? TF.BRACO_PF : TF.BRACO_P)) return;
-    const C = L.filter(([v, m]) => m.st === 5 && seated(v, m, op) && !(v.carry && v.carry.n > EPS) && v.age >= 18 && v.age < 58 && v.hp > 50 && ((m.r || 0) >= 1 || (v.drinks || 0) >= 1) && TF.forca(v) >= TF.FORTE && compete(v) >= TF.BRACO_X && !(d.concurso && d.concurso.quem.includes(v.id)))
+    const C = L.filter(([v, m]) => (m.st === 5 || m.st === 2) && seated(v, m, op) && !(v.carry && v.carry.n > EPS) && v.age >= 18 && v.age < 58 && v.hp > 50 && drank(v, m, op) && TF.forca(v) >= TF.FORTE && compete(v) >= TF.BRACO_X && !(d.concurso && d.concurso.quem.includes(v.id)))
       .map(([v]) => v).sort((p, q) => TF.forca(q) - TF.forca(p) || p.id - q.id);
     if (C.length < 2) return;
     const a = C[0], c = C[1]; const h1 = G.hash(Math.imul(a.id | 0, 53) + Math.imul(k, 17) + 5), h2 = G.hash(Math.imul(c.id | 0, 53) + Math.imul(k, 17) + 5);
@@ -321,7 +336,7 @@
     if (!c) {
       if (!f || f.fase < 2 || d.concursoN || S.clock < (f.discurso || 0) + TF.CONC_DEPOIS) return;
       const L = [];
-      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; const v = S.villagers.get(+id); if (!v || !seated(v, m, op) || !(m.st === 5 || m.st === 3) || v.age < 18 || v.age >= 60 || v.energy < 30 || (m.r || 0) < 1) continue;
+      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; const v = S.villagers.get(+id); if (!v || !seated(v, m, op) || !(m.st === 5 || m.st === 3 || m.st === 2) || v.age < 18 || v.age >= 60 || v.energy < T.SPENT || f.bardos.includes(v.id)) continue;
         if (coin(b) && E.purse(v) + EPS < T.PRICE.drink * 3) continue; const s = compete(v); if (s >= TF.CONC_X) L.push([s, v.id]); }
       if (L.length < 2) return;
       L.sort((p, q) => q[0] - p[0] || p[1] - q[1]);
