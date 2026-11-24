@@ -468,7 +468,7 @@
       podeDobrar: C.podeDobrar(q, me) && j.aposta > 0, hist: q.hist.slice(-8), fim: q.fim ? Object.assign({}, q.fim, { meu: q.fim.w === me ? 1 : q.fim.w === ai ? -1 : 0 }) : null, civ: [q.civ[me], q.civ[ai]], bonus: q.p[me].bonus, mal: q.p[me].mal, desc: [q.p[me].desc.length, q.p[ai].desc.length],
       preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: (j.bar && j.bar[me]) || null, trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length,
       // (de onde vem cada baralho da mesa, o seu e o do outro — «o seu baralho», «baralho da casa, emprestado» —, e o aluguel pago: D-933)
-      fontes: [me, ai].map(i => { const n = j.ns && j.ns[i]; const r = n && JC() ? JC().mesa(n) : null; return r ? JC().fonteDe(r, v) : j.casa && j.casa[i] ? 'baralho da casa, emprestado' : ''; }), alug: j.alug || 0 };
+      fontes: [me, ai].map(i => { const n = j.ns && j.ns[i]; const r = n && JC() ? JC().mesa(n) : null; return r ? JC().fonteDe(r, v, 1) : j.casa && j.casa[i] ? 'baralho da casa, emprestado' : ''; }), alug: j.alug || 0, casas: (j.casa || []).filter(Boolean).length };
   };
 
   // ------------------------------ o laço do jogo e o da trapaça (a sociedade) ------------------------------

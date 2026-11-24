@@ -220,7 +220,8 @@ if (on('g4')) {
     if (!go.ok && rent.length) b4.push('pagou aluguel sem a partida começar');
     if (go.ok) { done = true;
       if (!(rent.length === 1 && rent[0].from === G.Eco.coinRef(v) && rent[0].to === G.Eco.coinRef(k0) && Math.abs(rent[0].q - al.n) < EPS)) b4.push('o aluguel não foi pelo livro às moedas do taverneiro: ' + JSON.stringify(rent));
-      const sv = JD.corpo(v); if (!sv || !sv.set || !sv.set.casa || Math.abs(sv.set.alug - al.n) > EPS || !/emprestado/.test(sv.set.de) || !/aluguel/.test(sv.set.de)) b4.push(`a tela não diz de onde vem o jogo nem o aluguel: ${JSON.stringify(sv && sv.set)}`);
+      // (the screen says where the set comes from, and the rent once, beside it — the source does not repeat it: L-2190)
+      const sv = JD.corpo(v); if (!sv || !sv.set || !sv.set.casa || Math.abs(sv.set.alug - al.n) > EPS || !/emprestado/.test(sv.set.de) || /aluguel/.test(sv.set.de)) b4.push(`a tela não diz de onde vem o jogo, ou diz o aluguel duas vezes: ${JSON.stringify(sv && sv.set)}`);
       s4.push(`${v.name}, sentado sem consumir em #${b.id}: chamou com «${x.de}» e começou — pagou ${rent.length ? rent[0].q : 0} ao taverneiro (${r2(kc)} → ${r2(purse(k0))}; as moedas dele ${r2(vc)} → ${r2(purse(v))}); a tela diz «${sv && sv.set ? sv.set.de : ''}»`); }
     else s4.push(`#${b.id}: ${go.why} (nada pago)`);
     if (s) { const op = A.get(s.op); ask(w => JD.sair(w, s.op)); until(() => !op || !A.live(op), 60, 0.25); }

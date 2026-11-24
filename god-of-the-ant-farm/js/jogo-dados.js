@@ -688,7 +688,7 @@
       // (the set on the table and where it comes from — the house's, lent; the body's own; another's —, and the rent paid: the J front, D-932)
       set: d.set ? { k: d.set.k, mat: d.set.k.split('.')[1], meus: !!d.set.dono && d.set.dono === v.id, casa: !!d.set.casa, alug: d.set.alug || 0,
         vem: d.fase === 'convite' && d.host === v.id && d.set.casa && !d.set.alug && JC() ? JC().aluguel(b, v).n : 0, // (the rent the body will pay as it begins)
-        de: d.set.n && JC() && JC().mesa(d.set.n) ? JC().fonteDe(JC().mesa(d.set.n), v) : d.set.casa ? 'dados da casa, emprestados' : d.set.dono === v.id ? 'os seus dados' : 'dados emprestados' } : null,
+        de: d.set.n && JC() && JC().mesa(d.set.n) ? JC().fonteDe(JC().mesa(d.set.n), v, 1) : d.set.casa ? 'dados da casa, emprestados' : d.set.dono === v.id ? 'os seus dados' : 'dados emprestados' } : null,
       torneio: torn ? { premio: torn.data.pote || 0, placar: Object.keys(torn.data.placar).map(id => [nome(+id), torn.data.placar[id][0]]).sort((a, c) => c[1] - a[1]).slice(0, 3) } : null,
       tema: T() && T().look ? T().look(b).tema : 'classico', copo: cupOf(b),
       price: n => money(b, n), hist: d.hist.slice(-3).map(h => ({ r: h.r, total: h.total, cravou: h.cravou ? nome(h.cravou) : '', queimou: h.queimou.map(nome) })) };

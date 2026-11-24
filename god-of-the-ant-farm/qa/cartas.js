@@ -222,6 +222,8 @@ if (on('c7')) {
         const d = ask(w => C.desafia(w, pc.o, ap)); if (!d.ok) bad.push('o desafio: ' + d.why); else said.push(d.msg);
         let j = C.vivoDe(body); let lances = 0;
         for (let k = 0; k < 14 && j && j.fase === 'jogo'; k++) { const vv = C.doCorpo(body); if (!vv) break;
+          // (the cloth says where the body's deck comes from, and the rent of the game once, beside it — never twice: L-2190)
+          if (k === 0) { said.push(`o pano: «${vv.fontes[0] || ''}»${vv.alug ? `, aluguel ${vv.preco(vv.alug)}${vv.casas > 1 ? ' (os dois baralhos)' : ''}` : ''}`); if (vv.alug > 0 && /aluguel/.test(vv.fontes[0] || '')) bad.push(`o pano diz o aluguel duas vezes: «${vv.fontes[0]}» e ${vv.alug}`); }
           if (vv.dobra === 'outro') { const rr = ask(w => C.respondeCorpo(w, j.id, true)); said.push('o outro dobrou: ' + (rr.msg || rr.why)); j = C.jogo(j.id); continue; }
           if (k === 1 && vv.podeDobrar) { const dd = ask(w => C.dobrar(w, j.id)); said.push('dobrar: ' + (dd.msg || dd.why)); j = C.jogo(j.id); if (!j || j.fase !== 'jogo') break; }
           const id = C.ia(j.s, j.corpo, { ousado: 0.5 }); const rr = ask(w => C.lance(w, j.id, id, k === 2)); if (!rr.ok) { bad.push('o lance: ' + rr.why); break; } lances++;

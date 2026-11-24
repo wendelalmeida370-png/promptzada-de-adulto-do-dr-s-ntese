@@ -230,9 +230,10 @@
     return `${G.cap(fr)}: espere ${ele} voltar${buy ? `, ou ${buy}` : ''}.`;
   };
   // de onde vem o jogo de uma partida, para a tela: «dados da casa, emprestados», «os seus dados», «os dados de Orm»; e o aluguel pago
-  JC.fonteDe = function (rec, v) {
+  // (sem ele, «semAluguel», a tela que diz o aluguel da partida inteira ao lado — o pano das Tabuletas, o título do copo —: L-2190)
+  JC.fonteDe = function (rec, v, semAluguel) {
     if (!rec) return ''; const t = TIPO[rec.tipo] || TIPO.dados; const S = S_();
-    if (!rec.dono) return `${t.casa}, emprestado${rec.tipo === 'dados' ? 's' : ''}${rec.aluguel > EPS ? ` (aluguel ${money(S.buildings.get(rec.b) || { set: 0 }, rec.aluguel)})` : ''}`;
+    if (!rec.dono) return `${t.casa}, emprestado${rec.tipo === 'dados' ? 's' : ''}${!semAluguel && rec.aluguel > EPS ? ` (aluguel ${money(S.buildings.get(rec.b) || { set: 0 }, rec.aluguel)})` : ''}`;
     if (v && rec.dono === v.id) return t.seu;
     const o = S.villagers.get(rec.dono); return `${rec.tipo === 'dados' ? 'os dados' : 'o baralho'} ${nomeDe(v, o)}`;
   };
