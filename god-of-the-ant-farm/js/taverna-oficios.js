@@ -50,7 +50,8 @@
   TO.COOK_HI = 7;      // (meals a night, by the memory, at which a taberna takes a cook — a taverna at 5, a hospedaria at 3: the keeper alone
                        //  buys and serves about six a night, act-taverna.js — the busiest tabernas of the ready metrópole sell five or six,
                        //  and keep him alone)
-  TO.BREW_HI = 7;      // (rounds a night of the house's own drink at which it takes a brewer — 5, 3: the keeper's small vat gives eight a batch)
+  TO.BREW_HI = 6;      // (rounds a night of the house's own drink — sold, and the ones the thirsty room would have asked — at which it takes a
+                       //  brewer — 4, 2: the keeper's small vat gives eight a batch, and the room of Mênfis is left thirsty for two or three)
   TO.STEP = 2;         // (what each step of the house takes off those marks)
   TO.LO = 0.55;        // (of the mark: below it, the one taken is let go)
   TO.SEM = 0.35;       // (the least share of the night the shelf had the plate — or the drink — counted: what was sold, over the time there was some)
