@@ -186,6 +186,14 @@ for (const s of small.slice(0, process.env.CAT ? 999 : 12)) console.log('   · '
   } finally { if (F) F.build = orig; }
   ok('o pé da escada sem chão (T-409)', got.length === 3 && got.every(([, a, e]) => !a && /^o pé da escada sem chão \(piso 0\)$/.test(e)), got.length ? got.map(([k, a, e]) => `${k}: ${a ? 'ARMA' : e}`).join(' · ') : 'sem a família estalagem.andar');
 }
+// (F13, D-990: each type's grammar — In.VERSION_T, a number from 1 up for a type of the game — and the catalogue's lines of each
+// type made by its grammar now: a version raised without its lines made again leaves the game probing that type's families live)
+{
+  const C = require('./catalogo.js'); const R = C.raw(); const bad = [];
+  for (const [t, n] of Object.entries(In.VERSION_T)) if (!In.TYPES[t] || !(Number.isInteger(n) && n >= 1)) bad.push(`In.VERSION_T.${t} = ${n}`);
+  const stale = R ? Object.keys(R.o.fams || {}).filter(t => In.TYPES[t] && !C.fresh(R, t)) : ['o arquivo'];
+  ok('a gramática de cada tipo e o catálogo dela (F13)', !bad.length && !stale.length, `${Object.keys(In.TYPES).length} tipos, ${Object.keys(In.VERSION_T).length ? 'com a sua versão: ' + Object.keys(In.VERSION_T).map(t => t + ' ' + In.versionOf(t)).join(', ') : 'todos na ' + In.VERSION}${bad.length ? ' — fora da regra: ' + bad.join(', ') : ''}${stale.length ? ' — as linhas do catálogo de outra gramática: ' + stale.join(', ') + ' (node qa/catalogo.js gera ' + stale.join(',') + ')' : ''}`);
+}
 // (a ratchet: the count the grammar has reached — it may only go down; brought down, the ceiling comes down with it, and the
 // goal is zero. Raised by a change, the change is wrong — unless the leader agrees and the commit says why)
 const GERADOR_TETO = 6; // (17 → 11 com a B2c: a ínsula do centro com um andar a mais, D-082 (3); 11 → 9 com a cabana redonda do deus, T-161; 9 → 6 com o pé das escadas onde o corpo fica, L-391)

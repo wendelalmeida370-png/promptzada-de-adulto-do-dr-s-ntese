@@ -23,7 +23,14 @@
   const In = G.Interiors = {};
   const TILE = 4;
   const CS = In.CS = 0.25; // (a cell of the inner grid, in metres)
-  In.VERSION = 6; // (the grammar's version: a newer grammar makes new plans of the same records — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196; 4: what hangs on a wall stays under the floor above it, L-814; 5: the walk starts at the cells nearest the door and a flight's end, L-816; 6: the tavern of the interiors 2.0 — its zones, its corridor, its tables and stools, the hall up to the roof —, a piece in parts, the bench of two, D-720)
+  In.VERSION = 6; // (the engine's grammar, what every type's plans are made by: a newer one makes new plans of the same records of every type — 2: the body's places fitted, D-088; 3: the house's core — where the household eats together, by the fire — before its other beds, D-196; 4: what hangs on a wall stays under the floor above it, L-814; 5: the walk starts at the cells nearest the door and a flight's end, L-816; 6: the tavern of the interiors 2.0 — its zones, its corridor, its tables and stools, the hall up to the roof —, a piece in parts, the bench of two, D-720. Since the interiors 3 each type has its own besides — In.VERSION_T —, and this one goes up only where the plans of every type change: D-990)
+  // each type's own grammar over the engine's (F13, D-990): a type whose plans change — its recipe, a piece only it lays, a change
+  // of the engine that moves only its plans (qa/plantas-iguais.js says which) — raises its number here, and only its plans are
+  // made again (the key), only its lines of the catalogue (node qa/catalogo.js gera TIPO) and only its records in a save made
+  // before are judged on loading. A type not here: 0 — the grammar of In.VERSION as it was when there was only one
+  In.VERSION_T = {};
+  // (a type's grammar as the key and the catalogue say it: the engine's, and the type's own over it where it has one — '6', '6.1')
+  In.versionOf = t => { const n = In.VERSION_T[t] | 0; return n > 0 ? In.VERSION + '.' + n : String(In.VERSION); };
   const REC_V = In.REC_V = 4; // (the record's version: an older one has its door judged on loading — 4: the grammar of In.VERSION 2. A world saved under an older grammar has all its records judged so: the save keeps the grammar its plans were made by, intG — D-196)
   In.TRIES = 12; // (how many times a recipe is laid out, each with its own dice, before its family gives way)
   In.STEP = 0.3; // (along a wall, the places tried every so many metres — besides the corners and right beside each piece)
@@ -194,11 +201,13 @@
   // (the table, compact: for each key, one number for each family of the type in its own order — 1 it is laid out, n the
   // reason msgs[n - 2] it is not —, and for each type the fingerprint of its list of families: a list changed since the
   // table was made leaves that type to the slow way)
+  // (and each type's own grammar its lines were made by, vers — a table of before the types had their own: none, 0 —: a type
+  // whose number went up since is left to the slow way until its lines are made again, the other types' lines read as they are)
   In.famPrint = t => { const f = (TYPES[t] && TYPES[t].fams) || []; let h = 5381; const str = f.join(','); for (let i = 0; i < str.length; i++) h = (Math.imul(h, 33) + str.charCodeAt(i)) | 0; return f.length + ':' + (h >>> 0).toString(36); };
   In.addProbed = (ver, o) => {
     if (ver !== In.VERSION || !o || !o.keys) return;
     for (const k in o.keys) {
-      const t = k.split('|')[0]; if (!TYPES[t] || !o.fams || o.fams[t] !== In.famPrint(t)) continue;
+      const t = k.split('|')[0]; if (!TYPES[t] || !o.fams || o.fams[t] !== In.famPrint(t) || ((o.vers && o.vers[t]) | 0) !== (In.VERSION_T[t] | 0)) continue;
       const row = o.keys[k]; const fams = TYPES[t].fams; const tab = {};
       for (let q = 0; q < fams.length; q++) tab[fams[q]] = row[q] === 1 ? 1 : o.msgs[row[q] - 2];
       PROBED[k] = tab;
@@ -938,9 +947,9 @@
   // the least floor where a household sleeps: mats and beds packed head to the wall with one aisle (1.38 m² each sleeper),
   // and the fire, the way in and what keeps the house's things (2.5 m²) — less than this, no arrangement holds them
   In.floorNeed = housing => housing * 1.38 + 2.5;
-  // (and the grammar's version: a plan of an older grammar is another plan — what a save kept by this key, the piece the body
-  // sat on, is no longer the piece of that number: D-196)
-  const planKey = (b, rec) => b.id + ':' + rec.r + ':' + rec.f + ':' + b.type + ':' + rec.s + ':' + (rec.fx || []).length + ':g' + In.VERSION;
+  // (and the grammar's version — its type's, In.versionOf: D-990 —: a plan of an older grammar is another plan — what a save kept
+  // by this key, the piece the body sat on, is no longer the piece of that number: D-196)
+  const planKey = (b, rec) => b.id + ':' + rec.r + ':' + rec.f + ':' + b.type + ':' + rec.s + ':' + (rec.fx || []).length + ':g' + In.versionOf(rec.t);
   // (the key of a building's plan, as the cache keeps it: the same key, the same plan — for whoever keeps a plan of its own)
   In.keyOf = b => (b && b.ip && TYPES[b.ip.t] ? planKey(b, b.ip) : null);
   const keep = (id, key, p) => { p.key = key; cache.set(id, p); if (cache.size > In.CACHE) cache.delete(cache.keys().next().value); return p; }; // (a plan is a function of its record: made again when asked)
@@ -2916,11 +2925,13 @@
     const t = TYPES[b.type] ? b.type : TYPES[b.origType] ? b.origType : null; if (!t) { delete b.ip; return false; }
     const ctx = In.contextOf(b); ctx.t = t; b.ip = newRecord(b, ctx, true); if (b.type !== 'ruin') placeDoor(b); b.ip.h.push([G.S.day, 'migrado']); secure(b); return true;
   }
-  // (g: the grammar the save's plans were made by — the save's intG; 0 for a save of before D-196 — an older one than this:
-  // every record judged as one of an older version is — the door, and a home's household still held by the plan it has now —,
-  // whatever its own version)
-  In.migrate = function (g) {
-    const oldG = g !== undefined && !(g >= In.VERSION); let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++;
+  // (g: the grammar the save's plans were made by — the save's intG, the engine's; 0 for a save of before D-196 — and gt, each
+  // type's own over it — the save's intGT; none in a save of before the types had their own: every type at 0, D-990 —: where a
+  // type's is older than its grammar now, every record of that type is judged as one of an older version is — the door, and a
+  // home's household still held by the plan it has now —, whatever its own version; the records of the other types, never)
+  const olderG = (g, gt, t) => g !== undefined && (!(g >= In.VERSION) || (g === In.VERSION && ((gt && gt[t]) | 0) < (In.VERSION_T[t] | 0)));
+  In.migrate = function (g, gt) {
+    const oldG = t => olderG(g, gt, t); let n = 0; for (const b of G.S.buildings.values()) if ((TYPES[b.type] || (b.type === 'ruin' && TYPES[b.origType])) && repair(b)) n++;
     // (a record of an older version — v 1: before the door of a building of work went before an open tile of its street and
     // the way in asked for that tile, L-209; v 2: before a side open onto a pocket, smaller than the ground another side opens
     // onto, stopped being a side open to the street, L-216; v 3: before the grammar of In.VERSION 2, whose plans fit the body's
@@ -2930,7 +2941,7 @@
     // list of a type changed: L-283), another, chosen as a new building's would be, with the fact. A record of this version, in a
     // save of this grammar, is never judged on loading: what a save and a load give back is the same)
     for (const b of G.S.buildings.values()) {
-      const r = b.ip; if (!r || (!oldG && (r.v | 0) >= REC_V)) continue; r.v = REC_V;
+      const r = b.ip; if (!r || (!oldG(r.t) && (r.v | 0) >= REC_V)) continue; r.v = REC_V;
       // (and where the type has its form's family and it is laid out for the record's people — D-093: the temple —, that family,
       // the one the god and the 3D draw: an old temple there becomes the form's, not a hall the form does not have; chosen as a
       // new building's is, so only where the form's is laid out)
@@ -2959,7 +2970,10 @@
   G.saveHooks = G.saveHooks || [];
   // (the record goes into the save with its building; loading a world without records — an older save, a ready-made world —
   // gives each building one from what it is on the day it is loaded, the same each time)
-  G.saveHooks.push({ save(out) { out.intG = In.VERSION; }, load(o) { cache.clear(); In.migrate((o && o.intG) || 0); } });
+  // (and the grammar its plans were made by: the engine's, intG, and each type's own over it, intGT — written only where a type
+  // has one: a save with none is the save of before, byte for byte — D-990)
+  const ownG = () => { const o = {}; for (const t of Object.keys(In.VERSION_T).sort()) if ((In.VERSION_T[t] | 0) > 0) o[t] = In.VERSION_T[t] | 0; return o; };
+  G.saveHooks.push({ save(out) { out.intG = In.VERSION; const gt = ownG(); if (Object.keys(gt).length) out.intGT = gt; }, load(o) { cache.clear(); In.migrate((o && o.intG) || 0, o && o.intGT); } });
 
   // ------------------------------ the catalogue (what the proofs and the god read) ------------------------------
   In.catalog = function (rec) {

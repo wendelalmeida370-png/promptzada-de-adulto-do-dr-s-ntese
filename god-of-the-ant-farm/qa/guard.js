@@ -551,13 +551,14 @@ for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const
 for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (f !== 'act-lazer.js' && /\bBiblioteca\.MAX\b/.test(c)) fails.push(`biblioteca: ${f}:${k + 1} lê o teto do dia da biblioteca clássica (pergunte G.Biblioteca.maxOf(b) — D-192): ${l.trim().slice(0, 110)}`);
   if (f === 'act-lazer.js' && /\bBi\.MAX\b/.test(c) && !/\bBi\.(MAX|maxOf|maxCopias) =/.test(c)) fails.push(`biblioteca: ${f}:${k + 1} lê Bi.MAX fora de onde ele se define e de onde o degrau o multiplica (use Bi.maxOf(b), Bi.maxCopias(b) — D-192): ${l.trim().slice(0, 110)}`); });
-// 67. "a gramática das plantas no save é do interiors.js" (D-198): o save diz a gramática que fez as suas plantas (intG), e só
-// o interiors.js o escreve e o lê — num save de antes, todo registro é julgado ao abrir; e a chave da planta leva a gramática
-// (':g' + In.VERSION), ou um lugar da planta de antes ficaria nas mãos do corpo depois de uma mudança de gramática. (A regra
-// 68 está livre)
+// 67. "a gramática das plantas no save é do interiors.js" (D-198, D-990): o save diz a gramática que fez as suas plantas — a do
+// motor (intG) e a de cada tipo sobre ela (intGT) —, e só o interiors.js as escreve e as lê — num save de antes, todo registro
+// do tipo cuja gramática subiu é julgado ao abrir; e a chave da planta leva a gramática do tipo do registro (':g' +
+// In.versionOf(rec.t)), ou um lugar da planta de antes ficaria nas mãos do corpo depois de uma mudança de gramática. (Mudada
+// pela frente K dos interiores 3: a gramática por tipo, F13. A regra 68 está livre)
 for (const f of files) if (f !== 'interiors.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
-  if (/\bintG\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG é do interiors.js — D-198): ${l.trim().slice(0, 110)}`); });
-if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.VERSION"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática (':g' + In.VERSION): D-198");
+  if (/\bintGT?\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG e intGT são do interiors.js — D-198, D-990): ${l.trim().slice(0, 110)}`); });
+if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.versionOf(rec.t)"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática do tipo (':g' + In.versionOf(rec.t)): D-198, D-990");
 // 69. "a vontade do banho e da leitura não sorteia" (D-200, D-201): no js/act-servicos.js, do bloco «the wish for a bath» até
 // o Te.go, e no js/act-lazer.js, do «the wish to read» até o Bi.go, nenhuma chamada ao acaso do mundo nem ao do que só se vê:
 // a sorte do dia de cada um é o G.hash da pessoa e do dia — a mesma dentro e fora do passo, com ou sem gente olhando
@@ -3033,5 +3034,21 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
   if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
   if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
+// === os interiores 3, a frente K: o motor da planta (480–489) ===
+// 480. "a gramática é de cada tipo" (F13, D-990): sobre a gramática do motor (In.VERSION) cada tipo tem a sua (In.VERSION_T: o
+// número de cada tipo cujas plantas mudaram, um inteiro de 1 para cima; quem não está, 0), e tudo o que diz de que gramática é uma
+// planta a lê por tipo — (a) a tabela só com números inteiros positivos; (b) o In.versionOf a faz do motor e da do tipo; (c) o
+// In.addProbed lê as linhas de um tipo do catálogo só se a versão dele no arquivo (vers) for a de agora; (d) o load passa ao
+// In.migrate a gramática do motor e a dos tipos do save (intG, intGT), e o In.migrate julga só os registros do tipo cuja gramática
+// subiu; (e) o qa/catalogo.js grava a versão de cada tipo e só lê de volta as linhas da gramática de agora
+{ const ir = (src['interiors.js'] || []).join('\n'); const code = s => s.replace(/(^|\s)\/\/\s.*$/gm, '');
+  const t0 = ir.indexOf('In.VERSION_T = {'), t1 = ir.indexOf('};', t0); const tab = t0 < 0 || t1 < 0 ? null : code(ir.slice(t0 + 'In.VERSION_T = {'.length, t1));
+  if (tab === null) fails.push('a gramática é de cada tipo: o interiors.js sem a tabela In.VERSION_T (F13, D-990)');
+  else for (const e of tab.split(',').map(s => s.trim()).filter(Boolean)) { const m = /^(?:'([\w-]+)'|"([\w-]+)"|([A-Za-z_]\w*))\s*:\s*(\d+)$/.exec(e); if (!m || !(+m[4] >= 1)) fails.push(`a gramática é de cada tipo: na tabela In.VERSION_T, «${e.slice(0, 60)}» não é um tipo com um número inteiro de 1 para cima (F13, D-990)`); }
+  if (!/In\.versionOf = t => \{ const n = In\.VERSION_T\[t\] \| 0; return n > 0 \? In\.VERSION \+ '\.' \+ n : String\(In\.VERSION\); \};/.test(ir)) fails.push('a gramática é de cada tipo: o In.versionOf não é a gramática do motor e a do tipo sobre ela (F13, D-990)');
+  if (!/\(\(o\.vers && o\.vers\[t\]\) \| 0\) !== \(In\.VERSION_T\[t\] \| 0\)\) continue;/.test(ir)) fails.push('a gramática é de cada tipo: o In.addProbed lê as linhas de um tipo sem conferir a versão dele no catálogo (vers, F13)');
+  if (!/load\(o\) \{ cache\.clear\(\); In\.migrate\(\(o && o\.intG\) \|\| 0, o && o\.intGT\); \}/.test(ir) || !/const olderG = \(g, gt, t\) =>/.test(ir) || !/if \(!r \|\| \(!oldG\(r\.t\) && \(r\.v \| 0\) >= REC_V\)\) continue;/.test(ir)) fails.push('a gramática é de cada tipo: o load e o In.migrate não julgam os registros pela gramática do tipo (intG, intGT — F13, D-990)');
+  const cat = fs.existsSync(path.join(__dirname, 'catalogo.js')) ? fs.readFileSync(path.join(__dirname, 'catalogo.js'), 'utf8') : '';
+  if (!/vers\[t\] = In\.VERSION_T\[t\] \| 0;/.test(cat) || !/"vers": \$\{JSON\.stringify\(vers\)\}/.test(cat) || !/!fresh\(R, t\)\) continue;/.test(cat)) fails.push('a gramática é de cada tipo: o qa/catalogo.js não grava a versão de cada tipo (vers) ou lê de volta linhas de uma gramática que não é a de agora (F13, D-990)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
