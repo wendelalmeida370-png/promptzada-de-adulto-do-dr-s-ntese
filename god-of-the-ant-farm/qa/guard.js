@@ -2663,7 +2663,8 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const it = (src['itens.js'] || []).join('\n'), jd = (src['jogo-dados.js'] || []).join('\n');
   if (!/dados: \{[^\n]*mats: \['madeira', 'osso'\]/.test(it) || !/dados: \{ wood: 0\.05 \}/.test(it)) fails.push('os dados têm origem: o catálogo sem os dados de madeira e de osso, ou sem o que os de madeira gastam (D-852)');
   if (!/if \(G\.Origem && G\.Origem\.matOK\(fid, 'osso', arts\)\) r = D\.make\(shelf\(b\), 'dados\.osso'/.test(jd) || !/D\.use\(shelf\(b\), 'wood', JD\.MADEIRA, \{ code: 'dados', by: k0\.id \}\)\.ok\) \{ r = D\.make\(shelf\(b\), 'dados\.madeira'/.test(jd)) fails.push('os dados têm origem: os dados da casa sem o osso que o povo teve ou sem a madeira gasta (D-852)');
-  if (!/const set = setFor\(b, null\); if \(!set\)/.test(jd) || !/const set = setFor\(b, v\); if \(!set\)/.test(jd)) fails.push('os dados têm origem: uma partida que começa sem um jogo de dados de verdade (setFor, D-852)');
+  // (a frente J, D-932: o jogo da partida é o de quem joga ou um livre da casa — setFor com os jogadores —; sem nenhum, nenhuma partida)
+  if (!/let set = setFor\(b, null, \[host\]/.test(jd) || !/if \(!set\) \{ why\('sem-dados'\); continue; \}/.test(jd) || !/const set = setFor\(b, v\);\n\s*if \(!set\) return \{ k: 'chamar', ok: false/.test(jd)) fails.push('os dados têm origem: uma partida que começa sem um jogo de dados de verdade (setFor, D-852, D-932)');
   for (const f of files) { if (f === 'jogo-dados.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bmake\([^)]*'dados\./.test(c)) fails.push(`os dados têm origem: ${f}:${k + 1} faz um jogo de dados fora do jogo de dados (D-852): ${l.trim().slice(0, 110)}`); }); } }
 // 384. "a índole joga, a aparência e o povo não" (D-854, regra 194): quem joga, a aposta, o palpite, o blefe e a trapaça saem da índole
 // (G.Indole), da bebida e da bolsa — as leituras do jogo (JD.tracos, JD.apostaDe, JD.entra, R.palpite, R.quer) não leem o povo, o
@@ -2721,7 +2722,9 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
     if (!new RegExp(`^\\s{4}${m}: \\{ nome: 'de `, 'm').test(it)) fails.push(`o baralho tem origem: o material «${m}» fora do catálogo (D-868)`);
     if (!new RegExp(`O\\.PLAIN = \\{[^}]*\\b${m}: 1`).test(og) && !new RegExp(`m === '${m}'`).test(og)) fails.push(`o baralho tem origem: o material «${m}» sem a sua causa no G.Origem (matOK, D-868)`);
     if (!new RegExp(`F\\.MATS = \\{[^}]*\\b${m}: '`).test(fo)) fails.push(`o baralho tem origem: o material «${m}» sem a sua forma (F.MATS, D-868)`); }
-  if (!/'jogo-cartas': 'baralho'/.test(iv) || !/PLACE_TOOL = \{[^}]*baralho: 1/.test(iv)) fails.push('o baralho tem origem: o kit não dá o baralho da casa a quem joga (ACT_TOOL, PLACE_TOOL — D-868)');
+  // (a frente J, D-935: o baralho não é mais do lugar — é uma coisa de verdade, a da casa emprestada à mesa ou a de quem joga —, e o kit põe
+  // na mão só o baralho da partida, o do lado de quem joga, como os dados; nenhum fora de uma partida)
+  if (!/'jogo-cartas': 'baralho'/.test(iv) || /PLACE_TOOL = \{[^}]*baralho: 1/.test(iv) || !/if \(t === 'baralho'\) \{ if \(!key && G\.Cartas && G\.Cartas\.baralhoNaMesa\) key = G\.Cartas\.baralhoNaMesa\(v\); if \(!key\) return; \}/.test(iv)) fails.push('o baralho tem origem: o kit não dá a quem joga o baralho de verdade da mesa (G.Cartas.baralhoNaMesa), ou dá um do lugar (PLACE_TOOL) — D-868, D-935');
   let om = ''; try { om = fs.readFileSync(path.join(dir, '..', 'ORIGEM.md'), 'utf8'); } catch (e) { om = ''; }
   if (!/\*\*baralho\*\*/.test(om)) fails.push('o baralho tem origem: o ORIGEM.md sem a linha do baralho (D-868)'); }
 // 395. "quem joga não sorteia" (T5, D-864): no mundo das Tabuletas (cartas-mesa.js), quem começa uma partida, a aposta, o dobrar, a manga e
@@ -2762,5 +2765,62 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const at = (src['act-taverna.js'] || []).join('\n'), tf = (src['taverna-festa.js'] || []).join('\n');
   if (!/const held = answering\(d\.mesa\[v\.id\]\) \|\| brawls\.has\(v\.id\);/.test(at) || !/if \(lead === v && !held\)/.test(at) || !/\|\| answering\(m\) \|\| brawls\.has\(o\.id\)\) continue;/.test(at) || !/TF\(\)\.ocupado\(v, op\)\) && !answering\(m\)\)/.test(at)) fails.push('a resposta vem primeiro: o estrado, o músico ou a dança da festa levam quem responde à bebida na cara (act-taverna.js life, L-2162)');
   if (!/\(T\.answering && T\.answering\(m\)\) \|\| \(T\.brawling && T\.brawling\(v\)\)\) continue;/.test(tf)) fails.push('a resposta vem primeiro: o coro da festa (TF.coro) leva o bardo que responde à bebida na cara (L-2162)'); }
+// ---------------- Onda 4 — J: os jogos da casa (js/jogos-casa.js; D-930 a D-939) ----------------
+// 455. "o jogo na mesa é do jogos-casa.js" (D-932): o lugar 'n:' do livro (o jogo fora do seu lugar, numa mesa) e o registro dos jogos na
+// mesa (S.jogosMesa) só o js/jogos-casa.js cria e escreve — a letra do lugar é uma só (L-2064: outro arquivo que registre a 'n' apaga a mesa)
+{ const jc = src['jogos-casa.js'] || [];
+  if (!jc.length) fails.push('o jogo na mesa: falta o js/jogos-casa.js (D-930)');
+  else if (!/D\.addKind\('n', \{/.test(jc.join('\n'))) fails.push("o jogo na mesa: o js/jogos-casa.js não registra o lugar 'n:' do livro (D-932)");
+  for (const f of files) if (f !== 'jogos-casa.js') (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/addKind\('n'/.test(c)) fails.push(`o jogo na mesa: ${f}:${k + 1} registra o lugar 'n:' do livro, que é o dos jogos na mesa (D-932, L-2064)`);
+    if (/\.jogosMesa\s*=(?!=)|\.jogosMesa\.n\[[^\]]+\]\s*=(?!=)/.test(c)) fails.push(`o jogo na mesa: ${f}:${k + 1} escreve o registro dos jogos na mesa fora do jogos-casa.js (D-932): ${l.trim().slice(0, 110)}`); }); }
+// 456. "a partida leva o seu jogo e o devolve" (D-932): o jogo de uma partida vai para a mesa pela porta do empréstimo (G.JogosCasa.empresta,
+// «jogo-mesa») quando ela começa — o jogo de dados no begin, que se desfaz sem ele; os dois baralhos na nova — e volta pela porta da volta
+// (G.JogosCasa.devolve, «jogo-volta») no fim de qualquer fim — o close dos dados, o fecha das Tabuletas —, e a ronda devolve o que fica numa
+// mesa sem partida
+{ const jd = (src['jogo-dados.js'] || []).join('\n'), cm = (src['cartas-mesa.js'] || []).join('\n'), jc = (src['jogos-casa.js'] || []).join('\n');
+  if (!/const L = src && JC\(\) \? JC\(\)\.empresta\(\{ b, jogo: op\.id, tipo: 'dados'/.test(jd) || !/if \(!L\) \{ A\.end\(op, 'cancel', 'sem dados na mesa'\);/.test(jd)) fails.push('a partida leva o seu jogo: o begin dos dados não empresta o jogo à mesa, ou começa sem ele (D-932)');
+  if (!/function close\(op, why\) \{ if \(!live\(op\)\) return; if \(\(op\.data\.pote \|\| 0\) > EPS\) giveBack\(op\); if \(op\.data\.set && op\.data\.set\.n && JC\(\)\) JC\(\)\.devolve\(op\.data\.set\.n, why\);/.test(jd)) fails.push('a partida leva o seu jogo: o close dos dados não devolve o jogo da mesa (D-932)');
+  if (!/const L = JC\(\)\.empresta\(\{ b, jogo: id, tipo: 'baralho', g, s: F\[i\]/.test(cm) || !/if \(JC\(\)\) for \(const n of j\.ns \|\| \[\]\) if \(n\) JC\(\)\.devolve\(n, j\.s\.fim\.por\);/.test(cm)) fails.push('a partida leva o seu jogo: as Tabuletas não emprestam os dois baralhos à mesa, ou o fecha não os devolve (D-932)');
+  if (!/D\.move\(s\.de, 'n:' \+ id, s\.k, 1, \{ code: 'jogo-mesa'/.test(jc) || !/const tries = \[\[rec\.ref, 'jogo-volta'\]\];/.test(jc) || !/A\.hooks\.tick\.push\(function \(\) \{\n\s*const s = S_\(\) && S_\(\)\.jogosMesa;/.test(jc)) fails.push('a partida leva o seu jogo: o empréstimo e a volta não vão pelo livro, ou a ronda não devolve o jogo de uma mesa sem partida (D-932)');
+  for (const f of files) if (f !== 'jogos-casa.js') (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'n:' \+[^;]*\b(D|Depot)\.(move|make|use|drop|swap)\(|\b(D|Depot)\.(move|make|use|drop|swap)\(\s*'n:'/.test(c)) fails.push(`a partida leva o seu jogo: ${f}:${k + 1} mexe no jogo da mesa fora da porta do empréstimo (D-932): ${l.trim().slice(0, 110)}`); }); }
+// 457. "o aluguel e a venda pelo livro" (D-934, D-936): no js/jogos-casa.js as moedas só andam pelo G.Depot, com a causa — o aluguel do jogo
+// da casa («aluguel-jogo»), a venda do taverneiro («venda-jogo») —, das moedas de quem paga às do taverneiro; nenhuma moeda nem bem à mão
+{ const L = src['jogos-casa.js'] || [];
+  L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/(\.coin|\.purse|\.stock\[[^\]]+\]|\.pantry|\.carry|\.inv\[[^\]]+\]|\.mochila)\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`o aluguel pelo livro: jogos-casa.js:${k + 1} mexe em moedas ou bens à mão (D-934): ${l.trim().slice(0, 110)}`);
+    for (const m of c.matchAll(/'moedas'[^;]*?code: '([\w-]+)'/g)) if (!['aluguel-jogo', 'venda-jogo'].includes(m[1])) fails.push(`o aluguel pelo livro: jogos-casa.js:${k + 1} move moedas com a causa «${m[1]}» (D-934)`); });
+  const jc = L.join('\n');
+  if (!/D\.move\(from, to, 'moedas', n, \{ code: 'aluguel-jogo', by: v\.id \}\)/.test(jc) || !/const c = \{ code: 'venda-jogo', by: v\.id/.test(jc)) fails.push('o aluguel pelo livro: o aluguel ou a venda dos jogos da casa fora do livro (D-934, D-936)'); }
+// 458. "os baralhos da casa têm origem" (D-931, D-440): um baralho nasce só pelas mãos do taverneiro no cartas-mesa.js (C.faz) — no material
+// do povo (G.Itens.dePovo), o que o povo teve (G.Origem.matOK), depois de gastar da prateleira o que ele pede (G.Itens.feitoDe, «baralho») —,
+// ou do armazém pela porta das coisas (G.Inv.make); ninguém mais faz um, e o jogos-casa.js não faz coisa nenhuma (só empresta e vende)
+{ const cm = (src['cartas-mesa.js'] || []).join('\n');
+  if (!/if \(!G\.Origem\.matOK\(fid, m, arts\)\) continue;/.test(cm) || !/const u = D\.use\(ref, o\.k, o\.n, \{ code: 'baralho', by: k0\.id \}\);/.test(cm) || !/const r = D\.make\(ref, key, 1, \{ code: 'baralho', by: k0\.id \}\);/.test(cm)) fails.push('os baralhos da casa têm origem: o baralho da casa sem o material do povo, ou feito sem gastar o que ele pede (D-931)');
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bmake\([^)]*'baralho\./.test(c)) fails.push(`os baralhos da casa têm origem: ${f}:${k + 1} faz um baralho com nome escrito (D-931): ${l.trim().slice(0, 110)}`); });
+  (src['jogos-casa.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(D|Depot)\.make\(/.test(c)) fails.push(`os baralhos da casa têm origem: jogos-casa.js:${k + 1} faz uma coisa (o jogo da casa só nasce nas mãos do taverneiro, no arquivo de cada jogo; D-931): ${l.trim().slice(0, 110)}`); }); }
+// 459. "quem joga não sorteia, e o jogo da mesa é lido" (D-669, D-930): o js/jogos-casa.js não tira de acaso nenhum (quem paga, quem compra, que
+// jogo vai à mesa: a índole, a bolsa, o livro, os ids), e as suas leituras (casa, daCasa, proprio, aluguel, ondeEstao, semJogo, podeComprar,
+// querComprar, falta) não escrevem no mundo
+{ const L = src['jogos-casa.js'] || [];
+  L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`quem joga não sorteia: jogos-casa.js:${k + 1} tira do acaso (D-669): ${l.trim().slice(0, 110)}`); });
+  const jc = L.join('\n'); const body = (a, b) => { const i = jc.indexOf(a); const j = b ? jc.indexOf(b, i + 1) : -1; return i < 0 ? null : jc.slice(i, j < 0 ? undefined : j); };
+  for (const [n, a, b] of [['JC.casa', 'JC.casa = function', 'JC.daCasa = function'], ['JC.daCasa', 'JC.daCasa = function', 'JC.proprio = function'], ['JC.proprio', 'JC.proprio = function', 'JC.fonte ='], ['JC.aluguel', 'JC.aluguel = function', 'const payee'], ['JC.podeComprar', 'JC.podeComprar = function', 'JC.comprar = function'], ['JC.querComprar', 'JC.querComprar = function', 'JC.falta = function']]) {
+    const x = body(a, b); if (!x) { fails.push(`quem joga não sorteia: o jogos-casa.js sem o ${n}`); continue; }
+    if (/\b(D|Depot)\.(move|make|use|swap|drop)\(|\bJC\.(empresta|devolve|cobra|comprar)\(|\b(b|v|r|rec|st)\.\w+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(x)) fails.push(`quem joga não sorteia: o ${n} do jogos-casa.js escreve no mundo — uma leitura só lê (D-930)`); } }
+// 460. "a tela pede pelas mãos" (D-936, D-669): as telas e os verbos (jogo-dados-ui.js, cartas-ui.js, e qualquer outro) só pedem a compra de um
+// jogo dentro de um G.Possess.apply, e nenhum deles empresta, devolve ou cobra um jogo (isso é do mundo, no passo dele)
+{ for (const f of files) if (f !== 'jogos-casa.js' && f !== 'jogo-dados.js' && f !== 'cartas-mesa.js') (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bJogosCasa\.comprar\(/.test(c) && !/Possess\.apply\(w => G\.JogosCasa\.comprar\(|P\(\)\.apply\(w => G\.JogosCasa\.comprar\(/.test(c)) fails.push(`a tela pede pelas mãos: ${f}:${k + 1} compra um jogo fora das mãos do corpo (G.Possess.apply, D-936): ${l.trim().slice(0, 110)}`);
+    if (/\b(JogosCasa|JCa\(\)|JC\(\))\.(empresta|devolve|cobra)\(/.test(c)) fails.push(`a tela pede pelas mãos: ${f}:${k + 1} empresta, devolve ou cobra um jogo da casa fora do mundo (D-932): ${l.trim().slice(0, 110)}`); }); }
+// 461. "o porquê de esperar diz onde estão" (D-933): sem jogo livre para a partida do corpo, o porquê dos dois jogos é o do mundo, que diz
+// com quem estão os da casa e o que se pode fazer (G.JogosCasa.semJogo) — no G.JogoDados.verbo e no G.Cartas.podeCorpo
+{ const jd = (src['jogo-dados.js'] || []).join('\n'), cm = (src['cartas-mesa.js'] || []).join('\n');
+  if (!/why: \(JC\(\) && JC\(\)\.semJogo\(v, b, 'dados'\)\)/.test(jd)) fails.push('o porquê de esperar: o verbo dos dados sem dizer onde estão os da casa (G.JogosCasa.semJogo, D-933)');
+  if (!/why: \(JC\(\) && JC\(\)\.semJogo\(v, b, 'baralho', meu \? 1 : 2\)\)/.test(cm)) fails.push('o porquê de esperar: as Tabuletas sem dizer onde estão os baralhos da casa (G.JogosCasa.semJogo, D-933)'); }
+// 462. "o mapa das causas tem os jogos da casa" (D-440): o ORIGEM.md diz de onde vem o jogo da mesa — o empréstimo e a volta («jogo-mesa»,
+// «jogo-volta»), o aluguel («aluguel-jogo»), a venda do taverneiro («venda-jogo») e o baralho da casa feito do material do povo
+{ let om = ''; try { om = fs.readFileSync(path.join(dir, '..', 'ORIGEM.md'), 'utf8'); } catch (e) { om = ''; }
+  for (const w of ['jogo-mesa', 'jogo-volta', 'aluguel-jogo', 'venda-jogo', 'Os jogos da casa']) if (!om.includes(w)) fails.push(`o mapa das causas: o ORIGEM.md sem «${w}» (os jogos da casa, D-930)`); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

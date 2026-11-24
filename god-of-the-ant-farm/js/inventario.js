@@ -44,8 +44,9 @@
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
   // (P7, D-805: the knucklebones of the tavern's game and the keeper's rag — the place's too, the body's hands among them)
-  // (T5, D-868: the house's deck of the Tabuletas in the hands of who plays — and of who hides one up the sleeve)
-  const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1, baralho: 1 };
+  // (the deck of the Tabuletas is no more the place's: a real thing, the house's lent to the table or one's own — the J front, D-935;
+  // the kit puts in the hand only the deck of the game, as the dice: act() below)
+  const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
     // (the living tavern's acts, P7 D-806: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
@@ -193,8 +194,9 @@
     // (the cheat's hand: the tablets of the game of cards one is in, else the dice — T4, T5)
     if (t === 'jogo') t = G.Cartas && G.Cartas.de && G.Cartas.de(v) ? 'baralho' : 'dados';
     if (t === 'dados') { if (!key && G.JogoDados && G.JogoDados.dadosDe) key = G.JogoDados.dadosDe(v); if (!key) return; }
-    // (the deck is the game's real one — the house's, of its people's material, or the body's own —; out of a game, the people's: T5, D-868)
-    if (t === 'baralho' && !key && G.Cartas && G.Cartas.baralhoNaMesa) key = G.Cartas.baralhoNaMesa(v);
+    // (the deck is the game's real one — the one of one's side on the table: the house's, lent, or one's own —; none on the table, none in
+    // the hand, never a deck of the people's arts: T5, D-868; the J front, D-935)
+    if (t === 'baralho') { if (!key && G.Cartas && G.Cartas.baralhoNaMesa) key = G.Cartas.baralhoNaMesa(v); if (!key) return; }
     // (the cup of the tavern and of the feast, the bonds of the one who leads the prisoner: the place's, never the person's own — given
     // to whoever has things of their own too, the god's body among them; in the material the people has: 22c, D-612)
     if (!key && own && PLACE_TOOL[t]) key = made(t, G.Fac.idOfV(v), artsOf(v));
@@ -244,16 +246,20 @@
   // arts, its way of fishing), which changes slowly. The inventory reads its own fields here (rule 128); the caller keeps the memo
   // and never writes it; a fresh answer only when it changes (L-1114)
   const band = a => (a < 2 ? 0 : a < 14 ? 1 : a < 60 ? 2 : 3);
+  // (the acts of the games: the set in the hand is the game's own — the house's lent, or one's own —, and it changes with the game: the J
+  // front, D-935)
+  const GAME_ACT = { 'jogo-dados': 1, 'jogo-cartas': 1, 'jogo-cartas-ganha': 1, trapaca: 1, 'trapaca-pega': 1 };
+  const gameKey = v => (GAME_ACT[v.act] ? (G.JogoDados && G.JogoDados.dadosDe ? G.JogoDados.dadosDe(v) : null) || (G.Cartas && G.Cartas.baralhoNaMesa ? G.Cartas.baralhoNaMesa(v) : null) : null);
   Inv.heldFor = function (v, m) {
     if (!v || !m) return Inv.held(v);
     const e = v.equip && typeof v.equip === 'object' ? v.equip : null, b = v.mochila && typeof v.mochila === 'object' ? v.mochila : null;
-    const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0;
+    const c = v.carry && v.carry.n > 0 ? 1 : 0, ag = band(v.age), day = G.S ? G.S.day : 0; const jg = gameKey(v);
     let same = !!m.out && m.v === v && m.act === v.act && m.role === v.role && m.unit === v.unit && m.arm === v.arm && m.elite === v.elite && m.cap === !!v.captive
-      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg) && m.rd === roundOf(v) && m.rk === (c ? v.carry.k : null);
+      && m.c === c && m.gear === !!v.gear && m.ag === ag && m.day === day && m.e === !!e && m.kit === !!(e && e.kit) && m.pl === playing(v) && m.lg === !!(v.lost && v.lost.leg) && m.rd === roundOf(v) && m.rk === (c ? v.carry.k : null) && m.jg === jg;
     if (same && e) for (let i = 0; i < SLOTS.length; i++) if (m.es[i] !== (e[SLOTS[i]] || null)) { same = false; break; }
     if (same) { let n = 0; if (b) for (const k in b) if (b[k] > EPS) { if (m.bk[n] !== k || m.bn[n] !== b[k]) { same = false; break; } n++; } if (same && n !== m.bl) same = false; }
     if (same) return m.out;
-    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg); m.rd = roundOf(v); m.rk = c ? v.carry.k : null;
+    m.v = v; m.act = v.act; m.role = v.role; m.unit = v.unit; m.arm = v.arm; m.elite = v.elite; m.cap = !!v.captive; m.c = c; m.gear = !!v.gear; m.ag = ag; m.day = day; m.pl = playing(v); m.lg = !!(v.lost && v.lost.leg); m.rd = roundOf(v); m.rk = c ? v.carry.k : null; m.jg = jg;
     m.e = !!e; m.kit = !!(e && e.kit); m.es = m.es || new Array(SLOTS.length); for (let i = 0; i < SLOTS.length; i++) m.es[i] = e ? e[SLOTS[i]] || null : null;
     m.bk = m.bk || []; m.bn = m.bn || []; let n = 0; if (b) for (const k in b) if (b[k] > EPS) { m.bk[n] = k; m.bn[n] = b[k]; n++; } m.bl = n;
     m.out = Inv.held(v); return m.out;

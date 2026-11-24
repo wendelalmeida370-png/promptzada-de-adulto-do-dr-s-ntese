@@ -96,7 +96,9 @@ if (need) {
   const led0 = seen.length; let n = 0;
   while (S().time < 0.86 && n < 4000) {
     calm(); M.viver(0.25); n++;
-    for (const v of S().villagers.values()) if (v.act === 'jogo-dados' && !(v.carry && v.carry.n > 1e-6)) { night.acts++; // (with the round's cup or plate in the hands, the dice wait on the table)
+    // (the act is the tavern's, set in the people's step before the games' own: one step behind a game just ended is no fault — the
+    // checker's own tolerance, S3 past 1,5 s —; who is in a game holds its set: T-2090)
+    for (const v of S().villagers.values()) if (v.act === 'jogo-dados' && !(v.carry && v.carry.n > 1e-6) && JD.dadosDe(v)) { night.acts++; // (with the round's cup or plate in the hands, the dice wait on the table)
       const h = G.Inv.held(v); const k = JD.dadosDe(v); if (h.mao && h.mao === k) night.hand++; else if (night.handBad.length < 3) night.handBad.push(`#${v.id} segura ${h.mao || 'nada'} (o jogo: ${k})`); }
     if (!MID) { const op = JD.jogos().find(o => o.data.fase === 'palpite' && o.data.r >= 1 && o.data.pal.length >= 1); if (op) MID = { save: G.Save.serialize(), op: op.id }; }
     if (n % 20 === 0) watch(night.bad);
@@ -166,18 +168,25 @@ if (on('j7') && need) {
   const Po = G.Possess; const In = G.Interiors; const tried = new Set(); let pick = null, x = null, taken = false;
   // (a customer seated at a table with two more who could play — awake, free, not in a game —, of coin, in an open tavern: the god takes
   // the body on its seat; the table it was at, still with someone to play when the tavern sees it there — else the next table)
-  const could = (v, m) => v && m.g && !m.zz && m.st >= 2 && m.st <= 5 && v.task && v.task.type === 'tavern' && v.energy > 36 && !(G.Ebrio && G.Ebrio.grau(v) >= 2) && !JD.gameOf(v);
+  // (and with time for a game before one's hour to go home: the cup's table holds nobody — T4 —, and one who accepted and went home at
+  // once left the body's game at its first cups, T-2094)
+  const could = (v, m, b) => v && m.g && !m.zz && m.st >= 2 && m.st <= 5 && v.task && v.task.type === 'tavern' && v.energy > 36 && !(G.Ebrio && G.Ebrio.grau(v) >= 2) && !JD.gameOf(v) && (!b || S().time < T.leaveOf(v, b) - 0.1);
   for (let tryN = 0; tryN < 6 && !(x && x.k === 'chamar' && x.ok); tryN++) {
     if (Po.body()) god(() => Po.release('deus')); M.reseed(99 + tryN); G.Save.apply(JSON.parse(SNAP)); G.Main.mode = 'game'; pick = null;
     for (let k = 0; k < 400 && !pick; k++) { calm(); M.viver(0.25);
       for (const op of A.all().filter(o => o.def === 'taverna' && A.live(o))) { const b = S().buildings.get(op.at); if (!T.aberta(b)) continue; const by = {};
-        for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const v = S().villagers.get(+id); if (!could(v, m)) continue; (by[m.g] = by[m.g] || []).push(v); }
-        for (const g in by) { if ((op.data.jogo && op.data.jogo[g]) || tried.has(op.at + ':' + g) || by[g].length < 3) continue; const v = by[g].sort((a, c) => D.get(G.Eco.coinRef(c), 'moedas') - D.get(G.Eco.coinRef(a), 'moedas') || a.id - c.id)[0]; if (D.get(G.Eco.coinRef(v), 'moedas') >= 1 && Po.can(v).ok) { pick = { b, v, g }; tried.add(op.at + ':' + g); break; } }
+        for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const v = S().villagers.get(+id); if (!could(v, m, b)) continue; (by[m.g] = by[m.g] || []).push(v); }
+        // (… and nobody at that table about to go home: the call is answered by whoever is free there, T-2094)
+        const soon = g => Object.keys(op.data.mesa).some(id => { const o = S().villagers.get(+id); return String(op.data.mesa[id].g) === String(g) && o && S().time >= T.leaveOf(o, b) - 0.1; });
+        for (const g in by) { if ((op.data.jogo && op.data.jogo[g]) || tried.has(op.at + ':' + g) || by[g].length < 3 || soon(g)) continue; const v = by[g].sort((a, c) => D.get(G.Eco.coinRef(c), 'moedas') - D.get(G.Eco.coinRef(a), 'moedas') || a.id - c.id)[0]; if (D.get(G.Eco.coinRef(v), 'moedas') >= 1 && Po.can(v).ok) { pick = { b, v, g }; tried.add(op.at + ':' + g); break; } }
         if (pick) break; } }
     if (!pick) break;
     const pl = In.placeOf(pick.v); god(() => Po.take(pick.v)); taken = Po.body() === pick.v; god(() => Po.use(pick.v, pick.b, pl)); M.viver(3); // (the tavern sees the body at its seat in its own second: D-767)
     for (let k = 0; k < 100 && JD.verbo(pick.v).k !== 'chamar'; k++) M.viver(0.25); // (a game at the table meanwhile: its end)
     x = JD.verbo(pick.v);
+    // (the table as it is when the body calls it — others sat meanwhile —: nobody there about to go home, or the next table, T-2094)
+    { const top = T.dia(pick.b); const g0 = top && top.data.mesa[pick.v.id] ? top.data.mesa[pick.v.id].g : null;
+      if (x && x.ok && top && Object.keys(top.data.mesa).some(id => { const o = S().villagers.get(+id); return +id !== pick.v.id && String(top.data.mesa[id].g) === String(g0) && o && S().time >= T.leaveOf(o, pick.b) - 0.1; })) x = null; }
   }
   if (!pick) ok('j7 o corpo à mesa', true, 'nenhuma mesa de três com moeda nesta noite — a parte não se aplica');
   else {
@@ -195,8 +204,8 @@ if (on('j7') && need) {
     let rc = { ok: false, why: 'ninguém quis' }; if (s3 && s3.convite.some(q => q.sim)) rc = ask(w => JD.comecar(w, s3.op));
     if (!rc.ok) info = `ninguém aceitou: ${s3 ? s3.convite.map(q => q.nome + (q.sim ? ' sim' : ' não (' + q.por + ')')).join(', ') : '-'}`;
     else {
-      const op = A.get(s3.op); const paid = Math.round((purse0 - D.get(G.Eco.coinRef(v), 'moedas')) * 100) / 100;
-      if (Math.abs(paid - op.data.aposta) > 1e-6 && op.data.moeda) bad.push(`a aposta do corpo: pagou ${paid}, a aposta é ${op.data.aposta}`);
+      const op = A.get(s3.op); const paid = Math.round((purse0 - D.get(G.Eco.coinRef(v), 'moedas')) * 100) / 100; const alug = (op.data.set && op.data.set.alug) || 0; // (and the rent of the house's dice: the J front, D-934)
+      if (Math.abs(paid - op.data.aposta - alug) > 1e-6 && op.data.moeda) bad.push(`a aposta do corpo: pagou ${paid}, a aposta é ${op.data.aposta}${alug ? ` e o aluguel ${alug}` : ''}`);
       // (only its own dice before the cups come up)
       for (let k = 0; k < 40 && op.data.fase === 'sacode'; k++) M.viver(0.05);
       const sv = JD.corpo(v); const others = sv.jogadores.filter(p => !p.eu);
@@ -237,7 +246,8 @@ if (on('j8') && need) {
   const op = r.op && A.get(r.op); const prize = op ? op.data.pote : 0;
   if (op && G.Eco.coinage(G.Village.facOfSet(b.set)) && before >= 1 && Math.abs(prize - 1) > 1e-6) bad.push(`o prêmio no pote: ${prize}`);
   let n = 0; while (op && A.live(op) && n < 3000) { calm(); M.viver(0.25); n++; }
-  const champ = op && op.data.campeao ? S().villagers.get(op.data.campeao) : null; const L = seen.slice(L0).filter(e => /^torneio-/.test(e.c || ''));
+  // (the lines of this tournament only: the feasts of the night open others at other taverns — T-2091)
+  const champ = op && op.data.campeao ? S().villagers.get(op.data.campeao) : null; const L = seen.slice(L0).filter(e => /^torneio-/.test(e.c || '') && op && e.op === op.id);
   if (op && A.live(op)) bad.push('o torneio não acabou com a noite'); if (op && (op.data.pote || 0) > 1e-6) bad.push('o prêmio ficou no pote');
   const paidOut = L.filter(e => e.c === 'torneio-campeao').reduce((a, e) => a + e.n, 0);
   if (champ && Math.abs(paidOut - prize) > 1e-6) bad.push(`o campeão recebeu ${paidOut} de ${prize}`);

@@ -22,7 +22,9 @@
 //  cause). It is played only with real dice (the catalog's
 //  `dados`, of bone or of wood): the house's — made by the keeper,
 //  of the carcass's bone the people had or of the wood of the
-//  shelf — or the body's own. The customers play among
+//  shelf —, lent to the table for the game and back at its end, or
+//  one's own (the J front's G.JogosCasa: the rent, the waiting, the
+//  purchase — D-930 to D-939). The customers play among
 //  themselves, with or without the body looking; the body asks
 //  through its hands (G.Possess.apply); the screen
 //  (jogo-dados-ui.js) only shows what the world decided, by the
@@ -210,40 +212,47 @@
   };
 
   // ------------------------------ the dice of the house and of who plays ------------------------------
-  // (the sets on a tavern's shelf, and the ones its games have on the tables now)
+  // (the house's sets — on its shelf, on a table with a game, lying on a table — and their whereabouts: G.JogosCasa, the J front, D-931)
+  const JC = () => G.JogosCasa;
   const shelf = b => 'b:' + b.id;
   JD.casa = function (b) {
-    const out = { 'dados.osso': 0, 'dados.madeira': 0, usados: 0 }; if (!b) return out;
-    for (const k of JD.KEYS) out[k] = Math.floor(D.get(shelf(b), k) + EPS);
-    for (const op of games()) if (op.at === b.id && op.data.set && op.data.set.ref === shelf(b)) out.usados++;
-    return out;
+    const out = { 'dados.osso': 0, 'dados.madeira': 0, usados: 0, livres: 0 }; if (!b || !JC()) return out;
+    const c = JC().casa(b, 'dados'); for (const k of JD.KEYS) out[k] = c.por[k] || 0; out.usados = c.naMesa.length; out.livres = c.livres; return out;
   };
-  // a set free for a game at this tavern: the house's (one not on another table), or the one who calls it carries (the body's bag)
-  function setFor(b, v) {
-    const own = v && G.Inv && G.Inv.count ? JD.KEYS.find(k => G.Inv.count(v, k) >= 1) : null;
-    if (own) return { ref: 'm:' + v.id, k: own };
-    const c = JD.casa(b); const used = {}; for (const op of games()) if (op.at === b.id && op.data.set && op.data.set.ref === shelf(b)) used[op.data.set.k] = (used[op.data.set.k] || 0) + 1;
-    for (const k of JD.KEYS) if (c[k] - (used[k] || 0) >= 1) return { ref: shelf(b), k };
-    return null;
+  // the set of a game (D-932): the own one of who calls it — the body's bag; a customer's bag, or his house in the town of the tavern
+  // (G.JogosCasa.proprio) —, then the own one of who joins (quem, in their order), else one of the house's free (lent to the table: the
+  // rent is the host's) → { de, ref, k, dono, lar, daCasa } or null
+  function setFor(b, v, quem) {
+    if (!JC()) return null;
+    for (const p of v ? [v] : quem || []) { const o = JC().proprio(p, 'dados', b); if (o) return o; }
+    return JC().daCasa(b, 'dados');
   }
-  JD.setFor = (b, v) => (b ? setFor(b, v) : null);
+  JD.setFor = (b, v, quem) => (b ? setFor(b, v, quem) : null);
   // the house's sets, made by its keeper the first time the day opens with fewer than it keeps (D-852): of the carcass's bone where
   // the people has had bone (slaughtered, hunted, offered — G.Origem: nothing of the store, as the knucklebones), else of the wood
-  // on the shelf (the house's firewood, bought: what a set of wood takes comes out of it first). With neither, none — and no game
+  // on the shelf (the house's firewood, bought: what a set of wood takes comes out of it first). With neither, none — and no game.
+  // (counted with the ones on the tables: a set lent is still the house's, never one to make again — D-931)
   function houseDice(b) {
     const S = S_(); const day = G.mod('jogodados.casa'); const rec = day && day.d === S.day ? day : G.mod('jogodados.casa', { d: S.day, b: {} });
     const want = JD.SETS[b.esc] || 1; const c0 = JD.casa(b); let have = c0['dados.osso'] + c0['dados.madeira']; if (have >= want) return;
     // (short of sets: a try now, and again a minute of the world later — the wood may come to the shelf)
     if (Number.isFinite(rec.b[b.id]) && S.clock - rec.b[b.id] < 60) return; rec.b[b.id] = r1(S.clock);
     const k0 = T() && T().keeperOf ? T().keeperOf(b) : null; if (!k0) return;
-    const fid = G.Village.facOfSet(b.set); const arts = G.Inv && G.Inv.artsOf ? G.Inv.artsOf(k0) : null;
-    while (have < want) {
-      let r = null;
-      if (G.Origem && G.Origem.matOK(fid, 'osso', arts)) r = D.make(shelf(b), 'dados.osso', 1, { code: 'dados', by: k0.id });
-      else if (D.free(shelf(b), 'wood') + EPS >= JD.MADEIRA && D.use(shelf(b), 'wood', JD.MADEIRA, { code: 'dados', by: k0.id }).ok) { r = D.make(shelf(b), 'dados.madeira', 1, { code: 'dados', by: k0.id }); if (!r.ok) D.make(shelf(b), 'wood', JD.MADEIRA, { code: 'desfeito', by: k0.id }); }
-      if (!r || !r.ok) break; have++;
-    }
+    while (have < want) { if (!faz(b, k0)) break; have++; }
   }
+  // one set made on the shelf by the keeper's hands — the house's, and the one he sells (G.JogosCasa.comprar) → its key, or null
+  function faz(b, k0) {
+    const fid = G.Village.facOfSet(b.set); const arts = G.Inv && G.Inv.artsOf ? G.Inv.artsOf(k0) : null; let r = null;
+    if (G.Origem && G.Origem.matOK(fid, 'osso', arts)) r = D.make(shelf(b), 'dados.osso', 1, { code: 'dados', by: k0.id });
+    else if (D.free(shelf(b), 'wood') + EPS >= JD.MADEIRA && D.use(shelf(b), 'wood', JD.MADEIRA, { code: 'dados', by: k0.id }).ok) { r = D.make(shelf(b), 'dados.madeira', 1, { code: 'dados', by: k0.id }); if (!r.ok) D.make(shelf(b), 'wood', JD.MADEIRA, { code: 'desfeito', by: k0.id }); }
+    return r && r.ok && r.e ? r.e[5] : null;
+  }
+  JD.faz = (b, k0) => (G.inSim && b && k0 ? faz(b, k0) : null);
+  // (what the keeper would make now — only read: G.JogosCasa.podeComprar)
+  JD.qual = function (b) {
+    const k0 = b && T() && T().keeperOf ? T().keeperOf(b) : null; if (!k0) return null; const fid = G.Village.facOfSet(b.set); const arts = G.Inv && G.Inv.artsOf ? G.Inv.artsOf(k0) : null;
+    return G.Origem && G.Origem.matOK(fid, 'osso', arts) ? 'dados.osso' : D.free(shelf(b), 'wood') + EPS >= JD.MADEIRA ? 'dados.madeira' : null;
+  };
 
   // ------------------------------ the pot: the ledger's holder 'j:<op>' ------------------------------
   // (the coins of the stakes, on the table of the game, until the winner takes them — or they go back, the game let go)
@@ -332,12 +341,18 @@
 
   // ------------------------------ a game begins ------------------------------
   // (a new game at a table: who calls it, the stake, the set; phase 'convite' — a lobby — or straight to the cups)
-  function begin(b, top, g, host, aposta, set, lobby, torneio) {
+  // (the set goes to the table as the game is called — out of the house's shelf, or of the bag or the house of whose it is: the J front's
+  // door, G.JogosCasa.empresta, by the ledger —, and back at its end, whatever end: close. d.set: { ref — the table's place of the ledger,
+  // 'n:' —, k, n — its record —, de — where it goes back —, dono, casa — the house's —, alug — the rent paid })
+  function begin(b, top, g, host, aposta, src, lobby, torneio) {
     const S = S_(); const f = G.Fac.get(G.Village.facOfSet(b.set));
     const op = A.start('jogo-dados', { at: b.id, fac: f ? f.id : 0, set: b.set, by: host.id, why: 'à mesa da taverna', data: {
       v: 1, top: top.id, g, host: host.id, quem: [host.id], n: {}, fora: {}, pago: {}, pal: [], faces: {}, ordem: [], vez: 0, r: 0,
-      aposta: coinOf(b) ? aposta : 0, moeda: coinOf(b) ? 1 : 0, pote: 0, set, fase: 'convite', t: r1(S.clock), ate: r1(S.clock + (lobby || 0)), res: null, hist: [], venc: 0, convite: {}, torneio: torneio || 0, tally: {} } });
+      aposta: coinOf(b) ? aposta : 0, moeda: coinOf(b) ? 1 : 0, pote: 0, set: null, fase: 'convite', t: r1(S.clock), ate: r1(S.clock + (lobby || 0)), res: null, hist: [], venc: 0, convite: {}, torneio: torneio || 0, tally: {} } });
     op.data.seed = op.id; op.data.n[host.id] = JD.DADOS; dirty();
+    const L = src && JC() ? JC().empresta({ b, jogo: op.id, tipo: 'dados', g, s: src, quem: src.dono || host.id }) : null;
+    if (!L) { A.end(op, 'cancel', 'sem dados na mesa'); dirty(); return null; }
+    op.data.set = { ref: 'n:' + L.id, k: L.k, n: L.id, de: L.ref, dono: L.dono, casa: src.daCasa ? 1 : 0, alug: 0 };
     return op;
   }
   // (one more at the table of a game being called)
@@ -345,6 +360,10 @@
   // the stakes into the pot and the first round (who cannot pay now is let off the table's game); fewer than two: let go
   function start(op) {
     const S = S_(); const d = op.data; const b = tavOf(op); if (!b) return close(op, 'a taverna caiu');
+    // (the rent of the house's set, D-934: the host's — who calls the game pays the table, unless he is the house's customer tonight —,
+    // before the stakes; who cannot pay it lets the game go)
+    if (d.set && d.set.casa && !d.set.alug && JC()) { const h = S.villagers.get(d.host); const al = h ? JC().aluguel(b, h) : { n: 0 };
+      if (al.n > EPS) { const r = h && purse(h) + EPS >= al.n + (d.aposta || 0) ? JC().cobra(b, h, [d.set.n], al.n) : { ok: false }; if (!r.ok) { d.convite[d.host] = 'nao:sem o aluguel'; return close(op, 'sem o aluguel'); } d.set.alug = r.n; } }
     if (d.aposta > 0) for (const id of d.quem.slice()) { const v = S.villagers.get(id); const ref = v ? E.coinRef(v) : null;
       const r = ref ? D.move(ref, pot(op), 'moedas', d.aposta, { op: op.id, code: 'dados-aposta', by: id }) : { ok: false };
       if (r.ok) d.pago[id] = [ref, d.aposta]; else { d.quem.splice(d.quem.indexOf(id), 1); delete d.n[id]; d.convite[id] = 'nao:sem dinheiro'; dirty(); } }
@@ -382,14 +401,20 @@
         if (top.data.jogo && top.data.jogo[g]) { why('ossinhos'); continue; }
         if (R.h(top.id, R.mix(...String(g).split('').map(c => c.charCodeAt(0))), k, 5) >= (tor ? JD.P_TORNEIO : JD.P)) { why('agora-nao'); continue; }
         const cands = L.filter(v => !isBody(v) && free(v, b, top, g)).sort((a, c) => a.id - c.id); if (cands.length < 2) { why('poucos-livres'); continue; }
-        const set = setFor(b, null); if (!set) { why('sem-dados'); continue; }
         const bonus = tor ? 0.12 : 0;
         let host = null, hs = JD.GANA; for (const v of cands) { const s = JD.tracos(v).gana + bonus; if (s > hs) { hs = s; host = v; } } if (!host) { why('sem-vontade'); continue; }
         const st = JD.apostaDe(host, b); if (st === null) { why('sem-dinheiro'); continue; }
         // (who joins, by his own will at that stake — asked before the game is made: no game with nobody but who called it)
         const ans = cands.filter(v => v !== host).map(v => [v, JD.entra(v, b, st, bonus + Math.max(0, Math.min(0.1, afeto(v, host) / 300)))]);
         if (!ans.some(x => x[1].sim)) { why('ninguem-quis'); continue; }
-        const op = begin(b, top, g, host, st, set, 0, tor ? tor.id : 0); why('comecou');
+        // (the set of the game, D-932: the host's own, a joiner's own, else one of the house's free; with all the house's on other tables,
+        // the keen host buys his own of the keeper — D-936 —; none: the table waits for one to come back, or does something else, D-933)
+        let set = setFor(b, null, [host].concat(ans.filter(x => x[1].sim).map(x => x[0])));
+        if (!set && JC() && JC().querComprar(host, b, 'dados', hs) && JC().comprar(host, 'dados', b).ok) { why('comprou'); set = setFor(b, null, [host]); }
+        if (!set) { why('sem-dados'); continue; }
+        // (the rent of the house's set is the host's, unless he is the house's customer tonight: who cannot pay it with the stake calls none)
+        if (set.daCasa && JC() && purse(host) + EPS < JC().aluguel(b, host).n + st) { why('sem-aluguel'); continue; }
+        const op = begin(b, top, g, host, st, set, 0, tor ? tor.id : 0); if (!op) { why('sem-dados'); continue; } why('comecou');
         for (const [v, a] of ans) { if (a.sim) join(op, v); else op.data.convite[v.id] = 'nao:' + a.por; }
         // (the body seated at this table, free: a moment to join the game called)
         const me = G.Possess && G.Possess.body ? G.Possess.body() : null;
@@ -417,9 +442,14 @@
     const S = S_(); const d = op.data; const b = tavOf(op); const top = b && dayOf(b);
     if (!b) return close(op, 'a taverna caiu');
     if (!top || top.id !== d.top || !T().aberta(b) || top.data.fecha) return close(op, 'a taverna fechou');
+    // (the set gone from the table — the god's hand took it —: no dice, no game; D-937)
+    if (d.set && d.set.n && !(D.get(d.set.ref, d.set.k) >= 1 - EPS)) return close(op, 'o jogo sumiu da mesa');
     // (who left the table, died, fell asleep over it: out of the game — the stake stays in the pot)
     for (const id of d.quem) { if (d.fora[id]) continue; const v = S.villagers.get(id); const w = v ? here(op, v) : 'saiu';
       if (w === 'saiu' || w === 'dormiu') { dirty(); if (d.fase === 'convite') { d.quem.splice(d.quem.indexOf(id), 1); delete d.n[id]; continue; } d.fora[id] = w; d.n[id] = 0; tally(d, w); } }
+    // (whose the set is, gone from the table — up and away, dead —: he takes his dice with him, and the game is let go, the stakes back to
+    // who put them — the dead one's to his house, with his things: D-935)
+    if (d.set && d.set.dono && (d.fora[d.set.dono] === 'saiu' || !d.quem.includes(d.set.dono))) return close(op, 'o dono levou os dados');
     // (the cheat caught: the most quarrelsome of who saw it goes for him — a brawl at the table, the tavern's own)
     if (d.briga && S.clock >= d.briga.t) { const a = S.villagers.get(d.briga.a), c = S.villagers.get(d.briga.b); delete d.briga; if (a && c && T().briga && T().briga(a, c)) tally(d, 'briga'); }
     const L = R.ativos(d);
@@ -498,7 +528,9 @@
       const to = D.exists(ref) ? ref : b ? shelf(b) : null; if (to) D.move(pot(op), to, 'moedas', m, { op: op.id, code: 'dados-volta', by: +id }); }
     if ((d.pote || 0) > EPS && b) D.move(pot(op), shelf(b), 'moedas', d.pote, { op: op.id, code: 'dados-volta', by: 0 });
   }
-  function close(op, why) { if (!live(op)) return; if ((op.data.pote || 0) > EPS) giveBack(op); A.end(op, op.data.fim ? 'ok' : 'int', why); dirty(); }
+  // (the end, whatever end: the pot back to who paid it if no one took it, and the set back from the table to where it goes — the house's
+  // shelf, its owner's bag or house: G.JogosCasa.devolve, D-932)
+  function close(op, why) { if (!live(op)) return; if ((op.data.pote || 0) > EPS) giveBack(op); if (op.data.set && op.data.set.n && JC()) JC().devolve(op.data.set.n, why); A.end(op, op.data.fim ? 'ok' : 'int', why); dirty(); }
   JD.close = (op, why) => { if (op && live(op) && G.inSim) close(op, why || 'fechado'); };
 
   A.def('jogo-dados', {
@@ -547,28 +579,35 @@
     return { b, top, g };
   }
   // what the body can do about dice now, where it sits (only read: the verb and the screen ask it) →
-  //   { k: 'chamar' | 'entrar' | 'jogo' | 'olhar' | null, ok, why, op, aposta, apostas: [...], set }
+  //   { k: 'chamar' | 'entrar' | 'jogo' | 'olhar' | null, ok, why, op, aposta, apostas: [...], set, fonte, aluguel, de }
+  // (de: where the dice of the game come from, in words — «os seus dados», «dados da casa, emprestados»; aluguel: what the house's set
+  // costs the body, who calls the game — 0 for its own, or for the house's customer of the night: G.JogosCasa, D-934)
   JD.verbo = function (v) {
     const x = bodyAt(v); if (!x.b) return { k: null, ok: false, why: x.why };
     const { b, top, g } = x; const mine = gameOf(v); if (mine) return { k: 'jogo', ok: true, op: mine.id };
     const op = atTable(b, g);
-    if (op) { const d = op.data; if (d.fase === 'convite' && d.host !== v.id) { const s = d.aposta; const can = d.quem.length < JD.MAX && (!d.moeda || purse(v) + EPS >= s);
-      return { k: 'entrar', ok: can, why: d.quem.length >= JD.MAX ? 'A mesa já está cheia.' : can ? '' : 'Falta dinheiro para a aposta.', op: op.id, aposta: s }; }
-      return { k: 'olhar', ok: true, op: op.id }; }
+    if (op) { const d = op.data; const L = d.set && d.set.n && JC() ? JC().mesa(d.set.n) : null; const de = L ? JC().fonteDe(L, v) : '';
+      if (d.fase === 'convite' && d.host !== v.id) { const s = d.aposta; const can = d.quem.length < JD.MAX && (!d.moeda || purse(v) + EPS >= s);
+        return { k: 'entrar', ok: can, why: d.quem.length >= JD.MAX ? 'A mesa já está cheia.' : can ? '' : 'Falta dinheiro para a aposta.', op: op.id, aposta: s, de }; }
+      return { k: 'olhar', ok: true, op: op.id, de }; }
     if (top.data.jogo && top.data.jogo[g]) return { k: null, ok: false, why: 'A mesa joga ossinhos agora.' };
-    const set = setFor(b, v); if (!set) return { k: 'chamar', ok: false, why: 'A casa não tem dados livres, e você não traz os seus.' };
+    const set = setFor(b, v);
+    if (!set) return { k: 'chamar', ok: false, espera: 1, why: (JC() && JC().semJogo(v, b, 'dados')) || 'A casa não tem dados livres, e você não traz os seus.' };
     const others = Object.keys(top.data.mesa).map(id => S_().villagers.get(+id)).filter(o => o && o !== v && free(o, b, top, g));
     if (!others.length) return { k: 'chamar', ok: false, why: 'Não há ninguém à sua mesa para jogar.' };
-    const ap = coinOf(b) ? JD.APOSTAS.filter(s => purse(v) + EPS >= s) : [0];
-    if (!ap.length) return { k: 'chamar', ok: false, why: `Falta dinheiro: a menor aposta é ${money(b, JD.APOSTAS[0])}.` };
-    return { k: 'chamar', ok: true, why: '', apostas: ap, set };
+    const al = set.daCasa && JC() ? JC().aluguel(b, v) : { n: 0, por: '' };
+    const de = set.daCasa ? 'dados da casa, emprestados' : 'os seus dados';
+    const ap = coinOf(b) ? JD.APOSTAS.filter(s => purse(v) + EPS >= s + al.n) : [0];
+    if (!ap.length) return { k: 'chamar', ok: false, why: `Falta dinheiro: a menor aposta é ${money(b, JD.APOSTAS[0])}${al.n > EPS ? `, e o aluguel dos dados da casa ${money(b, al.n)}` : ''}.` };
+    return { k: 'chamar', ok: true, why: '', apostas: ap, set, fonte: set.daCasa ? 'casa' : 'seu', aluguel: al.n, alPor: al.por, de };
   };
   // the body calls its table to the dice, at a stake: a lobby where each one of the table answers by his own will (JD.entra)
   JD.chamar = function (v, aposta) {
     if (!inStep()) return NO; const c = JD.verbo(v); if (c.k !== 'chamar' || !c.ok) return { ok: false, why: c.why || 'Agora não dá.' };
     const { b, top, g } = bodyAt(v); const s = coinOf(b) ? (c.apostas.includes(aposta) ? aposta : c.apostas[0]) : 0;
-    const op = begin(b, top, g, v, s, c.set, JD.CONVITE_CORPO, torneioOf(b) ? torneioOf(b).id : 0); answers(op, b, top, v);
-    tally(op.data, 'corpo'); return { ok: true, op: op.id, msg: `Você chama a mesa para os dados${s ? ` — ${money(b, s)} cada um` : ''}.` };
+    const op = begin(b, top, g, v, s, c.set, JD.CONVITE_CORPO, torneioOf(b) ? torneioOf(b).id : 0); if (!op) return { ok: false, why: 'Os dados não chegaram à mesa.' };
+    answers(op, b, top, v);
+    tally(op.data, 'corpo'); return { ok: true, op: op.id, msg: `Você chama a mesa para os dados${s ? ` — ${money(b, s)} cada um` : ''} (${c.de}${c.aluguel > EPS ? `; o aluguel, ${money(b, c.aluguel)}, ao começar` : ''}).` };
   };
   // (the table's answers to the body's call, at the stake of now: each one free at the table, by his will; who liked the body, more)
   function answers(op, b, top, v) {
@@ -583,13 +622,14 @@
   JD.aposta = function (v, opId, s) {
     if (!inStep()) return NO; const op = A.get(opId); if (!op || op.def !== 'jogo-dados' || !live(op) || op.data.host !== v.id || op.data.fase !== 'convite') return { ok: false, why: 'Não há jogo sendo chamado.' };
     const b = tavOf(op); const top = b && dayOf(b); if (!b || !top) return { ok: false, why: 'A taverna fechou.' };
-    if (op.data.moeda && !(JD.APOSTAS.includes(s) && purse(v) + EPS >= s)) return { ok: false, why: 'Falta dinheiro para essa aposta.' };
+    const al = op.data.set && op.data.set.casa && JC() ? JC().aluguel(b, v).n : 0; // (and the rent of the house's dice, D-934)
+    if (op.data.moeda && !(JD.APOSTAS.includes(s) && purse(v) + EPS >= s + al)) return { ok: false, why: al > EPS ? 'Falta dinheiro para essa aposta e o aluguel dos dados.' : 'Falta dinheiro para essa aposta.' };
     op.data.aposta = op.data.moeda ? s : 0; answers(op, b, top, v); return { ok: true, n: op.data.quem.length - 1 };
   };
   JD.comecar = function (v, opId) {
     if (!inStep()) return NO; const op = A.get(opId); if (!op || op.def !== 'jogo-dados' || !live(op) || op.data.host !== v.id || op.data.fase !== 'convite') return { ok: false, why: 'Não há jogo sendo chamado.' };
     if (op.data.quem.length < 2) return { ok: false, why: 'Ninguém aceitou jogar a essa aposta.' };
-    start(op); return live(op) ? { ok: true, msg: 'Os copos na mesa. Sacudam!' } : { ok: false, why: 'Ninguém pôde pagar a aposta.' };
+    start(op); return live(op) ? { ok: true, msg: `Os copos na mesa. Sacudam!${op.data.set && op.data.set.alug > EPS ? ` (O aluguel dos dados da casa, ${money(tavOf(op) || { set: 0 }, op.data.set.alug)}, pago ao taverneiro.)` : ''}` } : { ok: false, why: op.end && op.end.why === 'sem o aluguel' ? 'Falta dinheiro para o aluguel dos dados da casa.' : 'Ninguém pôde pagar a aposta.' };
   };
   JD.entrar = function (v, opId) {
     if (!inStep()) return NO; const c = JD.verbo(v); if (c.k !== 'entrar' || c.op !== opId) return { ok: false, why: 'Esse jogo já começou.' }; if (!c.ok) return { ok: false, why: c.why };
@@ -644,7 +684,11 @@
       aposta: d.aposta, moeda: !!d.moeda, pote: d.pote || 0, apostas: JD.APOSTAS.slice(), convite: asked, res: up && d.res ? { total: d.res.total, cravou: d.res.cravou, queimou: d.res.queimou.slice(), dist: Object.assign({}, d.res.dist), trap } : null,
       armado: !!(d.trap && d.trap.id === v.id), trapacaOk: !!me && !d.fora[me] && (d.fase === 'palpite' || d.fase === 'segura') && d.pal.some(p => p[0] === me),
       olhos: me ? R.ativos(d).filter(id => id !== me).length : 0, risco: me ? r2(R.risco(d, me, Object.fromEntries(R.ativos(d).map(id => [id, S.villagers.get(id) ? JD.tracos(S.villagers.get(id)) : null])))) : 0,
-      venc: d.venc || 0, fim: d.fim || '', ganho: d.ganho || 0, set: d.set ? { k: d.set.k, mat: d.set.k.split('.')[1], meus: d.set.ref === 'm:' + v.id } : null,
+      venc: d.venc || 0, fim: d.fim || '', ganho: d.ganho || 0,
+      // (the set on the table and where it comes from — the house's, lent; the body's own; another's —, and the rent paid: the J front, D-932)
+      set: d.set ? { k: d.set.k, mat: d.set.k.split('.')[1], meus: !!d.set.dono && d.set.dono === v.id, casa: !!d.set.casa, alug: d.set.alug || 0,
+        vem: d.fase === 'convite' && d.host === v.id && d.set.casa && !d.set.alug && JC() ? JC().aluguel(b, v).n : 0, // (the rent the body will pay as it begins)
+        de: d.set.n && JC() && JC().mesa(d.set.n) ? JC().fonteDe(JC().mesa(d.set.n), v) : d.set.casa ? 'dados da casa, emprestados' : d.set.dono === v.id ? 'os seus dados' : 'dados emprestados' } : null,
       torneio: torn ? { premio: torn.data.pote || 0, placar: Object.keys(torn.data.placar).map(id => [nome(+id), torn.data.placar[id][0]]).sort((a, c) => c[1] - a[1]).slice(0, 3) } : null,
       tema: T() && T().look ? T().look(b).tema : 'classico', copo: cupOf(b),
       price: n => money(b, n), hist: d.hist.slice(-3).map(h => ({ r: h.r, total: h.total, cravou: h.cravou ? nome(h.cravou) : '', queimou: h.queimou.map(nome) })) };

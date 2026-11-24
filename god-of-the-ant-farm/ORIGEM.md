@@ -137,10 +137,10 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 |---|---|---|
 | **bronze**, **ferro** | uma das **ferramentas** (machado, picareta, pá, enxada, foice, martelo, faca, vara, rede, remo; os grilhões de ferro: ½) ou das **armas** (espada, lança, flecha — 20 a cada uma —, escudo, elmo, couraça) **daquele metal** do armazém (`of: 'bronze'`) | a arte do metal **e** o metal tido |
 | **pedra** | a pedra e a madeira do armazém (o machado: ½ + ½; a lança: ¼ de pedra e ¾ de madeira; a faca: ¼ de pedra…) | sempre |
-| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1; o prato torneado: 0,15; o jogo de dados de madeira, os oito dadinhos talhados: 0,05 — T4, D-852) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
+| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1; o prato torneado: 0,15; o jogo de dados de madeira, os oito dadinhos talhados: 0,05 — T4, D-852; o baralho de madeira, as vinte tábuas finas: 0,2 — T5, D-868) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
 | **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼; a bola de vime: 0,1; os grilhões de corda: 0,1) | sempre |
 | **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15); os instrumentos (P7, D-764), o couro e a madeira (a lira: 0,1 de couro — a caixa coberta e as cordas de tripa — e 0,3 de madeira; o tambor: 0,3 de couro e 0,6 de madeira) | **só quem teve couro** (caçou ou abateu: o couro e a tripa são do mesmo bicho) |
-| **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼; o prato de barro: 0,3) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
+| **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼; o prato de barro: 0,3; o baralho de barro, as pínakes da olaria: 0,2 — T5, D-868) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
 | **osso** (P7, D-805) | nada do armazém: os **ossinhos** da taverna são os ossos do tornozelo da carcaça (`G.Itens.feitoDe` → nada; o armazém não os dá); os **dados de osso** do jogo de copo também (T4, D-852) | **só quem teve osso**: a carne feita de um abate, de uma caça ou de um sacrifício marca o osso (`D.make` da comida com a parte `carne`); e quem teve couro, que veio de uma carcaça |
 | **lã** (P7, D-805) | o **tecido** do armazém (o pano de limpar a mesa: 0,05) | **só quem teve pano tecido** (`O.MAT_OF.tecido`: o tear o fez, ou entrou no povo) |
@@ -169,7 +169,8 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   senão um feixe de palha. São **do lugar** (`PLACE_TOOL`), como a caneca; o armazém não dá nenhum dos dois do nada — o osso e a
   palha não são de nada que ele guarda (`Inv.offer` recusa a coisa feita de nada).
 - **Os dados do jogo de copo** (T4, D-852): o jogo de dados (`dados`, oito dadinhos de um a seis) é uma **coisa de verdade** — na
-  prateleira da taverna (`b:`) ou na mochila de quem a traz (`m:`) —, e só se joga onde há uma (`G.JogoDados.setFor`). Os da casa, o
+  prateleira da taverna (`b:`), na mochila de quem a traz (`m:`), na casa de quem a comprou (`h:`), ou na mesa de uma partida (`n:`:
+  emprestada, os jogos da casa abaixo) —, e só se joga onde há uma (`G.JogoDados.setFor`). Os da casa, o
   taverneiro os faz uma vez, no dia em que a casa tem menos do que guarda (um jogo por degrau: a taberna 1, a taverna 2, a hospedaria
   3): **de osso** onde o povo teve osso (`G.Origem.matOK(fid, 'osso')` — a carcaça de um abate, de uma caça, de um sacrifício; nada do
   armazém, como os ossinhos; `D.make` com o código `dados`), **senão de madeira**, da lenha da prateleira da casa (`D.use` de 0,05 de
@@ -193,14 +194,32 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   no lugar dele (`taverna-mesa`, das mãos do taverneiro), o resto de um prato deixado (`sobra-mesa`) —; daí às mãos do corpo,
   pago ali (`taverna`), de volta à prateleira quando esfria sem dono (`taverna-mesa-volta`, `taverna-volta`), ou o resto à lavagem
   (`sobra`); no fechamento, o pedido volta à prateleira e o resto vai fora. Nada some sem a sua linha.
-- **O baralho das Tabuletas** (T5, D-868): quem joga as Tabuletas à mesa da taverna (o ato `jogo-cartas`; e quem esconde uma na
-  manga, `trapaca`, ou é pego, `trapaca-pega`) tem nas mãos o **baralho** — as vinte tabuletas pintadas do povo —, pelo kit, do lugar
-  (`PLACE_TOOL`, como os ossinhos), no material **que o seu povo pinta, o primeiro que ele tem** (`G.Itens.dePovo`: o egípcio no
-  **papiro** — o junco da água doce —, o asteca no **amate**, o romano na **cera** das colmeias, o grego no **barro** da olaria, o nórdico
-  na **madeira**; sem o seu, a madeira de sempre). Só se joga onde há um baralho: o da casa (`G.Cartas.baralhoCasa`) ou o que o corpo
-  leva na mochila (`G.Cartas.baralhoDe`); o armazém dá o baralho do que tem (a madeira, a cerâmica, a cera e a madeira — o papiro não,
-  que não é de nada que ele guarde). As **apostas** vão pelo livro: o lugar `'u:'` (a urna) é o pote de uma partida ou de um torneio (`aposta`,
-  `pote`, `pote-volta`, `torneio`): o que entra nele sai para quem venceu, ou volta a quem pôs.
+- **O baralho das Tabuletas** (T5, D-868; a frente J, D-931): quem joga as Tabuletas à mesa da taverna (o ato `jogo-cartas`; e quem
+  esconde uma na manga, `trapaca`, ou é pego, `trapaca-pega`) tem nas mãos **o baralho de verdade do seu lado da mesa** — as vinte
+  tabuletas pintadas de um povo: cada lado joga com o seu, o dele ou um da casa emprestado (`G.Cartas.baralhoNaMesa`; não é mais «do
+  lugar», o `PLACE_TOOL`) —, e nenhum fora de uma partida. A casa tem os seus na prateleira (dois por partida: a taberna 2, a taverna 4, a
+  hospedaria 6 — `G.Cartas.SETS`), feitos pelo taverneiro (`G.Cartas.faz`, código `baralho`) no material **que o povo da taverna pinta, o
+  primeiro que ele tem e de que a prateleira tem o que ele pede** (`G.Itens.dePovo` e `G.Itens.feitoDe`: o egípcio no **papiro** — o junco
+  da água doce, nada da prateleira —, o asteca no **amate** — 0,2 de madeira —, o romano na **cera** das colmeias — 0,1 de cera e 0,1 de
+  madeira —, o grego no **barro** — 0,2 da cerâmica da olaria —, o nórdico na **madeira** — 0,2 —; sem o do seu jeito, a madeira de
+  sempre; sem nada na prateleira, nenhum, e a casa tenta de novo um minuto do mundo depois). O que a casa não tem para o baralho que lhe
+  falta (a cerâmica do grego, a cera do romano) o taverneiro compra no armazém com o resto, antes de abrir (`G.JogosCasa.falta`). O
+  armazém dá ao corpo o baralho do que tem (a madeira, a cerâmica, a cera e a madeira — o papiro não, que não é de nada que ele guarde).
+  As **apostas** vão pelo livro: o lugar `'u:'` (a urna) é o pote de uma partida ou de um torneio (`aposta`, `pote`, `pote-volta`,
+  `torneio`): o que entra nele sai para quem venceu, ou volta a quem pôs.
+- **Os jogos da casa** (a frente J, D-930 a D-939; `js/jogos-casa.js`, `G.JogosCasa`): os dados e os baralhos de uma taverna são coisas
+  contadas no livro — na prateleira (`b:`), numa mesa (`n:`, o lugar dos jogos fora do seu lugar), ou nas mãos e nas casas de quem os
+  comprou. **O empréstimo**: uma partida leva um jogo livre — o de quem joga (a mochila; quem é do mundo, também o da sua casa na cidade da
+  taverna), senão um da casa — da prateleira, da mochila ou da casa para a mesa (`jogo-mesa`), e ele volta no fim, de qualquer fim
+  (`jogo-volta`: à prateleira, à mochila, à casa); o do dono que morreu vai à casa dele (`herdado`); o de alguém que não cabe em lugar
+  nenhum fica com a casa (`esquecido`); o da casa que perdeu a prateleira — queimou, caiu, foi derrubada — perde-se com ela (`ruina`,
+  `perdido`); o que sumiu da mesa pela mão do deus faz a partida acabar. **O aluguel**: quem chama o jogo e pega um da casa paga a mesa
+  (`aluguel-jogo`, 0,1), das suas moedas às do taverneiro (sem taverneiro, ao tesouro do povo) — a não ser o freguês da noite (serviu-se,
+  espera na fila, tem a rodada nas mãos), a família do taverneiro, o freguês de sempre em quem ele confia ou de quem é generoso; num povo
+  sem moeda, nada. **A venda**: o taverneiro vende o jogo que sobra além do que a casa guarda, ou faz um por dia do material da casa (as
+  mesmas receitas dos da casa) e o vende (`venda-jogo`: a coisa da prateleira para a mochila do corpo ou a casa de quem é do mundo, as
+  moedas para as dele, as duas pernas juntas; dados 0,4, baralho 0,8). Quem é do mundo, muito de jogo, à mesa sem jogo livre da casa,
+  compra o seu.
 - **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
   instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a
   **lira** (os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa) dos outros — do couro e da tripa do
