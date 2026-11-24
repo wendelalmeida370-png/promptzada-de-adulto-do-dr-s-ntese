@@ -94,7 +94,7 @@ if (on('n1')) {
     out.push(`E «${b ? b.label : '-'}», F «${F ? F.label + (F.ok ? '' : ' — ' + F.why) : '-'}»`);
     // (with nothing in the bag, no giving on the F: the verb is not said — the F is then the first social verb that can be done
     // (22b, D-628: «Cumprimentar»), or none; the ready worlds made with the society gave the body an empty bag: T-1600)
-    const r1 = b && b.id === 'pessoa' && b.t.o.id === o.id && (empty ? (!F || (/^soc-/.test(F.id || '') && F.id !== 'dar')) : !!F && /^Dar algo a /.test(F.label) && F.ok);
+    const r1 = b && b.id === 'pessoa' && b.t.o.id === o.id && (empty ? (!F || (/^soc-/.test(F.id || '') && F.id !== 'dar')) : !!F && /^Dar algo (a|ao|à) /.test(F.label) && F.ok);
     // (another part's verb for F on a person — the fight's challenge —: it takes the key; the giving goes to the card)
     I.verb('pessoa', { id: 'prova-desafio', k: 'outra', label: 'Desafiar (prova)', run: () => ({ ok: true, msg: 'desafiado' }) });
     const of2 = I.offer(I.best()); const F2 = of2.verbs.find(x => x.k === 'outra'); const dar = of2.more.find(x => x.id === 'dar');

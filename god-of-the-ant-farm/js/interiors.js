@@ -2414,6 +2414,15 @@
     if (out && leaving(v)) return out;
     return e ? { b, lv: e.lv || 0, x: e.x, z: e.z, y: 0, ry: 0, use: '', item: null, it: null, q: -1, st: 'idle', pose: 'de pé' } : null;
   };
+  // where someone is in the world, in tiles, and on which storey — [x, y, lv] (pure; the wave 4 I, D-917): one inside a building
+  // with a plan at the place the share-out gives them there (the world keeps the door's point in v.x, v.y: a word, a gift, a look
+  // across the room measured from there missed a table of the tavern by metres); the god's body where it stands; anyone else at
+  // v.x, v.y
+  In.posOf = function (v) {
+    if (!v) return null; const S = G.S;
+    if (v.inside > 0 && !(S.avatar && S.avatar.id === v.id)) { const pl = In.placeOf(v); if (pl && pl.b) return [pl.b.x + pl.x / TILE, pl.b.y + pl.z / TILE, pl.lv || 0]; }
+    return [v.x, v.y, 0];
+  };
   // the place one more wanting a use would have there now (a use or a list, the first wanted first): the step asks it before
   // sending someone to eat at home or to pray in the temple — null where none is free
   In.freePlace = function (b, use) {

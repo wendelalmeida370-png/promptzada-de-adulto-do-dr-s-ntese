@@ -2085,3 +2085,160 @@ canvas#game3d { touch-action: none; transition: none; }
   #tab-panel .tb-tk { width: 36px; height: 36px; font-size: 16px; }
   #tab-panel .tb-mao .ct-card { left: calc(50% - var(--cwh) / 2 + (var(--i) - (var(--n) - 1) / 2) * var(--cwh) * .78); }
 }
+
+/* === Onda 4 — I: a interação clara (acoes-ui.js, D-915 a D-929) === */
+/* the bar of a tavern's table (D-916): in the look of the house's people, as the menu is — the marble with the Pompeian red of Rome, the
+   clay with the black meander of the Greeks, Egypt's papyrus with lapis and gold, the North's carved wood, the Aztec amate with the
+   turquoise and the red, the parchment of the others —; a caption over the buttons (the house's name, or what the one under the finger
+   or the pointer does in whole, and why not now), each button a figure, a name and a line (the price, the stake, where a game comes from
+   — or why not now, greyed), its key on the PC. Seated, it takes the place of the quick things at the foot of the screen */
+#inc-root.mesa-on .ih-hotbar { visibility: hidden; }
+.ac-mesa, #acoes-panel, .ac-dica { --ink: #3b2716; --mute: rgba(59, 39, 22, .7); --acc: #8a2f1c; --acc2: #b0893e; --row: rgba(59, 39, 22, .05); --rowh: rgba(59, 39, 22, .1); --sel: rgba(176, 137, 62, .25); --line: rgba(59, 39, 22, .26);
+  --btn: #8a2f1c; --btn-ink: #fff4dc; --no: #a3402a; --band: none; --band-h: 0px;
+  --paper: repeating-radial-gradient(circle at 23% 31%, rgba(120, 80, 30, .035) 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 35%, #f6ead0 0%, #ecdab0 55%, #cfb07c 100%); }
+.ac-mesa.t-romano, #acoes-panel.t-romano, .ac-dica.t-romano { --ink: #2a1a12; --mute: rgba(42, 26, 18, .7); --acc: #9a2a1d; --acc2: #c59a3d; --sel: rgba(197, 154, 61, .24); --btn: #9a2a1d; --no: #9a2a1d; --band-h: 9px; --band: linear-gradient(#c59a3d 0 1.5px, #9a2a1d 1.5px 7.5px, #c59a3d 7.5px 9px);
+  --paper: linear-gradient(121deg, transparent 0 41%, rgba(150, 138, 126, .06) 41.6%, transparent 42.6%), linear-gradient(58deg, transparent 0 71%, rgba(150, 138, 126, .05) 71.5%, transparent 72.3%), radial-gradient(ellipse at 70% 80%, rgba(190, 178, 160, .18), transparent 40%), radial-gradient(ellipse at 40% 28%, #faf6ee, #e9e0d1 70%, #d8ccb8); }
+.ac-mesa.t-grego, #acoes-panel.t-grego, .ac-dica.t-grego { --ink: #1b120c; --mute: rgba(27, 18, 12, .74); --acc: #1b120c; --acc2: #f1d9b0; --row: rgba(0, 0, 0, .07); --rowh: rgba(0, 0, 0, .12); --sel: rgba(0, 0, 0, .15); --line: rgba(27, 18, 12, .4); --btn: #1b120c; --btn-ink: #f1d9b0; --no: #5a1a08; --band-h: 12px;
+  --band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Crect width='12' height='12' fill='%23d6824b'/%3E%3Cpath d='M0 1.2h12M0 10.8h12' stroke='%231b120c' stroke-width='1.4'/%3E%3Cpath d='M2 10.8V3.4h7.4v5.2H4.6V5.4h2.6' fill='none' stroke='%231b120c' stroke-width='1.4'/%3E%3C/svg%3E");
+  --paper: repeating-radial-gradient(circle at 60% 20%, rgba(60, 20, 0, .05) 0 1px, transparent 1px 5px), radial-gradient(ellipse at 50% 28%, #df8a52, #c7672f 60%, #a9501f); }
+.ac-mesa.t-egipcio, #acoes-panel.t-egipcio, .ac-dica.t-egipcio { --ink: #262010; --mute: rgba(38, 32, 16, .72); --acc: #1f3d8a; --acc2: #c9971f; --sel: rgba(201, 151, 31, .26); --line: rgba(31, 61, 138, .3); --btn: #1f3d8a; --btn-ink: #f6e6b6; --no: #8a2a1a; --band-h: 8px;
+  --band: linear-gradient(#c9971f 0 1.5px, #1f3d8a 1.5px 4px, #c9971f 4px 5px, #2f5bb5 5px 7px, #c9971f 7px 8px);
+  --paper: repeating-linear-gradient(0deg, rgba(150, 110, 40, .07) 0 1px, transparent 1px 3px, rgba(150, 110, 40, .05) 3px 4px, transparent 4px 11px), repeating-linear-gradient(90deg, rgba(150, 110, 40, .035) 0 2px, transparent 2px 17px), radial-gradient(ellipse at 50% 35%, #f1e2b0, #e3cd91 65%, #c9ab66); }
+.ac-mesa.t-nordico, #acoes-panel.t-nordico, .ac-dica.t-nordico { --ink: #f1e3c2; --mute: rgba(241, 227, 194, .72); --acc: #e8b75e; --acc2: #b88a3e; --row: rgba(255, 240, 210, .06); --rowh: rgba(255, 240, 210, .11); --sel: rgba(232, 183, 94, .2); --line: rgba(241, 227, 194, .22); --btn: #7a3b1e; --btn-ink: #f8e8c6; --no: #f0a37a; --band-h: 10px;
+  --band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='10'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M0 3C4 3 4 7 8 7S12 3 16 3' stroke='%231c1008' stroke-width='3.4'/%3E%3Cpath d='M0 3C4 3 4 7 8 7S12 3 16 3' stroke='%23e7cc97' stroke-width='1.6'/%3E%3Cpath d='M0 7C4 7 4 3 8 3S12 7 16 7' stroke='%231c1008' stroke-width='3.4'/%3E%3Cpath d='M0 7C4 7 4 3 8 3S12 7 16 7' stroke='%23e7cc97' stroke-width='1.6'/%3E%3C/g%3E%3C/svg%3E");
+  --paper: radial-gradient(ellipse at 22% 63%, rgba(0, 0, 0, .22) 0 3%, transparent 6%), repeating-linear-gradient(178.5deg, rgba(0, 0, 0, .2) 0 2px, transparent 2px 9px), repeating-linear-gradient(181deg, rgba(255, 220, 160, .05) 0 1px, transparent 1px 14px), linear-gradient(180deg, #5f3e25, #3c2515); }
+.ac-mesa.t-asteca, #acoes-panel.t-asteca, .ac-dica.t-asteca { --ink: #23120a; --mute: rgba(35, 18, 10, .74); --acc: #a5281f; --acc2: #1a9a90; --row: rgba(35, 18, 10, .06); --rowh: rgba(35, 18, 10, .11); --sel: rgba(26, 154, 144, .2); --line: rgba(35, 18, 10, .32); --btn: #1a8c83; --btn-ink: #fff3dc; --no: #8e1d15; --band-h: 12px;
+  --band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='12'%3E%3Crect width='16' height='12' fill='%239e2a20'/%3E%3Cpath d='M0 .8h16M0 11.2h16' stroke='%23f1dcb4' stroke-width='1'/%3E%3Cpath d='M.6 10h3.4V7.6h2.6V5.2h2.6V2.6h5.4V8h-2.6V5.4' fill='none' stroke='%2322a89d' stroke-width='1.5'/%3E%3C/svg%3E");
+  --paper: repeating-linear-gradient(28deg, rgba(60, 30, 10, .09) 0 1.2px, transparent 1.2px 13px), repeating-linear-gradient(-61deg, rgba(60, 30, 10, .08) 0 1px, transparent 1px 19px), radial-gradient(ellipse at 75% 25%, rgba(255, 220, 170, .14), transparent 45%), radial-gradient(ellipse at 50% 35%, #c49867, #ad8152 65%, #8e6438); }
+.ac-mesa.t-classico, #acoes-panel.t-classico, .ac-dica.t-classico { --band-h: 5px; --band: linear-gradient(var(--acc2) 0 1.5px, transparent 1.5px 3.5px, var(--acc2) 3.5px 5px); }
+/* (out of a tavern the list wears the screen's own glass and gold) */
+#acoes-panel.t-hud { --ink: var(--ih-text); --mute: var(--ih-mute); --acc: var(--ih-gold-2); --acc2: var(--ih-gold); --row: rgba(255, 255, 255, .05); --rowh: rgba(255, 255, 255, .1); --sel: rgba(240, 198, 110, .17); --line: rgba(255, 236, 200, .16);
+  --btn: linear-gradient(180deg, #f7d07c, #e0a648); --btn-ink: #2a1d0a; --no: #f0a37a; --band-h: 0px; --band: none; --paper: linear-gradient(180deg, rgba(22, 19, 27, .97), rgba(13, 11, 16, .97)); }
+
+#inc-hud .ac-mesa { position: absolute; z-index: 4; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(900px, calc(100vw - 540px)); min-width: min(560px, calc(100vw - 24px));
+  pointer-events: auto; color: var(--ink); background: var(--band) top / auto var(--band-h) repeat-x, var(--paper); padding: calc(var(--band-h) + 3px) 8px 7px; border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .35), inset 0 0 26px rgba(90, 50, 10, .2); animation: acRise .45s cubic-bezier(.2, .85, .25, 1) both; user-select: none; -webkit-user-select: none; }
+@keyframes acRise { 0% { opacity: 0; transform: translate(-50%, 18px); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+#inc-hud .ac-mesa.hidden { display: none; }
+#inc-hud .ac-mesa.t-nordico { box-shadow: 0 14px 36px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .5), inset 0 0 0 2px rgba(20, 10, 4, .45), inset 0 0 26px rgba(0, 0, 0, .45); text-shadow: 0 1px 0 rgba(0, 0, 0, .6); }
+.ac-mesa .ac-cap { display: flex; align-items: center; gap: 7px; min-height: 22px; padding: 0 4px 5px; border-bottom: 1px solid var(--line); margin-bottom: 6px; font-size: 12.5px; line-height: 1.25; }
+.ac-mesa .ac-emb { flex: none; width: 18px; height: 18px; color: var(--acc); }
+.ac-mesa .ac-emb svg { width: 100%; height: 100%; display: block; }
+.ac-mesa .ac-tit { flex: none; font-family: 'Cinzel', Georgia, serif; font-weight: 800; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--acc); }
+.ac-mesa .ac-say { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--ink); }
+.ac-mesa .ac-say small { font-weight: 700; color: var(--mute); margin-left: 4px; }
+.ac-mesa .ac-say em { font-style: italic; font-weight: 800; color: var(--no); }
+.ac-mesa .ac-row { display: flex; gap: 5px; }
+.ac-mesa .ac-b { position: relative; flex: 1 1 0; min-width: 0; min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 1px; padding: 6px 4px 5px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--row); color: var(--ink); font: inherit; cursor: pointer; transition: background .12s, transform .08s, border-color .12s; -webkit-tap-highlight-color: transparent; }
+.ac-mesa .ac-b:hover, .ac-mesa .ac-b.hov { background: var(--rowh); border-color: var(--acc2); }
+.ac-mesa .ac-b:active { transform: translateY(1px) scale(.97); }
+.ac-mesa .ac-b .ic { width: 26px; height: 26px; color: var(--acc); }
+.ac-mesa .ac-b .ic svg { display: block; width: 100%; height: 100%; }
+.ac-mesa .ac-b b { font-size: 12.5px; font-weight: 900; line-height: 1.15; letter-spacing: .01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ac-mesa .ac-b small { max-width: 100%; font-size: 10px; font-weight: 700; line-height: 1.15; color: var(--mute); text-align: center; overflow: hidden; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } /* (two lines: the price and where the game comes from — J, D-933) */
+.ac-mesa .ac-b kbd { position: absolute; left: 3px; top: 3px; min-width: 15px; font-size: 9.5px; line-height: 14px; padding: 0 3px; border-radius: 4px; border: 0; background: rgba(0, 0, 0, .16); color: var(--ink); text-align: center; }
+.ac-mesa.t-nordico .ac-b kbd { background: rgba(255, 240, 210, .16); }
+/* (what cannot be done now: greyed — the figure and the name faint, the line saying why) */
+.ac-mesa .ac-b.off { cursor: default; background: transparent; border-style: dashed; }
+.ac-mesa .ac-b.off .ic, .ac-mesa .ac-b.off b { opacity: .42; filter: grayscale(.8); }
+.ac-mesa .ac-b.off small { color: var(--no); font-style: italic; opacity: .9; }
+.ac-mesa .ac-b.up { flex: 0 0 auto; width: 76px; margin-left: 4px; border-left-width: 2px; }
+.ac-mesa .ac-b.up .ic { color: var(--ink); opacity: .8; }
+.ac-mesa .ac-b.up kbd { left: 50%; top: auto; bottom: 4px; transform: translateX(-50%); } /* («Espaço» is long: under the word, not over the arrow) */
+
+/* the word of the first time at a tavern's table (D-923): over the bar, its arrow down to it; gone for good once the bar is used */
+#inc-hud .ac-dica { position: absolute; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(var(--ac-h, 116px) + 16px); width: min(440px, calc(100vw - 28px)); pointer-events: auto;
+  color: var(--ink); background: var(--band) top / auto var(--band-h) repeat-x, var(--paper); padding: calc(var(--band-h) + 9px) 14px 11px; border-radius: 11px; box-shadow: 0 18px 40px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0, 0, 0, .35); animation: acHint .6s cubic-bezier(.2, .9, .3, 1.2) both; }
+#inc-hud .ac-dica.hidden { display: none; }
+#inc-hud .ac-dica::after { content: ''; position: absolute; left: 50%; bottom: -9px; margin-left: -9px; border: 9px solid transparent; border-bottom: 0; border-top-color: rgba(0, 0, 0, .35); filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
+@keyframes acHint { 0% { opacity: 0; transform: translate(-50%, 12px) scale(.96); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+.ac-dica > b { display: block; font-family: 'Cinzel', Georgia, serif; font-weight: 800; font-size: 14px; letter-spacing: .08em; color: var(--acc); margin-bottom: 4px; }
+.ac-dica p { margin: 0 0 6px; font-size: 13px; line-height: 1.38; }
+.ac-dica kbd { font-size: 11px; padding: 0 5px; border-radius: 4px; border: 0; background: rgba(0, 0, 0, .15); color: var(--ink); }
+.ac-dica button { display: block; margin: 8px 0 0 auto; min-height: 44px; padding: 0 22px; border: 0; border-radius: 10px; background: var(--btn); color: var(--btn-ink); font: inherit; font-weight: 900; font-size: 14px; cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+
+/* the list of actions (D-917, D-919): everything about one target — its figure or its face, its name as the body knows it —, the others in
+   reach to switch to by their names, each verb a row with its figure, its words, a line, and, greyed, why not now; on the PC at the right,
+   on the phone a sheet from the bottom */
+#inc-root.ac-on .ih-touch, #inc-root.ac-on .ih-corner, #inc-root.ac-on .ih-hotbar, #inc-root.ac-on .ac-mesa { visibility: hidden; }
+#acoes-panel { z-index: 6; pointer-events: auto; position: absolute; right: max(28px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 56px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; }
+#acoes-panel.hidden { display: none; }
+#acoes-panel .ac-card { position: relative; display: flex; flex-direction: column; min-height: 0; max-height: 100%; flex: 1 1 auto; color: var(--ink); background: var(--paper); border-radius: 10px; overflow: hidden;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .55), 0 0 0 1px rgba(0, 0, 0, .35), inset 0 0 40px rgba(90, 50, 10, .18); animation: acOpen .4s cubic-bezier(.2, .85, .25, 1) both; }
+#acoes-panel.t-hud .ac-card { border: 1px solid var(--ih-edge); }
+#acoes-panel.t-nordico .ac-card { text-shadow: 0 1px 0 rgba(0, 0, 0, .6); }
+@keyframes acOpen { 0% { opacity: 0; transform: translateX(26px); } 100% { opacity: 1; transform: none; } }
+#acoes-panel .ac-band { flex: none; height: var(--band-h); background: var(--band) center / auto 100% repeat-x; }
+#acoes-panel .x { position: absolute; right: 8px; top: calc(var(--band-h) + 6px); z-index: 3; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .14); color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; }
+#acoes-panel.t-hud .x, #acoes-panel.t-nordico .x { background: rgba(255, 255, 255, .1); }
+#acoes-panel .ac-top { flex: none; display: flex; align-items: center; gap: 12px; padding: 11px 54px 10px 14px; border-bottom: 1px solid var(--line); }
+#acoes-panel .ac-face { position: relative; flex: none; width: 50px; height: 50px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--rowh); color: var(--acc); box-shadow: 0 0 0 2px var(--acc2), 0 3px 8px rgba(0, 0, 0, .3); }
+#acoes-panel .ac-face canvas { display: none; width: 100%; height: 100%; }
+#acoes-panel .ac-face.pic canvas { display: block; }
+#acoes-panel .ac-face i { width: 28px; height: 28px; } #acoes-panel .ac-face i:empty { display: none; }
+#acoes-panel .ac-face i svg { display: block; width: 100%; height: 100%; }
+#acoes-panel .ac-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#acoes-panel .ac-who b { font-family: 'Cinzel', Georgia, serif; font-weight: 800; font-size: 17px; line-height: 1.15; color: var(--acc); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#acoes-panel .ac-who small { margin-top: 3px; font-size: 12px; font-weight: 700; color: var(--mute); }
+#acoes-panel .ac-tabs { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 8px 12px 0; }
+#acoes-panel .ac-tabs:empty { display: none; }
+#acoes-panel .ac-tl { font-size: 10.5px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin-right: 2px; }
+#acoes-panel .ac-tab { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--row); color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+#acoes-panel .ac-tab i { width: 15px; height: 15px; color: var(--acc); } #acoes-panel .ac-tab i svg { display: block; width: 100%; height: 100%; }
+#acoes-panel .ac-tab.on { border-color: var(--acc2); background: var(--sel); box-shadow: inset 0 0 0 1px var(--acc2); }
+#acoes-panel .ac-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 8px 10px 6px; scrollbar-width: thin; }
+#acoes-panel .ac-r { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; min-height: 52px; margin: 0 0 4px; padding: 6px 10px 6px 8px; border-radius: 10px; border: 1px solid transparent; background: var(--row); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background .12s; -webkit-tap-highlight-color: transparent; }
+#acoes-panel .ac-r:hover { background: var(--rowh); }
+#acoes-panel .ac-r.sel { border-color: var(--acc2); background: var(--sel); box-shadow: inset 0 0 0 1px var(--acc2); }
+#acoes-panel .ac-r:active { transform: scale(.99); }
+#acoes-panel .ac-r kbd { position: absolute; left: 3px; top: 3px; font-size: 9.5px; line-height: 14px; padding: 0 4px; border-radius: 4px; border: 0; background: rgba(0, 0, 0, .15); color: var(--ink); }
+#acoes-panel.t-hud .ac-r kbd, #acoes-panel.t-nordico .ac-r kbd { background: rgba(255, 255, 255, .14); }
+#acoes-panel .ac-r .ic { flex: none; width: 34px; height: 34px; padding: 5px; border-radius: 50%; color: var(--acc); background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 70%); box-shadow: inset 0 0 0 1px var(--line); }
+#acoes-panel .ac-r .ic svg { display: block; width: 100%; height: 100%; }
+#acoes-panel .ac-r .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#acoes-panel .ac-r .nm b { font-size: 14.5px; font-weight: 800; line-height: 1.22; }
+#acoes-panel .ac-r .nm small { margin-top: 2px; font-size: 11.5px; font-weight: 700; color: var(--mute); }
+#acoes-panel .ac-r .nm em { margin-top: 2px; font-size: 11.5px; font-weight: 800; font-style: italic; color: var(--no); line-height: 1.25; }
+#acoes-panel .ac-r.off { cursor: default; background: transparent; border: 1px dashed var(--line); }
+#acoes-panel .ac-r.off .ic, #acoes-panel .ac-r.off .nm b, #acoes-panel .ac-r.off .nm small { opacity: .5; filter: grayscale(.7); }
+#acoes-panel .ac-gone, #acoes-panel .ac-none { padding: 8px 6px 10px; text-align: center; font-size: 13px; font-style: italic; color: var(--mute); }
+#acoes-panel .ac-foot { flex: none; padding: 8px 14px 11px; border-top: 1px solid var(--line); text-align: center; font-size: 11px; color: var(--mute); }
+#acoes-panel .ac-foot kbd { font-size: 10px; padding: 0 5px; margin: 0 1px; border-radius: 4px; border: 0; background: rgba(0, 0, 0, .13); color: var(--ink); }
+#acoes-panel.t-hud .ac-foot kbd, #acoes-panel.t-nordico .ac-foot kbd { background: rgba(255, 255, 255, .13); }
+#acoes-panel .ac-fecha { width: 100%; min-height: 46px; border-radius: 11px; border: 1px solid var(--line); background: rgba(0, 0, 0, .07); color: var(--ink); font: inherit; font-weight: 900; font-size: 14.5px; cursor: pointer; }
+/* (the prompt's line of the verbs with no key of their own: the key of the list) */
+#inc-root .ih-prompt .ih-more { position: relative; display: inline-flex; align-items: center; gap: 7px; margin-left: 10px; padding-left: 10px; border-left: 1px solid rgba(255, 255, 255, .16); font-style: normal; color: var(--ih-mute); font-size: 11.5px; }
+#inc-root .ih-prompt .ih-more.hidden { display: none; }
+#inc-root .ih-prompt .ih-more kbd { min-width: 0; padding: 0 7px; background: rgba(255, 255, 255, .12); color: var(--ih-text); box-shadow: none; font-size: 11px; height: 22px; }
+#inc-root .ih-prompt.at .ih-more { margin-left: 0; padding-left: 0; border-left: 0; padding-top: 3px; border-top: 1px solid rgba(255, 255, 255, .1); }
+/* (the person's card: the why of a verb that cannot be done now, in sight) */
+#inc-card .btns button .why { display: block; width: 100%; font-size: 10.5px; font-weight: 700; font-style: italic; color: #e8a27c; margin-top: 2px; }
+#inc-card .btns button[disabled] { flex-wrap: wrap; opacity: .72; }
+/* (seated at the table, the prompt and the words of the moment stand over the bar) */
+#inc-root.mesa-on .ih-prompt:not(.at) { bottom: calc(var(--ac-h, 116px) + 12px); }
+#inc-root.mesa-on .ih-toasts { bottom: calc(var(--ac-h, 116px) + 62px); }
+#inc-root.mesa-on.under .ih-news { bottom: calc(var(--ac-h, 116px) + 18px); }
+/* the phone (and any narrow screen): the bar over the corner's buttons, the whole width, in two rows of four; the list a sheet from the
+   bottom */
+@media (max-width: 720px) {
+  #inc-hud .ac-mesa { left: 8px; right: 8px; width: auto; min-width: 0; transform: none; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); padding: calc(var(--band-h) + 2px) 6px 6px; animation-name: acRiseP; }
+  @keyframes acRiseP { 0% { opacity: 0; transform: translateY(18px); } 100% { opacity: 1; transform: none; } }
+  .ac-mesa .ac-cap { font-size: 12px; padding-bottom: 4px; margin-bottom: 5px; }
+  .ac-mesa .ac-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+  .ac-mesa .ac-b { min-height: 58px; padding: 5px 3px 4px; }
+  .ac-mesa .ac-b.up { width: auto; margin-left: 0; }
+  .ac-mesa .ac-b .ic { width: 24px; height: 24px; }
+  .ac-mesa .ac-b b { font-size: 12px; }
+  .ac-mesa .ac-b small { font-size: 9.5px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #acoes-panel { right: 10px; left: 10px; top: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: none; width: auto; max-height: 76vh; }
+  #acoes-panel .ac-card { animation-name: acSheet; }
+  @keyframes acSheet { 0% { opacity: 0; transform: translateY(40px); } 100% { opacity: 1; transform: none; } }
+  #acoes-panel .ac-r { min-height: 54px; }
+  #acoes-panel .ac-tab { min-height: 44px; padding: 0 14px; border-radius: 22px; }
+  /* (the word of the first time on a phone: beside the thumb's buttons, never over them — «Ações» is among them) */
+  #inc-hud .ac-dica { left: 8px; right: 122px; width: auto; transform: none; animation-name: acHintP; padding: calc(var(--band-h) + 8px) 12px 10px; }
+  @keyframes acHintP { 0% { opacity: 0; transform: translateY(12px) scale(.96); } 100% { opacity: 1; transform: none; } }
+  #inc-hud .ac-dica::after { left: 38%; }
+  .ac-dica p { font-size: 12.5px; line-height: 1.34; }
+}

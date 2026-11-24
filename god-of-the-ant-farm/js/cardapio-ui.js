@@ -107,7 +107,7 @@
     run: (ctx, t) => { const r = vb(); if (r && r.jogo && r.jogo.dentro && clip('jogo-ossos') && !G.Avatar.busy()) G.Avatar.act({ anim: 'jogo-ossos', dur: 1.6, vact: 'jogo-ossos', free: true });
       return asked(w => T().jogar(w, t.s.op)); } });
   if (G.Interact.verb) G.Interact.verb('pessoa', { id: 'tv-gorjeta', k: 'outra', ord: 4,
-    label: (ctx, t) => { const c = T() && T().gorjetaCan ? T().gorjetaCan(ctx.v, t.o) : null; return c && (c.ok || c.why) ? `Dar uma gorjeta a ${P().knows.call(ctx.v, t.o)}${c.ok ? ` (${c.price})` : ''}` : ''; },
+    label: (ctx, t) => { const c = T() && T().gorjetaCan ? T().gorjetaCan(ctx.v, t.o) : null; return c && (c.ok || c.why) ? `Dar uma gorjeta ${P().knows.ao(ctx.v, t.o)}${c.ok ? ` (${c.price})` : ''}` : ''; },
     can: (ctx, t) => (T() && T().gorjetaCan ? T().gorjetaCan(ctx.v, t.o) : { ok: false }),
     run: (ctx, t) => { if (G.Audio && G.Audio.play) G.Audio.play('coin', 0.5); return asked(w => T().gorjeta(w, t.o.id)); } });
 

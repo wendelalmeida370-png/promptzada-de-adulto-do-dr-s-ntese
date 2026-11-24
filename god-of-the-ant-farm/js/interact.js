@@ -43,6 +43,7 @@
   // the best thing to do right now (what the prompt shows: "E — …")
   I.AHEAD = 0.05; // (radians: how much more before the body an animal must be than a door to be what one means there)
   I.FACE = Math.PI / 4; // (radians: a door this far round from where the body looks, or less, is the door it faces — L-326)
+  I.ROOM_PREF = -1; // (how much less one in the body's room is meant than the room's own things in the same reach — the seat, the bed: D-918)
   // every target in reach and how good it is ({ ctx, all: [{ p, t, sc }] }, in the providers' order — the order I.best breaks
   // its ties by): one look round the body, read by I.best and by the list of the others one may switch to (I.candidates)
   I.scan = function () {
@@ -123,6 +124,25 @@
         best = f && f.d < b.d && f.ang + I.AHEAD < b.ang ? other : open;
       }
     }
+    // (standing, someone of the body's room gives way to the room's own thing the body faces, and faces more — the free seat of a table
+    // where people sit, the bed, the counter, the chest, the door: the person's reach (3.2 m, the seat's 2.2) gave the one beside a free
+    // seat more for the same distance than ROOM_PREF takes off; walking up to the free seats of the tables with people of the evening
+    // metropole, the seat faced and in reach, the E was someone of the room beside it at 48 points of 297: «Conversar com a agricultora
+    // nórdica», 48° round — L-2181, D-918, the acoes a8)
+    if (best.t.room && !G.Avatar.seated()) {
+      const pa = aim(ctx, best.t.X, best.t.Z).ang; let th = null;
+      for (const q of sn.all) { if (q.p.id === 'pessoa' || q.p.here || q.t.here) continue; const a = aim(ctx, q.t.X, q.t.Z).ang; if (a <= I.FACE && a < pa && (!th || q.sc > th.sc)) th = q; }
+      if (th) best = th;
+    }
+    // (on the doorstep of a building that is no house — its own offer's point is under the feet there, G.Vg.door: «Examinar taverna», a
+    // meal at the store, a prayer —, its plan's door faced in reach, shut or locked, before that offer: open it, or knock. Both are doors
+    // to the rule above, and the offer under the feet won by its nearness: the owner at the tavern's door was offered a look at it — T-2061,
+    // L-2178. Save the offer meant more there: the load set down at the store, pref)
+    if (best.p.id === 'porta' && !(best.t.pref > 0) && G.Interiors && G.Interiors.doorState) {
+      let pd = null; for (const q of sn.all) if (q.p.id === 'portaPlanta' && q.t.b === best.t.b && !q.t.dentro && (!pd || q.sc > pd.sc)) pd = q;
+      const st = pd ? G.Interiors.doorState(pd.t.b, pd.t.d.id) : null;
+      if (st && (st.state === 'fechada' || st.state === 'trancada') && aim(ctx, pd.t.X, pd.t.Z).ang <= I.FACE) best = pd;
+    }
     const c = best.p.can(ctx, best.t);
     return { id: best.p.id, t: best.t, label: best.p.label(ctx, best.t), ok: c.ok, why: c.why || '', p: best.p };
   };
@@ -178,6 +198,36 @@
     for (const k of ['outra', 'segurar']) { const e = ch.keys.get(k); if (e) verbs.push({ k, id: e.id, label: e.label, ok: e.ok, why: e.why }); }
     return { id: b.id, t: b.t, p: b.p, verbs, more: ch.more.map(e => ({ k: e.k, id: e.id, label: e.label, ok: e.ok, why: e.why })) };
   };
+  // every verb of a target, in the order a list shows them (the wave 4 I, D-916): the E first, then the provider's and the registry's
+  // by their ord — each { k, id, label, ok, why, sub }: sub a short line under it (where a game comes from, D-920: the can's own word,
+  // else the verb's sub — text or (ctx, t) → text); all: the verbs with no words now too (label '', never ok, with the can's why — the
+  // slot a list keeps, greyed, so what cannot be done now is seen, with why). Only read: the bar of the table and the list of actions
+  I.verbsOf = function (b, all, id) {
+    const ctx = I.ctx(); if (!ctx || !b || !b.p) return [];
+    // (id: that one verb only — a verb that borrows another's words and can, the person's dice from the table's: D-922)
+    const out = id === undefined ? [{ k: 'usar', id: '', label: b.label || '', ok: !!b.ok, why: b.why || '', sub: '' }] : [];
+    for (const x of verbList(ctx, b)) {
+      if (id !== undefined && (x.id || '') !== id) continue;
+      const label = vlabel(x, ctx, b.t); if (!label && !all) continue;
+      const c = x.can ? x.can(ctx, b.t) || { ok: false } : { ok: true };
+      const sub = c.sub || (typeof x.sub === 'function' ? x.sub(ctx, b.t) : x.sub) || '';
+      out.push({ k: x.k, id: x.id || '', label, ok: !!c.ok && !!label, why: c.why || '', sub: String(sub || '') });
+    }
+    return out;
+  };
+  // the target of one provider about the body now, as a choice (I.run and I.runVerb take it), whatever the body faces — the table it
+  // sits at, for the bar of the table (D-916): the most meant of that provider in the look, null where it has none in reach. Only read
+  I.here = function (id, sn) {
+    let ctx = sn ? sn.ctx : null, best = null;
+    if (sn) { for (const c of sn.all) if (c.p.id === id && (!best || c.sc > best.sc)) best = c; }
+    else {
+      // (with no look given, only that provider's: the bar asks a few times a second, and a whole look of every provider is the screen's)
+      ctx = I.ctx(); const p = I.list.find(q => q.id === id); if (!ctx || !p || G.Avatar.swimming()) return null;
+      for (const t of p.find(ctx)) { const s = score(ctx, t.X, t.Z, t.reach || p.reach); if (s >= 0 && (!best || s + (t.pref || 0) > best.sc)) best = { p, t, sc: s + (t.pref || 0) }; }
+    }
+    if (!best) return null; const k = best.p.can(ctx, best.t);
+    return { id: best.p.id, t: best.t, label: best.p.label(ctx, best.t), ok: !!k.ok, why: k.why || '', p: best.p };
+  };
   // doing verb k of the target the body faces (or of the choice given) — checked again at the moment of doing, as I.run; vid: one
   // verb by its id (a card's button: one that lost its key)
   I.runVerb = function (k, choice, vid) {
@@ -207,7 +257,7 @@
   // the targets in reach one may switch to: I.best's first, then the others — one a thing, the most meant of its providers —, in the
   // order of where they are before the body, from its left to its right (a wheel or a cross goes along it as the eye does). Each
   // { id, t, p, label, ok, why, key, ang (radians: + to the right of where the body faces), d (metres) }. At most I.CANDS
-  I.CANDS = 6;
+  I.CANDS = 8; // (6 before the wave 4 I: a tavern's table seats six or more, each of them someone to switch to — D-918)
   I.candidates = function (sn) {
     sn = sn || I.scan(); if (!sn) return []; const b = I.best(sn); if (!b) return []; const ctx = sn.ctx;
     const by = new Map(); by.set(ref(b.t), { p: b.p, t: b.t, sc: Infinity });
@@ -329,8 +379,18 @@
     id: 'pessoa', prio: 5, reach: 3.2,
     find(ctx) {
       const out = []; const S = G.S; const R = 3.6 / L();
+      // (and those in the body's own room — the same building, the same storey, settled at the place the share-out gives them: never
+      // one walking in or out by the door, nor asleep —, where they are in it (In.posOf: the world keeps the door's point in o.x, o.y).
+      // Inside the tavern nobody at all was a person to the body: «Está bem difícil de interagir com as pessoas» — L-2170. The room's
+      // own things the body is in reach of are meant a little before them — the seat, the bed, the chest, the table it sits at: pref)
+      const ind = ctx.v.inside > 0 && G.Avatar.indoors ? G.Avatar.indoors() : null; const In = G.Interiors;
       for (const o of S.villagers.values()) {
-        if (o.id === ctx.v.id || o.inside || o.aboard || o.held || o.air || o.ug || (o.age < 2 && o.carried)) continue;
+        if (o.id === ctx.v.id || o.aboard || o.held || o.air || o.ug || (o.age < 2 && o.carried)) continue;
+        if (o.inside) {
+          if (!ind || !ind.b || o.inside !== ind.b.id || o.sleeping || o.age < 2 || !In || !In.posOf || (In.passage && In.passage(o))) continue; // (a baby in the room is no one to turn to: it is in someone's arms or its crib)
+          const p = In.posOf(o); if (!p || p[2] !== ind.lv || Math.abs(p[0] - ctx.x) > R || Math.abs(p[1] - ctx.y) > R) continue;
+          out.push({ o, X: p[0] * L(), Z: p[1] * L(), room: ind.b.id, pref: I.ROOM_PREF }); continue;
+        }
         if (Math.abs(o.x - ctx.x) > R || Math.abs(o.y - ctx.y) > R) continue;
         out.push({ o, X: o.x * L(), Z: o.y * L() });
       }
@@ -353,8 +413,9 @@
       // it done by the world in its step)
       G.Possess.apply(() => {
         if (!G.S.villagers.has(o.id)) return { ok: false, why: '' };
-        G.faceTo(o, me.x - o.x, me.y - o.y);
-        if (txt && (!o.task || o.task.pri <= 1)) G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.9, wait: 5 * G.Space.TIME, kind: 'talk' });
+        // (one in the body's room answers from their place, no errand given: an errand indoors walks one out by the door first — L-2171)
+        const room = o.inside > 0; if (!room) G.faceTo(o, me.x - o.x, me.y - o.y);
+        if (txt && !room && (!o.task || o.task.pri <= 1)) G.Vg.setTask(o, { type: 'talk', id: me.id, pri: 0.9, wait: 5 * G.Space.TIME, kind: 'talk' });
         if (txt && G.Talk) G.Talk.say(o, txt, { dur: 4 });
         if (G.Possess.kin(me, o)) G.Vg.emote(o, 'heart', 2);
         if (G.Possess.meet(o.id)) G.Possess.deed('conversa');
@@ -369,7 +430,7 @@
     // and the giving goes to the card)
     verbs(ctx, t) {
       // (the giving only with something in the bag to give: an empty bag puts no verb on the F)
-      const o = t.o, me = ctx.v; const out = [{ id: 'dar', k: 'outra', ord: 5, label: G.Inv && G.Inv.list(me).length ? `Dar algo a ${who(me, o)}` : '', can: () => I.canGive(me, o), run: () => ({ ok: true, panel: { kind: 'dar', id: o.id } }) }];
+      const o = t.o, me = ctx.v; const out = [{ id: 'dar', k: 'outra', ord: 5, label: G.Inv && G.Inv.list(me).length ? `Dar algo ${G.Possess.knows.ao(me, o)}` : '', can: () => I.canGive(me, o), run: () => ({ ok: true, panel: { kind: 'dar', id: o.id } }) }];
       const h = I.canHug(me, o); if (h.label) out.push({ id: 'abraco', k: 'segurar', label: h.label, can: () => { const c = I.canHug(me, o); return { ok: c.ok, why: c.why }; }, run: () => I.hug(o) });
       return out;
     },
@@ -393,12 +454,15 @@
     G.Possess.gave = function (o) { const r = gave0.apply(this, arguments); const me = G.Possess.body(); if (r && me && o && me !== o && G.Lacos) G.Lacos.ato(me, o, 'dadiva'); return r; };
   }
   // (may the body give someone a thing now: there, awake, old enough to hold it, beside it — and something of its own to give)
+  // (where one is to the body's hands, in tiles: in the body's room, at their place — In.posOf, D-917)
+  const posOf = o => (G.Interiors && G.Interiors.posOf ? G.Interiors.posOf(o) : [o.x, o.y, 0]);
   I.canGive = function (me, o) {
     if (!me || !o || !G.S.villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
     if (o.sleeping) return { ok: false, why: `${Who(me, o)} está dormindo.` };
     if (o.age < 2) return { ok: false, why: `${Who(me, o)} ainda é um bebê.` };
-    if (o.inside || o.aboard || o.held || o.air || o.jail) return { ok: false, why: `Agora não dá para dar nada a ${who(me, o)}.` };
-    if (G.dist(me.x, me.y, o.x, o.y) * L() > 3.8) return { ok: false, why: 'Longe demais.' };
+    // (one in the body's own room is given to as anyone, where they sit — L-2170)
+    if ((o.inside && o.inside !== me.inside) || o.aboard || o.held || o.air || o.jail) return { ok: false, why: `Agora não dá para dar nada ${G.Possess.knows.ao(me, o)}.` };
+    { const p = posOf(o); if (G.dist(me.x, me.y, p[0], p[1]) * L() > 3.8) return { ok: false, why: 'Longe demais.' }; }
     if (!G.Inv || !G.Inv.list(me).length) return { ok: false, why: 'Você não tem nada na mochila para dar.' };
     return { ok: true };
   };
@@ -425,6 +489,9 @@
     if (!k && !grief && !fond) return { ok: false, why: '' };
     const label = grief && !k ? `Consolar ${who(me, o)}` : `Abraçar ${who(me, o)}`;
     if (o.sleeping) return { ok: false, label, why: `${Who(me, o)} está dormindo.` };
+    // (one in the body's room stays at their place: the hug is an errand of the two on their feet, and an errand indoors walks one out
+    // by the door — L-2171)
+    if (o.inside && o.inside === me.inside) return { ok: false, label, why: `Aqui dentro, cada um no seu lugar: não dá para abraçar ${who(me, o)} agora.` };
     if (o.inside || o.aboard || o.held || o.air || o.jail || o.age < 2) return { ok: false, label, why: `Não dá para abraçar ${who(me, o)} agora.` };
     if (o.fear > 60) return { ok: false, label, why: `${Who(me, o)} está assustad${oa(o)} demais.` };
     if (o.task && o.task.pri > 1) return { ok: false, label, why: `${Who(me, o)} está ocupad${oa(o)} com algo que não pode esperar.` };
