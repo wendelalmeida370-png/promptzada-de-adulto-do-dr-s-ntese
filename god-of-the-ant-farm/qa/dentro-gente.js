@@ -336,6 +336,7 @@ if (on('d8')) {
     // (3) the body on the floor lies, still or moved; who drags it walks bent over it
     const ly = []; for (const act of ['desmaio', 'arrastado']) for (const sp of [0, 1.4]) { const o = cp({ act }); const s = A3.stateOf(o, sp, P3.look(o)); ly.push(`${act} a ${sp} m/s «${s}»`); if (s !== act) bad.push(`${act}: «${s}» a ${sp} m/s (devia ficar deitado)`); }
     for (const act of ['desmaio', 'arrastado']) { const r = at(cp({ act }), seat); ly.push(`${act} no assento «${r.st}»${r.up ? ' (fora do assento)' : ''}`); if (r.st !== act || !r.up || r.over) bad.push(`${act}: sentado no assento («${r.over || r.st}»)`); }
+    { const o = cp({ act: 'desmaio', sleeping: true }); const s = A3.stateOf(o, 0, P3.look(o)); ly.push(`desmaio dormido pelo mundo (v.sleeping, a T2) «${s}»`); if (s !== 'desmaio') bad.push(`o desmaio que o mundo guarda como sono: «${s}»`); }
     const dg = cp({ act: 'arrastar' }); const dgS = A3.stateOf(dg, 0, P3.look(dg)), dgW = V3.overOf(dg, 'walk', P3.look(dg)); ly.push(`arrastar parado «${dgS}», andando «${dgW}»`);
     if (dgS !== 'arrastar' || dgW !== 'arrastar') bad.push('quem arrasta');
     for (const c of ['desmaio', 'arrastado']) if (!A3.CLIPS[c] || A3.CLIPS[c].mask !== 'full' && !(A3.CLIPS[c].base === 'idle' || A3.CLIPS[c].feet === 'free')) bad.push(`o clipe ${c} não é do corpo inteiro`);

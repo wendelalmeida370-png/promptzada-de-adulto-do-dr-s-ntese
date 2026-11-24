@@ -69,9 +69,10 @@
   // errand as a pose (TASK_OF), the load in the hands, else standing. L (the look, when the frame has it): what the hands hold
   Anim.stateOf = function (v, sp, L) {
     if (v.task && v.task.type === 'swim') return 'swim';
-    if (v.sleeping) return 'sleep';
-    // (the body on the floor — the faint, the one dragged out: T2's, D-871 — lies, whatever the world moves it at)
+    // (the body on the floor — the faint, which the world keeps as a sleep (v.sleeping), the one dragged out: T2's, D-871 — lies sprawled as
+    // it fell, whatever the world moves it at; the faint in one's bed at home is a sleep — the bed's place, atPlace)
     if (V3.LYING.has(v.act)) { const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c; }
+    if (v.sleeping) return 'sleep';
     if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || Anim.CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' || V3.runs(v) ? 'run' : 'walk'; }
     if (v.downT && v.downT > G.S.clock) return 'sleep';
     // (the act's own gesture, where there is a clip of it — the axe, the pick, the rod, the word, the prayer: anim-clips.js)

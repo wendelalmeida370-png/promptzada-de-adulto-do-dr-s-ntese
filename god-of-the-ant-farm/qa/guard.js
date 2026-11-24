@@ -2404,12 +2404,12 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   const i = v3.indexOf('Anim.stateOf = function (v, sp, L) {'), l = v3.indexOf('if (V3.LYING.has(v.act))', i), s = v3.indexOf('if (sp > 0.25)', i);
   if (i < 0 || l < 0 || s < 0 || l > s || !/V3\.LYING = new Set\(\['desmaio', 'arrastado'\]\);/.test(v3)) fails.push('o corpo no chão fica deitado: o leitor não pergunta pelo desmaio e pelo arrastado antes da velocidade (V3.LYING, D-871)');
   if (/A\.stateOf = function/.test(cc) && !/A\.stateOf = function \(v, sp, L\) \{\n\s*const s = stateOf0\(v, sp, L\);/.test(cc)) fails.push('o retrato adiante: o combate-clips.js embrulha o Anim3D.stateOf sem passar o retrato (L) — as escolhas pelo que as mãos seguram caem (L-2081)'); }
-// 403. "a bebida no corpo é a do mundo e de quem se é" (T6, D-872): o quanto se bebeu é o do mundo — o G.Atmos.drunk e o v.ebrio da T2,
-// pelo P3.drunkOf —, para todos e para o corpo do jogador; o rosto da bebida (o sorriso solto ou a cara azeda) é da índole (G.Indole) e
+// 403. "a bebida no corpo é a do mundo e de quem se é" (T6, D-872): o quanto se bebeu é o do mundo — o G.Atmos.drunk, que é o G.Ebrio.k
+// da T2, uma verdade só, pelo P3.drunkOf —, para todos e para o corpo do jogador; o rosto da bebida (o sorriso solto ou a cara azeda) é da índole (G.Indole) e
 // nunca da aparência nem do povo
 { const lk = (src['look3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
   const dm = (/P3\.drunkMood = v => \{([^\n]*)\};/.exec(lk) || [])[1];
-  if (!/P3\.drunkOf = v => Math\.max\(G\.Atmos && G\.Atmos\.drunk \? G\.Atmos\.drunk\(v\) : 0, v && v\.ebrio > 0\.05/.test(lk)) fails.push('a bebida no corpo: o P3.drunkOf não lê o v.ebrio da T2 (D-872)');
+  if (!/P3\.drunkOf = v => \(G\.Atmos && G\.Atmos\.drunk \? G\.Atmos\.drunk\(v\) : 0\);/.test(lk) || /\bebrio\b/.test((/P3\.drunkOf = [^\n]*/.exec(lk) || [''])[0])) fails.push('a bebida no corpo: o P3.drunkOf não é a bebida do mundo — o G.Atmos.drunk, que é o G.Ebrio.k da T2, uma verdade só (D-872, D-830)');
   if (!dm || !/G\.Indole/.test(dm) || /genoma|skin|hair|civ|style|Feicao|\.g\b/.test(dm)) fails.push('a bebida no rosto: o humor da bebida não é só da índole (P3.drunkMood: G.Indole, nunca a aparência nem o povo — D-872)');
   if (!/I\.drunk = P3\.drunkOf\(avv\); I\.drunkF = I\.drunk; I\.dmood = I\.drunk > 0 \? P3\.drunkMood\(avv\) : 0;/.test(p3) || !/INP\.drunkF = Lv\.drunk \|\| 0; INP\.dmood = Lv\.dmood \|\| 0;/.test(p3)) fails.push('a bebida no corpo: o corpo do jogador ou o rosto de quem está sentado sem a bebida do mundo (D-872)'); }
 // 404. "a vida do salão sem sorteio" (T6, D-873): o que cada um faz à toa no salão (o queixo na mão, o recosto, a cabeça pesada do bêbado), o

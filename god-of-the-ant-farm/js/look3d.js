@@ -98,9 +98,9 @@
     // (the inventory keeps the answer in the look's memo while what it reads is the same: it alone reads the bag and the places — rule 128, L-1114)
     return G.Inv.heldFor ? G.Inv.heldFor(v, L._inv || (L._inv = {})) : G.Inv.held(v);
   }
-  // (how drunk, 0..~1,25: the world's drink of before — G.Atmos.drunk — or what one has drunk, T2's v.ebrio (0..~1,5), the stagger growing
-  // with it — D-872)
-  P3.drunkOf = v => Math.max(G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0, v && v.ebrio > 0.05 ? Math.min(1.25, v.ebrio / 1.2) : 0);
+  // (how drunk, 0..1: the drink in the blood against what one bears — G.Atmos.drunk, which is T2's G.Ebrio.k, one truth (D-830): none below
+  // merry, the stagger growing with it, the arms out from the staggering mark (V3.DRUNK), the whole of it out — D-872)
+  P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
   // (the drink's mood by who one is — the temperament, G.Indole: the kind and the outgoing loosen into a silly smile, the unkind and the
   // anxious turn sour —: −1..1, D-872)
   P3.drunkMood = v => { const I = G.Indole; if (!I || !I.ax) return 0; return G.clamp(((I.ax(v, 'ama') - 50) + 0.5 * (I.ax(v, 'ext') - 50) - 0.6 * (I.ax(v, 'neu') - 50)) / 45, -1, 1); };
