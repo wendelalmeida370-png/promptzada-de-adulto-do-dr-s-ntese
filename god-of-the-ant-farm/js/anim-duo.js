@@ -41,7 +41,13 @@
     carry: { a: P('duo-colo', [['b', -0.16, 0.12, 0], ['b', 0.16, 0.12, 0]], [0.2, 0.95], 0.65, DOWN) },
     carried: { b: P('duo-colo-b', [['b', -0.17, 0.4, 0.07], ['b', 0.17, 0.4, 0.07]], [0.2, 0.95], 0.65, DOWN) },
     // (the feast: the cups meet between the two, side by side)
-    toast: { a: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.3, 0.6], 1.15, FWD), b: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.3, 0.6], 1.15, FWD) },
+    toast: { a: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.18, 0.42], 1.15, FWD), b: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.18, 0.42], 1.15, FWD) },
+    // (the tavern's toast — the world's «brinde»: the same cups meeting between the two; P6, D-795)
+    brinde: { a: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.18, 0.42], 1.15, FWD), b: P('duo-brinde', [null, ['m', -0.04, 0.25, 0]], [0.18, 0.42], 1.15, FWD) },
+    // (the brawler put out of the tavern at its door — «expulsar»: the keeper's right hand round the other's left arm at the shoulder,
+    // the left one fisted in their collar, pushing them back out; the one put out has no hand on the keeper, leaning back from him —
+    // P6, D-797)
+    expulsar: { a: P('expulsar-a', [['b', -0.07, 0.3, 0.12], ['b', 0.13, 0.3, 0.1]], [0.08, 0.92], 0.8, FWD), b: P('expulsar-b') },
     // (the conflict: the push on the chest, the one who parts two — the hands held on the other's chest)
     shove: { a: P('duo-empurrar', [['b', -0.1, 0.28, 0.12], ['b', 0.1, 0.28, 0.12]], [0.25, 0.5], 0.95, FWD) },
     separate: { a: P('duo-apartar', [['b', -0.1, 0.3, 0.12], ['b', 0.1, 0.3, 0.12]], [0.2, 0.9], 1, FWD) },

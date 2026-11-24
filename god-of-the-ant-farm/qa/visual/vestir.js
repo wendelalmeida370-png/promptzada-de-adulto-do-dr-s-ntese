@@ -91,7 +91,7 @@ const cm = x => (x * 100).toFixed(1);
     bad.length ? bad.join(' · ') : `a cabeça no máximo a ${cm(-res.cab[0])} cm do elmo (${res.cab[1]}), o tronco a ${cm(-res.tro[0])} cm da couraça (${res.tro[1]}), a perna ${cm(-res.wall[0])} cm debaixo da borda (${res.wall[1]})`); }
 
 // ------------------------------ 3. the leather's tabs out of the thighs ------------------------------
-{ let worst = [-9, '']; const deep = new Set(['harvest', 'mine', 'skin', 'rise', 'rest', 'eatg', 'rockg', 'low', ...['ato-condenado', 'ato-esconder', 'ato-chorar-joelhos', 'ato-implorar', 'ato-propor', 'ato-enforcado', 'crianca-cao'].flatMap(k => [k, k + '~m'])]); let deepW = [-9, '']; // (22c: on the knees, crouched hiding — deep as the harvest)
+{ let worst = [-9, '']; const deep = new Set(['harvest', 'mine', 'skin', 'rise', 'rest', 'eatg', 'rockg', 'low', ...['ato-condenado', 'ato-esconder', 'ato-chorar-joelhos', 'ato-implorar', 'ato-propor', 'ato-enforcado', 'crianca-cao', 'cochilo', 'cochilo-b'].flatMap(k => [k, k + '~m'])]); let deepW = [-9, '']; // (22c: on the knees, crouched hiding — deep as the harvest)
   for (const fem of [false, true]) for (const st of STATES) live(st, SPEED(st), { fem, inv: { corpo: 'couraca.couro' } }, 96, ({ body, P, R }) => { const Q = P(); const T = P3.tabsOf('couraca.couro', 0); if (!T) return;
     const fns = [thighIn(Q, body, 0, R), thighIn(Q, body, 1, R)]; let w = -9;
     for (const tb of T.tabs) { tb.m.getMatrixAt(0, M4); const g = tb.m.geometry, Pp = g.attributes.position.array, Ix = g.index.array;

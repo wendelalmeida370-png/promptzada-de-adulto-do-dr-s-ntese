@@ -22,7 +22,7 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|duo-clips|grupo-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|mesa-clips|taverna-clips|duo-clips|grupo-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };
@@ -215,12 +215,15 @@ const inside = (cm, bm) => {
 // 6% of it, never deeper than 3 cm, and the numbers said every run — the limit of this test, not of the look)
 // (the states the game gives only to a figure with nothing over the arms that open elbows would pierce — the hands on the hips:
 // Anim3D.ocioClip, L.armOut, no cape, no toga, no blouse, no long skirt — are not dressed in those here either: 22c, T-1618)
-const BARE = new Set(['oc-maos-cintura', 'oc-maos-cintura~m']), OVER = new Set(['capa', 'toga', 'bata', 'saiaL']);
+const BARE = new Set(['oc-maos-cintura', 'oc-maos-cintura~m', 'cochilo', 'cochilo~m']), // (the nap with the arms folded too: who wears something over them naps on one arm, cochilo-b — vida3d.js, P6)
+  OVER = new Set(['capa', 'toga', 'bata', 'saiaL']);
+// (a gesture of the top of the body over a seat — its base 'sit': the table's meal and sip, the claps, the song, the nap, P6/P7 — is seated)
+const seatedClip = st => !!(A.CLIPS[st] && A.CLIPS[st].base === 'sit');
 { const out = []; let fail = 0; const SEAT = new Set(['sit', 'rest', 'sneak', 'sleep', 'low', 'eat', 'rock', 'cook', 'sick', 'eatg', 'rockg', 'knocked', 'rise', 'crumple', 'harvest', 'skin', ...KNEELERS]); // (20a's gestures: the harvest bent double over the plants as low is; the knife at a carcass on one knee as rise is) // (low: bent double, gathering from the ground; eat and rock seated as sit is, eatg and rockg on the ground as rest, cook down on the heels, sick lying as sleep; thrown down by a blow lying as sleep, getting up on one knee and the knees giving in the last fall down as cook — D-333, D-334)
   for (const nm of ['capa', 'toga', 'bata', 'saiaC', 'saiaL']) { if (!MESH[nm]) continue; const row = [];
     for (const st of STATES) { let fr = 0, wo = 0; if (BARE.has(st) && OVER.has(nm)) continue;
       for (let k = 0; k < 6; k++) for (const bd of nm === 'bata' ? ['corpoF'] : nm === 'capa' || nm === 'toga' ? ['corpoM'] : ['corpoM', 'corpoF']) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = inside(MESH[nm], MESH[bd]); fr = Math.max(fr, r.frac); wo = Math.max(wo, r.worst); } // (a skirt on both bodies: the woman's hips and thighs are her own)
-      const seat = nm === 'bata' && SEAT.has(st), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
+      const seat = nm === 'bata' && (SEAT.has(st) || seatedClip(st)), bad = seat ? fr > 0.06 || wo > 0.03 : fr > 0.01;
       if (bad || (seat && fr > 0.01)) row.push(`${st} ${(fr * 100).toFixed(1)}% (${(wo * 100).toFixed(1)} cm)${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     out.push(`${nm}: ${row.length ? row.join(', ') : 'limpa'}`); }
   ok('a capa, a toga, a blusa e as saias não atravessam o corpo (capa, toga e saias: em todos os estados ≤1% do pano a mais de 8 mm dentro da pele; blusa: ≤1%, sentada ≤6% e ≤3 cm)', !fail, out.join(' · ')); }
@@ -266,7 +269,7 @@ const through = (cm, bm, hem) => {
   for (const nm of ['saiaC', 'saiaL']) for (const bd of ['corpoM', 'corpoF']) { const row = [];
     for (const st of STATES) { let o = 0, sh = 0, wo = 0; if (BARE.has(st) && OVER.has(nm)) continue;
       for (let k = 0; k < 6; k++) { pose(st, k / 6 * Math.PI * 2, st === 'run' ? 4.5 : 1.4, bd === 'corpoF' ? { fem: true } : null); const r = through(MESH[nm], MESH[bd], HEM[nm]); o = Math.max(o, r.out); sh = Math.max(sh, r.shown); wo = Math.max(wo, r.worst); }
-      const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && o > 0));
+      const bad = !WET.test(st) && (sh > 0 || (!SEAT.has(st) && !seatedClip(st) && o > 0));
       if (o) row.push(`${st} ${o}${sh ? ' (' + sh + ' à mostra)' : ''} até ${(wo * 100).toFixed(1)} cm${bad ? ' FALHA' : ''}`); if (bad) fail++; }
     rows.push(`${nm} em ${bd}: ${row.join(', ') || 'nada'}`); }
   ok('o corpo não sai pela saia (andando, parado e trabalhando nada passa do pano; sentado, o que passa tem a cor do pano: nada à mostra em terra)', !fail, rows.join(' · ')); }

@@ -112,6 +112,10 @@
     return true;
   }
   // (the fallback shapes, by kind and material: the wood, the stone, the bronze and the iron in the vertex colours)
+  // (the mouthful's colour by the part of the food — [the colour, a bread (1), the crumb] —, D-795)
+  const BOCADO = { trigo: [[0.72, 0.5, 0.26], 1, [0.93, 0.85, 0.66]], cevada: [[0.6, 0.42, 0.24], 1, [0.84, 0.74, 0.55]], milho: [[0.84, 0.64, 0.25], 1, [0.95, 0.86, 0.5]], sorgo: [[0.56, 0.36, 0.22], 1, [0.8, 0.66, 0.5]],
+    mel: [[0.72, 0.5, 0.26], 1, [0.92, 0.7, 0.3]], azeite: [[0.72, 0.5, 0.26], 1, [0.9, 0.84, 0.55]], arroz: [[0.93, 0.91, 0.85]], peixe: [[0.9, 0.82, 0.7]], marisco: [[0.9, 0.58, 0.46]], carne: [[0.46, 0.25, 0.15]],
+    leite: [[0.95, 0.93, 0.85]], ovos: [[0.96, 0.86, 0.5]], horta: [[0.36, 0.5, 0.2]], fruta: [[0.76, 0.24, 0.18]], provisao: [[0.7, 0.58, 0.38]], '?': [[0.7, 0.58, 0.38]] };
   const MAT_COL = { ferro: [0.42, 0.43, 0.45], bronze: [0.62, 0.42, 0.2], pedra: [0.46, 0.44, 0.4], madeira: [0.36, 0.25, 0.15], corda: [0.6, 0.52, 0.36], vime: [0.62, 0.5, 0.3], couro: [0.42, 0.3, 0.18] };
   function fallbackGeo(kind, mat) {
     const WOOD = [0.36, 0.25, 0.15], DARK = [0.26, 0.17, 0.1], ROPE = [0.6, 0.52, 0.36], IRON = MAT_COL[mat] || MAT_COL.ferro, EDGE = IRON.map(c => Math.min(1, c * 1.5 + 0.03)), LEATH = [0.4, 0.27, 0.15], PITCH = [0.12, 0.09, 0.06];
@@ -150,6 +154,11 @@
       cesto: () => { const g = new THREE.CylinderGeometry(0.16, 0.12, 0.2, 10, 1, true); g.translate(0, -0.24, 0); return [[g, MAT_COL.vime], arc(0.15, 0.008, 0, Math.PI, MAT_COL.vime, 8).map((q, i) => (i === 0 ? (q.translate(0, -0.14, 0), q) : q))]; },
       balde: () => { const g = new THREE.CylinderGeometry(0.14, 0.12, 0.24, 10, 1, true); g.translate(0, -0.3, 0); return [[g, WOOD], arc(0.14, 0.006, 0, Math.PI, IRON, 8).map((q, i) => (i === 0 ? (q.translate(0, -0.18, 0), q) : q))]; },
     };
+    // (P6, D-795: the mouthful in the fingers, of the food the world served — its part (mat here): a torn piece of the bread where
+    // the dish is of the grain, a lump of the rest, in the colour of what it is)
+    S.bocado = () => { if (mat === 'palha') { const g = new THREE.CylinderGeometry(0.022, 0.03, 0.16, 7, 1); g.rotateZ(Math.PI / 2); g.translate(0.05, 0, 0); return [[g, [0.82, 0.7, 0.38]], box(0.012, 0.064, 0.064, 0.02, 0, 0, [0.5, 0.38, 0.2])]; }
+      const c = BOCADO[mat] || BOCADO['?']; if (c[1]) return [box(0.042, 0.026, 0.03, 0, 0, 0, c[0], 0.3, 0.2), box(0.03, 0.012, 0.022, 0.004, 0.016, 0, c[2] || c[0], 0.3, 0.2)];
+      const g = new THREE.SphereGeometry(1, 6, 4); g.scale(0.017, 0.013, 0.015); return [[g, c[0]]]; };
     const f = S[kind]; if (!f) return null;
     const list = f(); let nv = 0, ni = 0; for (const [g] of list) { nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
     const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), cl = new Float32Array(nv * 3), idx = new Uint16Array(ni); let o = 0, oi = 0;
@@ -171,6 +180,58 @@
     if (!geo || !toolMat) { IMESH.set(id, null); return null; }
     m = new THREE.InstancedMesh(geo, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = lod < 2; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = key; m.userData.fallback = own; scene.add(m);
     IMESH.set(id, m); IMN.set(m, 0); return m;
+  }
+  // (the mouthful's mesh, by the part of the food: one for all who eat that, made the first time — D-795)
+  function morselMesh(part) {
+    const id = 'bocado|' + part; let m = IMESH.get(id); if (m !== undefined) return m;
+    const geo = toolMat ? fallbackGeo('bocado', part) : null; if (!geo) { IMESH.set(id, null); return null; }
+    m = new THREE.InstancedMesh(geo, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = false; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = id; m.userData.fallback = true; scene.add(m);
+    IMESH.set(id, m); IMN.set(m, 0); return m;
+  }
+  // what the hands hold of a tavern's, as it is (D-798): the cup a guest drinks from and the keeper carries, the plate the keeper brings
+  // and the body holds — the thing the world served, by the door of the food in 3D (G.Dentro3D.served: the model of the people's vessel
+  // with its drink, or of the dish of what was cooked, the parts that show now — as much as is left —, each one's paint, the level of
+  // the broth), held where the catalogue's cup and plate are held: the vessel's body toward the palm, the fist round it at its middle;
+  // the plate by its rim. With nothing served, the catalogue's own thing (the item art's)
+  const SERVED = new Map(); let SV_F = null, SV_L = null;
+  const lin8 = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  function servedOf(S, food, lod, bare) {
+    const names = G.Mesh3D && G.Mesh3D.parts ? G.Mesh3D.parts(S.name) : []; if (!names.length || !toolMat) return null;
+    const cols = S.parts.map(pt => { const p = S.paint(pt); return p && p[0] ? p[0].map(x => Math.round(x)).join('.') : '-'; });
+    const id = S.name + '|' + S.parts.join(',') + '|' + cols.join(',') + '|' + (food ? 1 : 0) + (bare ? 'b' : ''); if (SERVED.has(id)) return SERVED.get(id);
+    let out = null; const g0 = G.Mesh3D.geo(S.name); const box = G.Mesh3D.box(S.name);
+    if (g0 && box) {
+      const n = g0.attributes.position.count, own = g0.attributes.color, cl = new Float32Array(n * 3).fill(1); const I = g0.index.array; const keep = [], lvl = [];
+      g0.groups.forEach(gr => { const pt = names[gr.materialIndex]; const k = S.parts.indexOf(pt); if (k < 0) return; const p = S.paint(pt); const c = p && p[0] ? p[0].map(lin8) : [1, 1, 1];
+        for (let i = gr.start; i < gr.start + gr.count; i++) { const v = I[i]; for (let q = 0; q < 3; q++) cl[v * 3 + q] = (own ? own.array[v * 3 + q] : 1) * c[q]; (pt === 'nv' ? lvl : keep).push(v); } });
+      const mk = (idx, tag) => { if (!idx.length) return null; const q = new THREE.BufferGeometry(); q.setAttribute('position', g0.attributes.position); q.setAttribute('normal', g0.attributes.normal); q.setAttribute('color', new THREE.BufferAttribute(cl, 3));
+        q.setAttribute('shine', new THREE.BufferAttribute(new Float32Array(n * 3), 3)); q.setIndex(new THREE.BufferAttribute(n > 65535 ? new Uint32Array(idx) : new Uint16Array(idx), 1)); q.computeBoundingSphere();
+        const m = new THREE.InstancedMesh(q, toolMat, MAX); m.count = 0; m.visible = false; m.castShadow = lod < 2; m.frustumCulled = false; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.userData.item = S.name; m.userData.part = tag; scene.add(m); IMN.set(m, 0); return m; };
+      // (held as the catalogue's: the vessel's axis a palm and its radius toward +X, the fist at its middle; the plate by its rim, the fist at its edge)
+      const lo = box.lo, hi = box.hi; const cx = (lo[0] + hi[0]) / 2, cz = (lo[2] + hi[2]) / 2, rx = (hi[0] - lo[0]) / 2;
+      const at = bare ? new THREE.Matrix4().makeTranslation(-cx, -hi[1], -cz) : food ? new THREE.Matrix4().makeTranslation(0.011 + rx - cx, -lo[1] - 0.012, -cz) : new THREE.Matrix4().makeTranslation(0.011 + rx - cx, -(lo[1] + hi[1]) / 2, -cz);
+      out = { body: mk(keep, 'corpo'), nv: mk(lvl, 'nv'), at };
+    }
+    if (SERVED.size > 64) SERVED.delete(SERVED.keys().next().value);
+    SERVED.set(id, out); return out;
+  }
+  // the keeper's cloth (D-796): over his left shoulder — its top on the shoulder, hanging down the chest's side (G.Dentro3D.ombro: the
+  // tavern of a people that weaves, P5) —, or balled in the right hand that wipes a table; a people that does not weave wipes with a
+  // wisp of the straw its grain leaves (the fallback's own, the colour of straw)
+  const OMBRO = { F: null, T: null };
+  function clothPut(S, lod, F, inHand) {
+    const D = servedOf(S, false, Math.max(0, Math.min(2, lod | 0)), true); if (!D || !D.body) return false;
+    OMBRO.F = OMBRO.F || new THREE.Matrix4(); OMBRO.T = OMBRO.T || new THREE.Matrix4();
+    if (inHand) OMBRO.T.makeScale(0.55, 0.55, 0.55).setPosition(0.03, -0.02, 0); else OMBRO.T.identity();
+    OMBRO.F.multiplyMatrices(F, OMBRO.T).multiply(D.at); const n = IMN.get(D.body); if (n < MAX) { D.body.setMatrixAt(n, OMBRO.F); IMN.set(D.body, n + 1); } return true;
+  }
+  function servedPut(key, S, lod, F) {
+    const k = itemKind(key); if (!S || !S.parts || !S.parts.length || (k !== 'prato' && k !== 'caneca')) return false;
+    const D = servedOf(S, k === 'prato', Math.max(0, Math.min(2, lod | 0))); if (!D || !D.body) return false;
+    SV_F = SV_F || new THREE.Matrix4(); SV_L = SV_L || new THREE.Matrix4(); SV_F.multiplyMatrices(F, D.at);
+    const put = (m, M) => { const n = IMN.get(m); if (n < MAX) { m.setMatrixAt(n, M); IMN.set(m, n + 1); } };
+    put(D.body, SV_F); if (D.nv) { const lv = S.level ? S.level('nv') : null; if (lv && lv.elements) put(D.nv, SV_L.multiplyMatrices(SV_F, lv)); else put(D.nv, SV_F); }
+    return true;
   }
   function itemPut(key, lod, F) { const m = itemMesh(key, Math.max(0, Math.min(2, lod | 0))); if (!m) return false; const n = IMN.get(m); if (n >= MAX) return false; m.setMatrixAt(n, F); IMN.set(m, n + 1); return true; }
   // (a cuirass' waist tabs — the leather's row of short tabs hanging below its foot: the part 'enfeite' of the item art that hangs
@@ -198,6 +259,7 @@
   }
   P3.tabsOf = tabsOf; // (for the tests: the tabs' meshes and their tops)
   function toolsBegin() { for (const m of IMN.keys()) IMN.set(m, 0); }
+  P3.toolsBegin = toolsBegin; // (for the proofs: the things of one body drawn alone)
   function toolsEnd() { for (const [m, n] of IMN) { m.count = n; m.visible = n > 0; m.instanceMatrix.needsUpdate = true; } }
   P3.toolsReset = () => { toolsBegin(); toolsEnd(); }; // (for the tests: a body drawn alone, its things from the first instance)
   P3.tools = () => { const out = []; for (const [m, n] of IMN) if (n) out.push([m.userData.item, n, m.userData.fallback ? 'reserva' : 'arte']); return out; }; // (for the tests: who holds what this frame)
@@ -514,7 +576,7 @@
   // ------------------------------ poses ------------------------------
   // a pose: the angles of the joints, and the hips' height and lean (radians, metres)
   // (and for the skin: the stance of each foot, the grip of the hands, the mouth, the eyes' look, the cloth's swing)
-  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0,
+  const POSE0 = () => ({ bob: 0, crouch: 0, lean: 0, twist: 0, neck: 0, shLp: 0, shLr: 0, shRp: 0, shRr: 0, elL: 0.15, elR: 0.15, hipL: 0, hipR: 0, knL: 0.05, knR: 0.05, anL: 0, anR: 0, pelY: 0, pelR: 0, pelP: 0, shift: 0, sway: 0, breath: 0, lie: 0, tool: 0, stL: 0, stR: 0, pitL: 0, pitR: 0, grip: 0, talk: 0, chew: 0, morsel: 0, morselL: 0, gazeX: 0, gazeY: 0, cloth: 0, clothS: 0, clothB: 0, clothV: 0, wrist: 0, holdW: 0,
     // (20a: the hips' yaw and adduction, each foot's share of its swing — −1 standing —, the left hand's grip and wrist, the other
     // hand on a thing of two hands, the shoulders' yaw)
     adL: 0, adR: 0, hyL: 0, hyR: 0, tyL: 0, tyR: 0, swL: -1, swR: -1, pgL: -1, pgR: -1, rel: 0.33, esw: 0.86, gripL: 0, wristL: 0, offW: 0, shLy: 0, shRy: 0,
@@ -1208,6 +1270,16 @@
       if (!RX.cups) RX.cups = [new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4()];
       V3.a.set(-0.027, -0.076, 0).applyMatrix4(R[B.hdL]); uprightAt(RX.cups[0], V3.a, yaw, s, 0);
       for (let k = 1; k < RX.nCup; k++) { const M0 = k === 1 ? RX.mao : RX.cups[0], sd = k === 1 ? -1 : 1; RX.cups[k].copy(M0); M.b.makeTranslation(sd * 0.095, 0, 0.02); RX.cups[k].multiply(M.b); } }
+    // (the mouthful in the fingers of the meal — of the food the world served in these hands, by its part (L.food: G.Origem), never a
+    // mouthful of nothing — at the hand the gesture keys, pose.morsel / morselL: D-795)
+    RX.kMor = null;
+    if (L.food && (pose.morsel > 0.5 || pose.morselL > 0.5)) { const r = pose.morsel > 0.5; RX.kMor = L.food; if (!RX.mor) RX.mor = new THREE.Matrix4(); fr(RX.mor, R[r ? B.hdR : B.hdL], r ? 0.03 : -0.03, -0.088, 0.018, 0, 0, 0); }
+    // (the keeper's cloth — the shoulder's, or the hand's when he wipes: the gesture with nothing else in the right hand — and the wisp of straw)
+    RX.kOm = null; RX.omHand = false; RX.kPalha = false;
+    const wiping = L.st === 'limpar-mesa' && !kR;
+    if (L.ombro && L.ombro.parts && L.ombro.parts.length) { RX.kOm = L.ombro; RX.omHand = wiping; if (!RX.om) RX.om = new THREE.Matrix4();
+      if (wiping) fr(RX.om, R[B.hdR], 0.03, -0.085, 0.01, 0, 0, 0); else frameOn(RX.om, R[B.chest], 0.16, 0.44, 0, 0, 1, 0, 0, 0, 1); }
+    else if (wiping && L.wipe === 'palha') { RX.kPalha = true; if (!RX.pal) RX.pal = new THREE.Matrix4(); fr(RX.pal, R[B.hdR], 0.03, -0.085, 0.01, 0, 0, 0); }
     // (stowed: what the body keeps on its back and at its belt — and the thing a load took out of the hand, put there)
     let kB = inv.costas, kC = inv.cinto;
     if (inv.mao && !kR && free && !pose.tool && G.Itens) { if (!kB && G.Itens.fits(inv.mao, 'costas')) kB = inv.mao; else if (!kC && G.Itens.fits(inv.mao, 'cinto')) kC = inv.mao; }
@@ -1251,7 +1323,10 @@
     }
   }
   // the things drawn this frame, by the body's level of detail
-  function itemsPut(L) { const lod = L.lod | 0; for (let k = 0; k < (RX.nCup || 0); k++) itemPut(RX.kCup, lod, RX.cups[k]); if (RX.kR) { if (RX.kA) cuffsPut(RX.kR, Math.max(0, Math.min(2, lod))); else itemPut(RX.kR, lod, RX.mao); } if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
+  function itemsPut(L) { const lod = L.lod | 0; for (let k = 0; k < (RX.nCup || 0); k++) if (!servedPut(RX.kCup, L.served, lod, RX.cups[k])) itemPut(RX.kCup, lod, RX.cups[k]); if (RX.kR) { if (RX.kA) cuffsPut(RX.kR, Math.max(0, Math.min(2, lod))); else if (!servedPut(RX.kR, L.served, lod, RX.mao)) itemPut(RX.kR, lod, RX.mao); }
+    if (RX.kMor) { const m = morselMesh(RX.kMor); if (m) { const n = IMN.get(m); if (n < MAX) { m.setMatrixAt(n, RX.mor); IMN.set(m, n + 1); } } }
+    if (RX.kOm) clothPut(RX.kOm, lod, RX.om, RX.omHand);
+    if (RX.kPalha) { const m = morselMesh('palha'); if (m) { const n = IMN.get(m); if (n < MAX) { m.setMatrixAt(n, RX.pal); IMN.set(m, n + 1); } } } if (RX.kL) itemPut(RX.kL, lod, RX.outra); if (RX.kB) itemPut(RX.kB, lod, RX.costas); if (RX.kC) itemPut(RX.kC, lod, RX.cinto);
     if (RX.kH) itemPut(RX.kH, lod, RX.cabeca); if (RX.kT) cuirPut(RX.kT, Math.max(0, Math.min(2, lod)), RX.corpo); }
   // (the cuirass: whole, or its body and each of its tabs turned as the thighs push it — the lifts the rig left in RX.lift)
   function cuirPut(key, lod, F) {
@@ -1345,7 +1420,7 @@
   const INP = {}; // (the animator's input, one object for everyone: nothing made each frame)
   // (the clip of an act in step with the world's own clock of it: v.actT, the world seconds since the act — or its stroke — began;
   // a clip that names its stroke's period lands its contact where the world's stroke lands)
-  function clipClock(v, st) { const C = Anim.CLIPS && Anim.CLIPS[st]; if (!C || !(C.period > 0)) return undefined; return Anim.loopTime(C, v.actT || 0, C.period); }
+  function clipClock(v, st) { const C = Anim.CLIPS && Anim.CLIPS[st]; if (C && C.beats > 0 && G.Vida3D.beatU) return G.Vida3D.beatU(v, C); if (!C || !(C.period > 0)) return undefined; return Anim.loopTime(C, v.actT || 0, C.period); } // (the dance in the music's compass: the musician's clock, D-796)
   P3.clipClock = clipClock;
   // (the frame's own lists and clocks, kept: the nearest people a frame — reused entries, nothing made each frame —, the frames
   // drawn and the view's seconds, for the beats of the far ones and the crowd's portraits)
@@ -1749,7 +1824,7 @@
       // (waved at by the body: those standing or strolling near wave back, a moment later — only seen; and the act over the stride
       // of whoever walks: the prisoner's bound hands, the word said walking — the reader's, Vida3D.overOf)
       if (s.greetT > 0) { if ((s.greetD -= dt) <= 0) { s.greetT -= dt; if (st === 'idle' || st === 'talk') st = 'wave'; else if (st === 'walk') over = 'wave'; } }
-      if (!over) over = G.Vida3D.overOf(v, st);
+      if (!over) over = G.Vida3D.overOf(v, st, Lv);
       // (one of two under one crate: the frame between them; the crate is the one ahead's, drawn once, by his rig — both hands
       // of each on it: no torch, no thing in the hands)
       Lv.pair = pr;
@@ -1762,6 +1837,7 @@
       if (fresh) {
         // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
         // (v.actT), the drink, the tiredness — the pose made from what they do (anim-body.js; the reader's numbers: vida3d.js)
+        Lv.st = st; // (the state drawn, for the things it puts in the hands: the cloth that wipes, D-796)
         const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)
@@ -1781,7 +1857,7 @@
         // blink, the look, the speech; anim-rosto.js — near the eye; farther the face is a few pixels, and the old numbers do)
         if (s.lod < 2 && Anim.faceMix) { I.humor = G.Vida3D.humor(v); Anim.faceMix(s, I, s.pose, Lv.mood, s.an, dtA); } else s.pose.face = null;
       }
-      s.st = st;
+      s.st = st; s.ov = over; // (the state and the gesture over the top drawn: for the checker of the hands' things, D-796)
       if (P3.walkers.length < 40) P3.walkers.push([s.X, Y, s.Z, s.sp, st, v.act, s.yaw, v.id]); // (for the dust and the chips they raise, the grass they part)
       // (outside the eye's field, their shadow too: not drawn this frame — their steps go on; a torch they hold still burns
       // and lights round it, about where their hand is)

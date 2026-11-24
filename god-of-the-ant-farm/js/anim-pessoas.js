@@ -181,7 +181,7 @@
   // the mirror of a clip's definition (22c, D-596): the same gesture on the other side — the left-handed one's —: each joint of one
   // side keyed on the other, the turns and the rolls the other way, the stance's feet swapped. A twin registered beside a clip
   // (`id~m`) is the clip of the left-handed; the animator plays it for them (I.lefty)
-  const SWAP = { shLp: 'shRp', shRp: 'shLp', elL: 'elR', elR: 'elL', grip: 'gripL', gripL: 'grip', wrist: 'wristL', wristL: 'wrist', hipL: 'hipR', hipR: 'hipL', knL: 'knR', knR: 'knL', anL: 'anR', anR: 'anL' };
+  const SWAP = { shLp: 'shRp', shRp: 'shLp', elL: 'elR', elR: 'elL', grip: 'gripL', gripL: 'grip', wrist: 'wristL', wristL: 'wrist', morsel: 'morselL', morselL: 'morsel', hipL: 'hipR', hipR: 'hipL', knL: 'knR', knR: 'knL', anL: 'anR', anR: 'anL' };
   const SWAPN = { shLr: 'shRr', shRr: 'shLr', shLy: 'shRy', shRy: 'shLy', adL: 'adR', adR: 'adL', hyL: 'hyR', hyR: 'hyL' };
   const NEG = new Set(['twist', 'sway', 'tilt', 'headR', 'lookY', 'gazeX', 'pelY', 'pelR', 'shift']);
   const MASKM = { armR: 'armL', armL: 'armR' };

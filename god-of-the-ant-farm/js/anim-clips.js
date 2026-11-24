@@ -22,10 +22,11 @@
   const D2R = Math.PI / 180;
   // the joints a clip may key, in the pose's own units: the angles in radians (keyed in degrees, `deg: true`, the default),
   // the rest as they are (metres, fractions of the hips' height, weights)
-  const LINEAR = new Set(['bob', 'crouch', 'shift', 'breath', 'grip', 'gripL', 'talk', 'holdW', 'lie', 'prone', 'tool', 'cloth', 'clothS', 'offW', 'reachW']);
+  const LINEAR = new Set(['bob', 'crouch', 'shift', 'breath', 'grip', 'gripL', 'talk', 'chew', 'morsel', 'morselL', 'holdW', 'lie', 'prone', 'tool', 'cloth', 'clothS', 'offW', 'reachW']);
   // the masks: which joints a clip moves (the others are the base's)
-  const ARM_L = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL'], ARM_R = ['shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist'];
-  const HEAD = ['neck', 'lookY', 'talk', 'gazeX', 'gazeY', 'headR'];
+  // (morsel: the mouthful in the fingers of the hand — 0 none, 1 there —, drawn only where the hands hold the food the world served)
+  const ARM_L = ['shLp', 'shLr', 'shLy', 'elL', 'gripL', 'wristL', 'morselL'], ARM_R = ['shRp', 'shRr', 'shRy', 'elR', 'grip', 'wrist', 'morsel'];
+  const HEAD = ['neck', 'lookY', 'talk', 'chew', 'gazeX', 'gazeY', 'headR'];
   const TRUNK = ['lean', 'twist', 'sway', 'breath', 'tilt'];
   const LEGS = ['bob', 'crouch', 'shift', 'pelY', 'pelR', 'pelP', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'adL', 'adR', 'hyL', 'hyR', 'lie', 'prone'];
   const MASK = Anim.MASK = {
@@ -46,7 +47,9 @@
     const deg = def.deg !== false, loop = def.loop !== false;
     const c = { id, dur: def.dur > 0 ? def.dur : 1, loop, mask: Array.isArray(def.mask) ? new Set(def.mask) : MASK[def.mask || 'full'] || MASK.full,
       feet: def.feet || 'plant', bin: def.in >= 0 ? def.in : 0.22, bout: def.out >= 0 ? def.out : 0.28, events: Object.assign({ contact: 0.5 }, def.events || {}),
-      item: def.item || null, base: def.base || 'idle', ch: [], tab: [], keys: def.keys, period: def.period > 0 ? def.period : 0, stance: def.stance || null };
+      item: def.item || null, base: def.base || 'idle', ch: [], tab: [], keys: def.keys, period: def.period > 0 ? def.period : 0, stance: def.stance || null,
+      // (the eyes the gesture keeps shut — the nap over the table —, and the beats of the music a loop of it takes: the dance, the claps)
+      eyes: def.eyes || null, beats: def.beats > 0 ? def.beats : 0 };
     for (const j in def.keys) {
       const k = def.keys[j]; if (!Array.isArray(k) || !k.length) { Anim.clipErr.push(`clipe ${id}: a junta ${j} sem chaves`); continue; }
       const sc = deg && !LINEAR.has(j) ? D2R : 1; const pts = k.map(p => [p[0], p[1] * sc]).sort((a, b) => a[0] - b[0]);

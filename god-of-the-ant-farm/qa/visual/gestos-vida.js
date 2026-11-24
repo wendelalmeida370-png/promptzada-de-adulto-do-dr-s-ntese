@@ -33,7 +33,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 for (const f of ['js/interacao-clips.js', 'js/trabalho-clips.js', 'js/combate-clips.js']) try { vm.runInThisContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), { filename: f }); } catch (e) { console.log('(sem ' + f + ': ' + e.message + ')'); }
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null; const on = k => !ONLY || ONLY.has(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | gestos-vida ${name} | ${info}`); if (!c) fails.push(name); };
-const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js', 'js/duo-clips.js', 'js/grupo-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
+const OURS = new Set(); for (const f of ['js/vida-clips.js', 'js/social-clips.js', 'js/mesa-clips.js', 'js/taverna-clips.js', 'js/duo-clips.js', 'js/grupo-clips.js']) { const p = path.join(ROOT, f); if (fs.existsSync(p)) for (const m of fs.readFileSync(p, 'utf8').matchAll(/\b(?:K|c|oc)\('([\w-]+)'/g)) { OURS.add(m[1]); OURS.add(m[1] + '~m'); } }
 const ids = Object.keys(A.CLIPS).filter(id => (process.env.GRUPO !== '22c' || OURS.has(id)) && (!process.env.CLIPES || process.env.CLIPES.split(',').includes(id))).sort();
 const r1 = x => Math.round(x * 10) / 10, r2 = x => Math.round(x * 100) / 100;
 // the bodies: a man and a woman at three ages — the size of the age (People3D's lookFill: a child of 8 is 1.2 m, an elder of 75 1.68 m)
@@ -170,7 +170,7 @@ if (on('g11')) {
   const CASES = [];
   for (const act in A.DUO) for (const papel of ['a', 'b']) { const e = A.DUO[act][papel]; if (!e || !e.hands) continue; const sa = G.SocAtos && G.SocAtos.of(act); const rv = sa && sa.rev && A.DUO[sa.rev] ? sa.rev : act;
     const by = G.SocAtos ? G.SocAtos.LIST.find(k => G.SocAtos.of(k).rev === act && A.DUO[k] && A.DUO[k].a) : null; // (the one held: the part of the one whose act has it as its answer)
-    const other = papel === 'a' ? (A.DUO[rv] && A.DUO[rv].b) || A.DUO[act].b || null : A.DUO[act].a || (by ? A.DUO[by].a : null); const ds = sa && sa.dist ? sa.dist : act === 'carried' ? G.SocAtos.of('carry').dist : 1; // (the one taken up: the act of the one who takes them, its distance)
+    const other = papel === 'a' ? (A.DUO[rv] && A.DUO[rv].b) || A.DUO[act].b || null : A.DUO[act].a || (by ? A.DUO[by].a : null); const ds = sa && sa.dist ? sa.dist : act === 'carried' ? G.SocAtos.of('carry').dist : e.reach > 0 && e.reach < 1 ? e.reach : 1; // (an act the vocabulary has not: at the farthest its hands meet, its reach — the tavern's «expulsar», P6) // (the one taken up: the act of the one who takes them, its distance)
     CASES.push([act + ' ' + papel, e, other, ds, act === 'carry' || act === 'carried' ? papel : null]); }
   for (const k in A.GREET) { const e = A.GREET[k]; if (e.hands) CASES.push(['greet ' + k, e, e, 0.95, null]); }
   const trunk = (R, p, s) => { const c = inFrame(R, B.chest, p, s); return c[1] > -0.12 && c[1] < 0.5 ? Math.hypot(c[0] / 0.15, c[2] / 0.105) : 9; };

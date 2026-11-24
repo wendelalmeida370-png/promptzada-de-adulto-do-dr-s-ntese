@@ -148,6 +148,9 @@
     agree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, disagree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 },
     laugh: { s: 'riso', q: 'curso', cada: 2, v: 0.45, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
     console: still('quem consola fala baixo demais para se ouvir longe'),
+    // (P6, D-796: the acts of the tavern's night the sounds of P9 do not have — the stagger is the feet's, the keeper's call to the body a
+    // word; the others are the TAVERNA_ATO below)
+    cambalear: still('o cambaleio é dos pés'), 'chamar-pedido': { s: 'voz', q: 'curso', cada: 2.2, v: 0.45, alc: 0.9 },
   };
   // the acts of the tavern's night (P7: the toast, the knucklebones, the dance and the claps and the song with the music, the doze at
   // the table, the cloth on the table, the cups gathered, the coin of the tip, the one thrown out, the closing) — the sounds of P9
