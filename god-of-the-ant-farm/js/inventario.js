@@ -50,8 +50,11 @@
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
     // (the living tavern's acts, P7 D-806: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
     brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca',
-    // (the tablets' game, T5: the deck in the hand of who plays, who hides one up the sleeve, who is caught at it)
-    'jogo-cartas': 'baralho', trapaca: 'baralho', 'trapaca-pega': 'baralho' };
+    // (T4, D-852: the dice of the cup game — the real set on the table, the house's or one's own: G.JogoDados.dadosDe)
+    'jogo-dados': 'dados',
+    // (the tablets' game, T5: the deck in the hand of who plays and of the winner's slap — the real deck of the game, the house's or
+    // one's own: G.Cartas.baralhoNaMesa); who hides one up the sleeve, and who is caught, holds the thing of the game one is in
+    'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: 'jogo', 'trapaca-pega': 'jogo' };
   // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
   // the people had, as the cup is of its clay or wood: P7, D-764)
   const instrumentOf = v => ((G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) === 'asteca' ? 'tambor' : 'lira');
@@ -185,6 +188,13 @@
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
+    // (the dice are the game's real set — of the bone or the wood it was made of —, never a set of the people's arts: none on the table, none
+    // in the hand; T4, D-852)
+    // (the cheat's hand: the tablets of the game of cards one is in, else the dice — T4, T5)
+    if (t === 'jogo') t = G.Cartas && G.Cartas.de && G.Cartas.de(v) ? 'baralho' : 'dados';
+    if (t === 'dados') { if (!key && G.JogoDados && G.JogoDados.dadosDe) key = G.JogoDados.dadosDe(v); if (!key) return; }
+    // (the deck is the game's real one — the house's, of its people's material, or the body's own —; out of a game, the people's: T5, D-868)
+    if (t === 'baralho' && !key && G.Cartas && G.Cartas.baralhoNaMesa) key = G.Cartas.baralhoNaMesa(v);
     // (the cup of the tavern and of the feast, the bonds of the one who leads the prisoner: the place's, never the person's own — given
     // to whoever has things of their own too, the god's body among them; in the material the people has: 22c, D-612)
     if (!key && own && PLACE_TOOL[t]) key = made(t, G.Fac.idOfV(v), artsOf(v));

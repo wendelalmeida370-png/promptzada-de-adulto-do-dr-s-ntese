@@ -4177,6 +4177,119 @@
     }
   });
 })();
+  // ---- qa/taverna-cadeia-inv.js ----
+// taverna-cadeia-inv: as regras do verificador para a cadeia da taverna (a quarta onda, T3 — D-840 a D-849) — carregado depois do
+// qa/qa.js (QA.more), juntado a ele pelo qa/junta-inv.js. Lê o mundo e o livro-razão (G.Depot.ledger) — nenhuma pergunta muda nada:
+//   · quem tem o ofício da casa (o cozinheiro, o cervejeiro) trabalha numa taverna de pé, ou em nenhuma; e uma casa tem no máximo um
+//     de cada (S2);
+//   · cada brassagem e cada panelada vivas estão numa taverna de pé, numa etapa que a receita tem, com os montes finitos e o que
+//     separaram na tulha e na despensa ainda lá (S2);
+//   · **nada vem do nada**: a tulha só guarda cereal de comida (o grão da cerveja: 20h) e as partes do grão de cada brassagem são de
+//     cereal; a cerveja e o hidromel que uma brassagem fez na prateleira não passam do que ela gastou (um jarro por grão, dois potes
+//     por mel); nada nasce na despensa nem na tulha — só chega pelas mãos; o prato da panela é a comida da despensa movida à
+//     prateleira da mesma casa (S2);
+//   · os registros da casa bem formados: a memória das noites (b.tvo), a bebida da casa na prateleira (b.adega: não mais do que ela
+//     tem), os pratos da cozinha (b.prato) (S3).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const EPS = 1e-4; const fin = Number.isFinite;
+  const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
+  const YIELD = { cerveja: 1, mel: 2 }; // (what a batch makes of each unit of its input, at most: act of the vat, js/taverna-oficios.js)
+  let seenN = 0, seenS = null; const made = new Map(); // (the ledger's count at the last look; what each batch made since the world began)
+  QA.more.push(function (add, s) {
+    const TO = G.TavernaOficios, D = G.Depot, O = G.Origem; if (!TO || !D) return;
+    const taverna = id => { const b = s.buildings.get(id); return b && b.type === 'taverna' && b.built ? b : null; };
+    // ---- the house's people
+    const posts = new Map();
+    for (const v of s.villagers.values()) {
+      if (v.role !== 'cozinheiro' && v.role !== 'cervejeiro') continue; const nm = `${v.name} #${v.id}`;
+      if (v.job && !taverna(v.job)) add('tavcadeia', 2, `${nm} (${v.role}): trabalha no prédio #${v.job}, que não é uma taverna de pé`, v.id);
+      if (v.job && !v.captive) { const k = v.job + ':' + v.role; if (posts.has(k)) add('tavcadeia', 2, `taverna #${v.job}: dois ${v.role === 'cozinheiro' ? 'cozinheiros' : 'cervejeiros'} (#${posts.get(k)} e #${v.id})`, v.id); else posts.set(k, v.id); }
+    }
+    // ---- the batches and the pots
+    for (const op of s.acts || []) {
+      if ((op.def !== 'brassagem' && op.def !== 'panelada') || !LIVE[op.st]) continue; const d = op.data || {}; const nm = `${op.def} #${op.id}`;
+      const b = taverna(op.at); if (!b) { add('tavcadeia', 2, `${nm}: o lugar ${op.at} não é uma taverna de pé, e segue`); continue; }
+      const R = op.def === 'brassagem' ? TO.BREW[d.k] : null; const st = op.def === 'brassagem' ? (R ? R.st : null) : TO.POT_ST;
+      if (!st) { add('tavcadeia', 2, `${nm}: sem receita («${d.k}»)`); continue; }
+      if (!fin(d.s) || d.s < 0 || d.s >= st.length) add('tavcadeia', 2, `${nm}: numa etapa que a receita não tem (${d.s})`);
+      for (const k of ['got', 'molho', 'mosto', 'panela', 'feito', 'azedas', 'usado', 'lenha']) if (d[k] !== undefined && (!fin(d[k]) || d[k] < -EPS)) add('tavcadeia', 2, `${nm}: o monte ${k} = ${d[k]}`);
+      const ref = (op.def === 'brassagem' ? 'e:' : 'k:') + b.id; const kk = op.def === 'brassagem' ? (R.in) : 'food';
+      if (d.got > EPS && D.get(ref, kk) + EPS < d.got) add('tavcadeia', 2, `${nm}: separou ${d.got} de ${kk} em ${ref}, que só tem ${D.get(ref, kk)}`);
+      if (op.def === 'panelada' && d.panela > d.got + EPS) add('tavcadeia', 2, `${nm}: ${d.panela} na panela de ${d.got} separados`);
+      if (op.def === 'brassagem' && d.de && O) for (const t in d.de) if (!(O.FOOD[t] && O.FOOD[t].cereal)) add('tavcadeia', 2, `${nm}: a cerveja de «${t}», que não é cereal (20h)`);
+    }
+    // ---- the pantries: only on a tavern; the brewer's store keeps only the cereal of the food
+    for (const b of s.buildings.values()) {
+      for (const f of ['despensa', 'tulha']) { const L = b[f]; if (L === undefined) continue; if (b.type !== 'taverna' && L && Object.keys(L).some(k => L[k] > EPS)) add('tavcadeia', 2, `${b.type} #${b.id}: ${f} cheia num prédio que não é taverna`); if (L && typeof L === 'object') for (const k in L) if (!fin(L[k]) || L[k] < -EPS) add('tavcadeia', 2, `taverna #${b.id}: ${f}.${k} = ${L[k]}`); }
+      if (b.type !== 'taverna' || !b.built) continue;
+      if (O && D.get('e:' + b.id, 'food') > EPS) { const p = O.parts('e:' + b.id, 'food'); for (const t in p) if (p[t] > EPS && !(O.FOOD[t] && O.FOOD[t].cereal)) add('tavcadeia', t === '?' ? 3 : 2, `taverna #${b.id}: ${p[t].toFixed(2)} de «${t}» na tulha do cervejeiro, que só guarda cereal`); }
+      const a = b.adega; if (a !== undefined) { if (!a || typeof a !== 'object') add('tavcadeia', 3, `taverna #${b.id}: a adega não é um registro`); else for (const k in a) { const e = a[k]; if (!e || !fin(e.n) || e.n < -EPS || !fin(e.q) || e.q < -EPS || e.q > 1 + EPS) add('tavcadeia', 3, `taverna #${b.id}: a ${k} da casa mal formada (${JSON.stringify(e)})`); else if (e.n > D.get('b:' + b.id, k) + 0.01) add('tavcadeia', 3, `taverna #${b.id}: ${e.n} de ${k} da casa, e a prateleira tem ${D.get('b:' + b.id, k)}`); } }
+      const o = b.tvo; if (o !== undefined) { if (!o || typeof o !== 'object') add('tavcadeia', 3, `taverna #${b.id}: a memória das noites não é um registro`); else for (const k of ['n', 'ref', 'rb', 'sc', 'sb', 'dev']) if (!fin(o[k]) || o[k] < -EPS) { add('tavcadeia', 3, `taverna #${b.id}: a memória das noites com ${k} = ${o[k]}`); break; } }
+      const P = b.prato; if (P !== undefined && P && typeof P === 'object') for (const t in P) if (!fin(P[t]) || P[t] < -EPS || !(O && O.FOOD[t])) { add('tavcadeia', 3, `taverna #${b.id}: o prato da cozinha de «${t}» = ${P[t]}`); break; }
+    }
+    // ---- the ledger since the last look: nothing born in the pantries; the beer and the mead of a batch no more than it used; the pot's
+    // dishes only from the pantry to the shelf of the same house
+    if (seenS !== s) { seenS = s; seenN = s.ledgerN || 0; made.clear(); }
+    const L = D.ledger(); const from = seenN; seenN = s.ledgerN || 0;
+    for (const e of L) {
+      if (e[0] <= from) continue; const src = e[3], to = e[4], k = e[5], n = e[6], code = e[8];
+      if (src === '@mundo' && typeof to === 'string' && (to[0] === 'k' || to[0] === 'e') && to[1] === ':') add('tavcadeia', 2, `${n} de ${k} nasceu na ${to[0] === 'k' ? 'despensa' : 'tulha'} da taverna #${to.slice(2)} (código «${code}»): só chega pelas mãos`);
+      if (src === '@mundo' && code === 'fornada' && (k === 'cerveja' || k === 'mel')) {
+        const op = G.Act.get(e[7]); if (!op || op.def !== 'brassagem') continue;
+        const m = (made.get(op.id) || 0) + n; made.set(op.id, m);
+        if (m > (op.data.usado || 0) * (YIELD[op.data.k] || 1) + 0.01) add('tavcadeia', 2, `brassagem #${op.id}: fez ${m.toFixed(2)} de ${k} e gastou ${op.data.usado} de ${op.data.k === 'mel' ? 'mel' : 'grão'} (nada vem do nada)`);
+      }
+      if (code === 'cozinha' && !(typeof src === 'string' && src[0] === 'k' && src[1] === ':' && to === 'b:' + src.slice(2))) add('tavcadeia', 2, `o prato da panela foi de ${src} para ${to}: só da despensa à prateleira da mesma casa`);
+    }
+  });
+})();
+  // ---- qa/jogo-dados-inv.js ----
+// jogo-dados-inv: as regras do verificador para o jogo de dados da taverna (a quarta onda, T4 — D-850 a D-859) — carregado depois do
+// qa/qa.js (QA.more); o líder o junta (qa/junta-inv.js). Lê as operações do jogo e o livro (só lê):
+//   · o pote de uma partida viva é o que cada um pôs nele (pago), até o prêmio; uma partida acabada não guarda moeda (S1);
+//   · quem joga ainda tem de 1 a 3 dados, quem está fora tem 0; com os copos na mesa, as faces de cada um são as dos seus dados, de 1 a
+//     6, e são as do G.hash da partida, da rodada, de quem joga e do dado (D-669: o lance é do mundo) (S2);
+//   · os palpites da rodada são números diferentes, dentro do que os dados da mesa podem dar, um por jogador (S2);
+//   · o jogo de dados de uma partida existe de verdade onde ela diz — na prateleira da casa ou na mochila de quem joga (S2);
+//   · ninguém está em duas partidas vivas; quem faz o gesto do jogo (o ato 'jogo-dados') joga numa partida viva (S3);
+//   · o torneio da noite guarda só o prêmio, e o acabado nada (S2).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
+  const rule = function (add, s) {
+    const JD = G.JogoDados; if (!JD || !JD.R) return;
+    const ops = (s.acts || []).filter(o => o.def === 'jogo-dados'); const seen = new Map();
+    for (const op of ops) {
+      const d = op.data || {}; const nm = `dados #${op.id} (taverna #${op.at})`;
+      if (!LIVE[op.st]) { if ((d.pote || 0) > 1e-6) add('dados', 1, `${nm}: acabou com ${d.pote} no pote`); continue; }
+      const paid = Object.values(d.pago || {}).reduce((a, x) => a + (x && x[1] || 0), 0);
+      if (d.fase !== 'fim' && Math.abs((d.pote || 0) - paid) > 1e-6) add('dados', 1, `${nm}: o pote tem ${d.pote}, e puseram ${Math.round(paid * 100) / 100}`);
+      if ((d.pote || 0) < -1e-6) add('dados', 1, `${nm}: pote negativo (${d.pote})`);
+      for (const id of d.quem || []) {
+        const n = d.n[id] | 0; if (d.fora[id] ? n !== 0 : !(n >= 1 && n <= 3)) add('dados', 2, `${nm}: #${id} com ${n} dados (${d.fora[id] ? 'fora: ' + d.fora[id] : 'jogando'})`);
+        if (!d.fora[id] && d.fase !== 'convite' && d.r > 0) { const F = d.faces && d.faces[id];
+          // (the cups up: the faces of the round still count the die just burnt)
+          const n0 = n + ((d.fase === 'revela' || d.fase === 'fim') && d.res && (d.res.queimou || []).includes(id) ? 1 : 0);
+          if (!Array.isArray(F) || F.length !== n0) add('dados', 2, `${nm}: #${id} com ${F ? F.length : 0} faces para ${n0} dados`);
+          else F.forEach((f, i) => { const want = JD.R.face(d.seed, d.r, id, i); const turned = d.res && d.res.trap && !d.res.trap.pego && d.res.trap.id === id && d.res.trap.i === i && (d.fase === 'revela' || d.fase === 'fim');
+            if (!(f >= 1 && f <= 6) || (f !== want && !turned)) add('dados', 2, `${nm}: o dado ${i} de #${id} mostra ${f}, o mundo jogou ${want}`); }); }
+        if (!d.fora[id] && d.fase !== 'fim') { if (seen.has(id)) add('dados', 3, `#${id} em duas partidas (#${seen.get(id)} e #${op.id})`); seen.set(id, op.id); }
+      }
+      const said = (d.pal || []).map(p => p[1]); if (new Set(said).size !== said.length) add('dados', 2, `${nm}: um palpite repetido (${said.join(', ')})`);
+      if ((d.pal || []).some(p => (d.pal || []).filter(q => q[0] === p[0]).length > 1)) add('dados', 2, `${nm}: alguém disse dois palpites na rodada`);
+      if (d.set && d.set.ref) { const has = G.Depot.get(d.set.ref, d.set.k); if (!(has >= 1 - 1e-6)) add('dados', 2, `${nm}: joga com ${d.set.k} de ${d.set.ref}, que não tem nenhum`); }
+    }
+    // (the act is the tavern's, set in the people's step before the games' own: one step behind the game is no fault — a die burnt, the
+    // game just ended)
+    const near = v => ops.some(op => (op.data.quem || []).includes(v.id) && (LIVE[op.st] || (op.end && s.clock - op.end.t < 1.5)));
+    for (const v of s.villagers.values()) if (v.act === 'jogo-dados' && !near(v)) add('dados', 3, `${v.name} #${v.id}: o gesto do jogo de dados sem partida viva`);
+    for (const op of (s.acts || []).filter(o => o.def === 'torneio-dados')) { const d = op.data || {};
+      if (!LIVE[op.st] && (d.pote || 0) > 1e-6) add('dados', 2, `torneio #${op.id}: acabou com ${d.pote} no pote`);
+      if ((d.pote || 0) < -1e-6) add('dados', 2, `torneio #${op.id}: pote negativo`); }
+  };
+  QA.more.push(rule); QA.jogoDados = rule;
+})();
   // ==== fim das invariantes dos sistemas novos ====
   // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,
   // as the tick would — and is no loss of the save: the mundial of the v37 lived into one and the round trip said «execs: 3 → 2», T-212)

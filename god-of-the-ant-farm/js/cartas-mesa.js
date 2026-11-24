@@ -67,11 +67,11 @@
   const potOf = id => jogoDe(id) || torPorId(id);
   D.addKind('k', {
     obj: id => potOf(id),
-    get: (o, k) => (k === 'moedas' ? o.pote || 0 : 0),
+    get: (o, k) => (k === 'moedas' ? o.cofre || 0 : 0),
     room: (o, k) => (k === 'moedas' ? Infinity : 0),
-    take: (o, k, n) => { o.pote = r4((o.pote || 0) - n); },
-    put: (o, rec) => { o.pote = r4((o.pote || 0) + rec.n); },
-    list: o => (o.pote > EPS ? { moedas: o.pote } : {}),
+    take: (o, k, n) => { o.cofre = r4((o.cofre || 0) - n); },
+    put: (o, rec) => { o.cofre = r4((o.cofre || 0) + rec.n); },
+    list: o => (o.cofre > EPS ? { moedas: o.cofre } : {}),
     owner: o => { const b = S_().buildings.get(o.b); return { fac: b ? G.Village.facOfSet(b.set) : 0, bld: o.b }; },
     all: () => { const s = S_() && S_().cartas; if (!s) return []; return Object.keys(s.j).map(k => s.j[k]).concat(Object.keys(s.tor).map(k => s.tor[k])); },
   });
@@ -83,11 +83,11 @@
   function poe(j, i, n) { if (!(n > EPS)) return true; const v = S_().villagers.get(j.quem[i]); if (!v || !tem(v, n)) return false; const r = D.move(E.coinRef(v), 'k:' + j.id, 'moedas', n, { code: 'aposta', by: v.id }); if (!r.ok) return false; j.pago[i] = r4(j.pago[i] + r.n); conta('apostado', r.n); return true; }
   // (o pote sai: tudo para quem venceu, ou cada um recebe de volta o que pôs)
   function paga(j) {
-    if (!(j.pote > EPS)) return; const w = j.s.fim ? j.s.fim.w : -1; const S = S_();
-    if (w >= 0) { const v = S.villagers.get(j.quem[w]); if (v) { const r = D.move('k:' + j.id, E.coinRef(v), 'moedas', j.pote, { code: 'pote', by: v.id }); if (r.ok) conta('ganho', r.n); } }
-    for (const i of [0, 1]) { if (!(j.pote > EPS)) break; const v = S.villagers.get(j.quem[i]); const n = Math.min(j.pote, j.pago[i]); if (v && n > EPS) D.move('k:' + j.id, E.coinRef(v), 'moedas', n, { code: 'pote-volta', by: v.id }); }
+    if (!(j.cofre > EPS)) return; const w = j.s.fim ? j.s.fim.w : -1; const S = S_();
+    if (w >= 0) { const v = S.villagers.get(j.quem[w]); if (v) { const r = D.move('k:' + j.id, E.coinRef(v), 'moedas', j.cofre, { code: 'pote', by: v.id }); if (r.ok) conta('ganho', r.n); } }
+    for (const i of [0, 1]) { if (!(j.cofre > EPS)) break; const v = S.villagers.get(j.quem[i]); const n = Math.min(j.cofre, j.pago[i]); if (v && n > EPS) D.move('k:' + j.id, E.coinRef(v), 'moedas', n, { code: 'pote-volta', by: v.id }); }
     // (quem pôs já não existe — morreu no meio —: o que sobra vai ao armazém do povo da taverna, pelo livro)
-    if (j.pote > EPS) { const b = S.buildings.get(j.b); const fid = b ? G.Village.facOfSet(b.set) : 0; if (fid && G.Fac.get(fid)) D.move('k:' + j.id, 'f:' + fid, 'moedas', j.pote, { code: 'pote-volta' }); }
+    if (j.cofre > EPS) { const b = S.buildings.get(j.b); const fid = b ? G.Village.facOfSet(b.set) : 0; if (fid && G.Fac.get(fid)) D.move('k:' + j.id, 'f:' + fid, 'moedas', j.cofre, { code: 'pote-volta' }); }
   }
 
   // ------------------------------ o baralho de verdade (D-868) ------------------------------
@@ -96,6 +96,8 @@
   const It = () => G.Itens;
   C.baralhoCasa = function (b) { const fid = b ? G.Village.facOfSet(b.set) : 0; if (!fid || !G.Inv || !G.Inv.madeBy) return null; return G.Inv.madeBy('baralho', fid); };
   C.baralhoDe = function (v) { if (!v || !G.Inv || !G.Inv.bag) return null; const bag = G.Inv.bag(v); for (const k of Object.keys(bag).sort()) if (bag[k] >= 1 && k.split('.')[0] === 'baralho') return k; return null; };
+  // (o baralho da partida em que a pessoa está — o do corpo, se ele leva o seu; senão o da casa —, para a mão de quem joga: o kit, G.Inv)
+  C.baralhoNaMesa = function (v) { const j = C.de(v); if (!j) return null; const S = S_(); const b = S.buildings.get(j.b); const c = j.corpo >= 0 ? S.villagers.get(j.quem[j.corpo]) : null; return (c && C.baralhoDe(c)) || (b ? C.baralhoCasa(b) : null); };
   // (o povo das tabuletas de um baralho: o do povo de quem o fez — o da casa, o povo da taverna; o do corpo, o povo do corpo)
   const civDe = v => (G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) || 'classico';
   const civOk = c => (C.DECKS[c] ? c : 'classico');
@@ -115,7 +117,7 @@
     const S = S_(); const id = S.nextId++;
     const civ = [civOk(corpo === 0 && C.baralhoDe(a) ? civDe(a) : civDe(a)), civOk(civDe(o))];
     const s = C.nova({ id, seed: Math.imul(id, 2654435761 | 0) ^ Math.imul(op ? op.id : 1, 97), civ, quem: [a.id, o.id], aposta });
-    const j = { id, b: b.id, op: op ? op.id : 0, g: String(g), quem: [a.id, o.id], corpo, s, aposta, pago: [0, 0], pote: 0, t0: r1(S.clock), prox: r1(S.clock + C.RODADA_T), fase: 'jogo', fimT: 0, trap: null, conf: null, tor: tor ? tor.id : 0 };
+    const j = { id, b: b.id, op: op ? op.id : 0, g: String(g), quem: [a.id, o.id], corpo, s, aposta, pago: [0, 0], cofre: 0, t0: r1(S.clock), prox: r1(S.clock + C.RODADA_T), fase: 'jogo', fimT: 0, trap: null, conf: null, tor: tor ? tor.id : 0 };
     st().j[id] = j;
     if (aposta > EPS && !(poe(j, 0, aposta) && poe(j, 1, aposta))) { j.s.fim = { w: -1, por: 'sem-moeda' }; fecha(j); return null; }
     conta('jogos'); if (corpo >= 0) conta('corpo');
@@ -178,7 +180,7 @@
     const S = S_(); const s = j.s; const v = S.villagers.get(j.quem[i]); const vit = S.villagers.get(j.quem[1 - i]);
     j.trap.pega = w.id; j.conf = { de: v ? v.id : 0, por: w.id, vit: vit ? vit.id : 0, ate: r1(S.clock + C.CONFUSAO) };
     s.fim = { w: 1 - i, por: 'trapaca' }; s.hist.push({ r: s.r, trapaca: i, pega: w.id });
-    if (v && vit && G.Lacos) { G.Lacos.ato(v, vit, 'trapaca'); if (w !== vit) G.Lacos.ato(v, w, 'trapaca'); }
+    if (v && vit && G.Lacos) { G.Lacos.ato(vit, v, 'trapaca'); if (w !== vit) G.Lacos.ato(w, v, 'trapaca'); }
     if (v && G.Fama && G.Fama.feito) G.Fama.feito(v, 'mentiu');
     if (v && G.Falas && G.Falas.say) G.Falas.say(w, 'cartas_trapaca', { nome: v.name });
     conta('pegos'); return true;
@@ -232,7 +234,7 @@
   C.passo = function () {
     const S = S_(); if (!S) return;
     for (const j of jogos()) {
-      if (j.fase === 'fim') { if (S.clock - j.fimT >= C.FIM_T && !(j.pote > EPS)) delete st().j[j.id]; else if (j.pote > EPS) paga(j); continue; }
+      if (j.fase === 'fim') { if (S.clock - j.fimT >= C.FIM_T && !(j.cofre > EPS)) delete st().j[j.id]; else if (j.cofre > EPS) paga(j); continue; }
       const why = valida(j);
       if (why) { if (why === 'desiste-corpo') C.desiste(j.s, j.corpo); else j.s.fim = { w: -1, por: why }; fecha(j); continue; }
       if (j.corpo < 0 && S.clock >= j.prox) rodada(j);
@@ -252,7 +254,7 @@
     if (!G.inSim || !b || b.type !== 'taverna') return null; const S = S_(); const T0 = st().tor;
     let t = T0[b.id]; if (t && t.dia === S.day) return t;
     if (t) fimTorneio(t, true);
-    t = T0[b.id] = { id: S.nextId++, b: b.id, dia: S.day, pote: 0, pagos: {}, vit: {}, gl: {}, insc: [] };
+    t = T0[b.id] = { id: S.nextId++, b: b.id, dia: S.day, cofre: 0, pagos: {}, vit: {}, gl: {}, insc: [] };
     o = o || {}; const de = o.de ? (typeof o.de === 'object' ? o.de : S.villagers.get(o.de)) : null;
     if (de && o.premio > EPS && moeda(b) && tem(de, o.premio)) { const ref = E.coinRef(de); if (D.move(ref, 'k:' + t.id, 'moedas', o.premio, { code: 'torneio', by: de.id }).ok) t.pagos[ref] = r4((t.pagos[ref] || 0) + o.premio); }
     conta('torneios'); return t;
@@ -268,13 +270,13 @@
     if (aberto && !ja) return; if (jogos().some(j => j.tor === t.id && j.fase === 'jogo') && !ja) return;
     const ids = Object.keys(t.vit).map(Number).sort((x, y) => (t.vit[y] - t.vit[x]) || ((t.gl[y] || 0) - (t.gl[x] || 0)) || x - y);
     const w = ids.length ? S.villagers.get(ids[0]) : null;
-    if (w && t.pote > EPS) { D.move('k:' + t.id, E.coinRef(w), 'moedas', t.pote, { code: 'torneio', by: w.id }); if (G.Fama && G.Fama.feito) G.Fama.feito(w, 'nome'); conta('campeoes');
+    if (w && t.cofre > EPS) { D.move('k:' + t.id, E.coinRef(w), 'moedas', t.cofre, { code: 'torneio', by: w.id }); if (G.Fama && G.Fama.feito) G.Fama.feito(w, 'nome'); conta('campeoes');
       if (b && G.Village && G.Village.log) G.Village.log(`${w.name} venceu o torneio de tabuletas da festa${S.settlements.get(b.set) ? ' em ' + S.settlements.get(b.set).name : ''}, com ${t.vit[w.id]} ${t.vit[w.id] === 1 ? 'vitória' : 'vitórias'}.`, 'gold', b.x, b.y); }
     else if (w) conta('campeoes');
     // (sem campeão — ninguém venceu —: cada um recebe de volta o que pôs)
-    for (const ref of Object.keys(t.pagos).sort()) { if (!(t.pote > EPS)) break; const n = Math.min(t.pote, t.pagos[ref]); if (n > EPS && D.exists(ref)) D.move('k:' + t.id, ref, 'moedas', n, { code: 'torneio' }); }
-    if (t.pote > EPS && b) { const fid = G.Village.facOfSet(b.set); if (fid && G.Fac.get(fid)) D.move('k:' + t.id, 'f:' + fid, 'moedas', t.pote, { code: 'torneio' }); }
-    t.campeao = w ? w.id : 0; if (!(t.pote > EPS)) delete st().tor[t.b];
+    for (const ref of Object.keys(t.pagos).sort()) { if (!(t.cofre > EPS)) break; const n = Math.min(t.cofre, t.pagos[ref]); if (n > EPS && D.exists(ref)) D.move('k:' + t.id, ref, 'moedas', n, { code: 'torneio' }); }
+    if (t.cofre > EPS && b) { const fid = G.Village.facOfSet(b.set); if (fid && G.Fac.get(fid)) D.move('k:' + t.id, 'f:' + fid, 'moedas', t.cofre, { code: 'torneio' }); }
+    t.campeao = w ? w.id : 0; if (!(t.cofre > EPS)) delete st().tor[t.b];
   }
 
   // ------------------------------ o corpo à mesa (pelas mãos: G.Possess.apply, D-869) ------------------------------
@@ -375,7 +377,7 @@
     for (const k of Object.keys(s.j)) { const j = s.j[k]; if (!j.quem.includes(v.id)) continue;
       if (j.conf && now < j.conf.ate) { if (j.conf.de === v.id) return 'trapaca-pega'; if (j.conf.vit === v.id) return 'shout'; }
       if (j.fase === 'jogo') return j.trap && j.trap.lado === j.quem.indexOf(v.id) && !j.trap.pega && now - j.trap.t < 2.5 ? 'trapaca' : 'jogo-cartas';
-      if (now - j.fimT < C.FIM_T) return 'jogo-cartas'; }
+      if (now - j.fimT < C.FIM_T) return j.s.fim && j.s.fim.w >= 0 && j.quem[j.s.fim.w] === v.id && now - j.fimT < 2.4 ? 'jogo-cartas-ganha' : 'jogo-cartas'; } // (o tapa na mesa de quem venceu: o gesto da T6)
     return '';
   };
   // (quem está no meio de uma partida não pede outra rodada nem vai embora por falta de conversa: a mesa o segura)
@@ -392,7 +394,7 @@
       const postas = (q.lance[0] ? 1 : 0) + (q.lance[1] ? 1 : 0); const abertas = last && last.c ? last.c.slice() : [];
       const v0 = j.corpo >= 0 ? S_().villagers.get(j.quem[j.corpo]) : null; const bar = (v0 && C.baralhoDe(v0)) || (bb ? C.baralhoCasa(bb) : null);
       return { mesa: postas || abertas.length, maos: (q.p[0].mao.length ? 1 : 0) + (q.p[1].mao.length ? 1 : 0), monte: q.p[0].monte.length + q.p[1].monte.length, mat: MAT_DE(bar),
-        jogo: j.id, quem: j.quem.slice(), civ: q.civ.slice(), r: q.r, fase: j.fase, cartas: postas ? [] : abertas, postas: [!!q.lance[0], !!q.lance[1]], nMao: [q.p[0].mao.length, q.p[1].mao.length], nMonte: [q.p[0].monte.length, q.p[1].monte.length], gl: [q.p[0].gl, q.p[1].gl], pote: j.pote || 0, vence: q.fim ? q.fim.w : -2, por: q.fim ? q.fim.por : '', baralho: bar, trapaca: !!(j.conf && S_().clock < j.conf.ate) };
+        jogo: j.id, quem: j.quem.slice(), civ: q.civ.slice(), r: q.r, fase: j.fase, cartas: postas ? [] : abertas, postas: [!!q.lance[0], !!q.lance[1]], nMao: [q.p[0].mao.length, q.p[1].mao.length], nMonte: [q.p[0].monte.length, q.p[1].monte.length], gl: [q.p[0].gl, q.p[1].gl], pote: j.cofre || 0, vence: q.fim ? q.fim.w : -2, por: q.fim ? q.fim.por : '', baralho: bar, trapaca: !!(j.conf && S_().clock < j.conf.ate) };
     }
     return null;
   };
@@ -400,15 +402,16 @@
   // (a partida do corpo, como a tela a mostra — o que o corpo sabe: a sua mão, as tabuletas na mesa, a do outro só quando à vista)
   C.doCorpo = function (v) {
     const j = v && C.de(v); if (!j || j.corpo < 0 || j.quem[j.corpo] !== v.id) return null; const q = j.s; const me = j.corpo, ai = 1 - me; const S = S_(); const b = S.buildings.get(j.b);
-    return { jogo: j.id, me, ai, o: j.quem[ai], fase: j.fase, r: q.r, of: C.OF.slice(), pote: j.pote || 0, aposta: j.aposta, x: q.x, mao: q.p[me].mao.slice(), monte: [q.p[me].monte.length, q.p[ai].monte.length], maoOutro: q.p[ai].mao.length,
-      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.pote, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: q.vis === me && q.lance[ai] ? q.lance[ai] : null, posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
+    return { jogo: j.id, me, ai, o: j.quem[ai], fase: j.fase, r: q.r, of: C.OF.slice(), pote: j.cofre || 0, aposta: j.aposta, x: q.x, mao: q.p[me].mao.slice(), monte: [q.p[me].monte.length, q.p[ai].monte.length], maoOutro: q.p[ai].mao.length,
+      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: q.vis === me && q.lance[ai] ? q.lance[ai] : null, posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
       podeDobrar: C.podeDobrar(q, me) && j.aposta > 0, hist: q.hist.slice(-8), fim: q.fim ? Object.assign({}, q.fim, { meu: q.fim.w === me ? 1 : q.fim.w === ai ? -1 : 0 }) : null, civ: [q.civ[me], q.civ[ai]], bonus: q.p[me].bonus, mal: q.p[me].mal, desc: [q.p[me].desc.length, q.p[ai].desc.length],
       preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: C.baralhoDe(v) || (b ? C.baralhoCasa(b) : null), trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length };
   };
 
   // ------------------------------ o laço do jogo e o da trapaça (a sociedade) ------------------------------
   // (registrados quando a sociedade existe: o soc-lacos.js carrega depois deste arquivo)
-  const lacos = () => { if (G.Lacos && G.Lacos.tipo) { G.Lacos.tipo('jogo', { a: [3, 2, 0, 1], b: [3, 2, 0, 1], frente: 1 }); G.Lacos.tipo('trapaca', { a: [0, 0, 0, 0], b: [-12, -24, -4, -2], frente: 1 }); } };
+  // (os mesmos do jogo de dados da T4 — quem registra primeiro registra o mesmo —: no da trapaça, a é quem foi enganado ou viu, b o trapaceiro)
+  const lacos = () => { if (G.Lacos && G.Lacos.tipo) { G.Lacos.tipo('jogo', { a: [3, 1, 0, 1], b: [3, 1, 0, 1], frente: 1 }); G.Lacos.tipo('trapaca', { a: [-18, -25, -4, -2], b: [-2, 0, 0, 0], frente: 1 }); } };
   G.worldHooks.push(lacos); lacos();
 
   // ------------------------------ o save ------------------------------
@@ -422,7 +425,7 @@
     load(o) {
       const S = S_(); const c = o && o.cartas; if (!c || typeof c !== 'object') { delete S.cartas; return; }
       const out = { j: {}, tor: {}, n: {} }; const perdido = [];
-      for (const k of Object.keys(c.j || {})) { const j = c.j[k]; if (j && num(j.id) && Array.isArray(j.quem) && j.quem.length === 2 && saoDe(j.s) && num(j.b)) { if (!Array.isArray(j.pago)) j.pago = [0, 0]; out.j[j.id] = j; } else if (j && num(j.pote) && j.pote > 0) perdido.push(j); }
+      for (const k of Object.keys(c.j || {})) { const j = c.j[k]; if (j && num(j.id) && Array.isArray(j.quem) && j.quem.length === 2 && saoDe(j.s) && num(j.b)) { if (!Array.isArray(j.pago)) j.pago = [0, 0]; out.j[j.id] = j; } else if (j && num(j.cofre) && j.cofre > 0) perdido.push(j); }
       for (const k of Object.keys(c.tor || {})) { const t = c.tor[k]; if (t && num(t.id) && num(t.b) && num(t.dia)) { t.pagos = t.pagos && typeof t.pagos === 'object' ? t.pagos : {}; t.vit = t.vit || {}; t.gl = t.gl || {}; t.insc = Array.isArray(t.insc) ? t.insc : []; out.tor[t.b] = t; } }
       for (const k of Object.keys(c.n || {})) if (num(c.n[k])) out.n[k] = c.n[k];
       S.cartas = out; void perdido;

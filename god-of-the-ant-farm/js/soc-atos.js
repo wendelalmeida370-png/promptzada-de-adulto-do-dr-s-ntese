@@ -29,6 +29,10 @@
     pet: ['afeto', 1, 0.6, '', 3],
     celebrate: ['sozinho', 0, 0, '', 3], startle: ['sozinho', 0, 0, '', 1], contemplate: ['sozinho', 0, 0, '', 8], sigh: ['sozinho', 0, 0, '', 2],
     flee: ['crime', 0, 0, '', 2], surrender: ['crime', 0, 0, '', 2], shackle: ['crime', 1, 0.6, 'bound', 3], bound: ['crime', 0, 0, '', 3],
+    // (the drink, T2's acts — their gestures and the two parts of each act of two, T6: the cup thrown in a face from a step and the one who
+    // gets it, the song and the dance of the drunk alone, the faint, the one on the floor dragged out by the keeper or carried home by a friend)
+    'jogar-bebida': ['conflito', 1, 1, 'molhado', 1.4], molhado: ['conflito', 0, 0, '', 1.8], cantoria: ['festa', 0, 0, '', 6], danca: ['festa', 0, 0, '', 10],
+    desmaio: ['sozinho', 0, 0, '', 60], arrastar: ['afeto', 1, 0.9, 'arrastado', 8], arrastado: ['afeto', 0, 0, '', 8],
   };
   const A = G.SocAtos = {};
   A.FAM = FAM;

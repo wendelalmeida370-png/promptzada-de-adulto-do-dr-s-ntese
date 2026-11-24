@@ -22,7 +22,7 @@ G.W = G.W || {}; G.Render = { nightness: () => 0 }; G.Art = { CLOTH: {}, icon: (
 try { run('js/civs.js'); } catch (e) { } // (the peoples' colours, for the clothes)
 run('js/bodymesh.js'); run('js/body3d.js'); run('js/people3d.js');
 // (the body's animation: the stride, the clips, the animator — 20a, the files after people3d.js in index.html)
-{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|mesa-clips|taverna-clips|duo-clips|grupo-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
+{ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'); const a = html.indexOf('<!-- 22a: os personagens — os arquivos do 3D'), b = html.indexOf('<!-- 22c:', a); for (const m of html.matchAll(/<script src="(js\/[^"]+)"><\/script>/g)) if (/^js\/(anim-|vida|social-clips|mesa-clips|taverna-clips|taverna-noite-clips|duo-clips|grupo-clips|rosto)/.test(m[1]) || (a >= 0 && b > a && m.index > a && m.index < b)) run(m[1]); } // (the body's files in the page's order: the animation and the life that is seen, 22c; the look and the clothes, 22a)
 // (the realm the modules are given: a scene and the quality — enough to make their meshes)
 const scene = new THREE.Scene();
 const realm = { scene: () => scene, Q: () => ({ view: 420, npcs: 36, detail: 1 }) };

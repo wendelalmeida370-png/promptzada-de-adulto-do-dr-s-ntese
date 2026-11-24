@@ -237,13 +237,13 @@
 
   // ------------------------------ a partida ------------------------------
   // o estado (puro, números e textos: vai no save como está): o monte, a mão e o descarte de cada lado, a glória, a rodada, a oferenda
-  // que ficou no altar (pote), quem mostra primeiro (vis), a tabuleta de cada lado nesta rodada (lance), o que ficou pendente de uma
+  // que ficou no altar (altar), quem mostra primeiro (vis), a tabuleta de cada lado nesta rodada (lance), o que ficou pendente de uma
   // rodada para a outra (o presságio, a maldição, quem perdeu), a aposta e quantas vezes ela dobrou (x), o pedido de dobrar (dobra), e
   // a história de cada rodada (o que a tela mostra)
   C.nova = function (o) {
     const seed = o.seed | 0; const civ = [o.civ[0], o.civ[1]].map(c => (DECKS[c] ? c : 'classico'));
     const p = [0, 1].map(i => { const d = baralha(DECKS[civ[i]].map(c => c.id), Math.imul(seed, 31) + i * 977 + 5); return { monte: d.slice(C.MAO), mao: d.slice(0, C.MAO), desc: [], gl: 0, bonus: 0, mal: 0, perdeu: 0, venc: 0 }; });
-    return { v: C.VERSAO, id: o.id | 0, seed, civ, quem: [o.quem ? o.quem[0] | 0 : 0, o.quem ? o.quem[1] | 0 : 0], r: 0, comprou: 0, pote: 0, vis: -1, lance: [null, null], p, x: 1, aposta: +o.aposta || 0, dobrou: [0, 0], dobra: null, hist: [], fim: null };
+    return { v: C.VERSAO, id: o.id | 0, seed, civ, quem: [o.quem ? o.quem[0] | 0 : 0, o.quem ? o.quem[1] | 0 : 0], r: 0, comprou: 0, altar: 0, vis: -1, lance: [null, null], p, x: 1, aposta: +o.aposta || 0, dobrou: [0, 0], dobra: null, hist: [], fim: null };
   };
   const other = s => 1 - s;
   C.outro = other;
@@ -296,7 +296,7 @@
   // (a melhor da mão — a de maior força; no empate a primeira pela chave —, e a mais fraca, sem a jogada)
   const melhor = L => { let b = -1; for (let i = 0; i < L.length; i++) { const c = BY[L[i]]; const o = b >= 0 ? BY[L[b]] : null; if (!o || c.f > o.f || (c.f === o.f && c.id < o.id)) b = i; } return b; };
   const fracaIdx = (L, id) => { let b = -1; for (let i = 0; i < L.length; i++) { if (L[i] === id) continue; const c = BY[L[i]]; const o = b >= 0 ? BY[L[b]] : null; if (!o || c.f < o.f || (c.f === o.f && c.id < o.id)) b = i; } return b; };
-  const restaOf = s => { let n = s.pote; for (let r = s.r; r < C.RODADAS; r++) n += C.OF[r]; return n; };
+  const restaOf = s => { let n = s.altar; for (let r = s.r; r < C.RODADAS; r++) n += C.OF[r]; return n; };
 
   // a rodada se resolve (as duas tabuletas postas): quem vence, a glória, o que fica para a próxima; devolve o registro da rodada — as
   // tabuletas, as forças, quem venceu, o que ganhou, e os eventos na ordem em que a tela os mostra (ev: [{ k, lado, … }])
@@ -316,9 +316,9 @@
     if (d.trocou) ev.push({ k: 'troca', lado: PA === 'troca' ? 0 : 1 });
     if (d.pesa >= 0) ev.push({ k: 'pesagem', lado: d.pesa }); if (d.juiz >= 0) ev.push({ k: 'juiz', lado: d.juiz });
     if (d.mult > 1) ev.push({ k: 'mare', lado: PA === 'mare' ? 0 : 1 });
-    const vale = (of + s.pote) * d.mult; let ganho = 0;
-    if (d.w >= 0) { const q = s.p[d.w]; ganho = vale + (P[d.w] === 'oferenda' ? CC[d.w].n : 0); q.gl += ganho; q.venc++; s.pote = 0; if (P[d.w] === 'oferenda') ev.push({ k: 'oferenda', lado: d.w, n: CC[d.w].n }); }
-    else s.pote = vale;
+    const vale = (of + s.altar) * d.mult; let ganho = 0;
+    if (d.w >= 0) { const q = s.p[d.w]; ganho = vale + (P[d.w] === 'oferenda' ? CC[d.w].n : 0); q.gl += ganho; q.venc++; s.altar = 0; if (P[d.w] === 'oferenda') ev.push({ k: 'oferenda', lado: d.w, n: CC[d.w].n }); }
+    else s.altar = vale;
     for (const i of [0, 1]) s.p[i].perdeu = d.w === other(i) ? 1 : 0;
     // (as tabuletas jogadas: ao descarte — a que renasce sem ter vencido, de volta à mão)
     for (const i of [0, 1]) { const q = s.p[i]; const id = s.lance[i]; const j = q.mao.indexOf(id); if (j >= 0) q.mao.splice(j, 1); if (P[i] === 'renasce' && d.w !== i) { q.mao.push(id); ev.push({ k: 'renasce', lado: i, c: id }); } else q.desc.push(id); q.bonus = 0; q.mal = 0; }
@@ -333,7 +333,7 @@
       if (p === 'presagio') { q.bonus = c.n; ev.push({ k: 'presagio-vem', lado: i, n: c.n }); }
       if (p === 'maldicao') { o.mal = c.n; ev.push({ k: 'maldicao-vem', lado: i, n: c.n }); }
     }
-    const rec = { r: s.r, c: [ida, idb], f: [d.fa, d.fb], w: d.w, of, vale, ganho, pote: s.pote, mult: d.mult, ev, gl: [A.gl, B.gl] };
+    const rec = { r: s.r, c: [ida, idb], f: [d.fa, d.fb], w: d.w, of, vale, ganho, altar: s.altar, mult: d.mult, ev, gl: [A.gl, B.gl] };
     s.hist.push(rec); s.lance = [null, null]; s.vis = vis >= 0 ? vis : -1; s.r++;
     // (o fim: a sétima rodada; ou quem não pode mais ser alcançado; ou as duas mãos vazias, sem monte)
     const lead = Math.abs(A.gl - B.gl), resta = restaOf(s) * 2 + 2;
@@ -387,7 +387,7 @@
       const id = q.mao[i]; if (i > 0 && q.mao.indexOf(id) < i) continue; const c = BY[id]; const xa = ctxDe(q, id);
       let sum = 0, min = 1e9;
       for (const ox of pool) { const oc = BY[ox]; const d = side === 0 ? duelo(c, oc, xa, xo, of) : duelo(oc, c, xo, xa, of); const w = side === 0 ? d.w : d.w < 0 ? -1 : 1 - d.w;
-        const vale = (of + s.pote) * d.mult; let g = w === 0 ? vale + (c.p === 'oferenda' && !(side === 0 ? d.silA : d.silB) ? c.n : 0) : w === 1 ? -vale : 0;
+        const vale = (of + s.altar) * d.mult; let g = w === 0 ? vale + (c.p === 'oferenda' && !(side === 0 ? d.silA : d.silB) ? c.n : 0) : w === 1 ? -vale : 0;
         // (o que fica para a partida: renascer quando perde, a carta que se compra, a que se tira do outro, o presságio, a visão)
         const sil = side === 0 ? d.silA : d.silB;
         if (!sil) { if (c.p === 'renasce' && w !== 0) g += C.valeDe(c) * 0.32 * (resta / 6); if (c.p === 'compra') g += 0.45 * c.n * (resta / 6); if (c.p === 'colhe' && w === 0) g += 0.45 * c.n * (resta / 6);

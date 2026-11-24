@@ -215,7 +215,7 @@
     ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Urban', dt => G.Urban && G.Urban.update(dt)], ['Social', dt => G.Social && G.Social.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
     ['Life', dt => G.Life && G.Life.update(dt)], ['Carnage', dt => G.Carnage && G.Carnage.update(dt)], ['Animals', dt => G.Animals.updateAll(dt)],
     ['Flora', dt => G.Flora && G.Flora.update(dt)], ['Riches', dt => G.Riches && G.Riches.update(dt)], ['Estates', dt => G.Estates && G.Estates.update(dt)],
-    ['Court', dt => G.Court && G.Court.update(dt)], ['Tavern', dt => G.Tavern && G.Tavern.update(dt)], ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
+    ['Court', dt => G.Court && G.Court.update(dt)], ['Tavern', dt => G.Tavern && G.Tavern.update(dt)], ['JogoDados', dt => G.JogoDados && G.JogoDados.update(dt)], // (the dice games' steps: T4) ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
     ['Nests', dt => G.Nests && G.Nests.update(dt)], ['Polity', dt => G.Polity && G.Polity.update(dt)], ['Justice', dt => G.Justice && G.Justice.update(dt)], ['Crime', dt => G.Crime && G.Crime.update(dt)],
     ['Riots', dt => G.Riots && G.Riots.update(dt)], ['Secrets', dt => G.Secrets && G.Secrets.update(dt)], ['Scene', dt => G.Scene && G.Scene.update(dt)],
     ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],

@@ -134,8 +134,8 @@
     for (let i = E.length - 1; i >= 0; i--) { const e = E[i]; if (S.clock - e.t > 0.45) break; if (e.kind === 'acerto' && e.id === v.id && e.blocked && !e.beast) { const h = heldOf(v); return h && h.outra && /^escudo/.test(h.outra) ? 'cb-guarda-escudo' : 'cb-guarda-arma'; } }
     return null; };
   const stateOf0 = A.stateOf;
-  A.stateOf = function (v, sp) {
-    const s = stateOf0(v, sp); const S = G.S;
+  A.stateOf = function (v, sp, L) {
+    const s = stateOf0(v, sp, L); const S = G.S; // (the look passed on: the reader's choices by what the hands hold — L-2081)
     if (v.downT > S.clock && !v.sleeping && s === 'sleep') return 'knocked'; // (thrown down by a blow — not lying down to sleep)
     if (sp < 0.6 && s !== 'sleep' && s !== 'swim') { const g = guarded(v, S); if (g) return g; }
     if (v.stagT > S.clock && sp < 0.6 && s !== 'sleep' && s !== 'swim') return 'cb-tranco';
