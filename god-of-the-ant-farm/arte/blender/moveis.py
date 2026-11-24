@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 import moveis_forma as F
 import moveis_tabela as PC
+import pacotes as PK
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, 'js', 'movelmesh.js')
@@ -33,7 +34,10 @@ def build(spec, lod):
     return M
 
 def encode(M, spec):
-    P, N, UV, C, idx, parts = [], [], [], [], [], []
+    # (the points of each part joined where they are the same — to a hundredth of a millimetre, the normal's byte, the uv to a tenth of a
+    # millimetre, the light's byte: the same joins as the floats of before (v 1), so the same points and the same triangles —; each kept
+    # with the shape's own normal, which the 16-bit form codes: arte/blender/pacotes.py)
+    P, NF, UV, C, idx, parts = [], [], [], [], [], []
     for name in sorted(M.parts, key=lambda k: (PC.PART_ORDER.index(k) if k in PC.PART_ORDER else 99, k)):
         q = M.parts[name]
         if not q.T: continue
@@ -43,19 +47,15 @@ def encode(M, spec):
             key = (round(p[0], 5), round(p[1], 5), round(p[2], 5), qn, round(uv[0], 4), round(uv[1], 4), ql)
             j = keys.get(key)
             if j is None:
-                j = len(P); keys[key] = j; P.append(key[:3]); N.append(qn); UV.append((key[4], key[5])); C.append((ql, ql, ql))
+                j = len(P); keys[key] = j; P.append(key[:3]); NF.append(tuple(n)); UV.append((key[4], key[5])); C.append((ql, ql, ql))
             rem[i] = j
         for a, b, c in q.T:
             A, B, Cc = rem[a], rem[b], rem[c]
             if A == B or B == Cc or A == Cc: continue
             idx += [A, B, Cc]
         parts.append([name, start, len(idx) - start])
-    P = np.array(P, '<f4'); N = np.array(N, '<i1'); UV = np.array(UV, '<f4'); C = np.array(C, 'u1'); I = np.array(idx)
-    lo, hi = P.min(0), P.max(0); big = len(P) > 65535
-    b64 = lambda a: base64.b64encode(a.tobytes()).decode()
-    d = {'v': 1, 'n': int(len(P)), 't': int(len(I) // 3), 'box': [round(float(v), 4) for v in list(lo) + list(hi)],
-         'pos': b64(P), 'nor': b64(N), 'idx': b64(I.astype('<u4' if big else '<u2')), 'i32': bool(big), 'parts': parts, 'uv': b64(UV), 'col': b64(C),
-         'kind': spec['kind'], 'civ': spec['civ'], 'var': spec.get('var', ''), 'w': spec['w'], 'd': spec['d'], 'h': spec['h'], 'lod': M.lod, 'anc': M.anc}
+    d, (lo, hi), _ = PK.form16(spec['nome'] + ('@1' if M.lod else ''), P, NF, UV, C, idx, parts)
+    d.update({'kind': spec['kind'], 'civ': spec['civ'], 'var': spec.get('var', ''), 'w': spec['w'], 'd': spec['d'], 'h': spec['h'], 'lod': M.lod, 'anc': M.anc})
     # (the piece keeps to its rectangle on the plan — the body bumps the rectangle, not the mesh —, and to its floor)
     tol = 0.004
     if lo[0] < -spec['w'] / 2 - tol or hi[0] > spec['w'] / 2 + tol or lo[2] < -spec['d'] / 2 - tol or hi[2] > spec['d'] / 2 + tol or lo[1] < -tol:
@@ -129,7 +129,7 @@ def export(args):
             lines[nm] = line(nm, d); rep.append((nm, d['t'], len(lines[nm]) / 1024))
     size = write(lines, PC.alias())
     for nm, t, kb in rep: print(f'  {nm}: {t} triângulos, {kb:.1f} KB')
-    print(f'movelmesh.js: {len(lines)} modelos, {size / 1024:.0f} KB')
+    print(f'movelmesh.js: {len(lines)} modelos, {size / 1024:.0f} KB · {PK.worst()}')
 
 def count():
     old = read_old(); tot = 0
