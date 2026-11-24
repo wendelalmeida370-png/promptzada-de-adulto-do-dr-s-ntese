@@ -1980,7 +1980,7 @@
       const c = A.scene(A.earOf({ x: st.cx, y: st.cy, yaw: 0, r: 20 })); if (!c) continue;
       for (const f of c.fontes) {
         const de = f.de || {}; let why = '';
-        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo === 'ocio') { const oc = A.ocioSom ? A.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) why = 'de uma coisinha do ócio que não está acontecendo'; } else if (f.tipo === 'passos' || f.tipo === 'porta') { if (!(G.Interiors && G.Interiors.passage(v)) && !(s.avatar && s.avatar.id === v.id)) why = 'de quem não está passando'; } else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; } // (the little thing of the idle that sounds is its owner's doing: the one the scheduler gives now, 22c D-610)
+        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo === 'ocio') { const oc = A.ocioSom ? A.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) why = 'de uma coisinha do ócio que não está acontecendo'; } else if (f.tipo === 'passos' || f.tipo === 'porta') { if (!(G.Interiors && G.Interiors.passage(v)) && !(s.avatar && s.avatar.id === v.id)) why = 'de quem não está passando'; } else if (f.tipo === 'soluco') { if (!(A.ebrioDe(v) >= A.SOLUCO)) why = 'o soluço de quem não bebeu'; } else if (f.tipo === 'coro') { if (!(f.n >= 2) || (f.quem || []).some(id => { const p = s.villagers.get(id); return !p || !A.CORO[p.act]; })) why = 'o coro de quem não grita'; } else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; } // (the little thing of the idle that sounds is its owner's doing: the one the scheduler gives now, 22c D-610)
         if (!why && de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) why = 'de uma operação que não está viva'; }
         if (!why && de.b && !s.buildings.has(de.b)) why = 'de um prédio que não existe';
         if (!why && de.navio !== undefined && !s.ships.some(x => x.id === de.navio && x.moving)) why = 'de um navio parado ou que não existe';
@@ -3882,6 +3882,10 @@
   const DISHES = ['peixe', 'marisco', 'carne', 'arroz', 'trigo', 'cevada', 'milho', 'sorgo', 'horta', 'ovos', 'leite', 'fruta', 'mel', 'azeite', 'provisao'];
   const DRINKS = { 'bebida-cerveja': 'cerveja', 'bebida-cerveja-copo': 'cerveja', 'bebida-vinho': 'vinho', 'bebida-vinho-copo': 'vinho', 'bebida-pulque': 'pulque', 'bebida-mel': 'mel', 'bebida-mel-caneca': 'mel' };
   const HOTD = { 'comida-leite': 0, 'comida-fruta': 0, 'comida-mel': 0, 'comida-azeite': 0 };
+  // (the feast of the day, the world's: a decoration of a kind, of a model; its platter)
+  const festa = (W, k) => !!W.festa && W.festa.enfeites.some(e => e.k === k);
+  const festaM = (W, m) => !!W.festa && W.festa.enfeites.some(e => e.modelo === m);
+  const pratoF = (W, m) => !!W.festa && !!W.festa.prato && 'comida-festa-' + W.festa.prato.civ === m;
   // the cause of each thing, read again from what the building has now (G.Atmos.within): true, or what is missing
   const CAUSA = {
     jarra: W => W.bebida.length || W.bens.some(q => q.como === 'potes') || 'jarra sem bebida no livro',
@@ -3901,7 +3905,7 @@
     saco: W => cereal(W) || 'saco sem grão', cesto: W => W.comida.some(q => ['fruta', 'ovos', 'marisco'].includes(q.k)) || 'cesto sem fruta, ovos nem mariscos',
     lenha: W => !!W.lenha || 'lenha sem madeira no armazém do povo',
     panela: W => !!W.cozinha || 'panela sem fogo cozinhando', caldeirao: W => (!!W.cozinha && !!W.metal) || 'caldeirão sem fogo cozinhando ou sem metal',
-    lamparina: W => (!!W.luz && !!W.luz.oleo) || 'lamparina sem óleo para queimar', vela: W => (!!W.luz && W.luz.cera) || 'vela sem cera',
+    lamparina: W => (!!W.luz && !!W.luz.oleo) || 'lamparina sem óleo para queimar', vela: W => (!!W.luz && W.luz.cera) || festa(W, 'vela') || 'vela sem cera (nem a cera da festa)',
     'pano-dobrado': W => W.weave || W.bens.some(q => q.k === 'tecido') || 'pano onde o povo não tece',
     tapete: W => (!!W.pano && (W.pano.tapete || W.weave)) || 'tapete sem tecelagem nem riqueza', tapecaria: W => (!!W.pano && W.pano.tapecaria) || 'tapeçaria sem tecelagem nem riqueza',
     cavilha: () => true, // (the peg of what hangs: its own cause, checked with it)
@@ -3924,10 +3928,25 @@
     // ---- the marks of the night (D-749)
     'mancha-a': W => W.manchas > 0 || 'anel de cerveja sem doses servidas', 'mancha-b': W => W.manchas > 0 || 'anel sem doses', 'mancha-c': W => W.manchas > 0 || 'mancha sem doses', 'mancha-d': W => W.manchas > 0 || 'mancha sem doses',
     ossos: W => W.mesa.some(q => q.jogo) || 'ossinhos sem jogo à mesa',
-    cacos: W => (W.chao.some(q => q.k === 'cacos') && W.barro) || 'cacos sem caneca de barro quebrada', 'caneca-caida': W => W.chao.some(q => q.k === 'caneca-caida') || 'caneca caída sem briga',
-    poca: W => W.chao.some(q => q.k === 'poca') || 'poça sem nada derramado',
+    cacos: W => (W.chao.some(q => q.k === 'cacos') && W.barro) || 'cacos sem caneca de barro quebrada', 'caneca-caida': W => W.chao.some(q => q.k === 'caneca-caida') || W.caidos.length > 0 || 'caneca caída sem briga nem desmaio',
+    poca: W => W.chao.some(q => q.k === 'poca') || W.caidos.length > 0 || 'poça sem nada derramado',
     lousa: W => (!!W.lousa && W.lousa.k === 'lousa') || 'lousa sem o porte da lousa', quadro: W => (!!W.lousa && W.lousa.k === 'quadro') || 'quadro sem o porte do quadro', placa: W => (!!W.lousa && W.lousa.k === 'placa') || 'placa pintada sem casa rica ou grande',
     'pano-ombro': W => !!W.ombro || 'pano no ombro sem taverneiro de povo que tece',
+    // ---- the fourth wave (T7, D-880 to D-885): the feast's decorations by what they are made of, its platter; the door barred and
+    // broken in; the games at the tables; the cup of who fainted
+    'guirlanda-flores': W => festaM(W, 'guirlanda-flores') || 'guirlanda de flores sem festa', 'guirlanda-horta': W => festaM(W, 'guirlanda-horta') || 'guirlanda da horta sem festa',
+    bandeirolas: W => (festaM(W, 'bandeirolas') && W.weave) || 'bandeirolas sem festa ou onde o povo não tece', 'pano-festa': W => (festaM(W, 'pano-festa') && W.weave) || 'pano da festa sem festa ou onde o povo não tece',
+    'estandarte-classico': W => festaM(W, 'estandarte-classico') || 'estandarte sem festa', 'estandarte-romano': W => festaM(W, 'estandarte-romano') || 'estandarte sem festa',
+    'estandarte-grego': W => festaM(W, 'estandarte-grego') || 'estandarte sem festa', 'estandarte-egipcio': W => festaM(W, 'estandarte-egipcio') || 'estandarte sem festa',
+    'estandarte-nordico': W => festaM(W, 'estandarte-nordico') || 'estandarte sem festa', 'estandarte-asteca': W => festaM(W, 'estandarte-asteca') || 'estandarte sem festa',
+    petalas: W => festa(W, 'petalas') || 'pétalas sem festa',
+    'comida-festa-classico': W => pratoF(W, 'comida-festa-classico') || 'prato da festa sem festa', 'comida-festa-romano': W => pratoF(W, 'comida-festa-romano') || 'prato da festa sem festa',
+    'comida-festa-grego': W => pratoF(W, 'comida-festa-grego') || 'prato da festa sem festa', 'comida-festa-egipcio': W => pratoF(W, 'comida-festa-egipcio') || 'prato da festa sem festa',
+    'comida-festa-nordico': W => pratoF(W, 'comida-festa-nordico') || 'prato da festa sem festa', 'comida-festa-asteca': W => pratoF(W, 'comida-festa-asteca') || 'prato da festa sem festa',
+    tranca: W => (!!W.porta && W.porta.estado === 'trancada') || 'tranca numa porta que não está trancada',
+    'porta-caida': W => (!!W.porta && W.porta.estado === 'arrombada') || 'porta caída numa porta que não foi arrombada', lascas: W => (!!W.porta && W.porta.estado === 'arrombada') || 'lascas sem arrombamento',
+    dado: W => W.jogos.some(q => q.dados) || 'dados sem jogo de dados', 'copo-dados': W => W.jogos.some(q => q.dados && q.dados.copo) || 'copo de dados sem jogo',
+    cartas: W => W.jogos.some(q => q.cartas) || 'cartas sem jogo de cartas', monte: W => W.jogos.some(q => q.cartas && q.cartas.monte) || 'monte sem jogo de cartas',
   };
   QA.dentroCausa = CAUSA; // (for the guard: every thing of the file has its cause here — rule 296)
   // (the walls' faces of a storey, as the plan has them: the distance of a point to the nearest face)
@@ -3969,7 +3988,10 @@
         const c = CAUSA[t.k]; const r = c ? c(W, t) : 'coisa sem regra de causa no verificador'; if (r !== true && !(r && typeof r !== 'string')) out.push([3, `${what}: ${r}`, b.id]);
         if (CLAY[t.k] && !W.barro) out.push([2, `${what} de barro onde o povo nunca teve a cerâmica (nada vem do nada)`, b.id]);
         if (t.k === 'caldeirao' && !W.metal) out.push([2, `${what} de metal onde o povo não tem metal`, b.id]);
-        if (t.lit && !(W.luz && W.luz.acesa)) out.push([3, `${what} acesa sem ninguém acordado no escuro (${W.luz ? W.luz.why : 'nada para queimar'})`, b.id]);
+        if (t.lit && !(W.luz && W.luz.acesa) && !(t.festa && W.festa && W.festa.acesa)) out.push([3, `${what} acesa sem ninguém acordado no escuro (${W.luz ? W.luz.why : 'nada para queimar'})`, b.id]);
+        // (a part of the feast's platter only of what the recipe spent; a die on a face of its own)
+        if (/^comida-festa-/.test(t.k) && W.festa && W.festa.prato && JSON.stringify(t.de || []) !== JSON.stringify(W.festa.prato.de)) out.push([3, `${what}: as partes do prato da festa não são as que a receita gastou`, b.id]);
+        if (t.k === 'dado' && !(t.face >= 0 && t.face <= 6)) out.push([3, `${what}: um dado sem a face que o mundo jogou`, b.id]);
         // in the lot
         const pad = t.on === 'fora' ? 0.1 : 0; if (!(t.x > -pad && t.x < L + pad && t.z > -pad && t.z < L + pad)) out.push([2, `${what} fora do lote (${t.x}, ${t.z})`, b.id]);
         const l = p.levels.find(q => q.lv === t.lv); if (!l) { out.push([3, `${what} num andar que a planta não tem`, b.id]); continue; }

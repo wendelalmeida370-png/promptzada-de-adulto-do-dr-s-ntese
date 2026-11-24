@@ -285,7 +285,6 @@
     mint: (t, v) => { osc('triangle', 1700, t, 0.12, 0.14 * v, sfx, 1500); nz(t, 0.03, 0.2 * v, 'highpass', 3500); LIB.coin(t + 0.1, v * 0.6); },
     cup: (t, v) => { osc('sine', 1900, t, 0.06, 0.035 * v, sfx, 1700); osc('triangle', 420, t + 0.02, 0.05, 0.05 * v, sfx, 300); },
     scratch: (t, v) => { nz(t, 0.18, 0.03 * v, 'highpass', 4500, 0, sfx, 0, 0.02); nz(t + 0.25, 0.12, 0.025 * v, 'highpass', 5000); },
-    cook: (t, v) => { nz(t, 0.6, 0.04 * v, 'bandpass', 900, 1.5, sfx, 600, 0.15); for (let k = 0; k < 3; k++) osc('sine', 300 + G.VR() * 200, t + k * 0.18, 0.05, 0.02 * v, sfx, 500); },
     drill: (t, v, o) => { nz(t, 0.14, 0.1 * v, 'bandpass', 3000, 2, sfx, 1400); osc('sine', 100, t + 0.16, 0.1, 0.2 * v, sfx, 60); voc(140 * (o.tom || 1), t + 0.02, 0.1, 0.04 * v, 800); },
     scythe: (t, v) => { nz(t, 0.28, 0.1 * v, 'bandpass', 4200, 1.5, sfx, 1800, 0.05); },
     hoe: (t, v) => { nz(t, 0.08, 0.16 * v, 'lowpass', 700); osc('sine', 140, t, 0.07, 0.1 * v, sfx, 80); },
@@ -385,6 +384,115 @@
     panela: (t, v) => { for (let k = 0; k < 3; k++) osc('sine', G.vrr(240, 320), t + k * 0.11, 0.05, 0.05 * v, sfx, G.vrr(520, 700)); },
     chuvaTelhado: (t, v) => { for (let k = 0; k < 8; k++) nz(t + G.vrr(0, 0.4), 0.008, 0.22 * v, 'bandpass', G.vrr(1500, 4500), 2); },
   });
+  // ---------------- the tavern's fourth wave (T8, D-890 to D-899): the context, the drink, the trades, the games ----------------
+  // (a heavy thing falling on a floor: on boards the floor booms, on earth it flops, on flags it slaps)
+  function fall(t, v, piso, heavy) {
+    const h = heavy || 1;
+    if (piso === 'tabua') { osc('sine', 78, t, 0.3, 0.42 * v * h, sfx, 44); nz(t, 0.08, 0.22 * v * h, 'bandpass', 260, 2); }
+    else if (piso === 'terra') { osc('sine', 60, t, 0.2, 0.32 * v * h, sfx, 40); nz(t, 0.1, 0.2 * v * h, 'lowpass', 320); }
+    else { nz(t, 0.04, 0.26 * v * h, 'bandpass', 1300, 1); osc('sine', 88, t, 0.14, 0.28 * v * h, sfx, 52); }
+  }
+  // (knocks of wood or clay on wood: dice, tablets — bone bright, wood dull, clay short and ringing, wax soft)
+  const KNOCK = { osso: [2600, 4200, 5], madeira: [1100, 2000, 4], barro: [1800, 3000, 6], cera: [700, 1200, 2], papiro: [2200, 3600, 1] };
+  function tick(t, v, mat, k) { const K = KNOCK[mat] || KNOCK.madeira; const f = G.vrr(K[0], K[1]) * (k || 1); nz(t, mat === 'osso' ? 0.006 : 0.01, 0.16 * v, 'bandpass', f, K[2]); if (mat !== 'papiro' && mat !== 'cera') osc('triangle', f * 0.5, t, 0.018, 0.035 * v, sfx, f * 0.42); }
+  // (dice tumbling on a board: each a few bounces closer and closer, a little roll at the end)
+  function tumble(t, v, mat, n) { let end = t; for (let d = 0; d < (n || 2); d++) { let at = t + d * G.vrr(0.01, 0.05), gap = G.vrr(0.09, 0.14); for (let k = 0; k < 6; k++) { tick(at, v * (1 - k * 0.13), mat); at += gap; gap *= G.vrr(0.62, 0.78); } nz(at, 0.1, 0.025 * v, 'bandpass', mat === 'osso' ? 2600 : 1300, 2, sfx, mat === 'osso' ? 1800 : 900); end = Math.max(end, at + 0.1); } return end; }
+  // (a shout of many: n voices of the room, a breath apart, the vowels of its people)
+  function multidao(t, v, o, n, vg, f2k) { const L = lingua(o); n = Math.min(10, Math.max(2, n | 0)); for (let k = 0; k < n; k++) { const tom = k % 3 === 1 ? 1.5 : G.vrr(0.9, 1.15); const f = 130 * tom * G.vrr(1.15, 1.45); syl(f, t + G.vrr(0, 0.12), G.vrr(0.3, 0.5), 0.08 * v / Math.sqrt(n / 2), vg || G.vpick(['e', 'a', 'E']), f * (f2k || 1.25), 0.025, sfx, tom); } }
+  Object.assign(LIB, {
+    // the bar dropped across the door into its brackets: the wood sliding, its weight falling home, the brackets ringing
+    tranca: (t, v) => { nz(t, 0.28, 0.07 * v, 'bandpass', 620, 2, sfx, 950, 0.04); osc('sine', 110, t + 0.3, 0.2, 0.38 * v, sfx, 58); nz(t + 0.3, 0.06, 0.24 * v, 'lowpass', 600); nz(t + 0.3, 0.05, 0.14 * v, 'bandpass', 420, 4); for (let k = 0; k < 2; k++) nz(t + 0.42 + k * 0.07, 0.02, 0.08 * v, 'bandpass', 900, 4); },
+    // the keeper calling the street in, low and urgent: «venham!»
+    chamado: (t, v, o) => { const L = lingua(o), tom = (o && o.tom) || 1, f0 = 125 * tom; let at = t; for (let k = 0; k < 3; k++) { at += cons(at, 0.08 * v, L); syl(f0 * [1.5, 1.7, 1.4][k], at, 0.2, 0.13 * v, G.vpick(L.v), f0 * [1.7, 1.6, 1.2][k], 0.02, sfx, tom); at += 0.24; } },
+    // the held breath of who hides in a corner: a shaking breath in, a slow one out
+    respiro: (t, v) => { const s = ac.createBufferSource(); s.buffer = noise; s.loop = true; const f = ac.createBiquadFilter(), g = ac.createGain(), am = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(); f.type = 'bandpass'; f.frequency.value = 1300; f.Q.value = 1; lfo.frequency.value = 9; lg.gain.value = 0.4; am.gain.value = 0.6; lfo.connect(lg); lg.connect(am.gain); env(g, t, 0.15, 0.03 * v, 0.3); s.connect(f); f.connect(am); am.connect(g); g.connect(out(sfx)); s.start(t, G.VR()); lfo.start(t); s.stop(t + 0.6); lfo.stop(t + 0.6); nz(t + 0.7, 0.8, 0.012 * v, 'bandpass', 800, 1, sfx, 500, 0.3); },
+    // a blow on the door being forced: the shoulder or the axe, the leaf's panel booming, the bar rattling in its brackets — and the wood
+    // that cracks more with every blow (golpes: the blows so far)
+    arrombar: (t, v, o) => { osc('sine', 72, t, 0.26, 0.5 * v, sfx, 44); nz(t, 0.09, 0.32 * v, 'lowpass', 520); nz(t, 0.32, 0.12 * v, 'bandpass', 185, 5); for (let k = 0; k < 3; k++) nz(t + 0.05 + k * 0.045, 0.015, 0.09 * v, 'bandpass', 950, 4); const c = Math.min(1, ((o && o.golpes) || 1) / 6); const n = Math.floor(2 + 10 * c); for (let k = 0; k < n; k++) nz(t + 0.02 + G.vrr(0, 0.12), 0.004, (0.05 + 0.12 * c) * v, 'bandpass', G.vrr(2200, 6000), 2); },
+    // the door that yields: the wood splitting, the leaf slamming the wall, the bar clattering on the floor
+    portaCede: (t, v) => { const g = nz(t, 0.35, 0.32 * v, 'highpass', 1800, 0, sfx, 0, 0.005); g.connect(revIn); for (let k = 0; k < 18; k++) nz(t + G.vrr(0, 0.25), 0.005, G.vrr(0.08, 0.24) * v, 'bandpass', G.vrr(1500, 6500), 2); osc('sine', 64, t + 0.18, 0.35, 0.55 * v, sfx, 36); nz(t + 0.18, 0.12, 0.3 * v, 'lowpass', 700); let at = t + 0.55; for (let k = 0; k < 3; k++) { nz(at, 0.03, 0.16 * v * (1 - k * 0.25), 'bandpass', 700, 4); osc('sine', 140, at, 0.06, 0.1 * v, sfx, 100); at += 0.16 * (1 - k * 0.3); } },
+    // a speech: one long phrase, the voice rising to what it says and falling, the pause after it (who gives the feast, raising the cup)
+    discurso: (t, v, o) => { const L = lingua(o), tom = (o && o.tom) || 1, f0 = 120 * tom; const n = 6 + (G.VR() * 4 | 0); let at = t; for (let k = 0; k < n; k++) { const u = k / (n - 1); const arc = 1 + 0.45 * Math.sin(Math.PI * Math.min(1, u * 1.3)); const f = f0 * arc * G.vrr(0.96, 1.04); at += cons(at, 0.07 * v, L); const d = (k === n - 1 ? 0.34 : 1 / L.ritmo * G.vrr(0.8, 1.2)); syl(f, at, d, 0.12 * v, G.vpick(L.v), f * (k === n - 1 ? 0.8 : G.vrr(0.95, 1.05)), 0.025, sfx, tom); at += d + (k === Math.floor(n / 2) ? 0.12 : 0); } },
+    // the hall's viva: as many voices as cheer (n), with the claps and the cups of who holds one knocked together (canecas)
+    viva: (t, v, o) => { const n = (o && o.n) || 3; multidao(t, v, o, n, null, 1.3); for (let k = 0; k < Math.min(8, Math.ceil(n / 2)); k++) LIB.palmas(t + 0.15 + k * G.vrr(0.04, 0.12), 0.5 * v, { tom: G.vrr(0.85, 1.2) }); for (let k = 0; k < Math.min(4, Math.floor(((o && o.canecas) || 0) / 2)); k++) cupKnock(t + G.vrr(0.05, 0.4), 0.5 * v, (o && o.mat) || 'barro', G.vrr(0.95, 1.1)); },
+    // the crowd at a match, cheering it on: «hey! hey!» together, the claps on it — more voices, louder (n)
+    torcida: (t, v, o) => { const n = (o && o.n) || 3; for (let b = 0; b < 2; b++) { multidao(t + b * 0.42, v * (0.8 + 0.2 * b), o, n, b ? 'e' : 'E', 1.15); for (let k = 0; k < Math.min(6, n); k++) LIB.palmas(t + b * 0.42 + 0.05 + G.vrr(-0.02, 0.02), 0.45 * v, { tom: G.vrr(0.85, 1.2) }); } },
+    // the dancers' ring at the head of the music's turn: «hop!»
+    roda: (t, v, o) => { multidao(t, 0.8 * v, o, Math.max(3, (o && o.n) || 3), 'o', 1.4); },
+    // the drink thrown: the cup's swing, the liquid through the air and on the other's face and clothes, the drips — and the thrower's shout
+    jogarBebida: (t, v, o) => { const tom = (o && o.tom) || 1; nz(t, 0.18, 0.08 * v, 'bandpass', 2200, 1.5, sfx, 800); nz(t + 0.16, 0.18, 0.2 * v, 'bandpass', 900, 1.5, sfx, 500); nz(t + 0.16, 0.12, 0.1 * v, 'lowpass', 1500); for (let k = 0; k < 4; k++) osc('sine', G.vrr(900, 1600), t + 0.4 + k * G.vrr(0.08, 0.18), 0.04, 0.025 * v, sfx, G.vrr(500, 800)); voc(118 * tom * 1.6, t + 0.02, 0.32, 0.1 * v, 1100, 118 * tom * 1.3, 0.03); },
+    // the one it was thrown on: the gasp, the outraged «ei!»
+    molhado: (t, v, o) => { const tom = (o && o.tom) || 1; nz(t, 0.22, 0.06 * v, 'bandpass', 950, 1.4, sfx, 1600, 0.04); syl(130 * tom * 1.5, t + 0.28, 0.32, 0.13 * v, 'E', 130 * tom * 2, 0.02, sfx, tom); },
+    // the drunk singing alone and loud: the people's tune, out of tune — the notes off by a quarter tone, the lines sliding, the time unsteady
+    cantoria: (t, v, o) => { const N = (o && o.notas) || PENTA; const tom = (o && o.tom) || 1; const L = lingua(o); const base = Math.floor(N.length / 3); let at = t, i = base + (G.VR() * 3 | 0); const n = 4 + (G.VR() * 3 | 0);
+      for (let k = 0; k < n; k++) { i = G.clamp(i + G.vpick([-2, -1, 0, 1, 1, 2]), 0, N.length - 1); const off = Math.pow(2, G.vrr(-0.7, 0.7) / 12); const f = N[i] * (tom >= 1.3 ? 1 : 0.5) * off; const d = G.vrr(0.22, 0.55); syl(f, at, d, 0.14 * v, G.vpick(L.v), f * Math.pow(2, G.vrr(-1.2, 0.6) / 12), 0.04, sfx, tom); at += d + G.vrr(0, 0.12); }
+      if (G.VR() < 0.3) LIB.hiccup(at + 0.05, 0.8 * v, o); },
+    // the faint: the knees, then the body on the floor — the cup out of the hand rolling away
+    desmaio: (t, v, o) => { const p = (o && o.piso) || 'terra'; fall(t, 0.5 * v, p, 0.6); fall(t + 0.22, v, p, 1.2); nz(t + 0.24, 0.3, 0.05 * v, 'bandpass', 600, 1, sfx, 300); if (o && o.mat) { cupKnock(t + 0.3, 0.6 * v, o.mat); for (let k = 0; k < 3; k++) cupKnock(t + 0.5 + k * 0.17, 0.25 * v * (1 - k * 0.25), o.mat, 1.05); } syl(95 * ((o && o.tom) || 1), t + 1.1, 0.5, 0.05 * v, 'o', 80 * ((o && o.tom) || 1), 0.1, sfx); },
+    // a body dragged on the floor: the clothes and the heels on earth, boards or flags — and the breath of who pulls
+    arrastar: (t, v, o) => { const p = (o && o.piso) || 'terra'; const F = p === 'tabua' ? [700, 2] : p === 'terra' ? [380, 1.2] : [1300, 1.6]; const s = ac.createBufferSource(); s.buffer = noise; s.loop = true; const f = ac.createBiquadFilter(), g = ac.createGain(), am = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(); f.type = 'bandpass'; f.frequency.value = F[0]; f.Q.value = F[1]; lfo.frequency.value = G.vrr(14, 24); lg.gain.value = 0.35; am.gain.value = 0.65; lfo.connect(lg); lg.connect(am.gain); env(g, t, 0.12, 0.13 * v, 0.9); s.connect(f); f.connect(am); am.connect(g); g.connect(out(sfx)); s.start(t, G.VR()); lfo.start(t); s.stop(t + 1.2); lfo.stop(t + 1.2); LIB.heave(t + 0.1, 0.8 * v, o); },
+    // the brewer's paddle in the vat: its knock on the staves, the wort turned over — and, the vat on the fire, its boil (ferve)
+    cuba: (t, v, o) => { nz(t, 0.03, 0.16 * v, 'bandpass', 320, 5); osc('sine', 180, t, 0.05, 0.08 * v, sfx, 140); nz(t + 0.06, 0.55, 0.08 * v, 'bandpass', 650, 1.2, sfx, 1300, 0.12); nz(t + 0.4, 0.3, 0.05 * v, 'bandpass', 1000, 1.2, sfx, 550, 0.08); if (o && o.ferve) for (let k = 0; k < 5; k++) { const f0 = G.vrr(140, 260); osc('sine', f0, t + 0.2 + k * G.vrr(0.08, 0.2), 0.06, 0.06 * v, sfx, f0 * 2.1); } },
+    // the vat on the fire, by itself: the big slow bubbles of the boiling wort, the hiss under them
+    fervura: (t, v) => { nz(t, 1, 0.025 * v, 'bandpass', 900, 0.8, sfx, 700, 0.2); for (let k = 0; k < 6; k++) { const f0 = G.vrr(110, 240); osc('sine', f0, t + G.vrr(0, 1), G.vrr(0.05, 0.1), G.vrr(0.04, 0.09) * v, sfx, f0 * G.vrr(1.8, 2.6)); } },
+    // the knucklebones of the T4 — the dice in their cup, thrown, tumbling, still — and the thrower's cry, the table's laugh
+    dados: (t, v, o) => { const m = (o && o.mat) || 'madeira'; for (let k = 0; k < 9; k++) tick(t + k * 0.045 + G.vrr(0, 0.02), 0.5 * v, m, 0.9); const end = tumble(t + 0.6, v, m, 2); const tom = (o && o.tom) || 1; if (G.VR() < 0.65) syl(140 * tom, end + 0.15, 0.28, 0.1 * v, G.vpick(['a', 'o', 'e']), 185 * tom, 0.02, sfx, tom); if (G.VR() < 0.3) laugh(end + 0.5, 0.5 * v, o); },
+    // the cards of the T5, tablets of each people's stuff: shuffled (clacked, or riffled where they are papyrus), laid down, a word over them
+    cartas: (t, v, o) => { const m = (o && o.mat) || 'madeira'; if (m === 'papiro') { nz(t, 0.35, 0.05 * v, 'highpass', 3200, 0, sfx, 0, 0.05); } else for (let k = 0; k < 6; k++) tick(t + k * 0.06, 0.4 * v, m); tick(t + 0.6, 0.8 * v, m, 0.8); nz(t + 0.6, 0.03, 0.06 * v, 'bandpass', 1500, 1.5); if (G.VR() < 0.4) { const tom = (o && o.tom) || 1; syl(130 * tom, t + 0.9, 0.22, 0.07 * v, G.vpick(['a', 'e', 'o']), 140 * tom, 0.02, sfx, tom); } },
+    // the arm wrestle: two straining, through the teeth, and the table creaking under the elbows
+    bracoForca: (t, v, o) => { const tom = (o && o.tom) || 1; for (let k = 0; k < 2; k++) { const f = 105 * tom * (k ? 1.12 : 1); syl(f, t + k * 0.1, 0.75, 0.07 * v, k ? 'schwa' : 'e', f * G.vrr(1.08, 1.2), 0.1, sfx, tom); } nz(t + 0.2, 0.5, 0.04 * v, 'bandpass', 520, 9, sfx, 700, 0.1); },
+    // its end: the beaten arm slammed on the table, the cups jumping on it, the winner's shout and the room's «oh!»
+    bracoBate: (t, v, o) => { osc('sine', 140, t, 0.12, 0.42 * v, sfx, 70); nz(t, 0.05, 0.3 * v, 'bandpass', 500, 2); for (let k = 0; k < 3; k++) cupKnock(t + 0.04 + k * 0.05, 0.35 * v, (o && o.mat) || 'barro', 1 + k * 0.05); const tom = (o && o.tom) || 1; voc(118 * tom * 1.6, t + 0.15, 0.3, 0.1 * v, 1100, 118 * tom * 1.9, 0.03); multidao(t + 0.3, 0.7 * v, o, 4, 'o', 1.05); },
+    // the cheat: next to nothing — a tablet or a die slid under the hand on the wood
+    trapaca: (t, v) => { nz(t, 0.16, 0.02 * v, 'bandpass', 2600, 2, sfx, 2000, 0.05); },
+    // the cheat caught: the voices raised over each other, the bench shoved back, the fist on the table, the cups knocked over
+    confusao: (t, v, o) => { const tom = (o && o.tom) || 1; for (let k = 0; k < 3; k++) voc(118 * tom * G.vrr(1.3, 1.9), t + k * G.vrr(0.08, 0.2), 0.35, 0.09 * v, G.vpick([900, 1100, 1300]), 118 * tom * G.vrr(1.1, 2), 0.03); scrape(t + 0.15, v, (o && o.piso) || 'tabua'); osc('sine', 130, t + 0.45, 0.1, 0.35 * v, sfx, 70); nz(t + 0.45, 0.04, 0.22 * v, 'bandpass', 600, 2); for (let k = 0; k < 2; k++) cupKnock(t + 0.5 + k * 0.12, 0.4 * v, (o && o.mat) || 'barro'); },
+    // the drinking match: draught after draught, the throat working
+    goles: (t, v, o) => { const tom = (o && o.tom) || 1; for (let k = 0; k < 5; k++) { const at = t + k * G.vrr(0.26, 0.34); osc('sine', 185 * Math.sqrt(tom), at, 0.07, 0.08 * v, sfx, 118); nz(at, 0.05, 0.05 * v, 'bandpass', 420, 3); } },
+    // the last cup of the match slammed on the table, the breath let out
+    canecaBate: (t, v, o) => { cupKnock(t, 1.3 * v, (o && o.mat) || 'barro'); osc('sine', 120, t, 0.08, 0.2 * v, sfx, 70); nz(t + 0.15, 0.55, 0.06 * v, 'bandpass', 900, 1.1, sfx, 450, 0.06); },
+    // the cooking at a fire — the home's and the tavern's (T3: the same gesture): the sizzle, the ladle on the pot, a bubble
+    cook: (t, v) => { const s = ac.createBufferSource(); s.buffer = noise; s.loop = true; const f = ac.createBiquadFilter(), g = ac.createGain(), am = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(); f.type = 'highpass'; f.frequency.value = 3200; lfo.type = 'square'; lfo.frequency.value = G.vrr(20, 40); lg.gain.value = 0.35; am.gain.value = 0.65; lfo.connect(lg); lg.connect(am.gain); env(g, t, 0.05, 0.035 * v, 0.6); s.connect(f); f.connect(am); am.connect(g); g.connect(out(sfx)); s.start(t, G.VR()); lfo.start(t); s.stop(t + 0.8); lfo.stop(t + 0.8); if (G.VR() < 0.5) { osc('sine', 2350, t + 0.3, 0.12, 0.02 * v, sfx, 2300); osc('sine', 3650, t + 0.3, 0.08, 0.012 * v, sfx); } for (let k = 0; k < 2; k++) { const f0 = G.vrr(260, 380); osc('sine', f0, t + 0.15 + k * 0.2, 0.05, 0.03 * v, sfx, f0 * 1.9); } },
+  });
+  // ---------------- the screen's own sounds (T8, D-896): a sound of no place, for the screen — the games of the body ----------------
+  // G.Audio.ui(nome, o): the dice game and the cards of the T4 and the T5 call it (o: { mat — 'osso', 'madeira', the cards' stuff —, n — how
+  // many dice, coins —, vol }, or the material alone). No owner in the world: the screen is its owner; nothing of the world is read
+  const UI = {
+    // the dice shaken in the cup (the cup's own hollow over them)
+    'dados-copo': (t, v, o) => { const m = o.mat || 'madeira'; const n = 14 + ((o.n || 2) - 2) * 3; for (let k = 0; k < n; k++) tick(t + k * 0.04 + G.vrr(0, 0.018), 0.55 * v, m, 0.85); nz(t, 0.6, 0.03 * v, 'bandpass', 700, 3, sfx, 760, 0.05); },
+    // thrown on the board: each die bouncing and rolling
+    'dados-rolar': (t, v, o) => { tumble(t, v, o.mat || 'madeira', o.n || 2); },
+    // still: the last knock and the wobble
+    'dados-parar': (t, v, o) => { const m = o.mat || 'madeira'; tick(t, 0.9 * v, m); tick(t + 0.07, 0.4 * v, m, 1.05); tick(t + 0.11, 0.2 * v, m, 1.1); },
+    // the tablets shuffled: a run of knocks swelling, the deck squared — the papyrus and the amate riffled
+    'cartas-embaralhar': (t, v, o) => { const m = o.mat || 'madeira'; if (m === 'papiro') { const s = ac.createBufferSource(); s.buffer = noise; s.loop = true; const f = ac.createBiquadFilter(), g = ac.createGain(), am = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(); f.type = 'highpass'; f.frequency.value = 2600; lfo.frequency.value = 38; lg.gain.value = 0.5; am.gain.value = 0.5; lfo.connect(lg); lg.connect(am.gain); env(g, t, 0.1, 0.09 * v, 0.45); s.connect(f); f.connect(am); am.connect(g); g.connect(out(sfx)); s.start(t, G.VR()); lfo.start(t); s.stop(t + 0.7); lfo.stop(t + 0.7); }
+      else for (let k = 0; k < 14; k++) tick(t + k * 0.035 + G.vrr(0, 0.01), (0.3 + 0.04 * k) * v, m); tick(t + 0.62, 0.8 * v, m, 0.8); tick(t + 0.72, 0.7 * v, m, 0.8); },
+    // one card dealt: the slide, the landing
+    'cartas-dar': (t, v, o) => { const m = o.mat || 'madeira'; nz(t, 0.08, 0.08 * v, 'bandpass', 2600, 1.5, sfx, 1600); if (m === 'papiro') nz(t + 0.08, 0.02, 0.1 * v, 'bandpass', 1500, 1); else tick(t + 0.08, 0.5 * v, m, 0.9); },
+    // a card played on the table: firmer
+    'cartas-jogar': (t, v, o) => { const m = o.mat || 'madeira'; nz(t, 0.05, 0.1 * v, 'bandpass', 2200, 1.5, sfx, 1300); if (m === 'papiro') { nz(t + 0.05, 0.03, 0.2 * v, 'bandpass', 1600, 1); osc('sine', 150, t + 0.05, 0.05, 0.12 * v, sfx, 100); } else { tick(t + 0.05, v, m, 0.8); osc('sine', 160, t + 0.05, 0.05, 0.1 * v, sfx, 110); } },
+    // a card turned over: the flick and the light knock
+    'cartas-virar': (t, v, o) => { const m = o.mat || 'madeira'; nz(t, 0.05, 0.06 * v, 'bandpass', 3000, 2, sfx, 1800); nz(t + 0.06, 0.05, 0.05 * v, 'bandpass', 2200, 2, sfx, 3000); if (m === 'papiro') nz(t + 0.12, 0.02, 0.08 * v, 'bandpass', 1500, 1); else tick(t + 0.12, 0.45 * v, m); },
+    // the stake: the coins set down on the table, one on the other, the last one ringing
+    aposta: (t, v, o) => { const n = Math.min(8, o.n || 3); for (let k = 0; k < n; k++) { const at = t + k * G.vrr(0.06, 0.1); const f = G.vrr(2900, 3500); osc('sine', f, at, 0.1, 0.045 * v, sfx, f * 0.99); osc('sine', f * 1.66, at, 0.06, 0.02 * v, sfx); nz(at, 0.008, 0.06 * v, 'bandpass', 4200, 3); } },
+    // the win: a run up the lyre, the coins' shimmer over it
+    vitoria: (t, v) => { [392, 493.9, 587.3, 783.99].forEach((f, k) => { const n = pluckStr(f, t + k * 0.09, 0.2 * v, 3600); n.connect(revIn); }); for (let k = 0; k < 5; k++) osc('sine', G.vrr(3200, 4400), t + 0.35 + k * 0.05, 0.12, 0.018 * v, sfx); },
+    // the loss: down the lyre, softly, and the hand on the table
+    derrota: (t, v) => { [392, 349.2, 293.7].forEach((f, k) => { const n = pluckStr(f, t + k * 0.16, 0.16 * v, 1800); n.connect(revIn); }); osc('sine', 120, t + 0.55, 0.12, 0.14 * v, sfx, 75); nz(t + 0.55, 0.04, 0.08 * v, 'lowpass', 600); },
+  };
+  // (the level of each, measured — T-2021: the dice and the cards about the clatter of a table, the win and the loss under the buttons)
+  const UI_GAIN = { 'dados-copo': 2.4, 'dados-rolar': 2, 'dados-parar': 2.2, 'cartas-embaralhar': 2, 'cartas-dar': 2, 'cartas-jogar': 1.3, 'cartas-virar': 2.4, aposta: 1.3, vitoria: 0.6, derrota: 0.75 };
+  for (const k in UI_GAIN) { const f0 = UI[k]; UI[k] = (t, v, o) => f0(t, v * UI_GAIN[k], o); }
+  A.UI = Object.freeze(Object.keys(UI));
+  A.tocouUi = []; // (what the screen rang — kept while A.gravar is on: the proofs')
+  A.ui = function (nome, o) {
+    const fn = UI[nome]; if (!fn || !ac || !A.sfxOn || A.mute || ac.state !== 'running') return false;
+    const opt = typeof o === 'string' ? { mat: o } : o || NONE; const now = ac.currentTime;
+    if (last['ui:' + nome] && now - last['ui:' + nome] < 0.03) return false; last['ui:' + nome] = now;
+    bus = null; fn(now + 0.01, opt.vol === undefined ? 1 : opt.vol, opt);
+    if (A.gravar) { A.tocouUi.push({ t: now, s: nome, mat: opt.mat || null }); if (A.tocouUi.length > 200) A.tocouUi.splice(0, 100); }
+    return true;
+  };
   // the talk at a speaker's side, in the timbre of the speaker's people: two to four syllables (the voice of one, P9 — D-780)
   LIB.voz = (t, v, o) => { const L = lingua(o), tom = (o && o.tom) || 1, f0 = 118 * tom; const n = 2 + (G.VR() * 3 | 0); let at = t; for (let k = 0; k < n; k++) { const f = f0 * G.vrr(0.9, 1.22); at += cons(at, 0.05 * v, L); const d = 1 / L.ritmo * G.vrr(0.6, 1); syl(f, at, d, 0.085 * v, G.vpick(L.v), f * G.vrr(0.86, 1.1), 0.02, sfx, tom); at += d; } };
   A.sons = () => Object.keys(LIB); // (for the proofs: every sound a table names is in the library)
@@ -504,11 +612,12 @@
   G.worldHooks.push(() => { cena = null; A.cena = null; earNow = null; rung.clear(); bedMix = null; bedAt = 0; scapeT = 0; A.musNow = null; });
   A.tocou = []; // (what the place rang, and of whom — kept while A.gravar is on: the proofs')
   // (what a source gives its sound: the voice's pitch and tongue, the cup's material, the floor, the drink — P9)
-  const giveOf = f => ({ tom: f.tom, notas: f.notas || null, povo: f.povo || null, mat: f.mat || null, piso: f.piso || null, bebado: f.bebado || 0 });
+  const giveOf = f => ({ tom: f.tom, notas: f.notas || null, povo: f.povo || null, mat: f.mat || null, piso: f.piso || null, bebado: f.bebado || f.ebrio || 0, n: f.n || 0, canecas: f.canecas || 0, ferve: f.ferve || 0 });
   // (as: another sound of the same source — the door that shuts behind the one it swung for, the bench under who sits down)
-  function ring(f, vol, far, peso, as) {
+  // (extra: what the player's own memory adds — the blows on a door so far, T8)
+  function ring(f, vol, far, peso, as, extra) {
     const s = as || f.s;
-    if (!emit(s, vol, { pan: f.pan, muf: far ? Math.max(0.7, f.muf || 0) : f.muf, to: 'amb', sala: far ? 0 : f.sala || 0, o: giveOf(f) })) return;
+    if (!emit(s, vol, { pan: f.pan, muf: far ? Math.max(0.7, f.muf || 0) : f.muf, to: 'amb', sala: far ? 0 : f.sala || 0, o: extra ? Object.assign(giveOf(f), extra) : giveOf(f) })) return;
     note(s, f, vol, far, peso);
   }
   function note(s, f, vol, far, peso) {
@@ -533,10 +642,14 @@
         continue;
       }
       let st = rung.get(f.k);
+      // (the act with a sound at its end over, the same one now at another act — the arm wrestle ended, back to the talk: its end, T8)
+      if (st && st.f.fim && st.f.ato !== f.ato) ring(st.f, st.f.gain, false, 0, st.f.fim);
       if (!st) { st = { f, fase: f.fase, fired: f.q === 'contato' && f.fase >= f.contato, next: t + (f.cada || 0.3) * (f.q === 'acaso' ? G.vrr(0.2, 1.2) : G.vrr(0, 0.5)), seen: stamp }; rung.set(f.k, st);
         if (f.tipo === 'passos' && f.pass === 'sai' && f.banco) ring(f, f.gain, false, 0, 'banco'); // (up from the bench, and away)
         if (f.q === 'contato') continue; }
       if (inBed(f)) { st.f = f; st.seen = stamp; continue; }
+      // (a door being forced: the crash the moment its state turns to broken — the world's door, In.doorState —, T8 D-895)
+      if (f.porta !== undefined) { if (f.porta === 'arrombada' && st.porta !== undefined && st.porta !== 'arrombada') ring(f, Math.min(1, f.gain * 1.2), false, 0, 'portaCede'); st.porta = f.porta; if (f.porta === 'arrombada') { st.f = f; st.seen = stamp; continue; } }
       if (f.q === 'contato') {
         if (f.fase < st.fase) { if (reached(st)) ring(st.f, st.f.gain); st.fired = false; } // (a new gesture began)
         st.f = f; st.fase = f.fase; st.seen = stamp;
@@ -546,13 +659,15 @@
       st.f = f; st.seen = stamp;
       if (t < st.next) continue;
       st.next = t + f.cada * (f.q === 'acaso' ? G.vrr(0.5, 1.6) : G.vrr(0.9, 1.15));
-      ring(f, f.gain);
+      if (f.porta !== undefined) { st.n = (st.n || 0) + 1; ring(f, f.gain, false, 0, null, { golpes: st.n }); } else ring(f, f.gain);
     }
     for (const [k, st] of rung) {
       if (st.seen === stamp) continue; if (stamp - st.seen === 1 && reached(st)) ring(st.f, st.f.gain);
       // (the door shut after the last one through; the bench under the one come to the seat)
       if (st.f.q === 'estado') { if (!st.f.fica) ring(st.f, st.f.gain, false, 0, 'portaFecha'); rung.delete(k); continue; }
       if (st.f.tipo === 'passos' && stamp - st.seen === 1 && st.f.pass === 'entra' && st.f.banco) ring(st.f, st.f.gain, false, 0, 'banco');
+      // (the sound of an act's end, the act over: the arm slammed on the table, the match's last cup put down — T8)
+      if (st.f.fim && stamp - st.seen === 1) ring(st.f, st.f.gain, false, 0, st.f.fim);
       if (stamp - st.seen > 12 || st.f.q === 'contato') rung.delete(k);
     }
     // the quarter's bed: the far voices of its own work, as loud as its habit and the hands at it now — moving slowly
@@ -625,7 +740,8 @@
   }
   function wallaTick(t, c, live) {
     const f = live ? top(c, x => x.s === 'murmur') : null; if (!f && !walla) return; if (!walla) wallaMake();
-    const W = walla; W.on = !!f; W.sala = f ? f.sala || 0 : 0; W.B.set(f, t, f ? f.gain * 2.2 : 0); if (!f) { for (const V of W.vs) V.vg.gain.setTargetAtTime(0, t, 0.2); W.crowd.g.gain.setTargetAtTime(0, t, 0.4); return; }
+    // (a feast fills the hall louder and laughs more; mourners in the room hush the talk and stop the laughter — T8, D-890, D-892)
+    const W = walla; W.on = !!f; W.sala = f ? f.sala || 0 : 0; const fz = f && f.festa ? 1.3 : 1, lt = f ? 1 - 0.6 * Math.min(1, f.luto || 0) : 1; W.B.set(f, t, f ? f.gain * 2.2 * fz * lt : 0); if (!f) { for (const V of W.vs) V.vg.gain.setTargetAtTime(0, t, 0.2); W.crowd.g.gain.setTargetAtTime(0, t, 0.4); return; }
     const L = lingua(f), beb = f.bebado || 0, act = Math.min(W6, f.fala || 0);
     for (let k = 0; k < W6; k++) {
       const V = W.vs[k]; if (k >= act) { V.vg.gain.setTargetAtTime(0, t, 0.2); continue; } if (t < V.next) continue;
@@ -640,7 +756,7 @@
     }
     W.crowd.g.gain.setTargetAtTime(f.fala > W6 ? Math.min(0.06, 0.008 * (f.fala - W6 + 1)) : 0, t, 0.5);
     // (the laugh of who drank, in the talk: as many as drank, as drunk as they are)
-    if (beb > 0.3 && t >= W.riso) { W.riso = t + G.vrr(3, 9) / Math.max(1, f.fala * beb); bus = W.B.inG; laugh(t + 0.02, 0.55, { tom: G.vpick([1, 1, 1.5]), povo: f.povo, bebado: beb }); bus = null; note('riso', f, f.gain); }
+    if ((beb > 0.3 || f.festa) && !(f.luto > 0.1) && t >= W.riso) { W.riso = t + G.vrr(3, 9) / Math.max(1, f.fala * Math.max(beb, f.festa ? 0.5 : 0)); bus = W.B.inG; laugh(t + 0.02, 0.55, { tom: G.vpick([1, 1, 1.5]), povo: f.povo, bebado: beb }); bus = null; note('riso', f, f.gain); }
     if (t - W.rec >= 1) { W.rec = t; note('murmur', f, f.gain); }
   }
   // ---- the fire of the room (D-782): only lit (the scene asks G.Atmos.fire) — the low breath of the embers, the crackle of the wood, a
@@ -674,6 +790,9 @@
     const R = telhado; R.B.set(f, t, f ? f.gain : 0); if (!f) return;
     const K = ROOF[f.telhado] || ROOF.telha; if (R.kind !== f.telhado) { R.kind = f.telhado; R.bed.fl.type = K[0]; R.bed.fl.frequency.setTargetAtTime(K[1], t, 0.3); R.bed.fl.Q.value = K[2]; R.bed.g.gain.setTargetAtTime(K[3], t, 0.3); }
     const r = f.chuva || 0;
+    // (the storm: the rain heavier on the roof, and the wind against the shutters — S.weather.storm, the wind's strength: T8, D-892)
+    if (f.tempestade) { R.bed.g.gain.setTargetAtTime(K[3] * 1.6, t, 0.5); if (t >= (R.gust || 0)) { if (R.gust) { const w = G.clamp(f.vento || 0.6, 0.3, 1); const g0 = nz(t, 2.6, 0.12 * w, 'lowpass', 380, 0, R.B.inG, 220, 0.9); g0.connect(revIn); for (let k = 0; k < G.vri(2, 4); k++) nz(t + 0.8 + k * G.vrr(0.08, 0.16), 0.02, 0.12 * w, 'bandpass', 700, 4, R.B.inG); } R.gust = t + G.vrr(5, 14); } }
+    else if (R.kind) R.bed.g.gain.setTargetAtTime(K[3], t, 0.5);
     // (the drops one by one: on the tiles a click, on the boards a knock, on the flat earth a pat; the straw and the turf have none)
     if (f.telhado === 'telha' || f.telhado === 'tabua' || f.telhado === 'terraco') while (R.next < t + 0.06) { const at = Math.max(t, R.next);
       if (f.telhado === 'telha') nz(at, 0.003, G.vrr(0.04, 0.12), 'highpass', G.vrr(3000, 6500), 0, R.B.inG);
@@ -688,42 +807,54 @@
   // string with the strong pulses, the drum's middle and rim; and the room on the same pulse: who claps, who dances, who sings along
   const musics = new Map();
   let rate = 1, rateT = -1, rateC = 0;
+  // (a band — the musician of the night, the bards of a feast, T8 D-890 —: one pulse and one tune, the leader's (musica.de); each its part)
   function musicTick(t, c, live) {
-    const S = G.S, T = (G.Space && G.Space.TIME) || 0.27; const seen = new Set();
-    if (live) for (const f of c.fontes) {
-      if (!f.musica || !(f.gain >= 0.02)) continue; seen.add(f.k); const C = f.musica; const per = 60 / C.bpm;
-      let M = musics.get(f.k); if (!M) { M = { next: t + 0.05, pulse: 0, deg: 0, note: 0 }; musics.set(f.k, M); } M.f = f;
+    const S = G.S, T = (G.Space && G.Space.TIME) || 0.27; const bands = new Map();
+    if (live) for (const f of c.fontes) { if (!f.musica || !(f.gain >= 0.02)) continue; const key = 'v' + f.musica.de; let L = bands.get(key); if (!L) bands.set(key, L = []); L.push(f); }
+    for (const [key, L] of bands) {
+      L.sort((a, b) => ((a.banda && a.banda.papel) || 0) - ((b.banda && b.banda.papel) || 0) || (a.k < b.k ? -1 : 1));
+      const C = L[0].musica; const per = 60 / C.bpm;
+      let M = musics.get(key); if (!M) { M = { next: t + 0.05, pulse: 0, deg: 0, note: 0 }; musics.set(key, M); } M.L = L; M.C = C;
       // (at the body's pace, the pulse of the world: the set's start and its pulses in the world's seconds)
       if (rate > 0.02 && rate <= T * 1.4 && C.t0 > 0) { const k = Math.floor((S.clock - C.t0) / C.periodo) + 1; const at = t + (C.t0 + k * C.periodo - S.clock) / rate; if (at > t && Math.abs(at - M.next) > 0.08) { M.next = at; M.pulse = k; } }
       while (M.next < t + 0.12) { pulse(M, M.next, c, per); M.next += per; M.pulse++; }
     }
-    for (const k of [...musics.keys()]) if (!seen.has(k)) musics.delete(k);
+    for (const k of [...musics.keys()]) if (!bands.has(k)) musics.delete(k);
     // (the world's own music bows while a musician is heard here)
     const d0 = duck; duck = musics.size ? 0.2 : 1; if (d0 !== duck && mus) mus.gain.setTargetAtTime(musLevel(), t, 0.8);
   }
   function pulse(M, at, c, per) {
-    const f = M.f, C = f.musica; const N = C.notas || PENTA; const cyc = C.ciclo || [1, 0, 0.5, 0]; const a = cyc[M.pulse % cyc.length]; const len = cyc.length;
+    const C = M.C; const N = C.notas || PENTA; const top = N.length - 1; const cyc = C.ciclo || [1, 0, 0.5, 0]; const a = cyc[M.pulse % cyc.length]; const len = cyc.length;
     const deg = Math.max(1, Math.round(N.length / 3)); // (the ladder's degrees in one octave)
     // (the tune: a walk on the ladder from the middle octave; home to the tonic at the phrase's end — four cycles)
     const endP = M.pulse % (len * 4) === len * 4 - len;
     const play = a >= 0.5 || G.VR() < 0.3;
-    if (play) { M.deg = endP ? 0 : G.clamp(M.deg + G.vpick([-2, -1, -1, 0, 1, 1, 2]), -Math.floor(deg / 2), deg + 2); M.note = N[G.clamp(deg + M.deg, 0, N.length - 1)]; }
-    const note0 = M.note || N[deg]; const sp = { pan: f.pan, muf: f.muf, to: 'amb', sala: f.sala || 0 };
-    bus = way(sp);
-    if (f.s === 'lira') { if (play) LIB.lira(at, f.gain * (a >= 1 ? 1 : 0.75), { nota: note0, forte: a >= 1, baixo: N[0], brilho: C.timbre ? C.timbre.brilho : 3200 }); }
-    else if (f.s === 'tambor') { if (a >= 0.5 || G.VR() < 0.25) LIB.tambor(at, f.gain * (a >= 0.5 ? 1 : 0.45), { forte: a >= 1 }); }
-    else if (play) LIB.canto(at, f.gain, { nota: note0, tom: f.tom, dur: per * (a >= 1 ? 1.6 : 0.9) });
-    bus = null; if (play || f.s === 'tambor') note(f.s, f, f.gain);
-    // (the room on the pulse: the hands, the feet, the voices that join)
+    if (play) { M.deg = endP ? 0 : G.clamp(M.deg + G.vpick([-2, -1, -1, 0, 1, 1, 2]), -Math.floor(deg / 2), deg + 2); M.note = N[G.clamp(deg + M.deg, 0, top)]; }
+    const idx = G.clamp(deg + M.deg, 0, top); const note0 = M.note || N[deg];
+    // (each its part, in the people's ladder: the tune; its harmony two steps of the ladder over it (under it at the top); the low string an
+    // octave under, on the strong pulses; more players double the tune an octave down — and a second drum fills the pulses between)
+    let drums = 0;
+    for (const f of M.L) {
+      const p = (f.banda && f.banda.papel) || 0; const nota = p === 1 ? N[G.clamp(idx + (idx + 2 <= top ? 2 : -2), 0, top)] : p >= 2 ? N[Math.max(0, idx - deg)] : note0;
+      const on = p === 2 ? a >= 1 : p >= 3 ? a >= 0.5 : play;
+      bus = way({ pan: f.pan, muf: f.muf, to: 'amb', sala: f.sala || 0 }); let rang = false;
+      if (f.s === 'lira') { if (on) { LIB.lira(at + (p ? G.vrr(0, 0.012) : 0), f.gain * (a >= 1 ? 1 : 0.75) * (p ? 0.8 : 1), { nota, forte: a >= 1 && p === 0, baixo: N[0], brilho: C.timbre ? C.timbre.brilho : 3200 }); rang = true; } }
+      else if (f.s === 'tambor') { const second = drums++ > 0; if (second ? a === 0 && G.VR() < 0.55 : a >= 0.5 || G.VR() < 0.25) { LIB.tambor(at, f.gain * (second ? 0.5 : a >= 0.5 ? 1 : 0.45), { forte: !second && a >= 1 }); rang = true; } }
+      else if (on) { LIB.canto(at, f.gain, { nota, tom: f.tom, dur: per * (a >= 1 ? 1.6 : 0.9) }); rang = true; }
+      bus = null; if (rang) note(f.s, f, f.gain);
+    }
+    // (the room on the pulse: the hands, the feet, the voices that join — and the dancers' ring calling out at the head of every other turn)
     if (a < 0.5) return;
+    let ring0 = null, dancers = 0;
     for (const g of c.fontes) {
       if (!g.ritmo || g.ritmo.de !== C.de || g.gain < 0.02) continue; const j = G.vrr(-0.012, 0.012); // (each a hair off the pulse: a person, not a clock)
       bus = way({ pan: g.pan, muf: g.muf, to: 'amb', sala: g.sala || 0 });
       if (g.s === 'palmas') LIB.palmas(at + 0.012 + j, g.gain, { tom: g.tom });
-      else if (g.s === 'pe') LIB.pe(at + 0.015 + j, g.gain * (a >= 1 ? 1 : 0.6), { piso: g.piso });
+      else if (g.s === 'pe') { LIB.pe(at + 0.015 + j, g.gain * (a >= 1 ? 1 : 0.6), { piso: g.piso }); dancers++; if (!ring0) ring0 = g; }
       else if (g.s === 'canto' && play) LIB.canto(at + 0.02 + j, g.gain, { nota: note0, tom: g.tom, dur: per * 0.9 });
       bus = null; note(g.s, g, g.gain);
     }
+    if (ring0 && dancers >= 3 && M.pulse % (len * 2) === 0) { bus = way({ pan: ring0.pan, muf: ring0.muf, to: 'amb', sala: ring0.sala || 0 }); LIB.roda(at + 0.02, ring0.gain, { n: dancers, povo: ring0.povo }); bus = null; note('roda', ring0, ring0.gain); }
   }
   // the room, each frame: the outside muffled under a roof (more with the door shut), the echo of the room, its beds and its music. A
   // world standing still (paused, a panel open) plays none of the place: only the land goes on
@@ -869,7 +1000,7 @@
     const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext; if (!OAC) return null;
     const sr = ac ? ac.sampleRate : 48000; const res = {};
     for (const name of names) {
-      const fn = LIB[name]; if (!fn) { res[name] = { err: 'não está na biblioteca' }; continue; }
+      const fn = LIB[name] || UI[name]; if (!fn) { res[name] = { err: 'não está na biblioteca' }; continue; } // (and the screen's own: T8)
       const off = new OAC(2, Math.floor(sr * (secs || 3)), sr); const keep = [ac, master, sfx, amb, ambIn, revIn, noise, bus];
       ac = off; master = off.createGain(); master.connect(off.destination); sfx = amb = ambIn = master; revIn = off.createGain(); revIn.gain.value = 0.35; revIn.connect(master); bus = null;
       noise = off.createBuffer(1, sr * 2, sr); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = G.VR() * 2 - 1;
