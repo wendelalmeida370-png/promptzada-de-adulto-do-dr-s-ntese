@@ -679,6 +679,9 @@
     // panic zones (lightning, explosions)
     for (const p of S.panic || []) {
       const d = G.dist(v.x, v.y, p.x, p.y);
+      // (the storm's own bolt frightens who is out in it: one under a roof stays there — a bolt on the building itself is the fire's,
+      // which takes everyone out; L-1990)
+      if (p.fora && v.inside) continue;
       if (d < p.r && !(t && (t.type === 'fire' || t.type === 'fight' || t.type === 'dragao'))) { if (v.inside) Vg.endTask(v); fleeFrom(v, p.x, p.y, p.r + 3 - d, p.why || 'panic'); emote(v, 'fear', 2.5); return; }
     }
     if (G.War.emergency(v, H)) return;
@@ -915,7 +918,8 @@
     // took everyone at the tables at the fall of night, long before the closing and their bed — the tavern keeps its own
     // until it shuts. The watch's torch and the smuggler's errand still call: L-591)
     if (!(night && atTav) || watch || prowl || duty) opt(wU, watch || prowl ? 1.6 : 1, watch ? 'watch' : 'work');
-    if (S.weather.storm > 0 && !night && S.weather.rain > 0.3) { const h = S.buildings.get(v.home); if (G.Village.livable(h)) opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
+    // (the storm: home for shelter — but not the one the tavern keeps at its tables: under its roof, one is sheltered already, D-816, L-1990)
+    if (S.weather.storm > 0 && !night && S.weather.rain > 0.3 && !atTav) { const h = S.buildings.get(v.home); if (G.Village.livable(h)) opt(0.8 + G.R() * 0.3, 1.05, 'shelter'); }
     if (!night) {
       opt((v.traits.includes('Sociável') ? 0.3 : 0.15) * (eve ? 2.3 : 1) * (elder ? 1.8 : 1) * G.R() * 1.6, 0, 'social');
       if (canCourt(v)) opt((v.traits.includes('Romântico') ? 0.95 : 0.72) * (0.55 + G.R() * 0.8), 0.5, 'court');
