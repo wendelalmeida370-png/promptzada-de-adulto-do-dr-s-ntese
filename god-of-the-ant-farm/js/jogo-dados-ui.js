@@ -35,8 +35,9 @@
   const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
   const ease = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
   let panel = null, cv = null, ctx = null, open = false, closer = false, sig = '', pick = 0, pickFor = '', busy = false, note = '', help = false;
+  let saidShown = '';
   let scene = null, faces = new Map(), lastKey = '', said = {}, seatEls = new Map(), upT = 0;
-  G.worldHooks.push(() => { if (open) hide(true); scene = null; faces = new Map(); lastKey = ''; said = {}; sig = ''; pick = 0; pickFor = ''; });
+  G.worldHooks.push(() => { if (open) hide(true); scene = null; faces = new Map(); lastKey = ''; said = {}; saidShown = ''; sig = ''; pick = 0; pickFor = ''; });
   UI.isOpen = () => open;
 
   // ------------------------------ the verb at the table (F and the card's keys) ------------------------------
@@ -383,25 +384,34 @@
   }
   // the middle of the table: the sum counted as the cups come up, who hit it, the cheat; the end's word
   function mid(s, sc, geo, L) {
-    const el = panel.querySelector('.jd-mid'); const ban = panel.querySelector('.jd-banner'); let html = '', bh = '', num = null;
+    const el = panel.querySelector('.jd-mid'); const ban = panel.querySelector('.jd-banner'); let bh = ''; const parts = [];
     const order = s.ordem && s.ordem.length ? s.ordem : L.map(p => p.id);
     if (s.fase === 'revela' || s.fase === 'fim') {
       const T = (performance.now() - sc.revT) / 1000; let sum = 0; let all = true;
       for (let k = 0; k < order.length; k++) { const p = L.find(q => q.id === order[k]); if (!p || !p.faces) continue; if (p.eu || T >= 0.25 + k * 0.45 + 0.2 || s.fase === 'fim') sum += p.faces.reduce((a, b) => a + b, 0); else all = false; }
       const done = all && s.res; if (s.fase === 'revela' && sum !== sc.counted) sc.counted = sum;
-      html = `<div class="jd-soma${done ? ' fim' : ''}"><small>soma</small><b>{N}</b></div>`; num = s.res && done ? s.res.total : sum;
+      parts.push({ k: 'soma', cls: 'jd-soma' + (done ? ' fim' : ''), num: s.res && done ? s.res.total : sum });
       // (the word of the round goes under the table, with the hands: the middle keeps the sum, the seats round it stay in sight)
       const said = done && s.res ? resWords(s, L) : ''; if (said !== sc.said) { sc.said = said; sig = ''; }
-      if (done && s.res && s.res.cravou) html += '<div class="jd-res crava">Cravou!</div>';
-      else if (done && s.res && s.res.trap && s.res.trap.pego) html += '<div class="jd-res trap">Trapaça!</div>';
-    } else if (s.fase === 'segura') html = '<div class="jd-res suspense">Os copos vão subir…</div>';
-    else if (s.fase === 'convite') html = `<div class="jd-res">${s.moeda ? `Aposta: ${esc(s.price(s.aposta))}` : 'Pela glória'}</div>`;
+      if (done && s.res && s.res.cravou) parts.push({ k: 'crava', cls: 'jd-res crava', txt: 'Cravou!' });
+      else if (done && s.res && s.res.trap && s.res.trap.pego) parts.push({ k: 'trap', cls: 'jd-res trap', txt: 'Trapaça!' });
+    } else if (s.fase === 'segura') parts.push({ k: 'segura', cls: 'jd-res suspense', txt: 'Os copos vão subir…' });
+    else if (s.fase === 'convite') parts.push({ k: 'convite', cls: 'jd-res', txt: s.moeda ? `Aposta: ${s.price(s.aposta)}` : 'Pela glória' });
+    // (each piece of the middle is born once — its pop then, never again: the sum counted in place, the pill turned gold in place at the
+    // end of the count, the word of the round beside it; before, the whole middle was written again as the count ended, and the pill
+    // faded out and popped back at the very moment of the sum — caught there by a photo, half seen through, the pot's coins under it)
+    for (const ch of [...el.children]) if (!parts.some(p => p.k === ch.dataset.k)) ch.remove();
+    parts.forEach((p, i) => {
+      let ch = el.querySelector(`:scope > [data-k="${p.k}"]`);
+      if (!ch) { ch = document.createElement('div'); ch.dataset.k = p.k; ch.className = p.cls + ' pop'; ch.innerHTML = p.k === 'soma' ? '<small>soma</small><b></b>' : ''; }
+      else if (ch.className.replace(' pop', '') !== p.cls) ch.className = p.cls + (ch.classList.contains('pop') ? ' pop' : '');
+      if (p.k === 'soma') { const b = ch.querySelector('b'); if (b.textContent !== String(p.num)) b.textContent = p.num; } else if (ch.textContent !== p.txt) ch.textContent = p.txt;
+      if (el.children[i] !== ch) el.insertBefore(ch, el.children[i] || null);
+    });
     if (s.fase === 'fim') {
       const won = s.venc && s.venc === s.eu; const lost = s.eu && s.venc !== s.eu; const v = L.find(p => p.id === s.venc);
       bh = won ? `<div class="jd-ban win"><b>Você levou o pote!</b>${s.ganho ? `<small>+ ${esc(s.price(s.ganho))}</small>` : ''}</div>` : v ? `<div class="jd-ban ${lost ? 'lose' : ''}"><b>${esc(cap(v.nome))} levou o pote</b>${lost && s.moeda && s.aposta ? `<small>− ${esc(s.price(s.aposta))}</small>` : ''}</div>` : '<div class="jd-ban"><b>O jogo acabou</b><small>o pote voltou a quem apostou</small></div>';
     }
-    // (the sum counted in place as the cups come up — the pill pops once, not with every number)
-    if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html.replace('{N}', num); } else if (num !== null) { const b = el.querySelector('.jd-soma b'); if (b && b.textContent !== String(num)) b.textContent = num; }
     if (ban.dataset.h !== bh) { ban.dataset.h = bh; ban.innerHTML = bh; ban.classList.toggle('on', !!bh); }
   }
 
@@ -451,7 +461,8 @@
     } else if (s.fase === 'sacode') {
       h = `<div class="jd-wait">${s.jogo ? 'Sacudam os copos!' : 'Os copos na mesa…'}</div>${regua(s, null)}`;
     } else if (s.fase === 'revela') {
-      h = `${scene && scene.said ? `<div class="jd-said">${scene.said}</div>` : '<div class="jd-wait">Levantam-se os copos…</div>'}${regua(s, null)}`;
+      const sk = scene && scene.said ? `${s.op}:${s.rodada}:${scene.said}` : ''; const fresh = !!sk && sk !== saidShown; if (sk) saidShown = sk; // (the round's words pop in once — written again with the hands, they stay)
+      h = `${scene && scene.said ? `<div class="jd-said${fresh ? ' pop' : ''}">${scene.said}</div>` : '<div class="jd-wait">Levantam-se os copos…</div>'}${regua(s, null)}`;
     } else if (s.fase === 'fim') {
       const x = vb(); h = `${regua(s, null)}<div class="jd-btns"><button class="jd-no" data-a="close">Sair</button>${x && x.k === 'chamar' && x.ok ? `<button class="jd-go" data-a="denovo">${k(0, G.Input3D.label('interagir'))}Jogar de novo</button>` : ''}</div>`;
     } else if (!s.jogo && s.eu) h = `<div class="jd-wait">Você está fora desta. Olhe o fim.</div>${regua(s, null)}`;
