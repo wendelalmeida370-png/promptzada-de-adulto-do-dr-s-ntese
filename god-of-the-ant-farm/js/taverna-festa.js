@@ -81,6 +81,7 @@
   TF.BRACO_PF = 0.45;
   TF.BRACO_T = 6;       // its seconds, and up to 3 more by the pair
   TF.APOSTA = 0.2;      // the bet
+  TF.PREMIO = 1;        // the prize of the feast's dice tournament, of the keeper's coins (T4's G.JogoDados.torneio)
   TF.FIM_T = 1.5;       // the seconds the end of a wrestle shows
 
   // ------------------------------ the causes ------------------------------
@@ -249,7 +250,10 @@
       const o = op.data.atos || (op.data.atos = {}); const e = o.discurso || (o.discurso = {}); e['festa:' + f.motivo] = (e['festa:' + f.motivo] || 0) + 1;
     }
     if (v.actT < TF.DISCURSO_T) return true;
-    f.fase = 2; f.discurso = r1(S.clock); moreBards(op, b, f); rodada(op, b); t.st = 1; t.disc = 0; v.actT = 0; return true;
+    f.fase = 2; f.discurso = r1(S.clock); moreBards(op, b, f); rodada(op, b);
+    // (and the night's dice tournament, where the house has the dice — T4's: the prize from the keeper's coins to its pot, by the ledger)
+    if (G.JogoDados && G.JogoDados.torneio && !f.torneio) { const r = G.JogoDados.torneio(b, { premio: TF.PREMIO, motivo: 'a festa: ' + f.causa }); if (r && r.ok) f.torneio = r.op; }
+    t.st = 1; t.disc = 0; v.actT = 0; return true;
   };
   // (the round of the house: everyone of the world at the tables with the hands free asks for a drink, the keeper's to give — serve()
   // pours it with no coin, «rodada-casa», D-821)

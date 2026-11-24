@@ -648,7 +648,7 @@
       if (v.carry && v.carry.op === op.id) { t.st = 3; v.actT = 0; m.st = 3; m.cup = r1(S.clock); return; }
       v.act = sit; t.pose = talk ? 'sittalk' : undefined; t.wt = (t.wt || 0) + dt;
       // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-806)
-      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : musicOn(op) && !d.fecha ? listen(v, m, d) : ''; if (a === 'jogo-ossos') v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); const fa = TF() ? TF().actOf(v, m, op, b) : null; if (fa === 'torcer') v.act = fa; }
+      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const jd = G.JogoDados ? G.JogoDados.ato(v) : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : jd || (musicOn(op) && !d.fecha ? listen(v, m, d) : ''); if (a === 'jogo-ossos' || a === jd) v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); const fa = !jd && TF() ? TF().actOf(v, m, op, b) : null; if (fa === 'torcer') v.act = fa; }
       // (nobody at the counter for a while — the keeper away —: one gets up, walks to the counter, serves oneself there and pays
       // as to the keeper, and walks back to one's seat, kept — L-1930; a tavern with no buyer's place at its counter, at the table)
       if (t.wt > T.SELF && !serving(b, op) && !m.vem) {
@@ -840,7 +840,8 @@
     if (!T.aberta(b) && D.get(ref, 'wood') < T.LENHA_N && D.free('f:' + f.id, 'wood') >= 4) cands.push({ k: 'wood', n: T.LENHA_N + 1 - D.get(ref, 'wood') });
     if (!T.aberta(b) && D.get(ref, 'cera') < VELA() * 2 && D.free('f:' + f.id, 'cera') >= 1) cands.push({ k: 'cera', n: 1 });
     if (!T.aberta(b)) for (const k of OIL) if (D.get(ref, 'azeite') + D.get(ref, 'oleo') < T.OLEO * 2 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 1 }); break; }
-    for (const c of cands) {
+    // (T3, D-845: the house's cook buys and cooks the food, its brewer the grain or the honey of the vat — what the keeper still buys)
+    for (const c of (G.TavernaOficios ? G.TavernaOficios.keeperBuys(b, cands) : cands)) {
       const n = Math.floor(Math.min(c.n, c.of ? OR().free('f:' + f.id, c.k, c.of) : D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);
       if (n < 1) continue;
       if (coin(b) && D.get(E.coinRef(v), 'moedas') + EPS < r2((E.PRICE[c.k] || 0.3) * n * WHOLE)) continue;
@@ -1124,6 +1125,7 @@
   // (what each drink is: the beer of the house's vat by the grain it was brewed of — b.malte, D-802 —, or the people's store's; the pulque
   // of the agave's sap; the wine and the mead of the store)
   function descDrink(b, k, brew) {
+    { const tc = G.TavernaOficios && G.TavernaOficios.desc(b, k); if (tc) return tc; } // (the beer and the mead of the house's brewer: T3, D-846)
     if (k === 'cerveja') { const g = T.malte(b); const nm = g && OR().FOOD[g] ? OR().FOOD[g].nome : ''; if (nm) return `cerveja de ${nm} da casa, da cuba`; return brew === 'cerveja' && b.malte && b.malte['?'] ? 'cerveja do armazém do povo' : brew === 'cerveja' ? 'cerveja da casa' : 'cerveja do armazém do povo'; }
     if (k === 'pulque') return brew === 'pulque' ? 'pulque da seiva do agave, da casa' : 'pulque do armazém do povo';
     if (k === 'mel') return 'hidromel de mel, do armazém do povo';
@@ -1151,8 +1153,9 @@
       const nm = DISH_M[t]; if (!nm || said.has(nm)) continue; const parts = MENU_FOOD.filter(x => DISH_M[x] === nm);
       const n = Math.floor(O1.free(ref, 'food', parts) + EPS); if (n < 1) continue; said.add(nm);
       const fest = !!pf && parts.length === 1 && pf.de.includes(t); const nf = fest ? Math.floor(O1.free(ref, 'food', parts) / TF().PRATO_N + EPS) : 0;
-      if (fest && nf >= 1) out.push({ id: 'food:' + t, k: 'food', of: t, sort: 'comer', nome: pf.nome, p: T.PRICE.food, n: nf, ok: true, de: t, desc: `o prato da festa (${fe.causa}): ${descFood(fid, t)}`, porcao: TF().PRATO_N, festa: 1 });
-      else out.push({ id: 'food:' + t, k: 'food', of: parts.length > 1 ? parts : t, sort: 'comer', nome: nm, p: T.PRICE.food, n, ok: true, de: t, desc: descFood(fid, t) });
+      const ds = (G.TavernaOficios && G.TavernaOficios.desc(b, 'food', t)) || descFood(fid, t); // (the cook's dish: T3, D-846)
+      if (fest && nf >= 1) out.push({ id: 'food:' + t, k: 'food', of: t, sort: 'comer', nome: pf.nome, p: T.PRICE.food, n: nf, ok: true, de: t, desc: `o prato da festa (${fe.causa}): ${ds}`, porcao: TF().PRATO_N, festa: 1 });
+      else out.push({ id: 'food:' + t, k: 'food', of: parts.length > 1 ? parts : t, sort: 'comer', nome: nm, p: T.PRICE.food, n, ok: true, de: t, desc: ds });
     }
     else if (!hunger) { const n = Math.floor(D.free(ref, 'food') + EPS); if (n >= 1) out.push({ id: 'food', k: 'food', of: null, sort: 'comer', nome: T.dish(b), p: T.PRICE.food, n, ok: true, de: null, desc: 'o prato do dia' }); }
     if (!out.some(x => x.sort === 'comer')) out.push({ id: 'food', k: 'food', of: null, sort: 'comer', nome: 'o prato do dia', p: T.PRICE.food, n: 0, ok: false, de: null, desc: 'o que a cozinha tem hoje' });
@@ -1563,6 +1566,7 @@
     // (the drinking match, the arm wrestle, the cheering round them — taverna-festa.js, D-823, D-824)
     { const fa = TF() ? TF().actOf(v, m, op, b) : null; if (fa) { if (fa === 'torcer') { const ev = TF().torcida(op, m); if (ev && m.tor !== ev[0]) { m.tor = ev[0]; tally(d, 'torcer', ev[1]); } } return fa; } }
     const j = d.jogo && m.g ? d.jogo[m.g] : null; if (j && j.quem.includes(v.id)) return 'jogo-ossos';
+    { const jd = G.JogoDados && G.JogoDados.ato(v); if (jd) return jd; } // (the dice game of the table: its own file — T4, D-850)
     if (musicOn(op) && !d.fecha) { const a = listen(v, m, d); if (a === 'danca') { toDance(v, t, b, op, m); return shown(d, m, 'danca'); } if (a) return shown(d, m, a); }
     return null;
   }
@@ -1605,6 +1609,7 @@
     const S = S_(); if (d.jogo && d.jogo[g]) return;
     if (TC() && TC().calado(S.buildings.get(op.at))) return; // (no game in mourning, D-816)
     if (d.braco && d.braco[g]) return; // (the table at an arm wrestle, D-824)
+    if (G.JogoDados && G.JogoDados.atMesa(op.at, g)) return; // (the table at the dice: no bones there now — T4)
     if (!OR() || !OR().matOK(op.fac, 'osso')) return; // (no bone had — no beast slaughtered, hunted or offered —: no knucklebones)
     const k = Math.floor(S.clock / T.JOGO); const jk = d.jk || (d.jk = {}); if (jk[g] === k) return; jk[g] = k; // (a look a game's while)
     const quem = L.filter(([v, m]) => (m.st === 5 || m.st === 2) && !(v.carry && v.carry.n > EPS) && !m.zz && v.age >= 12 && !brawls.has(v.id) && gamer(v) >= T.JOGA).map(([v]) => v.id).slice(0, 4);
@@ -2149,7 +2154,7 @@
     load(o) {
       const S = S_();
       // (a save of before has no list: everyone at the tables, as it always loaded)
-      const keep = o && Array.isArray(o.taverna) ? new Set(o.taverna) : null;
+      const keep = o && Array.isArray(o.taverna) ? new Set(o.taverna) : null; const took = new Set();
       for (const op of A.all()) {
         if (op.def !== 'taverna') continue;
         // (a day saved before its book said «gasto» has what the keeper paid as «custo» — the word went to what a house cost
@@ -2179,7 +2184,8 @@
           const st = v.carry && v.carry.op === op.id ? 3 : m.st === 4 ? 4 : m.st === 5 || m.st === 6 || m.st === 9 ? 5 : 2; // (the dancer back at the seat)
           delete m.vem; m.st = st;
           G.Vg.setTask(v, { type: 'tavern', id: op.at, op: op.id, pri: 0.5, st, wt: 0, use: m.use || 'sentar', kind: 'tavern' });
-          if (v.task && v.task.type === 'tavern') { v.inside = op.at; const b = S.buildings.get(op.at); if (b && m.it && G.Interiors && G.Interiors.holdAt && !G.Interiors.holdAt(v, b, m.it, m.q, 1)) { m.it = 0; m.q = -1; } if (st === 2 && !d.fila.includes(+id)) d.fila.push(+id); }
+          // (a seat two held in a save — a save of before L-1980 — given to the first only: the other is seated by the share-out, T-1922)
+          if (v.task && v.task.type === 'tavern') { v.inside = op.at; const b = S.buildings.get(op.at); const sk = op.at + ':' + m.it + ':' + m.q; if (m.it && took.has(sk)) { m.it = 0; m.q = -1; } if (b && m.it && G.Interiors && G.Interiors.holdAt && !G.Interiors.holdAt(v, b, m.it, m.q, 1)) { m.it = 0; m.q = -1; } if (m.it) took.add(sk); if (st === 2 && !d.fila.includes(+id)) d.fila.push(+id); }
           else delete d.mesa[id];
         }
         d.fila = d.fila.filter(id => d.mesa[id] && d.mesa[id].st === 2); d.mus = 0;

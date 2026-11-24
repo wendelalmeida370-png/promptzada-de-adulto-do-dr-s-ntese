@@ -1276,7 +1276,7 @@
     if (L.food && (pose.morsel > 0.5 || pose.morselL > 0.5)) { const r = pose.morsel > 0.5; RX.kMor = L.food; if (!RX.mor) RX.mor = new THREE.Matrix4(); fr(RX.mor, R[r ? B.hdR : B.hdL], r ? 0.03 : -0.03, -0.088, 0.018, 0, 0, 0); }
     // (the keeper's cloth — the shoulder's, or the hand's when he wipes: the gesture with nothing else in the right hand — and the wisp of straw)
     RX.kOm = null; RX.omHand = false; RX.kPalha = false;
-    const wiping = L.st === 'limpar-mesa' && !kR;
+    const wiping = (L.st === 'limpar-mesa' || L.st === 'enxugar-caneca') && !kR;
     if (L.ombro && L.ombro.parts && L.ombro.parts.length) { RX.kOm = L.ombro; RX.omHand = wiping; if (!RX.om) RX.om = new THREE.Matrix4();
       if (wiping) fr(RX.om, R[B.hdR], 0.03, -0.085, 0.01, 0, 0, 0); else frameOn(RX.om, R[B.chest], 0.16, 0.44, 0, 0, 1, 0, 0, 0, 1); }
     else if (wiping && L.wipe === 'palha') { RX.kPalha = true; if (!RX.pal) RX.pal = new THREE.Matrix4(); fr(RX.pal, R[B.hdR], 0.03, -0.085, 0.01, 0, 0, 0); }
@@ -1742,7 +1742,9 @@
       // the act and the clips are the body's own, avatar.js's)
       const avv = S.villagers.get(av.id);
       if (av.drive) { const I = av.drive; I.X = av.X; I.Z = av.Z; I.ground = av.look.ground; I.s = av.look.s;
-        if (avv) { avFeet.yaw = av.yaw; avFeet.sp = 0; I.porte = G.Vida3D.read(avFeet, avv, vt, DRAWN); I.clock = S.clock; I.id = av.id; I.tempo = G.Vida3D.tempo(avv); I.ctx = avFeet.ctx; I.lod = 0; I.tired = G.Vida3D.tired(avv); }
+        if (avv) { avFeet.yaw = av.yaw; avFeet.sp = 0; I.porte = G.Vida3D.read(avFeet, avv, vt, DRAWN); I.clock = S.clock; I.id = av.id; I.tempo = G.Vida3D.tempo(avv); I.ctx = avFeet.ctx; I.lod = 0; I.tired = G.Vida3D.tired(avv);
+          // (the body the player lives drinks as the people do: the stagger in its pose and the drink on its face — T2's v.ebrio, D-872)
+          I.drunk = P3.drunkOf(avv); I.drunkF = I.drunk; I.dmood = I.drunk > 0 ? P3.drunkMood(avv) : 0; }
         Anim.drive(avFeet.an, I, av.pose, av.look, dt); if (I.post) I.post(av.pose, dt, I); }
       avFeet.t = (avFeet.t || 0) + dt; av.pose.blink = Anim.blinkAt(avFeet.t, av.id); cloth(avFeet, av.X, av.Z, av.yaw, dt, av.pose); if (av.look.mood) av.look.mood = Anim.easeMood(avFeet, av.look.mood, dt);
       if (avv && av.drive && Anim.faceMix) { av.drive.humor = G.Vida3D.humor(avv); Anim.faceMix(avFeet, av.drive, av.pose, av.look.mood, avFeet.an, dt); }
@@ -1838,6 +1840,7 @@
         // the body's animator: the stride or the posture, the hands, the clip of the act in step with the world's own clock of it
         // (v.actT), the drink, the tiredness — the pose made from what they do (anim-body.js; the reader's numbers: vida3d.js)
         Lv.st = st; // (the state drawn, for the things it puts in the hands: the cloth that wipes, D-796)
+        INP.drunkF = Lv.drunk || 0; INP.dmood = Lv.dmood || 0; // (the drink on the face, seated too, by who one is: D-872)
         const I = INP; I.st = st; I.t = s.t; I.sp = s.sp; I.yaw = s.yaw; I.yawV = s.yawV; I.acc = s.acc; I.X = s.X; I.Z = s.Z; I.ground = Lv.ground; I.s = Lv.s;
         // (the gait is the world's intent, not the speed: whoever the world has walking walks — a long, quick stride on a road —, and
         // only one in a hurry runs: the world's own «run» — the chase, the flight, the charge — or faster than a walk goes; L-1119)

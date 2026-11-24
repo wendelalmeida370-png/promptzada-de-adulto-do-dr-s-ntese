@@ -85,6 +85,18 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 - **O pulque** é o aguamiel do maguey (o agave); o mundo ainda **não tem o maguey**: a receita pede `aguamiel`, e o povo do pulque,
   sem ele, faz **a cerveja do seu milho** (`tavern.js`: `asteca: { k: 'pulque', alt: 'cerveja' }`). O agaval é o plano (§6).
 - **O prato** da taverna é do que se come: `T.dish(b)` — «um prato de peixe», «tortilhas de milho», «um caldo de cevada»…
+- **A cadeia da taverna** (T3, D-840 a D-849; `js/taverna-oficios.js`): a casa procurada tem o **cozinheiro** e o **cervejeiro**,
+  ofícios do repartidor. O cervejeiro compra no armazém do povo o cereal (`of: G.Origem.CEREAL`) e a lenha, pagos das moedas do
+  taverneiro (`compra-taverna`), que um carregador à porta do armazém — ou ele mesmo — leva à **tulha** da casa (o lugar `'e:'`:
+  só cereal, mel e lenha); a cuba gasta o grão pelo livro (`cuba-grao`, as partes do grão no lote: `op.data.de`, que a carta diz,
+  D-802) e a lenha da água quente da mosturação (`cuba-lenha`); a cerveja nasce só da fornada da brassagem (`fornada`: **um jarro
+  por grão gasto**; o jarro azedo não nasce) — **sem cereal no povo, nenhum cervejeiro e nenhuma cerveja**. O hidromel do nórdico é
+  o mel da colmeia (o apicultor) na água do poço (que não se guarda): dois potes por mel. O cozinheiro compra a comida da receita do
+  povo — o principal (o peixe, a carne, a horta…) e o grão do pão ou do caldo — para a **despensa** da casa (`'k:'`), e a panela a
+  **move** à prateleira (`cozinha`), nunca a faz: o prato de peixe é o peixe que se comprou, com a sua origem; a lenha do fogo pelo
+  livro (`cozinha-lenha`). O soldo do dia vai do bolso do taverneiro à casa de quem trabalha (`soldo-taverna`), o frete ao
+  carregador (`frete`). O vinho continua do vinhateiro (o vinhedo pisa as uvas: `estates.js`): a taverna o compra; o pulque, do
+  maguey que o mundo não tem (§6 C)
 - **A dádiva** (22b, D-587): a refeição que um bondoso dá a quem passa fome sai da despensa da casa dele, pelo livro (`G.Depot.use`,
   código `dadiva`), e é comida ali — nada nasce. O empréstimo entre amigos (D-588) é moeda de uma casa a outra (`emprestimo`, e a
   volta, `divida`): a dívida é a lembrança dele (a marca `deve`), não uma moeda a mais.
@@ -106,7 +118,7 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 | `tijolo`, `adobe`, `ceramica` | — | a **olaria**: argila + lenha no forno | as obras (tijolo, adobe), as casas e o mercado (cerâmica) |
 | `joias` | — | o **ourives**: 1 de ouro → 1 | as casas ricas, o mercado, o comércio |
 | `moedas` | — | a **coletoria**: 1 de ouro → 6 (`cunhagem`) | tudo o que se paga |
-| `mel`, `cera` | o apiário, a colmeia do mato | o apicultor | a taverna do nórdico (hidromel), a comida da fome |
+| `mel`, `cera` | o apiário, a colmeia do mato | o apicultor | a taverna do nórdico (o hidromel: servido do armazém, ou fermentado na cuba do cervejeiro, §3), a comida da fome |
 | `seda` | o bicho-da-seda na folha de amoreira | a casa da seda | o comércio, a roupa |
 | `vinho`, `azeite`, `tamaras`, `cacau`, `cafe`, `especiarias`, `incenso` | o vinhedo, o olival, o pomar, a plantação — só onde crescem e de quem os conhece | os ofícios do campo (`estates.js`) | a taverna (vinho), as casas ricas, o comércio |
 | `sal` | a salina; **o sal-gema da caverna** (era comida: L-1360) | o salineiro; quem cava a caverna | a salga |
@@ -114,7 +126,7 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 | `queijo` | o leite (40% da ordenha) | a ordenha | a comida da fome |
 | `atum`, `camarao` | o cardume (o peixe que vale mais) | a pesca | a comida da fome, o comércio |
 | `perolas`, `coral` | os recifes | o mergulhador | o luxo |
-| `cerveja`, `pulque` | — | a cuba da taverna (§3) | a taverna |
+| `cerveja`, `pulque` | — | a cuba da taverna (§3): a pequena do taverneiro, e a brassagem do cervejeiro (do cereal da tulha) | a taverna |
 | `guano` | os morcegos da caverna | quem o recolhe | o adubo dos campos |
 
 ## 5. As coisas do catálogo (`G.Itens`) — o que cada uma é feita
@@ -125,12 +137,12 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 |---|---|---|
 | **bronze**, **ferro** | uma das **ferramentas** (machado, picareta, pá, enxada, foice, martelo, faca, vara, rede, remo; os grilhões de ferro: ½) ou das **armas** (espada, lança, flecha — 20 a cada uma —, escudo, elmo, couraça) **daquele metal** do armazém (`of: 'bronze'`) | a arte do metal **e** o metal tido |
 | **pedra** | a pedra e a madeira do armazém (o machado: ½ + ½; a lança: ¼ de pedra e ¾ de madeira; a faca: ¼ de pedra…) | sempre |
-| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1; o prato torneado: 0,15) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
+| **madeira** | a madeira (a pá, a enxada, a clava, o arco, o escudo de madeira, o remo: 1; a vara: ½; o cajado: ½; a tocha: ¼; o balde: ½; a muleta: ½; a caneca talhada: 0,1; o prato torneado: 0,15; o jogo de dados de madeira, os oito dadinhos talhados: 0,05 — T4, D-852) | sempre (o arco, com a arte do arco; a vara, com o anzol de bronze: o bronze tido) |
 | **vime**, **corda** | as fibras da madeira (o cesto: 0,2; a rede: 1; a funda: ¼; a bola de vime: 0,1; os grilhões de corda: 0,1) | sempre |
 | **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15); os instrumentos (P7, D-764), o couro e a madeira (a lira: 0,1 de couro — a caixa coberta e as cordas de tripa — e 0,3 de madeira; o tambor: 0,3 de couro e 0,6 de madeira) | **só quem teve couro** (caçou ou abateu: o couro e a tripa são do mesmo bicho) |
 | **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼; o prato de barro: 0,3) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
-| **osso** (P7, D-805) | nada do armazém: os **ossinhos** da taverna são os ossos do tornozelo da carcaça (`G.Itens.feitoDe` → nada; o armazém não os dá) | **só quem teve osso**: a carne feita de um abate, de uma caça ou de um sacrifício marca o osso (`D.make` da comida com a parte `carne`); e quem teve couro, que veio de uma carcaça |
+| **osso** (P7, D-805) | nada do armazém: os **ossinhos** da taverna são os ossos do tornozelo da carcaça (`G.Itens.feitoDe` → nada; o armazém não os dá); os **dados de osso** do jogo de copo também (T4, D-852) | **só quem teve osso**: a carne feita de um abate, de uma caça ou de um sacrifício marca o osso (`D.make` da comida com a parte `carne`); e quem teve couro, que veio de uma carcaça |
 | **lã** (P7, D-805) | o **tecido** do armazém (o pano de limpar a mesa: 0,05) | **só quem teve pano tecido** (`O.MAT_OF.tecido`: o tear o fez, ou entrou no povo) |
 | **palha** (P7, D-805) | nada do armazém: o feixe de palha é dos talos secos que todo povo corta para os telhados e as camas | sempre (`O.PLAIN`) |
 
@@ -153,6 +165,18 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   nenhum jogo de ossinhos na taverna); quem limpa a mesa (o ato `limpar-mesa`) tem o **pano**: de lã onde o povo teve pano tecido,
   senão um feixe de palha. São **do lugar** (`PLACE_TOOL`), como a caneca; o armazém não dá nenhum dos dois do nada — o osso e a
   palha não são de nada que ele guarda (`Inv.offer` recusa a coisa feita de nada).
+- **Os dados do jogo de copo** (T4, D-852): o jogo de dados (`dados`, oito dadinhos de um a seis) é uma **coisa de verdade** — na
+  prateleira da taverna (`b:`) ou na mochila de quem a traz (`m:`) —, e só se joga onde há uma (`G.JogoDados.setFor`). Os da casa, o
+  taverneiro os faz uma vez, no dia em que a casa tem menos do que guarda (um jogo por degrau: a taberna 1, a taverna 2, a hospedaria
+  3): **de osso** onde o povo teve osso (`G.Origem.matOK(fid, 'osso')` — a carcaça de um abate, de uma caça, de um sacrifício; nada do
+  armazém, como os ossinhos; `D.make` com o código `dados`), **senão de madeira**, da lenha da prateleira da casa (`D.use` de 0,05 de
+  madeira, depois o `D.make` dos dados de madeira; sem lenha, nenhum jogo, e a casa tenta de novo um minuto do mundo depois). O corpo
+  pode trazer os seus: o armazém do povo dá **dados de madeira** pela madeira dele (`Inv.offer`: 0,05); os de osso, o armazém não dá
+  (o osso não é de nada que ele guarda). O kit põe na mão de quem joga **os dados de verdade da mesa** (`G.JogoDados.dadosDe`), nunca
+  uns de arte do povo. As **moedas** do jogo andam pelo livro, da bolsa de cada um ao pote (`j:`, `dados-aposta`) e do pote ao vencedor
+  (`dados-premio`) ou de volta a quem pôs (`dados-volta`); o prêmio do torneio da noite de festa sai de quem o dá (`torneio-premio`) e vai
+  ao campeão (`torneio-campeao`). O copo em que se sacode é o da casa, só desenhado: de couro onde o povo teve o couro, de barro onde
+  teve a cerâmica, senão de madeira torneada.
 - **A cerveja diz o grão de que foi feita** (P7, D-802): o lote da cuba guarda as partes do grão que tomou (`op.data.de`: o `D.use` da
   origem diz as partes que saíram, `r.parts`), e a taverna guarda o grão da cerveja da sua prateleira (`b.malte`: cada lote feito põe
   o seu grão, cada caneca que sai leva a sua parte; a cerveja que veio do armazém é de grão não sabido) — a carta diz «cerveja de

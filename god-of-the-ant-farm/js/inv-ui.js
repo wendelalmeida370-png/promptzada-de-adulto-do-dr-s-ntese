@@ -161,7 +161,7 @@
     if (st && G.Possess.knows.stock(v, st)) {
       const f = G.Fac.get(G.Fac.idOfV(v)); const have = g => Math.floor(((f && f.stock[g]) || 0) * 100) / 100;
       // (what the store gives is what it has: the material of what each thing is made of — I.offer, 20h)
-      const offs = ['machado', 'picareta', 'pa', 'enxada', 'foice', 'martelo', 'faca', 'vara', 'rede', 'remo', 'espada', 'lanca', 'clava', 'arco', 'flecha', 'escudo', 'elmo', 'couraca', 'cajado', 'tocha', 'cesto', 'balde'].map(kd => [kd, I.offer(v, kd)]).filter(x => x[1].k);
+      const offs = ['machado', 'picareta', 'pa', 'enxada', 'foice', 'martelo', 'faca', 'vara', 'rede', 'remo', 'espada', 'lanca', 'clava', 'arco', 'flecha', 'escudo', 'elmo', 'couraca', 'cajado', 'tocha', 'cesto', 'balde', 'dados'].map(kd => [kd, I.offer(v, kd)]).filter(x => x[1].k);
       h += `<div class="iv-store"><label>No armazém do seu povo — ferramentas ${have('ferramentas')}, armas ${have('armas')}, madeira ${Math.floor(have('wood'))}, pedra ${Math.floor(have('stone'))}</label><div class="iv-take">${offs.map(([kd, o]) => { const k = o.k; const n = kd === 'flecha' ? 20 : 1;
         const of = o.need.map(x => Math.round(x.n * 100) / 100 + ' de ' + G.Eco.name(x.k) + (x.of && G.Origem && G.Origem.METAL[x.of] ? ' ' + G.Origem.METAL[x.of].nome : '')).join(' e ');
         return `<button data-a="make" data-kind="${kd}"${o.can ? '' : ' disabled'} title="${esc(`${G.cap(It().nome(k, n))} — ${o.can ? of : o.why}`)}">${UI.sign(k)}<span>${esc(kd === 'flecha' ? '20 flechas' : It().def(k).nome)}</span></button>`; }).join('')}</div></div>`;

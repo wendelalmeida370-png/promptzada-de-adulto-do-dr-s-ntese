@@ -47,7 +47,10 @@
     T[X.browSad] += 0.2 * p.cansado + 0.3 * p.doente + 0.8 * p.luto + 0.2 * p.medo; T[X.pain] += 0.6 * p.ferido + 0.15 * p.doente;
     T[X.cry] += 0.6 * p.luto; T[X.smile] -= 0.4 * p.luto + 0.2 * p.medo + 0.3 * p.furia + 0.15 * p.doente;
     T[X.wide] += 0.8 * p.medo; T[X.browUp] += 0.7 * p.medo; T[X.stretch] += 0.3 * p.medo; T[X.browIn] += 0.9 * p.furia; T[X.sneer] += 0.3 * p.furia;
-    const dk = I.drunk || 0; if (dk > 0) { T[X.blush] += 0.7 * dk; T[X.smileSide] += 0.4 * dk; T[X.squint] += 0.3 * dk; T[X.smile] += 0.3 * dk; }
+    // (the drink: the flush, the heavy lids — and, by who one is (I.dmood: the temperament, G.Indole), the loose silly smile or the sour
+    // scowl; the face shows it seated too: I.drunkF — D-872)
+    const dk = I.drunkF !== undefined ? I.drunkF : I.drunk || 0; if (dk > 0) { const dm = I.dmood || 0; T[X.blush] += 0.7 * dk; T[X.squint] += 0.3 * dk + 0.25 * Math.max(0, dk - 0.5); T[X.blink] += 0.3 * Math.max(0, dk - 0.4);
+      if (dm >= 0) { T[X.smileSide] += 0.4 * dk; T[X.smile] += (0.3 + 0.4 * dm) * dk; T[X.jaw] += 0.08 * dk * dm; } else { T[X.browIn] += 0.6 * dk * -dm; T[X.press] += 0.3 * dk * -dm; T[X.sneer] += 0.25 * dk * -dm; T[X.smile] -= 0.3 * dk * -dm; } }
     // the little thing of the moment
     if (oc) { const u = a.ocU || 0, mid = Math.sin(Math.PI * Math.max(0, Math.min(1, u)));
       if (oc === 'oc-bocejar') { T[X.jaw] = Math.max(T[X.jaw], 0.85 * mid); T[X.squint] += 0.7 * mid; }
@@ -71,7 +74,7 @@
       F[X.jaw] = Math.max(F[X.jaw], cw * (0.04 + 0.2 * op)); F[X.press] += cw * 0.45 * (1 - op); F[X.pucker] += cw * 0.12 * op; F[X.smileSide] += cw * 0.16 * Math.sin(q * 0.5); }
     // the blink, the look — and the eyes a gesture keeps shut (the nap with the head on the arms: its clip's own word, eyes)
     const b = pose.blink === undefined ? 1 : pose.blink; F[X.blink] = Math.max(F[X.blink], (1 - b) / 0.88);
-    const sh = a && ((a.over && a.ow > 0.5 && a.over.eyes) || (a.clip && a.clip.eyes)); if (sh === 'shut') F[X.blink] = Math.max(F[X.blink], 0.97);
+    const sh = a && ((a.over && a.ow > 0.5 && a.over.eyes) || (a.clip && a.clip.eyes)); if (sh === 'shut') F[X.blink] = Math.max(F[X.blink], 0.97); else if (sh === 'half') F[X.blink] = Math.max(F[X.blink], 0.55);
     F[X.gazeX] = pose.gazeX || 0; F[X.gazeY] = pose.gazeY || 0;
     return RO.clamp(F);
   };
