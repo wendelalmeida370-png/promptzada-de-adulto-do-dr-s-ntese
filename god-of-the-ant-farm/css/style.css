@@ -1753,12 +1753,14 @@ canvas#game3d { touch-action: none; transition: none; }
 #dados-panel .jd-seat[data-side="r"] .jd-bal { right: 100%; margin-right: 10px; top: 4px; }
 #dados-panel .jd-seat[data-side="r"] .jd-bal::after { right: -4px; top: 14px; }
 /* the middle: the sum counted, the word of the round; the banner of the end */
-#dados-panel .jd-mid { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 64%; pointer-events: none; text-align: center; }
-#dados-panel .jd-soma { display: flex; flex-direction: column; align-items: center; padding: 4px 18px 6px; border-radius: 14px; background: rgba(18, 11, 6, .72); color: #fbe9bf; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); animation: jdPop .35s both; }
+#dados-panel .jd-mid { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 64%; pointer-events: none; text-align: center; z-index: 3; }
+#dados-panel .jd-soma { display: flex; flex-direction: column; align-items: center; padding: 4px 18px 6px; border-radius: 14px; background: rgba(18, 11, 6, .9); color: #fbe9bf; box-shadow: 0 6px 18px rgba(0, 0, 0, .5); }
+#dados-panel .jd-soma.pop { animation: jdPop .35s both; }
 #dados-panel .jd-soma small { font-size: 10px; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; color: #d9bd83; }
 #dados-panel .jd-soma b { font-family: 'Cinzel', Georgia, serif; font-weight: 900; font-size: 38px; line-height: 1; }
 #dados-panel .jd-soma.fim b { color: #ffd56a; text-shadow: 0 0 18px rgba(255, 200, 80, .6); }
-#dados-panel .jd-res { padding: 3px 11px; border-radius: 10px; background: rgba(18, 11, 6, .74); color: #f6e7c4; font-weight: 900; font-size: 12.5px; line-height: 1.25; text-shadow: 0 1px 2px #000; animation: jdPop .4s both; }
+#dados-panel .jd-res { padding: 3px 11px; border-radius: 10px; background: rgba(18, 11, 6, .9); color: #f6e7c4; font-weight: 900; font-size: 12.5px; line-height: 1.25; text-shadow: 0 1px 2px #000; }
+#dados-panel .jd-res.pop { animation: jdPop .4s both; }
 #dados-panel .jd-res.crava { color: #ffd56a; font-family: 'Cinzel', Georgia, serif; font-size: 16px; letter-spacing: .05em; }
 #dados-panel .jd-res.queima { color: #ffb39a; }
 #dados-panel .jd-res.trap { color: #ff8f7a; font-size: 15px; }
@@ -1776,7 +1778,8 @@ canvas#game3d { touch-action: none; transition: none; }
 /* the controls */
 #dados-panel .jd-ctl { flex: none; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 9px 14px 11px; border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(0, 0, 0, .04), rgba(0, 0, 0, .08)); }
 #dados-panel .jd-sec { font-size: 13px; font-weight: 800; text-align: center; }
-#dados-panel .jd-said { max-width: 520px; min-height: 22px; font-size: 14px; font-weight: 800; text-align: center; line-height: 1.35; animation: jdPop .35s both; }
+#dados-panel .jd-said { max-width: 520px; min-height: 22px; font-size: 14px; font-weight: 800; text-align: center; line-height: 1.35; }
+#dados-panel .jd-said.pop { animation: jdPop .35s both; }
 #dados-panel .jd-said b.crava { color: var(--acc); font-family: 'Cinzel', Georgia, serif; font-weight: 900; letter-spacing: .03em; }
 #dados-panel .jd-said b.trap { color: #b0301c; } #dados-panel .jd-said b.mao { color: #2f6b2a; }
 #dados-panel.t-nordico .jd-said b.trap { color: #ff9a80; } #dados-panel.t-nordico .jd-said b.mao { color: #a8e29a; }
