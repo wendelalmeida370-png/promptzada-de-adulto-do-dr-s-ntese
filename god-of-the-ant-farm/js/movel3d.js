@@ -40,7 +40,8 @@
   // family of interior's file (packs: js/movelmesh-<família>.js, js/decomesh-<família>.js; arte/blender/pacotes.py says the families),
   // never loaded by index.html. A pack is asked for when a piece of its family is drawn (pick here, the decoration's MESH in the
   // dentro3d.js) or by anyone who knows it will be (want); its file by a script tag, in the background, one at a time (the game opens
-  // from the disk: a fetch would be refused) — the early ones (every inside's: cedo in the index) a few seconds after the page opens.
+  // from the disk: a fetch would be refused) — the early ones (every inside's: cedo in the index) a few seconds after the page opens,
+  // the ones of a kind of building (tipos in the index) as a world that has one opens (forWorld, D-1025).
   // Until a pack comes its pieces are drawn as before — the boxes of the FURN, the inside without those things —; when it comes, the
   // look of every building says so (V.gen, in its signature) and the insides open are drawn again by themselves. A file that does not
   // come is a failure where every module's is (G.modErr), asked again only a while later. Only seen: nothing of the world read or written
@@ -64,8 +65,9 @@
   V.want = fam => V.pacote('movel', fam); // (the furniture's packs; the decoration's: G.Dentro3D.want)
   // (a pack's own file, as it runs: its models are in — G.PACOTES says so —, and every look is another now)
   V.got = function (lib, fam) { asked.delete(lib + ':' + fam); GEN++; };
-  // how a pack's file is fetched: a script tag in the page's head (done(ok) when it ran or failed); the proofs in Node give their own
-  V.fetch = function (file, done) {
+  // how a pack's file is brought in: a script tag in the page's head (done(ok) when it ran or failed) — never a fetch: the game opens
+  // from the disk (qa/visual/guarda3d.js); the proofs in Node give their own
+  V.script = function (file, done) {
     const doc = typeof document !== 'undefined' ? document : null; if (!doc || typeof doc.createElement !== 'function' || !doc.head) { done(false); return; }
     const s = doc.createElement('script'); s.async = true; s.src = file;
     s.onload = () => { s.remove(); done(true); }; s.onerror = () => { s.remove(); done(false); }; doc.head.appendChild(s);
@@ -76,7 +78,7 @@
       const k = queue.shift(); const [lib, fam] = k.split(':'); if (V.ready(lib, fam)) { asked.delete(k); continue; }
       const P = LIBS[lib](); const f = P && P.packs && P.packs[fam] && P.packs[fam].f; if (!f) { asked.delete(k); continue; }
       busy = k;
-      V.fetch(f, ran => { busy = null; if (!V.ready(lib, fam)) fail(k, f, ran ? 'o arquivo não trouxe o pacote' : 'o arquivo não abriu'); pump(); });
+      V.script(f, ran => { busy = null; if (!V.ready(lib, fam)) fail(k, f, ran ? 'o arquivo não trouxe o pacote' : 'o arquivo não abriu'); pump(); });
     }
   }
   function fail(k, f, why) { asked.set(k, now() || 1); G.modErr = G.modErr || {}; G.modErr.Pacotes = (G.modErr.Pacotes || 0) + 1; console.error('[Pacotes]', k, why + ':', f); }
@@ -89,6 +91,17 @@
   V.wantAll = () => { let all = true; for (const lib in LIBS) { const P = LIBS[lib](); if (P && P.packs) for (const fam of Object.keys(P.packs)) all = V.pacote(lib, fam) && all; } return all; };
   V.early = lib => { const P = LIBS[lib] && LIBS[lib](); if (P && P.packs) for (const fam of Object.keys(P.packs)) if (P.packs[fam].cedo) V.pacote(lib, fam); };
   if (typeof setTimeout === 'function') setTimeout(() => V.early('movel'), 2500);
+  // the packs a world will want (D-1025): a family that is not early says the types of building whose insides draw it (tipos in the
+  // index, arte/blender/pacotes.py TIPOS); a world opened with one of them asks for it at once — before the body comes near one, so
+  // the first it walks into is drawn by its models, never by the boxes. The world's buildings are read once it is in (the hook runs
+  // before they are: its own turn after); nothing of it written. A building of a new type later is asked for when first drawn (pick).
+  // Gives the families asked for, 'lib:família'
+  V.forWorld = function () {
+    const S = G.S; const out = []; if (!S || !S.buildings) return out; const types = new Set(); for (const b of S.buildings.values()) types.add(b.type);
+    for (const lib in LIBS) { const P = LIBS[lib](); if (P && P.packs) for (const fam of Object.keys(P.packs).sort()) { const T = P.packs[fam].tipos; if (T && T.some(t => types.has(t))) { V.pacote(lib, fam); out.push(lib + ':' + fam); } } }
+    return out;
+  };
+  if (G.worldHooks) G.worldHooks.push(() => { if (typeof setTimeout === 'function') setTimeout(V.forWorld, 0); });
 
   // ------------------------------ the models of the file ------------------------------
   // (kind → the people's tag — 'romano', 'romano~rico' — → its models, by size; made once, from what the files hold — the index's

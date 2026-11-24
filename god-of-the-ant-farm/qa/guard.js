@@ -3060,7 +3060,7 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
     for (const f of files.filter(f => re.test(f) && f !== lib + '.js')) if (!named.has(f)) fails.push(`os pacotes pelo arquivo de cada um: js/${f} é um pacote que o índice js/${lib}.js não nomeia (D-1020)`); }
   for (const f of files) { if (MOVELIB.test(f) || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { if (/(?:movelmesh|decomesh)-[\w-]+\.js/.test(code(l))) fails.push(`os pacotes pelo arquivo de cada um: ${f}:${k + 1} nomeia o arquivo de um pacote — quem pede um pacote é o G.Movel3D.pacote, pelo índice (D-1022)`); }); }
   { const mv = (src['movel3d.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n');
-    if (!/const s = doc\.createElement\('script'\); s\.async = true; s\.src = file;/.test(mv)) fails.push('os pacotes pelo arquivo de cada um: o G.Movel3D.fetch não pede o arquivo de um pacote por uma tag de script (o jogo abre do disco: D-1022)');
+    if (!/const s = doc\.createElement\('script'\); s\.async = true; s\.src = file;/.test(mv)) fails.push('os pacotes pelo arquivo de cada um: o G.Movel3D.script não pede o arquivo de um pacote por uma tag de script (o jogo abre do disco: D-1022)');
     if (/createElement\(['"]script['"]\)/.test(dt)) fails.push('os pacotes pelo arquivo de cada um: o dentro3d.js cria uma tag de script — a decoração pede os seus pacotes pelo G.Movel3D.pacote (D-1022)'); }
   // 511. "a base é o que a casca e a rua desenham" (D-1020): o índice dos móveis traz, além do índice, só os modelos da família «base» — a
   // folha da porta (a casca do interior aberto) e as peças de um quintal (o pedaço da rua): o que se desenha uma vez e não espera um
@@ -3094,6 +3094,22 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   // 16 bits sobre as suas caixas, as normais octaédricas em dois bytes (p16, n8, u16) —, nunca os números de ponto flutuante de antes; e só
   // o mesh3d.js (o G.Mesh3D, o leitor de todo G.MESH3D) lê essa forma: ninguém decodifica um modelo por conta própria
   for (const f of files.filter(f => MOVELIB.test(f) || DECOLIB.test(f))) for (const m of models(f)) if (!/^\{"v":2,"n":\d+,"t":\d+,"box":\[[^\]]*\],"p16":"[^"]*","n8":"[^"]*",/.test(m.line) || /"pos":"/.test(m.line)) fails.push(`os modelos de dentro em 16 bits: ${m.name} (js/${f}) não está na forma 2 (D-1021)`);
-  for (const f of files) { if (f === 'mesh3d.js' || MOVELIB.test(f) || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { if (/\.(?:p16|n8|u16)\b/.test(code(l))) fails.push(`os modelos de dentro em 16 bits: ${f}:${k + 1} lê a forma de 16 bits de um modelo por conta própria (é do G.Mesh3D: D-1021)`); }); } }
+  for (const f of files) { if (f === 'mesh3d.js' || MOVELIB.test(f) || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { if (/\.(?:p16|n8|u16)\b/.test(code(l))) fails.push(`os modelos de dentro em 16 bits: ${f}:${k + 1} lê a forma de 16 bits de um modelo por conta própria (é do G.Mesh3D: D-1021)`); }); }
+  // 515. "as mãos pelo carregador" (L-2262): o que as mãos seguram de uma taverna — a caneca servida (G.Dentro3D.served) e o pano do ombro
+  // do taverneiro (G.Dentro3D.ombro) — chega ao seu modelo pelo carregador das malhas (o MESH do dentro3d.js), como toda coisa da
+  // decoração: o pacote pedido quando não está; nunca o G.Mesh3D.parts de um nome que ninguém pediu
+  { const dt = (src['dentro3d.js'] || []).join('\n');
+    if (!/const parts = \(MESH\(name\) && G\.Mesh3D \? G\.Mesh3D\.parts\(name\) : \[\]\)\.filter\(pt => shows\(pt, t\)\);/.test(dt)) fails.push('as mãos pelo carregador: o G.Dentro3D.served lê o modelo da caneca ou do prato sem pedir o seu pacote (o MESH: L-2262)');
+    if (!/return \{ name, parts: MESH\('pano-ombro'\) && G\.Mesh3D \? G\.Mesh3D\.parts\(name\) : \[\],/.test(dt)) fails.push('as mãos pelo carregador: o G.Dentro3D.ombro lê o modelo do pano sem pedir o seu pacote (o MESH: L-2262)'); }
+  // 516. "o mundo pede os pacotes dos seus prédios" (D-1025): uma família que não é cedo diz os tipos de prédio que a desenham (tipos, no
+  // índice; o TIPOS do arte/blender/pacotes.py), e o mundo aberto pede na hora as famílias dos tipos que tem — o gancho do mundo agenda o
+  // G.Movel3D.forWorld para depois de o mundo estar dentro (o gancho roda antes dos prédios); a família cedo não tem tipos
+  { const mv = (src['movel3d.js'] || []).join('\n');
+    if (!/if \(G\.worldHooks\) G\.worldHooks\.push\(\(\) => \{ if \(typeof setTimeout === 'function'\) setTimeout\(V\.forWorld, 0\); \}\);/.test(mv)) fails.push('o mundo pede os pacotes dos seus prédios: o movel3d.js não agenda o G.Movel3D.forWorld ao abrir um mundo (D-1025)');
+    if (!/const T = P\.packs\[fam\]\.tipos; if \(T && T\.some\(t => types\.has\(t\)\)\) \{ V\.pacote\(lib, fam\);/.test(mv)) fails.push('o mundo pede os pacotes dos seus prédios: o G.Movel3D.forWorld não pede as famílias pelos tipos do índice (D-1025)');
+    for (const [lib, , obj] of libs) { const P = index(lib, obj); if (!P || !P.packs) continue; for (const fam of Object.keys(P.packs)) { const T = P.packs[fam].tipos;
+      if (T !== undefined && !(Array.isArray(T) && T.length && T.every(t => typeof t === 'string' && /^[a-z_]+$/.test(t)))) fails.push(`o mundo pede os pacotes dos seus prédios: os tipos do pacote ${fam} de ${lib} não são uma lista de tipos de prédio (D-1025)`);
+      if (T && P.packs[fam].cedo) fails.push(`o mundo pede os pacotes dos seus prédios: o pacote ${fam} de ${lib} é cedo e tem tipos — uma coisa ou a outra (D-1025)`); } } }
+}
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

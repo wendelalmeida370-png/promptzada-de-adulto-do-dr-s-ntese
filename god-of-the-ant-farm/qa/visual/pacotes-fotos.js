@@ -5,7 +5,9 @@
 // the world opens (a game of before has none: nothing to wait for); then the same world, the same tavern (the first of the world with
 // its keeper, by its id), the body put in by a seat near its door, the same frames stepped (the 3D by software: only the last ones
 // drawn, as qa/visual/fotos.js does) and the eye on the hall from two sides: taverna-a.png, taverna-b.png. Side by side:
-// python3 qa/visual/compara.py ANTES DEPOIS SAIDA
+// python3 qa/visual/compara.py ANTES DEPOIS SAIDA. With SEM=1, the packs are not waited for: sem-pacote.png is the tavern as the
+// page draws it before its pack comes (its own pieces by the boxes), chegou.png the same eye once every pack is in and a second of
+// the world has passed (the inside drawn again by itself, D-1022)
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); const OUT = process.argv[3] || path.join(require('os').tmpdir(), 'pacotes-fotos'); const WORLD = process.argv[4] || 'metropole';
@@ -19,14 +21,15 @@ fs.mkdirSync(OUT, { recursive: true });
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
   await page.waitForFunction(() => !(window.G && G.Ground3D && G.Ground3D.texReady) || G.Ground3D.texReady(), null, { timeout: 120000 });
   // (every pack in before the world opens — the page's script tags, one at a time; a game of before has none)
-  const t0 = Date.now(); await page.waitForFunction(() => !(G.Movel3D && G.Movel3D.wantAll) || G.Movel3D.wantAll(), null, { timeout: 180000, polling: 200 });
-  const packs = await page.evaluate(() => (G.Movel3D && G.Movel3D.packs ? JSON.stringify(G.Movel3D.packs()) : 'sem pacotes (antes)'));
-  console.log(`os pacotes (${((Date.now() - t0) / 1000).toFixed(1)} s): ${packs}`);
+  const SEM = !!process.env.SEM; const allIn = async () => { const t0 = Date.now(); await page.waitForFunction(() => !(G.Movel3D && G.Movel3D.wantAll) || G.Movel3D.wantAll(), null, { timeout: 180000, polling: 200 });
+    console.log(`os pacotes (${((Date.now() - t0) / 1000).toFixed(1)} s): ${await page.evaluate(() => (G.Movel3D && G.Movel3D.packs ? JSON.stringify(G.Movel3D.packs()) : 'sem pacotes (antes)'))}`); };
+  if (SEM) console.log(`os pacotes ao abrir: ${await page.evaluate(() => (G.Movel3D && G.Movel3D.packs ? JSON.stringify(G.Movel3D.packs()) : '-'))}`); else await allIn();
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', WORLD + '.js') });
-  const shots = [['taverna-a', 0], ['taverna-b', Math.PI]];
+  // (name, the turn of the eye from the hall's middle, the frames stepped before — a second of the world is 111 at the body's pace)
+  const shots = SEM ? [['sem-pacote', 0, 0], ['chegou', 0, 130]] : [['taverna-a', 0, 0], ['taverna-b', Math.PI, 0]];
   for (let k = 0; k < shots.length; k++) {
-    const [name, turn] = shots[k]; const t1 = Date.now();
-    const { png, ...info } = await page.evaluate(([w, turn, first, Q]) => {
+    const [name, turn, wait] = shots[k]; const t1 = Date.now(); if (SEM && k === 1) await allIn();
+    const { png, ...info } = await page.evaluate(([w, turn, first, Q, wait]) => {
       let r0 = null, rq = null, quiet = true;
       const hush = on => { quiet = on; const r = G.Realm.renderer(); if (!r || r0) return; rq = r; r0 = r.render; r.render = function () { return quiet ? undefined : r0.apply(this, arguments); }; };
       const sync = () => { const r = G.Realm.renderer(); if (!r) return; const gl = r.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); };
@@ -52,13 +55,15 @@ fs.mkdirSync(OUT, { recursive: true });
         const room = p.rooms.filter(m => m.lv === (p.entryLv || 0) && !m.open).sort((a, c) => (c.r[2] - c.r[0]) * (c.r[3] - c.r[1]) - (a.r[2] - a.r[0]) * (a.r[3] - a.r[1]))[0];
         const st = G.Avatar.state(); const cx = b.x * TL + (room.r[0] + room.r[2]) / 2, cz = b.y * TL + (room.r[1] + room.r[3]) / 2;
         const yaw = Math.atan2(cx - st.X, cz - st.Z) + Math.PI + turn;
-        G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.32; G.Cam3D.dist = 2.6; G.Cam3D.cur = 2.6; f(60);
+        G.Cam3D.OPT.follow = false; G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.32; G.Cam3D.dist = 2.6; G.Cam3D.cur = 2.6; f(60 + (wait | 0));
         drawn(33); drawn(33); G.Cam3D.yaw = yaw; G.Cam3D.pitch = 0.32; G.Cam3D.cur = 2.6; drawn(1);
         const c = G.Realm.renderer().domElement, o = document.createElement('canvas'); o.width = c.clientWidth || c.width; o.height = c.clientHeight || c.height; o.getContext('2d').drawImage(c, 0, 0, o.width, o.height);
         const B3 = G.Build3D; const open = B3.opened ? B3.opened().find(q => q.id === b.id) : null;
-        return { b: b.id, civ: b.style || '', clock: +S.clock.toFixed(2), open: !!open, err: JSON.stringify(G.modErr), png: o.toDataURL('image/png') };
+        // (what of the furniture the scene draws by its models: the instanced meshes of the inside — Build3D's 'movel:', Dentro3D's 'dentro:')
+        let mv = 0, dt = 0; G.Realm.scene().traverse(m => { if (m.name && m.name.startsWith('movel:')) mv++; if (m.name && m.name.startsWith('dentro:')) dt++; });
+        return { b: b.id, civ: b.style || '', clock: +S.clock.toFixed(2), open: !!open, moveis: mv, coisas: dt, pacotes: G.Movel3D && G.Movel3D.packs ? JSON.stringify(G.Movel3D.packs()) : '-', err: JSON.stringify(G.modErr), png: o.toDataURL('image/png') };
       } finally { if (rq) rq.render = r0; }
-    }, [WORLD, turn, k === 0, process.env.Q || 'media']);
+    }, [WORLD, turn, k === 0, process.env.Q || 'media', wait]);
     if (info.err && !png) { console.log(`FALHOU ${name}: ${info.err}`); break; }
     const file = path.join(OUT, name + '.png'); fs.writeFileSync(file, Buffer.from(png.split(',')[1], 'base64'));
     console.log(`${name}: ${JSON.stringify(info)} (${((Date.now() - t1) / 1000).toFixed(0)} s) → ${file}`);

@@ -90,12 +90,14 @@ def worst(): return f"os 16 bits: o ponto mais longe a {WORST['pos'] * 1000:.3f}
 #   · 'taverna': the tavern's own — the bar and the brew, the hall's tables, the musician's stage, the hearths made for it, the marks
 #     of its nights, the boards at its door, the feast, the door barred or broken in, the games;
 #   · and, as the waves come, a family for each kind of work (the court of a palace, the rite of a temple, the craft of a workshop, the
-#     cells of the law, the port, the trade): the front that models its pieces says their family here, a line a kind.
+#     cells of the law, the port, the trade): the front that models its pieces says their family here, a line a kind — and the types
+#     of building that draw the family (TIPOS): a world that has one asks for it as it opens (D-1025).
 # A kind no line names goes to 'comum' (the pack every inside asks for: drawn right wherever it is put, if not cheaply) and the
 # generators say so. A pack holds shapes only: what each part of a piece is made of is still what its people has (js/movel3d.js —
-# Movel3D.paint, by G.Origem.matOK —; the decoration's by G.Atmos.within), never the pack's: nada vem do nada. A building asks for few packs — the common, the house's where people live in it, its own: the proof
-# qa/visual/pacotes.js counts them, type by type. A model is in one pack only; a pack is its family's whole. A family that grows past
-# its budget (BUDGET['arquivo']) is split by the front that makes it grow — two families here —, never a model in two packs.
+# Movel3D.paint, by G.Origem.matOK —; the decoration's by G.Atmos.within), never the pack's: nada vem do nada. A building asks for
+# few packs — the common, the house's where people live in it, its own: the proof qa/visual/pacotes.js counts them, type by type. A
+# model is in one pack only; a pack is its family's whole. A family that grows past its budget (BUDGET['arquivo']) is split by the
+# front that makes it grow — two families here —, never a model in two packs.
 FAMILIA = {
     'base': 'what the shell and the street draw at first sight — the leaf of a door, the pieces of a yard: never waiting for a pack',
     'comum': "every inside's: to sit, to set down, to keep, to light — the pack every inside asks for",
@@ -104,6 +106,11 @@ FAMILIA = {
     'taverna': "the tavern's own: the bar and the brew, the hall's tables, the musician, its hearths, its nights, its door, its feast, its games",
 }
 CEDO = {'movel': ['comum', 'casa'], 'deco': ['comum']}  # (asked a few seconds after the page opens: every inside asks for them)
+# The types of building whose insides draw a family that is not early (D-1025): a world opened with a building of one of them asks for
+# the family's pack at once, in the background — before the body comes near one, so the first of them it walks into is drawn by its
+# models, never by the boxes. The front that makes a family says its types here, with the family (the proof p10 of
+# qa/visual/pacotes.js: every family a building of the ready worlds draws is early or has the building's type here)
+TIPOS = {'movel': {'taverna': ['taverna']}, 'deco': {'mesa': ['taverna'], 'taverna': ['taverna']}}
 MOVEL = {
     # (the shell and the street)
     'folha': 'base', 'mesa-terreiro': 'base',
@@ -149,6 +156,9 @@ def files(lib, lines, index_text, pack_text, budget):
     (lib-<família>.js); lines {model name: its line}. Each file in its budget (MiB): the index BUDGET['indice'], a pack 'arquivo',
     all of them 'todos' — or nothing is written"""
     ln = LIBNAME[lib]; groups, loose, of = {}, set(), {}
+    for fam in list(CEDO[ln]) + list(TIPOS[ln]):
+        if fam not in FAMILIA: raise SystemExit(f'arte/blender/pacotes.py: a família «{fam}» (CEDO ou TIPOS de {ln}) não é uma das FAMILIA')
+        if fam in CEDO[ln] and fam in TIPOS[ln]: raise SystemExit(f'arte/blender/pacotes.py: a família «{fam}» de {ln} é cedo e tem tipos — uma coisa ou a outra')
     for name in sorted(lines):
         k = KIND.search(lines[name]).group(1); fam, said = familia(ln, k)
         if not said: loose.add(k)
@@ -158,6 +168,7 @@ def files(lib, lines, index_text, pack_text, budget):
         t = pack_text(fam, groups[fam]); out[f'{lib}-{fam}.js'] = t
         meta[fam] = {'f': f'js/{lib}-{fam}.js', 'n': len(groups[fam]), 'kb': round(len(t.encode('utf8')) / 1024)}
         if fam in CEDO[ln]: meta[fam]['cedo'] = 1
+        elif fam in TIPOS[ln]: meta[fam]['tipos'] = sorted(TIPOS[ln][fam])
     out[f'{lib}.js'] = index_text(groups.get('base', {}), {k: of[k] for k in sorted(of)}, meta)
     for f, t in out.items():
         lim = budget['indice'] if f == f'{lib}.js' else budget['arquivo']

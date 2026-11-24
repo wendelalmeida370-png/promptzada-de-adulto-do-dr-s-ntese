@@ -22,10 +22,15 @@
 //       no storm of asking (asked again only after G.Movel3D.RETRY); let in later, drawn by its models
 //   p6. a save and a load in the middle: the packs stay in (they are the page's, not the world's), the same drawing before and after
 //   p7. a building asks for few packs: every type of building of the ready worlds, the packs its plan's pieces and the things its
-//       decoration shows need — the common, the house's where people live in it, its own: three of each library at most
+//       decoration shows need — the common, the house's where people live in it, its own: three of each library at most; and each of
+//       them early, or asked for by the building's type as the world opens (D-1025)
 //   p8. what a pack costs: the time to run its file and to read every model of it (G.Mesh3D.geo), in Node
-//   p9. (a measure, D-665) the meshes of a tavern drawn by instances — a model's part and pattern each — and the ones there would be
-//       with the parts of a model in one mesh
+//   p9. (a measure, D-665, D-1023) the meshes of a tavern drawn by instances — a model's part and pattern each — and the ones there
+//       would be with the parts of a model in one mesh (and the furniture's half way, the two woods apart)
+//   p10. a world opened asks at once for the packs its kinds of building will want (D-1025): the hook scheduled as it opens and run
+//       once it is in, the families whose types it has and no other; a new world without them asks for none
+//   p11. the hands ask for the pack of what they hold (L-2262): the cup served and the keeper's cloth by the loader — asked for while
+//       out, nothing of the model in the hands; with every pack in, the models
 const fs = require('fs'), path = require('path'), vm = require('vm'), cp = require('child_process');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
 const BASE = process.env.BASE || '5c482ef';
@@ -86,13 +91,13 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
   }
 }
 
-// ------------------------------ the packs in the game (p2 to p9) ------------------------------
+// ------------------------------ the packs in the game (p2 to p11) ------------------------------
 {
   const T = require(path.join(__dirname, 'tres-node.js'));
   const { G, M, THREE } = T.load({ pacotes: false });
   const MV = G.Movel3D, D = G.Dentro3D, B3 = G.Build3D, In = G.Interiors, M3 = G.Mesh3D; const TL = G.Space.TILE;
   // (the page's script tags in the proof's hand: a file asked for is held until let in — run as the page runs it — or refused)
-  const held = []; MV.fetch = (file, done) => held.push({ file, done });
+  const held = []; MV.script = (file, done) => held.push({ file, done });
   const letIn = (n, why) => { let k = 0; while (held.length && k < (n === undefined ? 1e9 : n)) { const h = held.shift(); if (why) { h.done(false); } else { M.run(h.file); h.done(true); } k++; } return k; };
   // (the inside drawn without a graphics card: a scene and an inner material of its own — Build3D opens the buildings as the game does)
   const scene = new THREE.Scene(), MI = new THREE.MeshBasicMaterial(); G.Realm.scene = () => scene; const m0 = G.Realm.mats; G.Realm.mats = () => Object.assign({}, m0 ? m0() : {}, { inner: MI, solid: MI, innerF: MI });
@@ -102,7 +107,30 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
   const TAV = ['banquinho', 'mesa-redonda', 'mesa-taverna', 'banco', 'cadeira', 'balcao', 'balcao-alvenaria', 'prateleira-bar', 'anforeira', 'barril', 'lareira', 'forno-barro', 'fogao-comal', 'fogo-comprido', 'estrado-musico', 'cuba', 'pipas', 'lampadario', 'cama', 'cama-casal', 'arca', 'mesa', 'mesa-terreiro', 'talha', 'jarros', 'fogao', 'lar', 'esteira', 'esteira-casal'];
   const drawn = (b, plan) => { const out = B3.interior(plan, b, { fine: true }); let mod = 0, box = 0; for (const it of plan.items) { if (!TAV.includes(it.kind) || (it.form && B3.byForm && B3.byForm(b))) continue; const R = out.item[it.id]; if (R && R[3] !== undefined) mod++; else box++; } return { out, mod, box, leaves: out.leaf.length }; };
   const errs0 = () => Object.keys(G.modErr || {}).length; const planted = []; // (the console lines of the failure the proof plants: p5)
-  M.pronto('metropole'); const S = () => G.S;
+  const S = () => G.S; const LIB = { movel: () => G.MOVEIS, deco: () => G.DECO };
+  // ---- p10 (first, nothing asked yet): a world opened asks at once for the packs its kinds of building will want (D-1025) — the hook
+  // scheduled as the world opens (the page's timer here in the proof's hand) and run once the world is in: the families whose types the
+  // world has, nothing else; every type a family names a building of the game, no early family with types; a world without those
+  // kinds of building asks for none
+  { const bad = []; const later = []; const st0 = global.setTimeout; global.setTimeout = f => { later.push(f); return 0; };
+    try { M.pronto('metropole'); } finally { global.setTimeout = st0; }
+    const hook = later.filter(f => f === MV.forWorld); const before = held.length + MV.packs().queue.length;
+    if (hook.length !== 1) bad.push(`o mundo aberto agendou ${hook.length} vezes o pedido dos pacotes (uma)`); if (before) bad.push(`${before} pacotes pedidos antes de o mundo estar dentro`);
+    const got = hook.length ? hook[0]() : []; const types = new Set([...S().buildings.values()].map(q => q.type)); const want = [];
+    for (const lib of ['movel', 'deco']) { const P = LIB[lib](); for (const fam of Object.keys(P.packs).sort()) { const T = P.packs[fam].tipos || [];
+        for (const t of T) if (!G.BDEF[t]) bad.push(`${lib}:${fam}: o tipo «${t}» não é um prédio do jogo`); if (T.length && P.packs[fam].cedo) bad.push(`${lib}:${fam}: cedo e com tipos`);
+        if (T.some(t => types.has(t))) want.push(lib + ':' + fam); } }
+    // (the loader asks one file at a time: the first in the page's hand, the others in its queue)
+    const fileOf = k => { const [lib, fam] = k.split(':'); return path.basename(LIB[lib]().packs[fam].f); };
+    const files = held.map(h => path.basename(h.file)).concat(MV.packs().queue.map(fileOf)).sort(); const wantF = want.map(fileOf).sort();
+    if (!want.length) bad.push('o mundo não tem um prédio de família pedida pelo tipo'); if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(`pediu ${got.join(', ') || 'nada'}, e o mundo quer ${want.join(', ')}`);
+    if (JSON.stringify(files) !== JSON.stringify(wantF)) bad.push(`os arquivos pedidos ${files.join(', ')}`);
+    M.novo({ seed: 11, type: 'ilha', size: 64, tribes: 1 }); const types2 = [...new Set([...S().buildings.values()].map(q => q.type))].sort(); const none = MV.forWorld();
+    if (want.some(k => { const [lib, fam] = k.split(':'); return LIB[lib]().packs[fam].tipos.some(t => types2.includes(t)); })) bad.push(`o mundo novo já tem ${types2.join(', ')} (a prova quer um sem eles)`); else if (none.length) bad.push(`o mundo novo (${types2.join(', ')}) pediu ${none.join(', ')}`);
+    ok('p10 o mundo aberto pede na hora os pacotes dos seus tipos de prédio: o pedido agendado ao abrir e feito com o mundo dentro, as famílias dos tipos que ele tem e nenhuma outra; um mundo sem eles não pede nada', !bad.length,
+      `a metrópole (${types.size} tipos de prédio): ${got.join(', ')} → ${files.join(', ')}; o mundo novo (${types2.join(', ')}): ${none.length ? none.join(', ') : 'nada'}${few(bad)}`);
+    M.pronto('metropole');
+  }
   const taverns = () => [...S().buildings.values()].filter(b => b.type === 'taverna' && b.built && In.plan(b) && In.plan(b).ok).sort((a, c) => a.id - c.id);
   const b = taverns().find(t => G.Taverna.keeperOf(t)) || taverns()[0]; const plan = G.Space.planNow(b);
   const fams = lib => Object.keys((lib === 'movel' ? G.MOVEIS : G.DECO).packs).sort();
@@ -119,6 +147,23 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
     M.pronto('metropole');
   }
   const b1 = S().buildings.get(b.id); const plan1 = G.Space.planNow(b1);
+  // ---- p11: the hands ask for the pack of what they hold (L-2262) — the cup served to a guest (G.Dentro3D.served) and the keeper's cloth
+  // over his shoulder (G.Dentro3D.ombro) reach their models by the loader, as every thing of the decoration does: their packs asked for,
+  // nothing in the hands while they are out (the catalogue's own thing drawn, as before), the models once they are in. What the world
+  // serves and who wears the cloth are the proof's hand on the two pure readings (G.Atmos.serving, the ombro of G.Atmos.within)
+  const hands = (b, kp) => { const calls = []; const At = G.Atmos, pk0 = MV.pacote, sv0 = At.serving, wi0 = At.within; const guest = { id: kp.id + 1e6 };
+    MV.pacote = function (lib, fam) { calls.push(lib + ':' + fam); return pk0.apply(this, arguments); };
+    At.serving = v => (v === guest ? { b: b.id, k: 'cerveja', st: 0, fresco: true, quente: false, t0: 0, why: 'a prova' } : sv0(v));
+    At.within = q => { const W = wi0(q); return q === b ? Object.assign({}, W, { ombro: { id: kp.id, why: 'a prova' } }) : W; };
+    try { const s = D.served(guest), o = D.ombro({ id: kp.id, job: b.id }); return { calls, s: s ? s.name + ' ' + s.parts.length : '-', o: o ? o.name + ' ' + o.parts.length : '-', ns: s ? s.parts.length : -1, no: o ? o.parts.length : -1 }; }
+    finally { MV.pacote = pk0; At.serving = sv0; At.within = wi0; } };
+  const kp1 = G.Taverna.keeperOf(b1);
+  { const bad = []; const h = kp1 ? hands(b1, kp1) : null;
+    if (!h) bad.push('a taverna sem taverneiro'); else { const fs0 = MV.familyOf('deco', 'bebida-cerveja'), fo = MV.familyOf('deco', 'pano-ombro');
+      if (!h.calls.includes('deco:' + fs0)) bad.push(`a caneca servida não pediu o pacote «${fs0}» (pediu: ${h.calls.join(', ') || 'nada'})`); if (!h.calls.includes('deco:' + fo)) bad.push(`o pano do ombro não pediu o pacote «${fo}»`);
+      if (h.ns !== 0 || h.no !== 0) bad.push(`com os pacotes fora, as mãos com ${h.ns} e ${h.no} partes`); }
+    ok('p11 as mãos pedem o pacote do que seguram: a caneca servida e o pano do ombro pelo carregador (L-2262); fora o pacote, nada do modelo', !bad.length, h ? `pedidos: ${h.calls.join(', ')}; ${h.s} partes, ${h.o} partes${few(bad)}` : few(bad));
+  }
   // ---- p3: without the packs, the drawing of today without models
   { const bad = []; const sig0 = MV.look(b1).sig; const d0 = drawn(b1, plan1); const dp = D.plan(b1, plan1, true);
     FOCUS = { X: (b1.x + b1.w / 2) * TL, Z: (b1.y + b1.h + 0.6) * TL }; tick(4);
@@ -175,16 +220,22 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
     ok('p6 um save e um load no meio: os pacotes ficam (são da página, não do mundo), o mesmo desenho antes e depois', s0 === s1 && MV.gen() === g0 && same && n0 === n1 && n0 > 0, `os móveis ${s0 === s1 ? 'iguais' : 'OUTROS'}, ${n0} → ${n1} coisas, os pacotes ${same ? 'os mesmos' : 'OUTROS'} (${MV.gen()} chegaram)`);
   }
   // ---- p7: a building asks for few packs (every pack let in first: a piece is counted where its model draws it)
-  { const per = {}; const bad = []; MV.wantAll(); letIn();
+  { const per = {}; const bad = []; const late = new Set(); MV.wantAll(); letIn();
     for (const w of ['metropole', 'mundial']) { M.pronto(w); for (const q of S().buildings.values()) { if (!q.built || !In.has(q)) continue; const p = G.Space.planNow(q); if (!p || !p.items) continue;
         const look = MV.look(q); const fm = new Set(), fd = new Set();
         for (const it of p.items) { const fam = MV.familyOf('movel', it.kind); if (fam && fam !== 'base' && MV.pick(it.kind, look.civ, it.w, it.d, it.h, look.rico >= 2 ? 'rico' : '')) fm.add(fam); }
         for (const t of D.plan(q, p, true).list) { const fam = MV.familyOf('deco', t.k); if (fam) fd.add(fam); }
         const r = per[q.type] || (per[q.type] = { n: 0, m: new Set(), d: new Set(), mx: 0 }); r.n++; for (const f of fm) r.m.add(f); for (const f of fd) r.d.add(f); r.mx = Math.max(r.mx, fm.size, fd.size);
-        if (fm.size > 3 || fd.size > 3) bad.push(`${q.type}#${q.id}: ${[...fm].join('+')} | ${[...fd].join('+')}`); } }
+        if (fm.size > 3 || fd.size > 3) bad.push(`${q.type}#${q.id}: ${[...fm].join('+')} | ${[...fd].join('+')}`);
+        // (and each of them early, or asked for as the world opens by the building's type — D-1025: never first asked by the drawing)
+        for (const [lib, set] of [['movel', fm], ['deco', fd]]) for (const fam of set) { const pk = LIB[lib]().packs[fam]; if (!pk.cedo && !(pk.tipos || []).includes(q.type)) late.add(`${q.type} → ${lib}:${fam}`); } } }
     const rows = Object.keys(per).sort().filter(t => per[t].m.size || per[t].d.size).map(t => `${t} ${[...per[t].m].sort().join('+') || '-'} | ${[...per[t].d].sort().join('+') || '-'}`);
-    ok('p7 cada prédio pede poucos pacotes: o comum, o da casa onde alguém mora nele, o seu — três de cada biblioteca, no máximo', !bad.length && rows.length > 3, `${rows.join(' · ')}${few(bad)}`);
+    for (const l of late) bad.push(`${l}: nem cedo nem pedido pelo tipo (arte/blender/pacotes.py TIPOS)`);
+    ok('p7 cada prédio pede poucos pacotes: o comum, o da casa onde alguém mora nele, o seu — três de cada biblioteca, no máximo; e cada um cedo ou pedido pelo tipo do prédio ao abrir o mundo', !bad.length && rows.length > 3, `${rows.join(' · ')}${few(bad)}`);
   }
+  // ---- p11 (again, every pack in): the hands hold the models
+  { M.pronto('metropole'); const b2 = S().buildings.get(b1.id); const k2 = b2 && G.Taverna.keeperOf(b2); const h = k2 ? hands(b2, k2) : null;
+    ok('p11 com os pacotes dentro, as mãos seguram os modelos: a caneca servida e o pano do ombro com as suas partes', !!h && h.ns > 0 && h.no > 0, h ? `${h.s} partes, ${h.o} partes` : 'a taverna sem taverneiro'); }
   // ---- p8: what a pack costs (in Node: the file run, every model of it read)
   { const ms = []; const bad = [];
     for (const lib of ['movel', 'deco']) { const P = lib === 'movel' ? G.MOVEIS : G.DECO; for (const fam of fams(lib)) { const f = P.packs[fam].f; const text = fs.readFileSync(path.join(ROOT, f), 'utf8'); const kb = Buffer.byteLength(text) / 1024;
@@ -195,12 +246,16 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
         const run = Number(t1 - t0) / 1e6, dec = Number(t3 - t2) / 1e6; ms.push(`${path.basename(f)} ${kb.toFixed(0)} KB: ${run.toFixed(0)} ms o arquivo, ${dec.toFixed(0)} ms os ${names.length} modelos`); if (run > 3000) bad.push(`${f}: ${run.toFixed(0)} ms`); } }
     ok('p8 o que um pacote custa (em Node: o arquivo rodado, cada modelo dele lido pelo G.Mesh3D)', !bad.length, ms.join(' · ') + few(bad));
   }
-  // ---- p9: (a measure, D-665) the meshes of a tavern by instances, and with the parts of a model in one mesh
-  { M.pronto('metropole'); const rows = []; let mx = [0, 0, 0];
+  // ---- p9: (a measure, D-665, D-1023) the meshes of a tavern by instances, and with the parts of a model in one mesh — and, for the
+  // furniture, the half way that three.js's one colour an instance allows without a shader of its own: the two woods apart (their tones
+  // are the piece's own, each of its id), every other part of a model in one mesh with its colour in its points (the building's)
+  { M.pronto('metropole'); const rows = []; let mx = [0, 0, 0, 0, 0];
     for (const t of taverns()) { const p = G.Space.planNow(t); const out = B3.interior(p, t, { fine: true }); const gs = B3.instGroups(out, 0); const models = new Set(out.inst.map(q => q.name)).size;
+      const by = new Map(); for (const q of out.inst) { const s = by.get(q.name) || new Set(); for (const [pt] of q.parts) s.add(pt === 'madeira' || pt === 'madeira2' ? pt : 'resto'); by.set(q.name, s); }
+      const half = [...by.values()].reduce((n, s) => n + s.size, 0);
       const dp = D.groupsOf(D.plan(t, p, true), t, [0, 0, 0], 0); const things = new Set(dp.map(g => g.name)).size;
-      rows.push(`#${t.id} ${gs.length}+${dp.length} → ${models}+${things}`); mx = [Math.max(mx[0], gs.length + dp.length), Math.max(mx[1], models + things), Math.max(mx[2], gs.length)]; }
-    ok('p9 (medida, D-665) as malhas de uma taverna — os móveis + as coisas, uma por modelo, parte e padrão — e as que seriam com as partes de um modelo numa malha', true, `${rows.join(' · ')}; no máximo ${mx[0]} → ${mx[1]} (só os móveis: ${mx[2]})`);
+      rows.push(`#${t.id} ${gs.length}+${dp.length} → ${models}+${things} (os móveis a meio caminho: ${half})`); mx = [Math.max(mx[0], gs.length + dp.length), Math.max(mx[1], models + things), Math.max(mx[2], gs.length), Math.max(mx[3], half), Math.max(mx[4], models)]; }
+    ok('p9 (medida, D-665, D-1023) as malhas de uma taverna — os móveis + as coisas, uma por modelo, parte e padrão — e as que seriam com as partes de um modelo numa malha', true, `${rows.join(' · ')}; no máximo ${mx[0]} → ${mx[1]}; só os móveis: ${mx[2]} → ${mx[4]} (a meio caminho, sem sombreador novo: ${mx[3]})`);
   }
   const E = M.erros(); const con = E.console.filter((l, i) => !planted.includes(i));
   ok('sem erro de módulo nem aviso no console (fora a falha plantada da p5)', !Object.keys(E.mod).length && !con.length, JSON.stringify(E.mod).slice(0, 200) + ' ' + con.slice(0, 3).join(' | '));

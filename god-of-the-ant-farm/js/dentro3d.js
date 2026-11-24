@@ -967,7 +967,7 @@
     const s = G.Atmos && G.Atmos.serving ? G.Atmos.serving(v) : null; if (!s) return null; const b = G.S.buildings.get(s.b); if (!b) return null;
     const W = G.Atmos.within(b); const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
     const name = s.k === 'food' ? dishOf(s.prato) : vesselName(W, s.k); const t = { k: name, key: 'mao/' + v.id, x: 0, z: 0, st: s.st, fresco: s.fresco, c: null };
-    const parts = (G.Mesh3D ? G.Mesh3D.parts(name) : []).filter(pt => shows(pt, t));
+    const parts = (MESH(name) && G.Mesh3D ? G.Mesh3D.parts(name) : []).filter(pt => shows(pt, t)); // (by the loader: its pack asked for, L-2262)
     return { name, parts, paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, level: pt => (pt === 'nv' ? D.levelAt(name, s.st) : null), st: s.st, fresco: s.fresco, quente: s.quente, t0: s.t0, why: s.why };
   };
   // the keeper's cloth over his shoulder, for the drawing of the body (the front P6): { name, parts, paint(part), why } for the keeper of
@@ -976,6 +976,6 @@
     const b = v && v.job ? G.S.buildings.get(v.job) : null; if (!b || b.type !== 'taverna' || !G.Atmos || !G.Atmos.within) return null;
     const W = G.Atmos.within(b); if (!W.ombro || W.ombro.id !== v.id) return null; const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
     const name = NAME('pano-ombro'); const t = { k: 'pano-ombro', key: 'ombro/' + v.id, x: 0, z: 0, c: null };
-    return { name, parts: G.Mesh3D ? G.Mesh3D.parts(name) : [], paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, why: W.ombro.why };
+    return { name, parts: MESH('pano-ombro') && G.Mesh3D ? G.Mesh3D.parts(name) : [], paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, why: W.ombro.why };
   };
 })(window.G = window.G || {});
