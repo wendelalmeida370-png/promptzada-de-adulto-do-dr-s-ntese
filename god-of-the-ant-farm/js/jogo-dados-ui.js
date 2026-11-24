@@ -383,13 +383,13 @@
   }
   // the middle of the table: the sum counted as the cups come up, who hit it, the cheat; the end's word
   function mid(s, sc, geo, L) {
-    const el = panel.querySelector('.jd-mid'); const ban = panel.querySelector('.jd-banner'); let html = '', bh = '';
+    const el = panel.querySelector('.jd-mid'); const ban = panel.querySelector('.jd-banner'); let html = '', bh = '', num = null;
     const order = s.ordem && s.ordem.length ? s.ordem : L.map(p => p.id);
     if (s.fase === 'revela' || s.fase === 'fim') {
       const T = (performance.now() - sc.revT) / 1000; let sum = 0; let all = true;
       for (let k = 0; k < order.length; k++) { const p = L.find(q => q.id === order[k]); if (!p || !p.faces) continue; if (p.eu || T >= 0.25 + k * 0.45 + 0.2 || s.fase === 'fim') sum += p.faces.reduce((a, b) => a + b, 0); else all = false; }
       const done = all && s.res; if (s.fase === 'revela' && sum !== sc.counted) sc.counted = sum;
-      html = `<div class="jd-soma${done ? ' fim' : ''}"><small>soma</small><b>${s.res && done ? s.res.total : sum}</b></div>`;
+      html = `<div class="jd-soma${done ? ' fim' : ''}"><small>soma</small><b>{N}</b></div>`; num = s.res && done ? s.res.total : sum;
       // (the word of the round goes under the table, with the hands: the middle keeps the sum, the seats round it stay in sight)
       const said = done && s.res ? resWords(s, L) : ''; if (said !== sc.said) { sc.said = said; sig = ''; }
       if (done && s.res && s.res.cravou) html += '<div class="jd-res crava">Cravou!</div>';
@@ -400,7 +400,8 @@
       const won = s.venc && s.venc === s.eu; const lost = s.eu && s.venc !== s.eu; const v = L.find(p => p.id === s.venc);
       bh = won ? `<div class="jd-ban win"><b>Você levou o pote!</b>${s.ganho ? `<small>+ ${esc(s.price(s.ganho))}</small>` : ''}</div>` : v ? `<div class="jd-ban ${lost ? 'lose' : ''}"><b>${esc(cap(v.nome))} levou o pote</b>${lost && s.moeda && s.aposta ? `<small>− ${esc(s.price(s.aposta))}</small>` : ''}</div>` : '<div class="jd-ban"><b>O jogo acabou</b><small>o pote voltou a quem apostou</small></div>';
     }
-    if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html; }
+    // (the sum counted in place as the cups come up — the pill pops once, not with every number)
+    if (el.dataset.h !== html) { el.dataset.h = html; el.innerHTML = html.replace('{N}', num); } else if (num !== null) { const b = el.querySelector('.jd-soma b'); if (b && b.textContent !== String(num)) b.textContent = num; }
     if (ban.dataset.h !== bh) { ban.dataset.h = bh; ban.innerHTML = bh; ban.classList.toggle('on', !!bh); }
   }
 
@@ -476,7 +477,8 @@
     const e = s.espero !== null && s.jogo ? `<rect class="prov" x="${x(Math.max(a, s.espero - 3)).toFixed(1)}" y="9" width="${(x(Math.min(b, s.espero + 3)) - x(Math.max(a, s.espero - 3))).toFixed(1)}" height="10" rx="5"/>` : '';
     const tot = s.res && (s.fase === 'fim' || s.fase === 'revela') ? `<g class="tot"><path d="M${x(s.res.total).toFixed(1)} 2 v24"/><text x="${x(s.res.total).toFixed(1)}" y="44">soma ${s.res.total}</text></g>` : '';
     const pk = mine !== null ? `<g class="pick"><circle cx="${x(mine).toFixed(1)}" cy="14" r="7"/></g>` : '';
-    return `<svg class="jd-regua" viewBox="0 0 ${W} 48" preserveAspectRatio="none"><path class="line" d="M10 14 H${W - 10}"/>${e}<text class="lim" x="10" y="44">${a}</text><text class="lim" x="${W - 10}" y="44">${b}</text>${marks}${pk}${tot}</svg>`;
+    const near = n => !!(s.res && (s.fase === 'fim' || s.fase === 'revela') && Math.abs(x(s.res.total) - x(n)) < 34); // (the sum's word at an end of the line: the end's number makes way)
+    return `<svg class="jd-regua" viewBox="0 0 ${W} 48" preserveAspectRatio="none"><path class="line" d="M10 14 H${W - 10}"/>${e}${near(a) ? '' : `<text class="lim" x="10" y="44">${a}</text>`}${near(b) ? '' : `<text class="lim" x="${W - 10}" y="44">${b}</text>`}${marks}${pk}${tot}</svg>`;
   }
 
   // ------------------------------ the hands ------------------------------

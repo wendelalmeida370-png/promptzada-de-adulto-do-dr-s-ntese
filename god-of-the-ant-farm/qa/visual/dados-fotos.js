@@ -21,6 +21,42 @@ const TEMAS = (process.env.TEMAS || 'romano,asteca').split(','), MOM = (process.
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(600);
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') });
+  // «mundo» (o 4.º argumento): a tela sobre uma partida de verdade — a metrópole à noite, o corpo tomado num freguês sentado à mesa
+  // com outros dois que podem jogar (como a j7 da prova), a mesa chamada e a partida começada pelas mãos (G.Possess.apply), o mundo
+  // vivendo pelo próprio passo; a tela lê o G.JogoDados.corpo real. Só a pergunta do modo é trocada (não há 3D): fotos da sacudida, da
+  // vez do corpo e dos copos de pé
+  if (process.argv[4] === 'mundo') {
+    const r = await page.evaluate(pc => {
+      G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden');
+      for (let t = 0; t < 400 && G.S.time < 0.6; t++) G.debug.step(0.5);
+      G.IncUI.init(); if (!pc) G.Input3D.touch = true;
+      G.Modes.inc = () => true; G.Modes.panel = () => false; G.Modes.setPanel = () => { }; G.Modes.panelIs = p => p === 'dados'; G.Input3D.free = () => { };
+      const Po = G.Possess, JD = G.JogoDados, T = G.Taverna, S = G.S; const step = s => { for (let k = 0; k < s / 0.05; k++) G.debug.step(0.05); };
+      for (let tries = 0; tries < 600; tries++) { step(0.25);
+        for (const op of G.Act.all().filter(o => o.def === 'taverna' && G.Act.live(o))) { const b = S.buildings.get(op.at); if (!T.aberta(b)) continue; const by = {};
+          for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const v = S.villagers.get(+id); if (!v || !m.g || m.zz || m.st < 2 || m.st > 5 || !v.task || v.task.type !== 'tavern' || v.energy < 37 || JD.gameOf(v) || (op.data.jogo && op.data.jogo[m.g])) continue; (by[m.g] = by[m.g] || []).push(v); }
+          for (const g in by) if (by[g].length >= 3) { const v = by[g].sort((a, c) => G.Depot.get(G.Eco.coinRef(c), 'moedas') - G.Depot.get(G.Eco.coinRef(a), 'moedas'))[0]; if (!Po.can(v).ok) continue;
+            const pl = G.Interiors.placeOf(v); G.inSim++; try { Po.take(v); Po.use(v, b, pl); } finally { G.inSim--; } step(3);
+            const x = JD.verbo(v); if (!(x.k === 'chamar' && x.ok)) { G.inSim++; try { Po.release('deus'); } finally { G.inSim--; } continue; }
+            const ask = fn => { const a = Po.apply(fn); for (let k = 0; k < 10 && !a.res; k++) step(0.05); return a.res || {}; };
+            const c1 = ask(w => JD.chamar(w, x.apostas[0])); const s1 = JD.corpo(v); if (!c1.ok || !s1 || !s1.convite.some(q => q.sim)) { G.inSim++; try { Po.release('deus'); } finally { G.inSim--; } continue; }
+            const c2 = ask(w => JD.comecar(w, s1.op)); if (!c2.ok) continue;
+            window.__ME = v; return { ok: true, b: b.id, me: v.name, quem: JD.corpo(v).jogadores.map(p => p.nome) }; } } }
+      return { ok: false };
+    }, PC);
+    console.log(r.ok ? `a partida de verdade na taverna #${r.b}: ${r.quem.join(', ')}` : 'nenhuma mesa para a partida de verdade');
+    if (r.ok) for (const [nm, until] of [['mundo-sacode', 'sacode'], ['mundo-vez', 'vez'], ['mundo-copos', 'revela']]) {
+      const got = await page.evaluate(([until]) => { const v = window.__ME, JD = G.JogoDados; G.JogoDadosUI.open(true);
+        for (let k = 0; k < 900; k++) { const s = JD.corpo(v); if (!s) break; const at = until === 'vez' ? s.fase === 'palpite' && s.vez === s.eu : s.fase === until; if (at) break;
+          G.debug.step(1 / 30 * G.Space.TIME); G.JogoDadosUI.render(JD.corpo(v), 1 / 30);
+          // (the body's turn: a bid of its own, the nearest free to what it expects — its hands, by the world's step)
+          if (until !== 'vez' && s.fase === 'palpite' && s.vez === s.eu && !window.__said) { window.__said = 1; const n = s.livres.slice().sort((a, b) => Math.abs(a - s.espero) - Math.abs(b - s.espero))[0]; G.Possess.apply(w => JD.palpite(w, s.op, n)); } }
+        const s = JD.corpo(v); if (until === 'vez') window.__said = 0; return s ? `${s.fase} r${s.rodada}` : 'sem partida'; }, [until]);
+      await page.waitForTimeout(until === 'revela' ? 2400 : 700); await page.evaluate(() => { for (let k = 0; k < 30; k++) { G.debug.step(1 / 30 * G.Space.TIME); G.JogoDadosUI.render(G.JogoDados.corpo(window.__ME), 1 / 30); } });
+      await page.screenshot({ path: path.join(OUT, nm + '.png') }); console.log(`${nm}: ${got}`);
+    }
+    console.log(errs.length ? 'ERROS: ' + errs.join(' | ').slice(0, 600) : 'sem erros'); await browser.close(); return;
+  }
   const r0 = await page.evaluate(pc => {
     G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden');
     for (let t = 0; t < 400 && G.S.time < 0.6; t++) G.debug.step(0.5);
