@@ -20,22 +20,22 @@ G.Ready.list({
   "bytes": 1189330
  },
  "metropole": {
-  "day": 61,
-  "pop": 913,
-  "peoples": 5,
+  "day": 57,
+  "pop": 762,
+  "peoples": 6,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Delfos",
+   "name": "Argos",
    "tier": 4,
-   "pop": 71
+   "pop": 51
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 4043226
+  "bytes": 3880934
  },
  "mega": {
   "day": 93,
