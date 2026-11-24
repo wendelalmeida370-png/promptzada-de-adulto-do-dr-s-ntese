@@ -58,10 +58,31 @@ function corridor() {
   return at;
 }
 const COR = corridor();
+// (the sprint of the m3, T-1904: back and forth with the run-on past each turn — the corridor's ends are no shore. The longest corridor of
+// the metropole began a tile from the sea, and the body sprinting out of breath ran on into it and drowned; the m4 then asked for a dead
+// body; the same in the base before the T2, Dafne #7764 drowned five tiles to the side of the corridor, at (30,6, 53,3): the run turned
+// at the ends and wandered off its line. A stretch of the corridor kind whose whole sprint — the strip and MARGEM tiles past each end,
+// LADO more on each side — crosses no water, tile by tile by the world's own door, W.isWater; the longest such; and on it the sprint
+// keeps to its line, the eye turned along it at each frame, as a player holds a straight run)
+const MARGEM = 3, LADO = 2;
+function corridorDry(m) {
+  const okT = (x, y) => { if (!W.inb(x, y)) return false; const i = W.idx(x, y); return !(!W.walkable(i) || S.occ[i] || S.treeAt[i] || S.objAt[i] || S.type[i] <= G.T.RIVER || S.slope[i] > 1.0 || S.wall[i] || S.road[i]); };
+  const wide = (x, y, dx, dy) => okT(x, y) && okT(x - dy, y + dx) && okT(x + dy, y - dx);
+  const wet = (x, y) => !W.inb(x, y) || W.isWater(W.idx(x, y));
+  const W2 = 1 + LADO; const runOn = (x, y, dx, dy, n) => { for (let k = -m; k < n + m; k++) for (let sd = -W2; sd <= W2; sd++) { if ((k >= 0 && k < n && Math.abs(sd) <= 1)) continue; if (wet(x + dx * k - dy * sd, y + dy * k + dx * sd)) return false; } return true; };
+  let best = 0, at = null;
+  for (let y = 2; y < G.N - 2; y++) for (let x = 2; x < G.N - 2; x++) for (const [dx, dy] of [[1, 0], [0, 1]]) { let n = 0; while (wide(x + dx * n, y + dy * n, dx, dy)) { n++; if (n > best && runOn(x, y, dx, dy, n)) { best = n; at = { x, y, dx, dy, n }; } } }
+  return at;
+}
+const COR3 = corridorDry(MARGEM);
+const A3 = COR3 ? [COR3.x + 0.5, COR3.y + 0.5] : null, YAW3 = COR3 ? Math.atan2(COR3.dy, COR3.dx) : 0;
 const A0 = COR ? [COR.x + 0.5, COR.y + 0.5] : null, A1 = COR ? [COR.x + 0.5 + COR.dx * (COR.n - 1), COR.y + 0.5 + COR.dy * (COR.n - 1)] : null;
 const YAW = COR ? Math.atan2(COR.dy, COR.dx) : 0;
 const pick = k => [...S.villagers.values()].filter(o => o.age >= 20 && o.age < 45 && !(o.lost && o.lost.leg) && !(o.sick > 0) && G.Possess.can(o).ok).sort((a, b) => a.id - b.id)[k || 0];
 function live(v, x, y, yaw) {
+  // (a body the world killed in a part before — drowned, fallen —: the proof says who and how, and stops; it never lives a dead one, nor
+  // another in silence: T-1904)
+  if (!G.S.villagers.has(v.id)) { const d = G.S.dead.get(v.id); ok('o corpo vivo', false, `${v.name} #${v.id} morreu${d && d.cause ? ' (' + d.cause + ')' : ''} antes desta parte: a prova não vive um corpo morto (T-1904)`); console.log(`FALHOU: ${fails.join(', ')}`); process.exit(1); }
   if (G.Possess.body()) G.Possess.release('deus'); Av.detach();
   G.Vg.endTask(v); v.inside = 0; v.x = x; v.y = y; v.path = null; v.hp = 100; v.sleeping = false; v.downT = 0; v.hunger = 10; v.energy = 90; v.carry = null;
   const r = G.Possess.take(v); if (!r.ok) return false;
@@ -69,11 +90,16 @@ function live(v, x, y, yaw) {
   for (let k = 0; k < 4; k++) frame(); return true;
 }
 // (back and forth along the corridor: the eye turned back at each end, as a player turns)
-const shuttle = () => { const b = st(); const t = ((b.X / TL - A0[0]) * COR.dx + (b.Z / TL - A0[1]) * COR.dy); const fw = Math.cos(wrap(C3.yaw - YAW)) > 0; if (fw && t > COR.n - 1.8) C3.yaw = YAW + Math.PI; else if (!fw && t < 0.8) C3.yaw = YAW; };
+const shuttleOf = (cor, a0, yaw, hold) => () => { const b = st(); const t = ((b.X / TL - a0[0]) * cor.dx + (b.Z / TL - a0[1]) * cor.dy); const fw = Math.cos(wrap(C3.yaw - yaw)) > 0; if (fw && t > cor.n - 1.8) C3.yaw = yaw + Math.PI; else if (!fw && t < 0.8) C3.yaw = yaw;
+  // (holding the line: the eye along the corridor, turned a little back toward its middle line by how far off it the body is)
+  if (hold) { const f = Math.cos(wrap(C3.yaw - yaw)) > 0 ? 1 : -1; const off = (b.X / TL - a0[0]) * -cor.dy + (b.Z / TL - a0[1]) * cor.dx; C3.yaw = (f > 0 ? yaw : yaw + Math.PI) - f * G.clamp(Math.atan(1.2 * off), -0.4, 0.4); } };
+const shuttle = shuttleOf(COR, A0, YAW);
+const shuttle3 = COR3 ? shuttleOf(COR3, A3, YAW3, true) : shuttle; // (the m3's: on the stretch with no water in its run-on, on its line)
 let v0 = pick();
 if (!COR || COR.n < 6 || !v0) { ok('palco', false, !COR ? 'nenhum corredor aberto' : !v0 ? 'ninguém para viver' : `o corredor mais longo tem ${COR.n} casas`); process.exit(1); }
 base = new Set(QA.check().filter(e => e.sev <= 3).map(qk));
 console.log(`(palco: corredor de ${COR.n} casas em ${COR.x},${COR.y} ${COR.dx ? 'ao longo de x' : 'ao longo de y'}; ${v0.name} #${v0.id})`);
+if (COR3) console.log(`(a disparada da m3: corredor de ${COR3.n} casas em ${COR3.x},${COR3.y} ${COR3.dx ? 'ao longo de x' : 'ao longo de y'}, sem água ${MARGEM} casas além de cada ponta e ${LADO} de cada lado — T-1904)`);
 
 // ================================ m1: a resposta ================================
 if (want('m1')) {
@@ -110,12 +136,13 @@ if (want('m2')) {
 }
 
 // ================================ m3: o fôlego sem piscar ================================
-if (want('m3')) {
-  live(v0, A0[0], A0[1], YAW); const b = st(); const max = b.caps.stamina;
+if (want('m3') && !COR3) ok('m3 o palco da disparada', false, `nenhum corredor sem água ${MARGEM} casas além das pontas e ${LADO} dos lados (T-1904)`);
+if (want('m3') && COR3) {
+  live(v0, A3[0], A3[1], YAW3); const b = st(); const max = b.caps.stamina;
   IN.mz = 1; IN.run = true; const ev = []; let was = false, winded = false, last = -9, flick = 0, gaps = [], minS = 1e9, k = 0, jogSt = null;
-  for (; k < 60 * 40; k++) { shuttle(); frame(); const sp = !!b.sprint; if (sp !== was) { const t = k / 60; if (t - last < 1.5) flick++; gaps.push(r2(t - last)); last = t; ev.push(`${t.toFixed(1)}:${sp ? 'dispara' : 'trota'}`); was = sp; } if (b.winded !== winded) { ev.push(`${(k / 60).toFixed(1)}:${b.winded ? 'sem fôlego' : 'recuperado'}`); winded = b.winded; } minS = Math.min(minS, b.stamina); }
+  for (; k < 60 * 40; k++) { shuttle3(); frame(); const sp = !!b.sprint; if (sp !== was) { const t = k / 60; if (t - last < 1.5) flick++; gaps.push(r2(t - last)); last = t; ev.push(`${t.toFixed(1)}:${sp ? 'dispara' : 'trota'}`); was = sp; } if (b.winded !== winded) { ev.push(`${(k / 60).toFixed(1)}:${b.winded ? 'sem fôlego' : 'recuperado'}`); winded = b.winded; } minS = Math.min(minS, b.stamina); }
   // (the jog alone: the breath does not go)
-  IN.run = false; for (let q = 0; q < 60 * 6; q++) { shuttle(); frame(); } const s0 = b.stamina; for (let q = 0; q < 60 * 10; q++) { shuttle(); frame(); } jogSt = { de: r2(s0), para: r2(b.stamina) };
+  IN.run = false; for (let q = 0; q < 60 * 6; q++) { shuttle3(); frame(); } const s0 = b.stamina; for (let q = 0; q < 60 * 10; q++) { shuttle3(); frame(); } jogSt = { de: r2(s0), para: r2(b.stamina) };
   stop(); for (let q = 0; q < 30; q++) frame();
   const cycles = ev.filter(e => /sem fôlego/.test(e)).length;
   ok('m3 a disparada gasta o fôlego, acaba devagar e só volta depois de descansar uma parte — sem piscar', cycles >= 1 && !flick && minS <= 0.5 && ev.some(e => /recuperado/.test(e)), `${ev.join(' ')}; trocas a menos de 1,5 s: ${flick}; o fôlego mais baixo ${r2(minS)} de ${max}`);

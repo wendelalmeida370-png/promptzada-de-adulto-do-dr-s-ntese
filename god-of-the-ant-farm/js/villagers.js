@@ -71,6 +71,9 @@
   // (the interiors 2.0, P7: the clock the walk out of a building ends at — still inside till then, Vg.leave, D-765 —; the day of
   // the last evening at the tavern, which act-taverna.js writes — one a day, D-760)
   'saiT', 'tavDay',
+  // (the drink in the body, T2 — D-830: the blood and the stomach, the night's top, the clock of the faint, the hangover, wet from a drink
+  // thrown over one — only embriaguez.js writes them, guard rule 360)
+  'ebrio', 'ebrioG', 'ebrioP', 'ebrioD', 'ressaca', 'molhado',
   ];
   const SHAPED = new Set(SHAPE);
   Vg.shape = function (o) {
@@ -461,7 +464,7 @@
     const i = W.idx(v.x, v.y);
     const ty = S.type[i];
     const sp = v.speed * (mul || 1) * (ty === T.RIVER ? (S.road[i] ? 1 : 0.5) : 1) * (S.road[i] ? (S.road[i] >= 3 ? 1.4 : 1.3) : S.wear[i] > 28 ? 1.15 : 1) * (v.sick > 0 ? 0.75 : 1)
-      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.lost && v.lost.leg ? 0.6 : 1) * (v.elite === 'carro' ? 1.45 : 1) * (ty >= T.SAND && !S.road[i] ? 1 / (1 + S.slope[i] * 0.16) : 1);
+      * (v.age < 8 ? 0.8 : v.age >= 62 ? 0.72 : 1) * (v.carry && v.carry.n >= 4 ? 0.9 : 1) * (v.lost && v.lost.leg ? 0.6 : 1) * (v.elite === 'carro' ? 1.45 : 1) * (v.ebrio > 0.3 && G.Ebrio ? G.Ebrio.lento(v) : 1) * (ty >= T.SAND && !S.road[i] ? 1 / (1 + S.slope[i] * 0.16) : 1);
     const step = sp * dt;
     // (never a step from ground one walks into a tile one does not: a way found before a building came up across it, the
     // straight run of one fleeing with no route — the way is found again from here, before the step, not from inside the
@@ -537,9 +540,12 @@
     // the hunger and the tiredness go by the day's pace of this step (G.pace, world.js: L-915); the rest in seconds, as ever
     const dd = dt / G.DAY_K; const dn = dd * G.pace;
     v.age += dt / day;
-    v.hunger = Math.min(100, v.hunger + dn * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1));
+    // (the drink in the body this step — the stomach, the blood, the faint — and the hangover of the morning after, which weighs on
+    // the hunger and the tiredness while it lasts: G.Ebrio, embriaguez.js, D-833)
+    const rk = G.Ebrio ? G.Ebrio.passo(v, dt) : 0;
+    v.hunger = Math.min(100, v.hunger + dn * (awake ? 0.95 : 0.45) * (v.age < 12 ? 0.6 : 1) * (v.traits.includes('Glutão') ? 1.2 : 1) * (rk > 0 ? 1 + G.Ebrio.FOME * rk : 1));
     // (awake, the energy falls by what the body does: at rest a share of what it falls at work or on the way — Vg.resting, D-240)
-    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dn * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) * (Vg.resting(v) ? Vg.REST : 1) : dn * (100 / 22)), 0, 100);
+    if (v.age >= 2) v.energy = G.clamp(v.energy + (awake ? -dn * (100 / 80) * (v.age >= 62 ? 1.12 : 1) * (v.task && v.task.type === 'flee' ? 1.6 : 1) * (Vg.resting(v) ? Vg.REST : 1) * (rk > 0 ? 1 + G.Ebrio.CANSA * rk : 1) : dn * (100 / 22)), 0, 100);
     if (v.hurt > 0) v.hurt -= dt;
     // babies are fed from the common stock
     if (v.age < 2 && v.hunger > 60) { const st = G.Fac.stockV(v); if (st.food >= 1) { st.food -= 0.5; v.hunger -= 50; } }
@@ -662,6 +668,7 @@
     const t = v.task;
     if (t && t.type === 'flee' && t.age < 3.5) return;
     if (t && (t.type === 'swim' || t.type === 'condemned' || t.type === 'escorted' || t.type === 'jail')) return;
+    if (t && (t.type === 'desmaio' || t.type === 'arrastado')) return; // (out of drink: one cannot run — G.Ebrio, D-835)
     const child = v.age < 16;
     // meteors
     for (const m of S.meteors) {

@@ -593,7 +593,11 @@
     const vp = vistaK > 0 && eb ? vistaPoseOf(eb, body) : null; if (vp && vp.none) vistaOn = false; // (no clear corner: no vista)
     if (vp && !vp.none) { for (let i = 0; i < 3; i++) aim[i] = G.lerp(aim[i], vp.A[i], vistaK);
       P.X = G.lerp(P.X, vp.E[0], vistaK); P.Y = G.lerp(P.Y, vp.E[1], vistaK); P.Z = G.lerp(P.Z, vp.E[2], vistaK); cam.position.set(P.X, P.Y, P.Z); cam.fov = G.lerp(fovNow, vp.fov, vistaK); cam.updateProjectionMatrix(); }
+    // (the drink in the body's eyes: the look thrown about and the picture leaning a little — over the player's own eye, which it never
+    // turns: G.EbrioCorpo, T2 D-837)
+    const dk = G.EbrioCorpo ? G.EbrioCorpo.olho(rdt) : null; if (dk) { aim[0] += dk.x; aim[1] += dk.y; aim[2] += dk.z; }
     cam.lookAt(aim[0], aim[1], aim[2]);
+    if (dk && dk.roll) cam.rotateZ(dk.roll);
     // (the cut of the fourth wall, and the body in a weave when the eye is at its head)
     cuts = eb ? cutFor(eb, P, body, piv) : NONE; keeps = eb && eb !== kept ? keepFor(eb, body) : NONE;
     { const dH = Math.hypot(P.X - piv.X, P.Y - piv.Y, P.Z - piv.Z); fade = G.clamp((C3.FADE_NEAR - dH) / C3.FADE_SPAN, 0, 1); }
