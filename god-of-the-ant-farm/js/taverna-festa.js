@@ -276,7 +276,8 @@
     const S = S_(); const f = TF.noiteDe(b); if (!f) return; const d = op.data; const In = G.Interiors; const lt = lead.task; const mp = In && In.placeOf ? In.placeOf(lead) : null;
     const coro = [];
     for (const id of f.bardos) {
-      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || m.vem || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v)) continue;
+      // (a bard answering what was done to him at the table — the drink in the face —, or in a brawl, stays at it: L-2162)
+      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || m.vem || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v) || (T.answering && T.answering(m)) || (T.brawling && T.brawling(v))) continue;
       TF.toStage(op, v); if (v.carry && v.carry.n > EPS) continue; const t = v.task; m.use = t.use; t.use = 'dancar'; t.near = mp && mp.item ? [mp.item, mp.q] : null; t.st = 6; m.st = 6; t.coro = 1; t.mw = lt.mw; t.me = lt.me; v.actT = 0; coro.push(id);
       if (!d.musicos.includes(id)) d.musicos.push(id);
     }
