@@ -28,7 +28,7 @@
 //     dados, as cartas, a trapaça, a queda de braço, o riso e a história —, ninguém fazendo o gesto da coisa que não tem (os dados, o
 //     baralho, a caneca, a arma), o desmaiado e o arrastado deitados parados e andando, as duas partes de cada ato a dois, a bebida
 //     (v.ebrio) no andar, à mesa, de pé e no rosto pela índole (nunca pela aparência), a vida do salão pelo relógio e pelo id, o aplauso
-//     no fim da música, o taverneiro que enxuga a caneca;
+//     no fim da música, o taverneiro que enxuga a caneca; quem dá o pulso (a banda da festa); a roupa molhada que escurece e seca;
 //   node qa/dentro-gente.js [mundo]     ONLY=d1,d3 para algumas partes (≈ 3 min inteira; ONLY=d6 ≈ 1,5 min, sempre no mega; ONLY=d8 ≈ 40 s)
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
@@ -324,16 +324,18 @@ if (on('d8')) {
       ['queda-de-braco', seat, 'queda-de-braco'], ['queda-de-braco-cede', seat, 'queda-de-braco-cede'],
       ['jogo-dados', seat, 'jogo-dados', { mao: 'dados.osso' }], ['jogo-cartas', seat, 'jogo-cartas', { outra: 'baralho.madeira' }], ['jogo-cartas', seat, 'jogo-cartas', { mao: 'baralho.madeira' }],
       ['jogo-cartas-ganha', seat, 'jogo-cartas-ganha', { outra: 'baralho.madeira' }], ['trapaca', seat, 'trapaca', { mao: 'dados.osso' }], ['trapaca', seat, 'trapaca', { outra: 'baralho.madeira' }],
-      ['jogar-bebida', seat, 'jogar-bebida', { mao: cupK }], ['discurso', stand, 'discurso', { mao: cupK }], ['arrombar', stand, 'arrombar', { mao: armaK }]];
+      ['jogar-bebida', seat, 'jogar-bebida', { mao: cupK }], ['discurso', stand, 'discurso', { mao: cupK }], ['arrombar', stand, 'arrombar', { mao: armaK }],
+      ['concurso-bebida', seat, 'concurso-bebida', { mao: cupK }], ['torcer', seat, 'torcer'], ['torcer', stand, 'torcer'], ['trapaca-pega', seat, 'trapaca-pega']];
     const got = []; for (const [act, pl, k, inv] of want) { const r = at(cp({ act }), pl, inv || {}); got.push(`${act}${pl === seat ? ' sentado' : ' de pé'}${inv ? ' (com ' + Object.values(inv)[0] + ')' : ''} «${shown(r)}»`); if (shown(r) !== k) bad.push(`${act}: «${shown(r)}» (devia ser ${k})`); }
     out.push(got.join(', '));
     // (2) never the gesture of a thing not in the hands: no dice, no deck, no cup, no weapon — the place's own (a cup in the hand: the cup at
     // rest, never thrown as dice), or the gesture without it
-    const none = [['jogo-dados', seat, 'sit'], ['jogo-cartas', seat, 'sit'], ['jogo-cartas-ganha', seat, 'sit'], ['trapaca', seat, 'sit'], ['jogar-bebida', seat, 'sit'], ['jogo-dados', seat, 'mesa-caneca', { mao: cupK }],
+    const none = [['jogo-dados', seat, 'sit'], ['jogo-cartas', seat, 'sit'], ['jogo-cartas-ganha', seat, 'sit'], ['trapaca', seat, 'sit'], ['jogar-bebida', seat, 'sit'], ['concurso-bebida', seat, 'sit'], ['jogo-dados', seat, 'mesa-caneca', { mao: cupK }],
       ['jogo-cartas', seat, 'mesa-caneca', { mao: cupK }], ['discurso', stand, 'discurso-mao'], ['arrombar', stand, 'arrombar-ombro'], ['arrombar', stand, 'arrombar-ombro', { mao: cupK }]].map(([act, pl, k, inv]) => [act, shown(at(cp({ act }), pl, inv || {})), k, inv]);
     out.push('sem a coisa na mão: ' + none.map(([a, s, , inv]) => `${a}${inv ? ' (com a caneca)' : ''} «${s}»`).join(', ')); for (const [a, s, k] of none) if (s !== k) bad.push(`${a}: «${s}» sem a coisa (devia ser ${k})`);
     // (3) the body on the floor lies, still or moved; who drags it walks bent over it
     const ly = []; for (const act of ['desmaio', 'arrastado']) for (const sp of [0, 1.4]) { const o = cp({ act }); const s = A3.stateOf(o, sp, P3.look(o)); ly.push(`${act} a ${sp} m/s «${s}»`); if (s !== act) bad.push(`${act}: «${s}» a ${sp} m/s (devia ficar deitado)`); }
+    for (const act of ['desmaio', 'arrastado']) { const r = at(cp({ act }), seat); ly.push(`${act} no assento «${r.st}»${r.up ? ' (fora do assento)' : ''}`); if (r.st !== act || !r.up || r.over) bad.push(`${act}: sentado no assento («${r.over || r.st}»)`); }
     const dg = cp({ act: 'arrastar' }); const dgS = A3.stateOf(dg, 0, P3.look(dg)), dgW = V3.overOf(dg, 'walk', P3.look(dg)); ly.push(`arrastar parado «${dgS}», andando «${dgW}»`);
     if (dgS !== 'arrastar' || dgW !== 'arrastar') bad.push('quem arrasta');
     for (const c of ['desmaio', 'arrastado']) if (!A3.CLIPS[c] || A3.CLIPS[c].mask !== 'full' && !(A3.CLIPS[c].base === 'idle' || A3.CLIPS[c].feet === 'free')) bad.push(`o clipe ${c} não é do corpo inteiro`);
@@ -377,6 +379,20 @@ if (on('d8')) {
     const kw = [...G.S.villagers.values()].find(o => o.task && o.task.type === 'atender' && G.Dentro3D && G.Dentro3D.ombro && G.Dentro3D.ombro(o)); let real = 'nenhum taverneiro de pano neste mundo';
     if (kw) { const q = copy(kw, { act: '', carry: null }); const Lq = P3.look(q); real = `o taverneiro #${kw.id}: ${Lq.polish ? 'enxuga ' + Lq.inv.outra : 'não enxuga'}`; if (!Lq.polish || !Lq.inv.outra || It.def(Lq.inv.outra).kind !== 'caneca') bad.push('o taverneiro de pano sem a caneca para enxugar'); }
     out.push(`o balcão: com o pano e a caneca «${pk}», sem «${pn}»; ${real}`); if (pk !== 'enxugar-caneca' || pn === 'enxugar-caneca') bad.push('o taverneiro enxugando a caneca');
+    // (7) who leads the music where one is (the band of the sound, T8 D-890): the feast's bards first, then the musician of the day, then
+    // by id — two of the world put to play in the tavern by the proof's hand, and put back
+    if (tv) { const pl = [...G.S.villagers.values()].filter(o => o.age >= 16 && !o.sleeping && !o.aboard && o.inside !== tv.id).sort((a, c) => a.id - c.id).slice(0, 2);
+      const keep = pl.map(o => [o, o.act, o.inside]), f0 = tv.festa, c1 = G.S.clock; const lead = () => { G.S.clock += 1e-4; const m = V3.musician(cp({ inside: tv.id })); return m ? m.id : 0; };
+      try { for (const o of pl) { o.act = 'play'; o.inside = tv.id; } const nb = lead(); tv.festa = { motivo: 'prova', bardos: [pl[1].id], dia: G.S.day, ate: G.S.day + 1 }; const wb = lead();
+        out.push(`quem dá o pulso: sem festa #${nb} (o de menor id, #${pl[0].id}), com o bardo da festa #${wb} (#${pl[1].id})`); if (nb !== pl[0].id || wb !== pl[1].id) bad.push('quem dá o pulso da música (a banda, D-890)'); }
+      finally { tv.festa = f0; for (const [o, a, i] of keep) { o.act = a; o.inside = i; } G.S.clock = c1; } }
+    // (8) the clothes wet with a drink thrown on them (G.Atmos.molhado, T7): darker, the top more than the legs, drying in the world's seconds
+    // — a copy of the outfit, never the outfit itself
+    const dry = P3.look(cp({})), wet = P3.look(cp({ molhado: { t: (G.S.clock || 0) - 3, k: 'cerveja' } })), gone = P3.look(cp({ molhado: { t: (G.S.clock || 0) - 40, k: 'cerveja' } }));
+    const lum = (L, q) => L.out && L.out.lin && L.out.lin[q] ? L.out.lin[q].reduce((a, c) => a + c, 0) : 0; const dry2 = P3.look(cp({}));
+    const kC = lum(wet, 'cloth') / (lum(dry, 'cloth') || 1), kP = lum(wet, 'pants') / (lum(dry, 'pants') || 1);
+    out.push(`a roupa molhada (${(wet.wet || 0).toFixed(2)}): o pano ×${kC.toFixed(2)}, as calças ×${kP.toFixed(2)}; seca depois de 40 s (${(gone.wet || 0).toFixed(2)}, ×${(lum(gone, 'cloth') / (lum(dry, 'cloth') || 1)).toFixed(2)})`);
+    if (!(wet.wet > 0.8 && kC < 0.7 && kP > kC && kP < 1) || gone.wet || lum(gone, 'cloth') !== lum(dry, 'cloth') || lum(dry2, 'cloth') !== lum(dry, 'cloth')) bad.push('a roupa molhada');
   } finally { It.def = def0; }
   if (stubbed.length) out.push(`(o catálogo ainda sem ${stubbed.join(' e ')}: a mão da prova os pôs pelo tipo)`);
   ok('d8 a quarta onda: cada ato com a sua pose, ninguém fazendo o gesto da coisa que não tem, o corpo no chão deitado, as duas partes de cada ato a dois, a bebida no corpo e no rosto pela índole, a vida do salão', !bad.length, out.join(' · ') + (bad.length ? ' — FALHAS: ' + bad.join('; ') : ''));

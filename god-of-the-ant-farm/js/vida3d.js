@@ -111,6 +111,8 @@
     if (v.sleeping || !has(pl.st)) return r;
     const base = pl.st, seat = SEATED.has(base);
     let a = Anim.stateOf(v, 0, L);
+    // (the body on the floor by its place — the faint at the table, the one dragged from it —: lying beside the seat, never seated: D-871)
+    if (V3.LYING.has(v.act) && a !== base && has(a)) { r.st = a; r.up = seat; return r; }
     // (the song of a full room: the instrument in the hands — seated or standing —, or, with none in them, the song sung)
     // (the pot of a stove stirred standing — the house's fire at a hearth is the posture crouched at it —; the game, the cheat's hand and the
     // drink thrown only with their thing in a hand — the dice, the deck, the cup: V3.NEEDS —, else the place's own: D-870, D-872)
@@ -197,7 +199,7 @@
   V3.DRUNK = 0.55; // (the drink in the look, 0..1, from which the walk staggers with the arms out)
   V3.LYING = new Set(['desmaio', 'arrastado']); // (the acts of a body on the floor: lying whatever it is moved at, D-871)
   // (the gestures of a thing of a kind — its kind in a hand, the inventory's, or not made: D-872. The dice of T4, the deck of T5, the cup)
-  V3.NEEDS = { 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: ['dados', 'baralho'], 'jogar-bebida': 'caneca' };
+  V3.NEEDS = { 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: ['dados', 'baralho'], 'jogar-bebida': 'caneca', 'concurso-bebida': 'caneca' };
   // (a thing of this kind in a hand — the inventory's, G.Inv.held (the look's when the frame has it); 'arma': what a fighter holds to strike)
   V3.handHas = function (L, v, kind) { if (Array.isArray(kind)) return kind.some(k => V3.handHas(L, v, k)); const h = L && L.inv ? L.inv : G.Inv && G.Inv.held && v ? G.Inv.held(v) : null; const I = G.Itens; if (!h || !I) return false;
     for (const k of [h.mao, h.outra]) { if (!k) continue; const d = I.def(k); if (!d) continue; if (kind === 'arma' ? d.tipo === 'arma' || d.kind === 'machado' || d.kind === 'martelo' || d.kind === 'clava' : d.kind === kind) return true; } return false; };
@@ -229,9 +231,17 @@
   // its pace and the start of his set (G.Audio.compasso, P9: the pulse the sound claps and stamps to) —, so the claps fall on the
   // sound's own; with nobody playing there, on the pulse of one's own people's music, from the world's start. Only reads
   V3.BEAT = 0.5; // (the pulse with no compass to ask: seconds of the world)
+  // (who leads the music where one is: of who plays inside the building now, the feast's bards first in their order, then the musician of
+  // the day, then by id — the band's order of the sound (P9/T8, D-890), whose leader's pulse the band, the claps, the dance and the ring
+  // go to; one a building, found once a moment of the world)
+  const BAND = new Map(); let bandT = -1;
   V3.musician = function (v) {
-    const T = G.Taverna; if (!T || !T.dia || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); const op = b ? T.dia(b) : null;
-    const m = op && op.data && op.data.mus ? G.S.villagers.get(op.data.mus) : null; return m && m.act === 'play' && m.inside === v.inside ? m : null;
+    if (!v || !(v.inside > 0)) return null; const S = G.S, t = S.clock || 0;
+    if (t !== bandT) { BAND.clear(); bandT = t; const T = G.Taverna, Au = G.Audio;
+      for (const o of S.villagers.values()) { if (o.act !== 'play' || !(o.inside > 0) || o.sleeping || o.aboard) continue; const b = S.buildings.get(o.inside); if (!b) continue;
+        const f = Au && Au.festaDe ? Au.festaDe(b) : null, B = (f && f.bardos) || [], op = T && T.dia ? T.dia(b) : null, md = op && op.data ? op.data.mus : 0;
+        const key = B.includes(o.id) ? B.indexOf(o.id) : 1000 + (o.id === md ? 0 : 1); const w = BAND.get(o.inside); if (!w || key < w[0] || (key === w[0] && o.id < w[1].id)) BAND.set(o.inside, [key, o]); } }
+    const w = BAND.get(v.inside); return w ? w[1] : null;
   };
   V3.beatU = function (v, C) {
     const n = C && C.beats > 0 ? C.beats : 4; const m = V3.musician(v); const k = G.Audio && G.Audio.compasso ? G.Audio.compasso(m || v) : null;

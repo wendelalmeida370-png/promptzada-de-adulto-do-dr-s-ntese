@@ -2380,9 +2380,10 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
 // 400. "todo ato da quarta onda tem gesto" (T6, D-870, D-871): cada ato novo do contrato (planos/taverna-onda4.md — a tranca, o chamado,
 // o esconder, a porta forçada, o discurso, a bebida jogada e o molhado, a cantoria, o desmaio, o arrastar e o arrastado, a cuba, os dados,
-// as cartas, a trapaça, a queda de braço) tem o seu clipe (acts), e cada ato a dois as duas partes no Anim.DUO
+// as cartas, a trapaça, a queda de braço; e os nomes que o som da T8 deu: o concurso de bebida, a torcida, o trapaceiro pego) tem o seu
+// clipe (acts), e cada ato a dois as duas partes no Anim.DUO
 { const clips = ['taverna-noite-clips.js', 'social-clips.js'].map(f => (src[f] || []).join('\n')).join('\n'), du = (src['anim-duo.js'] || []).join('\n');
-  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado', 'mexer-cuba', 'jogo-dados', 'jogo-cartas', 'trapaca', 'queda-de-braco'])
+  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado', 'mexer-cuba', 'jogo-dados', 'jogo-cartas', 'trapaca', 'queda-de-braco', 'concurso-bebida', 'torcer', 'trapaca-pega'])
     if (!new RegExp(`acts: \\[[^\\]]*'${a}'`).test(clips)) fails.push(`todo ato da quarta onda tem gesto: o ato «${a}» sem o seu clipe (acts) — D-870`);
   for (const [k, a, b] of [["'jogar-bebida'", 'jogar-bebida', 'molhado'], ['arrastar', 'arrastar', 'arrastado'], ["'queda-de-braco'", 'queda-de-braco', 'queda-de-braco']])
     if (!new RegExp(`${k.replace(/[-']/g, m => '\\' + m)}: \\{ a: P\\('${a}'[^}]*, b: P\\('${b}'`).test(du)) fails.push(`todo ato a dois da quarta onda tem as duas partes: «${a}» sem a parte a e a parte b («${b}») no Anim.DUO (D-871)`); }
@@ -2394,7 +2395,7 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
     for (const m of t.matchAll(/\n {2}c\('([^']+)'/g)) { const i = m.index, j = t.indexOf("\n  c('", i + 4); const d = t.slice(i, j < 0 ? t.length : j); const it = /item: \{ hand: '(mao|outra)'( \}|,)/.exec(d);
       if (it && !/two: true/.test(d.slice(it.index, it.index + 60)) && !/noMirror: true/.test(d)) fails.push(`o gesto da coisa só com a coisa: o clipe «${m[1]}» do ${f} segura uma coisa numa mão e tem espelho — o canhoto o faria com a mão vazia (noMirror; L-2080)`); } }
   const v3 = (src['vida3d.js'] || []).join('\n');
-  if (!/V3\.NEEDS = \{ 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: \['dados', 'baralho'\], 'jogar-bebida': 'caneca' \};/.test(v3) || !/if \(V3\.NEEDS\[a\] && !V3\.handHas\(L, v, V3\.NEEDS\[a\]\)\) a = base;/.test(v3)) fails.push('o gesto da coisa só com a coisa: os jogos, a trapaça e a bebida jogada sem pedir a sua coisa pelo tipo (V3.NEEDS, D-872)');
+  if (!/V3\.NEEDS = \{ 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: \['dados', 'baralho'\], 'jogar-bebida': 'caneca', 'concurso-bebida': 'caneca' \};/.test(v3) || !/if \(V3\.NEEDS\[a\] && !V3\.handHas\(L, v, V3\.NEEDS\[a\]\)\) a = base;/.test(v3)) fails.push('o gesto da coisa só com a coisa: os jogos, a trapaça e a bebida jogada sem pedir a sua coisa pelo tipo (V3.NEEDS, D-872)');
   if (!/if \(v\.act === 'arrombar' && !V3\.handHas\(L, v, 'arma'\)/.test(v3) || !/if \(v\.act === 'discurso' && !V3\.handHas\(L, v, 'caneca'\)/.test(v3)) fails.push('o gesto da coisa só com a coisa: a porta forçada sem a arma ou o discurso sem a caneca fazem o gesto de mentira (D-870)'); }
 // 402. "o corpo no chão fica deitado" (T6, D-871): o desmaiado e o arrastado (V3.LYING) ficam deitados seja qual for a velocidade com que
 // o mundo os move — o leitor pergunta antes da velocidade —, e a leitura dos estados passa o retrato adiante em quem a embrulha (o
@@ -2418,6 +2419,14 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   const blk = i < 0 || j < 0 ? '' : v3.slice(i, j); if (!blk) fails.push('a vida do salão: o bloco do salão não está no vida3d.js (D-873)');
   else { if (/\bG\.(R|rr|ri|pick|chance|VR|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(blk)) fails.push('a vida do salão sem sorteio: o bloco do salão tira de um acaso (D-873)');
     if (/\b(v|o|b|d|s|L|op)\.[\w.]+\s*(=(?![=>])|\+=|-=|\+\+|--)/.test(blk.replace(/\/\/[^\n]*/g, ''))) fails.push('a vida do salão só lê: o bloco do salão escreve numa pessoa, num prédio ou no dia da taverna (D-873)'); } }
+// 405. "a roupa molhada é a do mundo e não muda a roupa" (T6, D-874): o pano escurece pelo G.Atmos.molhado da T7 — a causa, a bebida
+// jogada, secando —, numa cópia da roupa (wetOut), nunca escrevendo nas cores da roupa guardada; e quem dá o pulso da música é o primeiro
+// da banda, como o som a ordena (os bardos da festa, o músico do dia, o id: G.Vida3D.musician)
+{ const lk = (src['look3d.js'] || []).join('\n'), v3 = (src['vida3d.js'] || []).join('\n');
+  if (!/const wet = G\.Atmos && G\.Atmos\.molhado \? G\.Atmos\.molhado\(v\) : null;/.test(lk) || !/L\._wetOf = \{ src: L\.out, n, out: wetOut\(L\.out, n\) \}; L\.out = L\._wetOf\.out;/.test(lk)) fails.push('a roupa molhada: o look3d.js não escurece o pano pelo G.Atmos.molhado numa cópia da roupa (D-874)');
+  const w = (/function wetOut\(o, n\) \{([\s\S]*?)\n {2}\S/.exec(lk) || [])[1] || ''; if (!w || /\bo\.lin\[[^\]]+\]\s*=(?!=)|\bo\.lin\s*=(?!=)/.test(w)) fails.push('a roupa molhada não muda a roupa: o wetOut escreve nas cores da roupa guardada (D-874)');
+  const m = v3.indexOf('V3.musician = function (v) {'), e = v3.indexOf('\n  };', m); const mu = m < 0 ? '' : v3.slice(m, e);
+  if (!mu || !/festaDe/.test(mu) || !/const key = B\.includes\(o\.id\) \? B\.indexOf\(o\.id\) : 1000 \+ \(o\.id === md \? 0 : 1\);/.test(mu)) fails.push('quem dá o pulso: o G.Vida3D.musician não segue a banda do som (os bardos da festa, o músico do dia — D-874, D-890)'); }
 // 420. "a porta de som da tela" (T8, D-896): o som sem lugar das telas (os jogos do corpo) é o G.Audio.ui do audio.js, com a sua
 // tabela — os dados no copo, rolando e parando, as cartas embaralhadas, dadas, jogadas e viradas, a aposta, a vitória e a derrota —; e
 // só as telas o chamam (um arquivo *-ui.js ou do que só se vê): o mundo não toca som de tela, o som do mundo tem lugar e dono

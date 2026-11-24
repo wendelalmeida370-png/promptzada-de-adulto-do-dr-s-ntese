@@ -82,6 +82,10 @@
     L.drunk = P3.drunkOf(v);
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.fe ? L.fe.prop.cabeca : L.out.headK;
+      // (the clothes darker where a drink was thrown on them — G.Atmos.molhado, T7's (D-883), drying in the world's seconds —: the top
+      // of the body soaked the most, the legs a little; a copy of the outfit a tenth of the drying, never the outfit itself — D-874)
+      const wet = G.Atmos && G.Atmos.molhado ? G.Atmos.molhado(v) : null; L.wet = wet ? wet.n : 0;
+      if (L.wet > 0) { const n = Math.ceil(L.wet * 10) / 10, k = L._wetOf; if (!k || k.src !== L.out || k.n !== n) L._wetOf = { src: L.out, n, out: wetOut(L.out, n) }; L.out = L._wetOf.out; }
       // (the legs, the arms and the trunk of a child against a grown one — G.Feicao's, D-639: the rig poses the bones by them)
       L.legK = L.fe ? L.fe.prop.perna : 1; L.armK = L.fe ? L.fe.prop.braco : 1; L.trunkK = L.fe ? L.fe.prop.tronco : 1; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
     }
@@ -397,6 +401,13 @@
     return o;
   }
   P3.outfit = v => outfitOf(v, P3.look(v), G.Fac.ofV ? G.Fac.ofV(v) : null);
+  // (an outfit soaked: its colours — linear, as the card wants them — darker as wet cloth is, the garments of the top of the body by
+  // P3.WET, the trousers and the boots by a third of it; n from 0 dry to 1 just soaked: D-874)
+  P3.WET = 0.42;
+  function wetOut(o, n) { const lin = Object.assign({}, o.lin), d = 1 - P3.WET * n, e = 1 - P3.WET * n / 3;
+    for (const q of ['cloth', 'over', 'cloak', 'trim', 'hat', 'belt']) if (lin[q]) lin[q] = lin[q].map(c => c * d);
+    for (const q of ['pants', 'boots']) if (lin[q]) lin[q] = lin[q].map(c => c * e);
+    return Object.assign({}, o, { lin, wet: n }); }
   // (the one colour a simple figure far off is dressed in: what the fine body wears over all)
   P3.farCol = L => { const o = L.out; return o ? (o.cloakM ? o.cloak : o.overK === 1 || o.overK === 3 ? o.over : o.cloth) : L.cloth; };
   // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,

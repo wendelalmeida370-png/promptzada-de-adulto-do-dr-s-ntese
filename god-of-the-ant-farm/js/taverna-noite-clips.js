@@ -172,7 +172,8 @@
     [0.32, T({ shRp: -40, shRr: 17, elR: 77, shRy: 4, grip: 0, lean: 18, neck: 28 })],
     [0.42, T({ shRp: -17, shRr: 5, elR: 104, shRy: 0, grip: 0.1, lean: 18, neck: 38 })],
     [0.52, T({ shRp: -17, shRr: 5, elR: 102, shRy: 0, grip: 0.1, lean: 18, neck: 36, talk: 0.55 })],
-    [0.66, T({ shRp: -19, shRr: 32, elR: 91, shRy: 0, grip: 0.4, lean: 18, neck: 32 })], // (the dice swept to the near edge in the one hand: an arm across the chest goes through a toga's drape)
+    [0.59, T({ shRp: -36, shRr: 10, elR: 84, shRy: 0, grip: 0.2, lean: 18, neck: 34 })], // (the hand out to where the dice rolled before it sweeps them in: the elbow off the belly, clear of a toga's drape — T-1980)
+    [0.66, T({ shRp: -19, shRr: 32, elR: 91, shRy: 0, grip: 0.4, lean: 15, neck: 32 })], // (the dice swept to the near edge in the one hand: an arm across the chest goes through a toga's drape)
     [0.78, T({ shRp: -22, shRr: 25, elR: 95, shRy: 20, grip: 0.8, lean: 18, neck: 28 })],
     [0.9, T(mix(SHAKE, { lean: 8, neck: 0 }))],
     [1, T(mix(SHAKE, { lean: 6, neck: -2, headR: 8 }))],
@@ -229,13 +230,13 @@
     mix(at(1, 'barriga', { elR: -8 }), at(-1, 'barriga', { elL: -8 }), { lean: -9, neck: -2, lookY: 12 }), mix(at(1, 'barriga', { elR: -10 }), at(-1, 'barriga', { elL: -10 }), { lean: -8, neck: -6, lookY: -10 })), SEAT);
   // the laugh of the whole body: the trunk thrown back and shaking, the head back, a hand slapping the board (or the thigh), the other
   // on the belly — over a seat or standing
-  const LAUGH = { talk: 0.8, neck: -16, lean: -6 };
+  const LAUGH = { talk: 0.8, neck: -20, lean: -3 }; // (the head thrown back more than the trunk: a rigid cuirass's edge — vestir, L-2083)
   c('riso-corpo', 1.6, U, [
     [0, mix(at(-1, 'barriga'), LAUGH, { shRp: -30, shRr: -10, elR: 60, grip: 0.05, breath: 0.6 })],
-    [0.2, mix(at(-1, 'barriga'), LAUGH, { shRp: -18, shRr: 13, elR: 97, grip: 0.05, lean: 8, neck: 2, breath: 0.2, talk: 0.9 })],
-    [0.36, mix(at(-1, 'barriga'), LAUGH, { shRp: -30, shRr: -10, elR: 60, grip: 0.05, lean: -8, neck: -18, breath: 0.7 })],
-    [0.52, mix(at(-1, 'barriga'), LAUGH, { shRp: -26, shRr: -8, elR: 66, lean: -4, neck: -12, breath: 0.3, talk: 0.7 })],
-    [0.7, mix(at(-1, 'barriga'), LAUGH, { shRp: -18, shRr: 13, elR: 97, lean: 10, neck: 6, breath: 0.2, talk: 0.9 })],
+    [0.2, mix(at(-1, 'barriga'), LAUGH, { shRp: -18, shRr: 13, elR: 97, grip: 0.05, lean: 5, neck: 6, breath: 0.2, talk: 0.9 })],
+    [0.36, mix(at(-1, 'barriga'), LAUGH, { shRp: -30, shRr: -10, elR: 60, grip: 0.05, lean: -5, neck: -23, breath: 0.7 })], // (thrown back by the head more than the trunk: a rigid cuirass's edge)
+    [0.52, mix(at(-1, 'barriga'), LAUGH, { shRp: -26, shRr: -8, elR: 66, lean: -3, neck: -15, breath: 0.3, talk: 0.7 })],
+    [0.7, mix(at(-1, 'barriga'), LAUGH, { shRp: -18, shRr: 13, elR: 97, lean: 6, neck: 10, breath: 0.2, talk: 0.9 })],
     [1, mix(at(-1, 'barriga'), LAUGH, { shRp: -30, shRr: -10, elR: 60, grip: 0.05, breath: 0.6 })],
   ], { takes: ['laugh'] });
   // the story told with the hands: the hands shaping the thing — so big, so far, then it came —, the trunk leaning in, the eyes on the
@@ -266,4 +267,39 @@
     { shLp: -52, shLr: 40, elL: 16, gripL: 0.6, shRp: -14, shRr: -26, elR: 36, neck: 20, headR: -8, tilt: -3 }), {});
   c('bebado-mesa', 4, U, loopOf(T(mix(at(1, 'rosto', { elR: 6 }), { grip: 0.2, lean: 16, neck: 18, headR: 16, tilt: 5 })), T(mix(at(1, 'rosto', { elR: 8 }), { grip: 0.2, lean: 18, neck: 21, headR: 8, tilt: -2 })),
     T(mix(at(1, 'rosto', { elR: 6 }), { grip: 0.2, lean: 17, neck: 19, headR: 20, tilt: 4 }))), Object.assign({ eyes: 'half', noMirror: true }, SEAT));
+
+  // ============================== the names the sound gave (T8): the contest, the crowd round it, the cheat caught ==============================
+  // the drinking contest (concurso-bebida): the cup up to the lips and tipped high, the head back and the throat working, swallow after
+  // swallow, slammed down on the board, the back of the left hand across the mouth and the shout — the sip's own numbers (mesa-clips.js:
+  // the rim meets the lips on the rig), the cup of the inventory in the hand (V3.NEEDS: no cup, no contest)
+  const SIP1 = { shRp: -40, shRr: 38.3, elR: 124.3, shRy: 39.8, wrist: 30 }, SIP2 = { shRp: -40, shRr: 38.3, elR: 124.3, shRy: 39.8, wrist: 14 };
+  const SET = { shRp: -13, shRr: 3, elR: 100, shRy: 4, wrist: -22, grip: 0.8 }; // (CUP and HOLD: the cup at the belly, as the speech's)
+  const LWIPE1 = mix(at(-1, 'boca', { elL: 2, shLy: 10 }), { wristL: -38, gripL: 0.5 }), LWIPE2 = mix(at(-1, 'boca', { elL: -6, shLy: -22, shLr: 6 }), { wristL: -38, gripL: 0.5 });
+  c('concurso-bebida', 3.6, U, [
+    [0, T(mix(SET, { grip: 0.9, neck: 6, lean: 10, talk: 0 }))],
+    [0.08, T(mix(HOLD, { grip: 0.95, neck: 4, lean: 8 }))],
+    [0.18, T(mix(SIP1, { grip: 1, neck: -12, lean: 4 }))],
+    [0.28, T(mix(SIP2, { neck: -21, lean: 1, tilt: -2 }))],
+    [0.36, T(mix(SIP2, { wrist: 6, neck: -24, lean: 0 }))],
+    [0.44, T(mix(SIP2, { wrist: 2, neck: -22, lean: 0 }))],
+    [0.52, T(mix(SIP2, { wrist: -2, neck: -25, lean: -1 }))],
+    [0.6, T(mix(SIP2, { wrist: -4, neck: -23, lean: -1 }))],
+    [0.68, T(mix(HOLD, { neck: -2, lean: 8 }))],
+    [0.75, T(mix(SET, { grip: 1, neck: 6, lean: 12, talk: 0.3 }))],
+    [0.83, mix(SET, LWIPE1, { neck: 2, lean: 8, talk: 0.2 })],
+    [0.91, mix(SET, LWIPE2, { neck: -4, lean: 4, talk: 0.9 })],
+    [1, T(mix(SET, { grip: 0.9, neck: 6, lean: 10, talk: 0 }))],
+  ], Object.assign({ acts: ['concurso-bebida'], item: { hand: 'mao' }, noMirror: true, events: { contact: 0.75 } }, SEAT));
+  // the crowd round a contest and an arm wrestle (torcer): the fist pumping up and pulled down, the other hand cupped by the mouth, shouting
+  // — seated or standing, the fist of either hand
+  const PUMPU = { shRp: -150, shRr: -22, elR: 30, shRy: 0, grip: 1 }, PUMPD = { shRp: -104, shRr: -34, elR: 104, shRy: 8, grip: 1 };
+  const CALL = mix(at(-1, 'boca', { elL: 4, shLy: 6 }), { gripL: 0.35 });
+  c('torcer', 1.6, U, loopOf(mix(PUMPU, CALL, { talk: 0.9, neck: -8 }), mix(PUMPD, CALL, { talk: 0.6, neck: -4 }), mix(PUMPU, CALL, { shRr: -18, talk: 0.95, neck: -9, lookY: 6 }), mix(PUMPD, CALL, { talk: 0.5, neck: -4, lookY: -4 })),
+    { acts: ['torcer'], events: { contact: 0.25 } });
+  // the cheat caught (trapaca-pega): both open hands up before the shoulders — «não fui eu!» —, leaning back from the board, the head
+  // shaking, talking fast (the head drawn back more than the trunk: a rigid cuirass's edge, vestir)
+  const NOT = { shRp: -70, shRr: -35, elR: 95, shRy: 0, grip: 0, shLp: -70, shLr: 35, elL: 95, shLy: 0, gripL: 0 };
+  c('trapaca-pega', 1.8, U, loopOf(mix(NOT, { lean: -3, neck: -10, talk: 0.85, lookY: 14 }), mix(NOT, { shRp: -62, shLp: -62, elR: 100, elL: 100, lean: -4, neck: -8, talk: 0.5, lookY: -14 }),
+    mix(NOT, { shRp: -74, shLp: -74, lean: -3, neck: -10, talk: 0.9, lookY: 12 }), mix(NOT, { shRp: -60, shLp: -60, elR: 102, elL: 102, lean: -3, neck: -7, talk: 0.6, lookY: -10 })),
+    { acts: ['trapaca-pega'] });
 })(window.G);
