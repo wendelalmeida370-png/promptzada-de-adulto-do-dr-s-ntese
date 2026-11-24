@@ -49,7 +49,7 @@
     nestwatch: 'ato-olhar-longe', oficio: MOVE, olhar: MOVE, ouro: MOVE, patrol: MOVE, pave: MOVE, penwork: MOVE, petition: MOVE, pick: MOVE, play: 'brincar',
     pocas: MOVE, praca: MOVE, praia: MOVE, pray: MOVE, prender: MOVE, quarry: MOVE, redes: MOVE, reembarque: MOVE, refugio: MOVE, rest: MOVE,
     restock: MOVE, riot: 'ato-motim', riotguard: 'posto', ronda: 'posto', sair: MOVE, sell: MOVE, shelter: MOVE, shop: MOVE, slaughter: MOVE, social: MOVE,
-    steal: MOVE, talk: MOVE, tavern: MOVE, taxes: MOVE, teatro: MOVE, tell: MOVE, tend: MOVE, termas: MOVE, trade: MOVE, tribute: MOVE,
+    steal: MOVE, talk: MOVE, tavern: MOVE, tavoficio: MOVE, taxes: MOVE, teatro: MOVE, tell: MOVE, tend: MOVE, termas: MOVE, trade: MOVE, tribute: MOVE,
     vinho: MOVE, visit: MOVE, wander: MOVE, water: MOVE,
   };
   // the errand's own pace on the move: the children's chase is a run, never a walk (the world's «run» is the act's: the flight)

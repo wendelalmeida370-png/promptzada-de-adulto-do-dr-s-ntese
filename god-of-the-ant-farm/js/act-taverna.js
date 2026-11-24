@@ -791,7 +791,8 @@
     if (!T.aberta(b) && D.get(ref, 'wood') < T.LENHA_N && D.free('f:' + f.id, 'wood') >= 4) cands.push({ k: 'wood', n: T.LENHA_N + 1 - D.get(ref, 'wood') });
     if (!T.aberta(b) && D.get(ref, 'cera') < VELA() * 2 && D.free('f:' + f.id, 'cera') >= 1) cands.push({ k: 'cera', n: 1 });
     if (!T.aberta(b)) for (const k of OIL) if (D.get(ref, 'azeite') + D.get(ref, 'oleo') < T.OLEO * 2 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 1 }); break; }
-    for (const c of cands) {
+    // (T3, D-845: the house's cook buys and cooks the food, its brewer the grain or the honey of the vat — what the keeper still buys)
+    for (const c of (G.TavernaOficios ? G.TavernaOficios.keeperBuys(b, cands) : cands)) {
       const n = Math.floor(Math.min(c.n, c.of ? OR().free('f:' + f.id, c.k, c.of) : D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);
       if (n < 1) continue;
       if (coin(b) && D.get(E.coinRef(v), 'moedas') + EPS < r2((E.PRICE[c.k] || 0.3) * n * WHOLE)) continue;
@@ -1063,6 +1064,7 @@
   // (what each drink is: the beer of the house's vat by the grain it was brewed of — b.malte, D-802 —, or the people's store's; the pulque
   // of the agave's sap; the wine and the mead of the store)
   function descDrink(b, k, brew) {
+    { const tc = G.TavernaOficios && G.TavernaOficios.desc(b, k); if (tc) return tc; } // (the beer and the mead of the house's brewer: T3, D-846)
     if (k === 'cerveja') { const g = T.malte(b); const nm = g && OR().FOOD[g] ? OR().FOOD[g].nome : ''; if (nm) return `cerveja de ${nm} da casa, da cuba`; return brew === 'cerveja' && b.malte && b.malte['?'] ? 'cerveja do armazém do povo' : brew === 'cerveja' ? 'cerveja da casa' : 'cerveja do armazém do povo'; }
     if (k === 'pulque') return brew === 'pulque' ? 'pulque da seiva do agave, da casa' : 'pulque do armazém do povo';
     if (k === 'mel') return 'hidromel de mel, do armazém do povo';
@@ -1087,7 +1089,7 @@
     if (O1) for (const t of MENU_FOOD) {
       const nm = DISH_M[t]; if (!nm || said.has(nm)) continue; const parts = MENU_FOOD.filter(x => DISH_M[x] === nm);
       const n = Math.floor(O1.free(ref, 'food', parts) + EPS); if (n < 1) continue; said.add(nm);
-      out.push({ id: 'food:' + t, k: 'food', of: parts.length > 1 ? parts : t, sort: 'comer', nome: nm, p: T.PRICE.food, n, ok: true, de: t, desc: descFood(fid, t) });
+      out.push({ id: 'food:' + t, k: 'food', of: parts.length > 1 ? parts : t, sort: 'comer', nome: nm, p: T.PRICE.food, n, ok: true, de: t, desc: (G.TavernaOficios && G.TavernaOficios.desc(b, 'food', t)) || descFood(fid, t) }); // (the cook's dish: T3, D-846)
     }
     else { const n = Math.floor(D.free(ref, 'food') + EPS); if (n >= 1) out.push({ id: 'food', k: 'food', of: null, sort: 'comer', nome: T.dish(b), p: T.PRICE.food, n, ok: true, de: null, desc: 'o prato do dia' }); }
     if (!out.some(x => x.sort === 'comer')) out.push({ id: 'food', k: 'food', of: null, sort: 'comer', nome: 'o prato do dia', p: T.PRICE.food, n: 0, ok: false, de: null, desc: 'o que a cozinha tem hoje' });
