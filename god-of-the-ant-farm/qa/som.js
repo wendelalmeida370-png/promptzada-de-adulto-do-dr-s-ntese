@@ -46,6 +46,14 @@
 //     no telhado que o 3D põe (a turfa, o terraço, a telha), só de dentro; f o eco da planta (a sala dura soa mais que a mole);
 //     g os atos da noite da P7 com o seu som e as palmas, a dança e o canto no compasso; h o deus a ouve só de perto (de longe nada
 //     da sala; de perto o burburinho abafado); i depois de fechar, a taverna calada
+//  s16 a quarta onda da taverna (T8, D-890 a D-897; ≈ 22 s): os estados e os atos das outras frentes postos pela mão da prova em gente
+//     de verdade de uma sala à noite (T-2020): a a festa — os bardos uma banda, um pulso e cada um a sua parte, o salão mais alto, o
+//     discurso, o viva do salão de quem grita; b a bebedeira — a voz arrastada e o soluço só de quem bebeu, a cantoria na escada do
+//     povo dele, a bebida jogada e o molhado, o desmaio e o arrastar no chão da planta; c o contexto — a tranca, quem se esconde só de
+//     perto, o luto que abafa, o arrombar com o estado da porta, a tempestade no telhado; d a cuba (a fervura só com a fornada no fogo),
+//     o cozinhar, os dados e as cartas no material da mão, a queda de braço com o seu fim, a trapaça quase nada, a torcida; e o tocador:
+//     o estrondo da porta uma vez, na hora em que ela vira arrombada, as notas dos dois da banda, o baque quando a queda de braço acaba;
+//     f a porta de som da tela: cada nome da lista toca, o osso e a madeira, nada para um nome que não há nem com os efeitos desligados
 //  e nenhum erro de módulo nem aviso, e o verificador sem nada novo (as regras do som entre elas).
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
@@ -76,7 +84,7 @@ function causal(c, tag) {
   const bad = (f, why) => { if (orphans.length < 8) orphans.push(`${tag}: ${f.k} (${f.tipo} ${f.s}) ${why}`); };
   const one = f => {
     sources++; const de = f.de || {};
-    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo === 'ocio') { const oc = G.Audio.ocioSom ? G.Audio.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) return bad(f, 'de uma coisinha do ócio que não está acontecendo'); return; } if (f.tipo === 'passos' || f.tipo === 'porta') { if (!G.Interiors.passage(v) && !(G.S.avatar && G.S.avatar.id === v.id)) return bad(f, 'de quem não está passando'); } else if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); const [wx, wy] = A.lugarDe(v, c.ear); if (f.tipo !== 'luta' && f.tipo !== 'porta' && (Math.abs(f.x - r3(wx)) > 0.002 || Math.abs(f.y - r3(wy)) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
+    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo === 'ocio') { const oc = G.Audio.ocioSom ? G.Audio.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) return bad(f, 'de uma coisinha do ócio que não está acontecendo'); return; } if (f.tipo === 'passos' || f.tipo === 'porta') { if (!G.Interiors.passage(v) && !(G.S.avatar && G.S.avatar.id === v.id)) return bad(f, 'de quem não está passando'); } else if (f.tipo === 'soluco') { if (!(A.ebrioDe(v) >= A.SOLUCO)) return bad(f, 'o soluço de quem não bebeu'); } else if (f.tipo === 'coro') { if ((f.quem || []).some(id => { const p = S.villagers.get(id); return !p || !A.CORO[p.act]; }) || !(f.n >= 2)) return bad(f, 'o coro de quem não grita'); } else if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); const [wx, wy] = A.lugarDe(v, c.ear); if (f.tipo !== 'luta' && f.tipo !== 'porta' && f.tipo !== 'coro' && (Math.abs(f.x - r3(wx)) > 0.002 || Math.abs(f.y - r3(wy)) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
     if (de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) return bad(f, 'de uma operação que não está viva'); }
     // (a gesture is the one its person is making: its act is the act the world shows; the water is of who bathes, the
     // watching of who is at the play, the lute of the one the tavern has playing, the anvil of a batch at its hammering)
@@ -84,7 +92,7 @@ function causal(c, tag) {
       if (!g || g.act !== v.act) return bad(f, `com o gesto «${f.g}», que não é do ato «${v.act}»`);
       if (f.g === 'banhar' && t.type !== 'termas') return bad(f, 'a água de quem não está no banho');
       if (f.g === 'assistir' && t.type !== 'teatro') return bad(f, 'a plateia de quem não está no espetáculo');
-      if (f.g === 'tocar') { const b = S.buildings.get(v.inside); if (!b || musicoDe(b) !== v) return bad(f, 'o alaúde de quem não está tocando'); }
+      if (f.g === 'tocar') { const b = S.buildings.get(v.inside); if (!b || v.act !== 'play' || (musicoDe(b) !== v && !(A.festaDe(b) || f.banda))) return bad(f, 'o alaúde de quem não está tocando'); } // (the musician of the day; or one of a band, the bards of a feast — who plays there now: T8)
       if (f.g === 'forjar') { const op = G.Act.get(t.op); const s = op && G.Oficio.stage(op); if (t.type !== 'oficio' || !s || s.anim !== 'forjar') return bad(f, 'o martelo de quem não está numa fornada na bigorna'); } }
     if (de.b) { if (!S.buildings.has(de.b)) return bad(f, 'de um prédio que não existe'); }
     if (de.navio !== undefined) { const s = S.ships.find(x => x.id === de.navio); if (!s || !s.moving) return bad(f, 'de um navio parado ou que não existe'); }
@@ -702,6 +710,123 @@ function s15() {
 }
 
 // =============================================================================================================
+// s16 the tavern's fourth wave (T8, D-890 to D-899): the feast, the drink, the context, the trades, the games — and the screen's door
+// =============================================================================================================
+// (the states and the acts of the fourth wave are the other fronts', in work beside this one — b.festa of the T1, v.ebrio of the T2, the
+// acts of the contract —: the proof's hand puts them on real people of a real room at night, reads the scene, and takes them off at once;
+// the world's own causes make the same states when they land, T-2020)
+function s16() {
+  const S = G.S, T = G.Taverna, In = G.Interiors;
+  const taverns = () => [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.ip && In.ready(b) && In.tableReady(b) && T.aberta(b)).sort((a, b) => a.id - b.id);
+  const inside = b => [...S.villagers.values()].filter(v => v.inside === b.id && !v.sleeping).sort((a, c) => a.id - c.id);
+  const earIn = b => earAt(b.x + (b.w || 1) / 2, b.y + (b.h || 1) / 2, { inside: b.id });
+  if (S.time < 0.66 || S.time > 0.8) skipTo(0.7); M.viver(2);
+  let b = null; for (let k = 0; k < 40 && !b; k++) { b = taverns().find(x => inside(x).filter(v => v.task && v.task.type === 'tavern').length >= 4) || null; if (!b) M.viver(1); }
+  if (!b) return ok('s16 a-quarta-onda', false, `nenhuma taverna aberta com quatro fregueses (${taverns().map(x => '#' + x.id + ':' + inside(x).length).join(', ')})`);
+  const P = inside(b).filter(v => v.task && v.task.type === 'tavern'); const [p1, p2, p3, p4] = P; const keep = new Map();
+  const put = (v, act, more) => { if (!keep.has(v)) keep.set(v, { act: v.act, actT: v.actT, ebrio: v.ebrio, x: v.x, y: v.y }); v.act = act; v.actT = 0.6; if (more) Object.assign(v, more); };
+  const undo = () => { for (const [v, k] of keep) { v.act = k.act; v.actT = k.actT; v.ebrio = k.ebrio; v.x = k.x; v.y = k.y; } keep.clear(); };
+  const of = (c, v) => c.fontes.filter(f => f.de && f.de.v === v.id);
+  const who = v => `${v.name} #${v.id}`;
+  try {
+    // ---- a the feast: the bards one band — one pulse and one tune, each its part —, the hall fuller and louder, the speech, the viva
+    const c0 = scene(earIn(b), 's16 antes'); const mu0 = c0.fontes.find(f => f.s === 'murmur' && f.de.b === b.id);
+    const f0 = b.festa; b.festa = { motivo: 'prova', causa: 'a mão da prova', dia: S.day, ate: S.day, bardos: [p2.id, p1.id] };
+    put(p1, 'play'); put(p2, 'play'); put(p3, 'sittalk'); put(p4, 'sittalk');
+    const cf = scene(earIn(b), 's16 festa'); const m1 = of(cf, p1).find(f => f.musica), m2 = of(cf, p2).find(f => f.musica); const muf = cf.fontes.find(f => f.s === 'murmur' && f.de.b === b.id);
+    delete b.festa; if (f0) b.festa = f0; const cn = scene(earIn(b), 's16 sem festa'); const mun = cn.fontes.find(f => f.s === 'murmur' && f.de.b === b.id); b.festa = { motivo: 'prova', dia: S.day, ate: S.day, bardos: [p2.id, p1.id] };
+    const bandOK = !!m1 && !!m2 && m1.musica.de === p2.id && m2.musica.de === p2.id && m2.banda.papel === 0 && m1.banda.papel === 1 && m1.banda.n === 2 && m1.musica.bpm === m2.musica.bpm && [m1, m2].every(f => f.s === (A.instrumentoDe(S.villagers.get(f.de.v)) || 'canto'));
+    const loudOK = !!muf && muf.festa === 1 && (!mun || (mun.festa === 0 && muf.forca > mun.forca && muf.gain >= mun.gain));
+    put(p3, 'discurso'); put(p1, 'cheer'); put(p2, 'cheer'); put(p4, 'cheer');
+    const cv = scene(earIn(b), 's16 viva'); const ds = of(cv, p3).find(f => f.s === 'discurso'); const vv = cv.fontes.find(f => f.tipo === 'coro' && f.de.b === b.id);
+    const lone = cv.fontes.filter(f => f.s === 'cheer' && [p1, p2, p4].some(p => f.de.v === p.id)).length;
+    const vivaOK = !!ds && !!vv && vv.s === 'viva' && vv.n === 3 && JSON.stringify(vv.quem) === JSON.stringify([p1.id, p2.id, p4.id].sort((x, y) => x - y)) && lone === 0;
+    ok('s16a a-festa', bandOK && loudOK && vivaOK,
+      `#${b.id} de ${townOf(b).name}: ${who(p2)} e ${who(p1)} na festa — ${m2 ? m2.s : '?'} e ${m1 ? m1.s : '?'}, uma banda (o pulso de #${m1 ? m1.musica.de : '?'}, ${m1 ? m1.musica.bpm : '?'} batidas; as partes ${m2 ? m2.banda.papel : '?'} e ${m1 ? m1.banda.papel : '?'}) ${bandOK ? '' : '— FORA DA BANDA'}; o salão com festa ${muf ? muf.forca + ' de peso, ganho ' + muf.gain : 'CALADO'}, sem ${mun ? mun.forca + ', ' + mun.gain : 'nada'}${loudOK ? '' : ' — NÃO MAIS ALTO'}; o discurso ${ds ? 'de ' + who(p3) : 'CALADO'}, o viva do salão ${vv ? `de ${vv.n} (#${vv.de.v} à frente)` : 'NENHUM'}, ${lone} grito(s) solto(s) deles`);
+    delete b.festa; if (f0) b.festa = f0; undo();
+    // ---- b the drink: the slurred voice and the hiccup only of who drank (v.ebrio), the song out of tune, the drink thrown and who gets it,
+    // the faint and the dragging on the plan's floor
+    put(p1, 'sittalk', { ebrio: 1.2 }); put(p2, 'sittalk', { ebrio: 0 });
+    const cb = scene(earIn(b), 's16 bebida'); const v1 = of(cb, p1), v2 = of(cb, p2);
+    // (the other's own drink of the night — G.Atmos.drunk — is still his: slurred only from 0,5, the hiccup from 0,8)
+    const e2 = A.ebrioDe(p2); const slurOK = v1.some(f => f.s === 'vozBebado') && v1.some(f => f.tipo === 'soluco' && f.s === 'hiccup') && v2.some(f => f.s === 'vozBebado') === (e2 >= 0.5 && v2.some(f => f.s === 'vozBebado' || f.s === 'voz')) && v2.some(f => f.tipo === 'soluco') === (e2 >= A.SOLUCO);
+    put(p1, 'cantoria'); put(p3, 'jogar-bebida'); put(p4, 'molhado'); put(p2, 'desmaio');
+    const cd = scene(earIn(b), 's16 bebedeira'); const can = of(cd, p1).find(f => f.s === 'cantoria'), jb = of(cd, p3).find(f => f.s === 'jogarBebida'), mo = of(cd, p4).find(f => f.s === 'molhado'), dm = of(cd, p2).find(f => f.s === 'desmaio');
+    const fl = A.PASSO[A.chaoDe(b, A.ondeDe(p2)[2])];
+    const fac = G.Fac.ofV(p1); const want = A.musicOf(fac ? fac.civ : null, fac && fac.tech ? fac.tech.known : null).notas;
+    const drunkOK = !!can && JSON.stringify(can.notas) === JSON.stringify(want) && can.ebrio >= 1.2 && !!jb && ['barro', 'madeira', 'metal'].includes(jb.mat) && !!mo && !!dm && dm.piso === fl;
+    undo(); put(p3, 'arrastar'); put(p2, 'arrastado');
+    const ca = scene(earIn(b), 's16 arrastar'); const ar = of(ca, p3).find(f => f.s === 'arrastar'); const quiet = of(ca, p2).length === 0;
+    ok('s16b a-bebedeira', slurOK && drunkOK && !!ar && ar.piso === A.PASSO[A.chaoDe(b, A.ondeDe(p3)[2])] && quiet,
+      `${who(p1)} com 1,2 de bebida: ${v1.map(f => f.s).join(', ')}; ${who(p2)} sem bebida: ${v2.map(f => f.s).join(', ') || 'calado'}; a cantoria ${can ? 'na escada do povo dele (' + (fac ? fac.civ : '?') + ')' : 'CALADA'}, a bebida jogada ${jb ? 'na caneca de ' + jb.mat : 'CALADA'}, o molhado ${mo ? 'grita' : 'CALADO'}, o desmaio ${dm ? 'no chão de ' + dm.piso + ' (o da planta: ' + fl + ')' : 'CALADO'}, o arrastar ${ar ? 'no chão de ' + ar.piso : 'CALADO'}, o arrastado ${quiet ? 'calado' : 'SOA'}`);
+    undo();
+    // ---- c the context: the bar on the door, the door forced (and its state with it), who hides (heard only near), the mourners hushing
+    // the talk, the storm on the roof
+    put(p1, 'trancar'); put(p2, 'esconder'); put(p3, 'mourn'); put(p4, 'mourn');
+    // (who hides is heard only beside: the ear at the next place)
+    const beside = v => { const [x, y] = A.ondeDe(v); return earAt(x + 0.1, y, { inside: b.id }); };
+    const ct = scene(earIn(b), 's16 contexto'); const tr = of(ct, p1).find(f => f.s === 'tranca'); const esc = of(scene(beside(p2), 's16 escondido'), p2).find(f => f.s === 'respiro');
+    const far = of(scene(earAt(b.x + (b.w || 1) / 2 + 3, b.y + (b.h || 1) / 2), 's16 de fora'), p2).length;
+    const mt = ct.fontes.find(f => f.s === 'murmur' && f.de.b === b.id);
+    const lutoOK = !mt || mt.luto > 0; // (two mourners of the room: if any talk is left, it is hushed)
+    undo();
+    const out = [...S.villagers.values()].filter(v => !v.inside && !v.sleeping && free(v)).sort((a, c) => a.id - c.id)[0];
+    const pl = In.plan(b); const e = pl.entrance; const st0 = In.doorState(b, e.door);
+    let forc = null; if (out) { put(out, 'arrombar', { x: b.x + e.out[0] / 4, y: b.y + e.out[1] / 4 }); forc = of(scene(earAt(b.x + e.out[0] / 4 + 1, b.y + e.out[1] / 4), 's16 arrombar'), out).find(f => f.s === 'arrombar'); }
+    const w0 = { rain: S.weather.rain, storm: S.weather.storm }; S.weather.rain = 1; S.weather.storm = 1; let rs = null;
+    try { rs = scene(earIn(b), 's16 tempestade').fontes.find(f => f.tipo === 'chuva' && f.de.b === b.id); } finally { S.weather.rain = w0.rain; S.weather.storm = w0.storm; }
+    ok('s16c o-contexto', !!tr && !!esc && far === 0 && lutoOK && !!forc && forc.alvo === b.id && forc.porta === (st0 ? st0.state : 'fechada') && !!rs && rs.tempestade === 1,
+      `a tranca ${tr ? 'de ' + who(p1) : 'CALADA'}; quem se esconde ${esc ? 'respira, de perto' : 'CALADO'} e de três casas fora ${far ? 'SE OUVE' : 'não se ouve'}; dois de luto: ${mt ? 'a conversa abafada (luto ' + mt.luto + ')' : 'a sala calada'}; o arrombar ${forc ? `de ${who(out)} na porta de #${forc.alvo}, a porta ${forc.porta}` : 'CALADO'}; a tempestade no telhado ${rs ? (rs.tempestade ? 'com o vento' : 'SEM O VENTO') : 'CALADA'}`);
+    undo();
+    // ---- d the trades and the games: the paddle in the vat (boiling where a batch is at the fire), the cooking, the dice and the cards in
+    // the material in the hand, the arm wrestle with its slam at the end, the cheat next to nothing, the match and its crowd
+    put(p1, 'mexer-cuba'); put(p2, 'cozinhar'); put(p3, 'jogo-dados'); put(p4, 'jogo-cartas');
+    const cj = scene(earIn(b), 's16 jogos'); const cu = of(cj, p1).find(f => f.s === 'cuba'), co = of(cj, p2).find(f => f.s === 'cook'), da = of(cj, p3).find(f => f.s === 'dados'), cr = of(cj, p4).find(f => f.s === 'cartas');
+    const boil = G.Oficio.batches(b).some(op => { const s0 = G.Oficio.stage(op); return s0 && s0.kind === 'fogo' && op.data && op.data.calor > 0; }) ? 1 : 0;
+    put(p1, 'queda-de-braco'); put(p2, 'trapaca'); put(p3, 'torcer'); put(p4, 'torcer');
+    const cq = scene(earIn(b), 's16 braco'); const qb = of(cq, p1).find(f => f.s === 'bracoForca'); const tp = of(scene(beside(p2), 's16 trapaca'), p2).find(f => f.s === 'trapaca'); const tc = cq.fontes.find(f => f.tipo === 'coro' && f.s === 'torcida' && f.de.b === b.id);
+    const tpFar = of(scene(earAt(b.x + (b.w || 1) / 2 + 3, b.y + (b.h || 1) / 2), 's16 trapaca de fora'), p2).length;
+    ok('s16d a-cadeia-e-os-jogos', !!cu && cu.ferve === boil && !!co && !!da && !!cr && ['osso', 'madeira'].includes(da.mat) && !!cr.mat && !!qb && qb.fim === 'bracoBate' && !!tp && tpFar === 0 && !!tc && tc.n === 2,
+      `a cuba ${cu ? (cu.ferve ? 'fervendo (a fornada no fogo)' : 'sem fervura (nenhuma fornada no fogo)') : 'CALADA'}, o cozinhar ${co ? 'soa' : 'CALADO'}; os dados ${da ? 'de ' + da.mat : 'CALADOS'}, as cartas ${cr ? 'de ' + cr.mat : 'CALADAS'}; a queda de braço ${qb ? 'com o baque no fim (' + qb.fim + ')' : 'CALADA'}; a trapaça ${tp ? 'quase nada' : 'CALADA'}, de fora ${tpFar ? 'SE OUVE' : 'nada'}; a torcida ${tc ? 'de ' + tc.n : 'NENHUMA'}`);
+    undo();
+    // ---- e the player (an audio context that plays nothing, FakeAC): the door's crash the moment its state turns to broken — once, of
+    // who forces it —, the band's notes of each of its two, and the slam when the arm wrestle ends
+    if (!FakeAC.last) { global.AudioContext = FakeAC; G.Audio.init(); }
+    const sp0 = G.speed; const keepAmb = [A.mute, A.ambOn, A.sfxOn]; A.mute = false; A.ambOn = true; A.sfxOn = true; A.gravar = true; A.tocou.length = 0;
+    const scene0 = A.scene; let look = 0, crash = 0, band = new Set(), slam = 0;
+    try {
+      G.speed = 1; const ear = earAt(b.x + e.out[0] / 4 + 1, b.y + e.out[1] / 4); A.ouvido = ear;
+      if (out) put(out, 'arrombar', { x: b.x + e.out[0] / 4, y: b.y + e.out[1] / 4 });
+      A.scene = function (er) { const c = scene0.call(A, er); look++; if (c && out) for (const f of c.fontes) if (f.de && f.de.v === out.id && f.s === 'arrombar') f.porta = look >= 4 ? 'arrombada' : 'fechada'; return c; };
+      for (let k = 0; k < 10; k++) { FakeAC.last.currentTime += 0.3; A.update(0.3); }
+      crash = A.tocou.filter(x => x.s === 'portaCede' && x.de && x.de.v === (out && out.id)).length;
+      A.scene = scene0; undo(); A.tocou.length = 0;
+      // (the band: the two of the feast, heard from within the room)
+      A.ouvido = earIn(b); const f1 = b.festa; b.festa = { motivo: 'prova', dia: S.day, ate: S.day, bardos: [p2.id, p1.id] }; put(p1, 'play'); put(p2, 'play');
+      for (let k = 0; k < 14; k++) { FakeAC.last.currentTime += 0.3; A.update(0.3); }
+      for (const x of A.tocou) if (['lira', 'tambor', 'canto'].includes(x.s) && x.de) band.add(x.de.v);
+      delete b.festa; if (f1) b.festa = f1; undo(); A.tocou.length = 0;
+      // (the arm wrestle for a few looks, then over: the slam)
+      put(p3, 'queda-de-braco'); for (let k = 0; k < 4; k++) { FakeAC.last.currentTime += 0.3; A.update(0.3); } undo();
+      for (let k = 0; k < 3; k++) { FakeAC.last.currentTime += 0.3; A.update(0.3); }
+      slam = A.tocou.filter(x => x.s === 'bracoBate' && x.de && x.de.v === p3.id).length;
+    } finally { A.scene = scene0; undo(); G.speed = sp0; A.ouvido = null; A.gravar = false; [A.mute, A.ambOn, A.sfxOn] = keepAmb; }
+    ok('s16e o-tocador', (!out || crash === 1) && band.has(p1.id) && band.has(p2.id) && slam === 1,
+      `a porta que cede: ${out ? crash + ' estrondo(s), na hora em que a porta virou arrombada, de ' + who(out) : '(ninguém na rua para forçá-la)'}; a banda: notas de ${[...band].map(id => '#' + id).join(' e ') || 'NINGUÉM'}; o baque da queda de braço quando ela acaba: ${slam}`);
+    // ---- f the screen's door: every name of the list rings (nodes made), each a sound of no place; an unknown name rings nothing; the
+    // switch of the effects is obeyed; the dice of bone and of wood both
+    const mk = () => FakeAC.last.made; const keep2 = [A.mute, A.sfxOn]; A.mute = false; A.sfxOn = true; const rows = []; let good = true;
+    try {
+      for (const n of ['dados-copo', 'dados-rolar', 'dados-parar', 'cartas-embaralhar', 'cartas-dar', 'cartas-jogar', 'cartas-virar', 'aposta', 'vitoria', 'derrota']) { FakeAC.last.currentTime += 0.5; const m0 = mk(); const r = A.ui(n); const d = mk() - m0; if (!r || d <= 0) good = false; rows.push(`${n} ${d}`); }
+      FakeAC.last.currentTime += 0.5; const bone = mk(); const rb = A.ui('dados-rolar', 'osso'); const nb = mk() - bone; FakeAC.last.currentTime += 0.5; const wood = mk(); const rw = A.ui('dados-rolar', { mat: 'madeira', n: 3 }); const nw = mk() - wood;
+      const none = A.ui('nada-disso'); A.sfxOn = false; FakeAC.last.currentTime += 0.5; const off = A.ui('aposta');
+      good = good && rb && rw && nb > 0 && nw > nb && none === false && off === false && A.UI.length === 10;
+      ok('s16f a-porta-da-tela', good, `${rows.join(', ')} (nós de som); os dados de osso ${nb}, de madeira com três ${nw}; um nome que não há: ${none ? 'TOCA' : 'nada'}; com os efeitos desligados: ${off ? 'TOCA' : 'nada'}`);
+    } finally { [A.mute, A.sfxOn] = keep2; }
+  } finally { undo(); }
+}
+
+// =============================================================================================================
 // s1 the table
 // =============================================================================================================
 function s1() {
@@ -752,6 +877,7 @@ if (on('s3') || on('s4') || on('s5') || on('s6')) day();
 if (on('s11')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s11(); }
 if (on('s14')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s14(); }
 if (on('s15')) s15();
+if (on('s16')) s16();
 if (on('s1') && (on('s3') || on('s4') || on('s5') || on('s6'))) s1c();
 if (on('s10')) ok('s10 toda-fonte-tem-dono', !orphans.length && (!!ONLY || (scenes > 10 && sources > 30)), `${scenes} cenas e ${sources} fontes olhadas ao longo da prova (as do s9 e do s7 entram no fim): ${orphans.length ? 'SEM DONO: ' + orphans.join(' · ') : 'cada uma de uma pessoa acordada num ato, um prédio com a operação viva, um navio que anda ou um bicho vivo'}`);
 { const bad = QA.check().filter(q => q.sev <= 2 || q.sys === 'som').map(q => `S${q.sev} ${q.sys}: ${q.msg}`); ok('verificador', !bad.length, bad.length ? bad.slice(0, 4).join(' · ') : `«${WORLD}» limpo depois do dia da prova`); }

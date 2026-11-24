@@ -2356,5 +2356,39 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   if (!/if \(L\.compasso && v\.inside > 0\) \{ const m = musicoEm\(v\.inside\); if \(m\) o\.ritmo = A\.compasso\(m\); \}/.test(as)) fails.push('o compasso: a cena não dá a quem acompanha o compasso do músico da sala (D-785)');
   if (!/t0: t && Number\.isFinite\(t\.mw\) \? t\.mw : 0/.test(as)) fails.push('o compasso: o pulso da música não conta do começo da vez do músico (t.mw, D-785)');
   if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
+// 420. "a porta de som da tela" (T8, D-896): o som sem lugar das telas (os jogos do corpo) é o G.Audio.ui do audio.js, com a sua
+// tabela — os dados no copo, rolando e parando, as cartas embaralhadas, dadas, jogadas e viradas, a aposta, a vitória e a derrota —; e
+// só as telas o chamam (um arquivo *-ui.js ou do que só se vê): o mundo não toca som de tela, o som do mundo tem lugar e dono
+{ const au = (src['audio.js'] || []).join('\n'); const t0 = au.indexOf('  const UI = {'), ui = t0 < 0 ? '' : au.slice(t0, au.indexOf('\n  };', t0));
+  if (!ui || !/A\.ui = function \(nome, o\) \{/.test(au)) fails.push('a porta de som da tela: o audio.js sem o G.Audio.ui e a sua tabela (D-896)');
+  for (const n of ['dados-copo', 'dados-rolar', 'dados-parar', 'cartas-embaralhar', 'cartas-dar', 'cartas-jogar', 'cartas-virar', 'aposta', 'vitoria', 'derrota']) if (!new RegExp(`(?:^|\\s)'?${n}'?: \\(t, v, o\\) =>|(?:^|\\s)'?${n}'?: \\(t, v\\) =>`, 'm').test(ui)) fails.push(`a porta de som da tela: o som «${n}» não está na tabela do G.Audio.ui (D-896)`);
+  for (const f of files) { if (LOOK.includes(f) || /-ui\.js$/.test(f)) continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bAudio\.ui\s*\(/.test(c)) fails.push(`a porta de som da tela: ${f}:${k + 1} o mundo toca um som de tela — o som do mundo tem lugar (D-896): ${l.trim().slice(0, 110)}`); }); } }
+// 421. "os atos da quarta onda têm som" (T8, D-890 a D-895): os atos do contrato da quarta onda (taverna-onda4.md) e os do supervisor — a
+// tranca, o abrigo, o esconder, o arrombar, o discurso, a bebida jogada e quem a recebe, a cantoria, o desmaio, o arrastar, a cuba, o
+// cozinhar, os dados, as cartas, a queda de braço, a trapaça — têm a sua linha no A.ATO do audio-src.js (a da frente do mundo, ou a do
+// TAVERNA_ATO), e todo som que elas nomeiam está na biblioteca do audio.js
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  const lib = new Set(); for (const m of au.matchAll(/^\s{4}'?([A-Za-z][\w-]*)'?: \(t, v(?:, o)?\) =>/gm)) lib.add(m[1]); for (const m of au.matchAll(/\bLIB\.([A-Za-z]\w*) = /g)) lib.add(m[1]);
+  const t0 = as.indexOf('const TAVERNA_ATO = {'), tv = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
+  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado', 'mexer-cuba', 'cozinhar', 'jogo-dados', 'jogo-cartas', 'queda-de-braco', 'trapaca']) {
+    const re = new RegExp(`(?:^|[\\s,{])'?${a}'?: (?:\\{ s: '(\\w+)'|still\\()`, 'm'); const m = re.exec(tv) || re.exec(as);
+    if (!m) fails.push(`os atos da quarta onda: o ato «${a}» sem a sua linha de som (A.ATO, D-890)`); else if (m[1] && !lib.has(m[1])) fails.push(`os atos da quarta onda: o ato «${a}» nomeia o som «${m[1]}», que a biblioteca do audio.js não tem (D-890)`); } }
+// 422. "a festa toca em banda" (T8, D-890): quem toca numa sala — o músico da noite, os bardos da festa (b.festa) — é uma banda só: a cena
+// dá a cada um o compasso do primeiro e a sua parte (o.banda), e o tocador toca a banda num pulso e numa melodia, cada parte na escada
+// do povo (a harmonia dois degraus da escada acima da melodia, a corda grave uma oitava abaixo)
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  if (!/const B = banda\.get\(v\.inside\) \|\| \[v\]; o\.musica = A\.compasso\(B\[0\] \|\| v\); o\.banda = \{ n: B\.length, papel: Math\.max\(0, B\.indexOf\(v\)\) \};/.test(as)) fails.push('a festa toca em banda: a cena não dá a quem toca o compasso do primeiro da banda e a sua parte (D-890)');
+  if (!/const f = A\.festaDe\(bb\); const B = \(f && f\.bardos\) \|\| NADA;/.test(as)) fails.push('a festa toca em banda: a banda da sala sem os bardos da festa (b.festa, D-890)');
+  if (!/const key = 'v' \+ f\.musica\.de;/.test(au) || !/p === 1 \? N\[G\.clamp\(idx \+ \(idx \+ 2 <= top \? 2 : -2\), 0, top\)\]/.test(au)) fails.push('a festa toca em banda: o tocador não toca a banda num pulso só, com a harmonia na escada do povo (D-890)'); }
+// 423. "o bêbado pela bebida" (T8, D-891): a voz arrastada e o soluço só pela bebida de quem fala (A.ebrioDe: o v.ebrio da T2, o
+// G.Atmos.drunk) — nunca pelo ato, pela mesa ou pelo acaso; e nenhuma outra linha da cena dá a voz de bêbado
+{ const as = src['audio-src.js'] || []; const all = as.join('\n');
+  if (!/const ebr = A\.ebrioDe\(v\);\n\s*if \(L && L\.s === 'voz' && ebr >= 0\.5\) L = /.test(all) || !/if \(ebr >= A\.SOLUCO && !ear\.ug\)/.test(all)) fails.push('o bêbado pela bebida: a voz arrastada e o soluço da cena não vêm da bebida de quem fala (A.ebrioDe, D-891)');
+  as.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/s: 'vozBebado'/.test(c) && !/ebr >= 0\.5/.test(c)) fails.push(`o bêbado pela bebida: audio-src.js:${k + 1} dá a voz de bêbado sem a bebida (D-891): ${l.trim().slice(0, 110)}`); }); }
+// 424. "a porta cede pelo mundo" (T8, D-895): o estrondo da porta que cede só soa na hora em que o estado da porta, o do mundo (In.doorState
+// pela porta de quem a força), vira «arrombada» — nunca por golpe contado, por sorteio ou pelo ato sozinho
+{ const as = (src['audio-src.js'] || []).join('\n'), au = src['audio.js'] || [];
+  if (!/const st = In\.doorState\(best\.b, best\.e\.door\); return \{ b: best\.b\.id, door: best\.e\.door,/.test(as)) fails.push('a porta cede pelo mundo: a cena não lê o estado da porta forçada no In.doorState (D-895)');
+  au.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'portaCede'/.test(c) && !/f\.porta === 'arrombada' && st\.porta !== undefined && st\.porta !== 'arrombada'/.test(c)) fails.push(`a porta cede pelo mundo: audio.js:${k + 1} toca a porta que cede fora da mudança do estado dela (D-895): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
