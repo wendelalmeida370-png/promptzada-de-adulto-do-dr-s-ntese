@@ -44,11 +44,14 @@
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
   // (P7, D-805: the knucklebones of the tavern's game and the keeper's rag — the place's too, the body's hands among them)
-  const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1 };
+  // (T5, D-868: the house's deck of the Tabuletas in the hands of who plays — and of who hides one up the sleeve)
+  const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1, baralho: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
     // (the living tavern's acts, P7 D-806: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
-    brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca' };
+    brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca',
+    // (the tablets' game, T5: the deck in the hand of who plays, who hides one up the sleeve, who is caught at it)
+    'jogo-cartas': 'baralho', trapaca: 'baralho', 'trapaca-pega': 'baralho' };
   // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
   // the people had, as the cup is of its clay or wood: P7, D-764)
   const instrumentOf = v => ((G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) === 'asteca' ? 'tambor' : 'lira');
@@ -81,8 +84,13 @@
   Inv.kindOK = kindOK;
   // a kind as the person's people would make it: the best material it has had; null — a kind of metal or leather only (the
   // sword, the helmet) in a people that never had the metal or the hide — is nothing at all
-  const made = (kind, fid, arts) => { if (!kind || !kindOK(kind, fid, arts)) return null; const m = It.bestOf(kind, x => matOK(fid, x, arts)); return m ? It.keyOf(kind, m) : null; };
+  // (a kind each people makes its own way — a deck of the Tabuletas: It.dePovo — in the first of its materials the people has; T5, D-868)
+  const made = (kind, fid, arts) => { if (!kind || !kindOK(kind, fid, arts)) return null; const pv = It.dePovo ? It.dePovo(kind, (G.Fac.get(fid) || {}).civ) : null;
+    if (pv) { for (const x of pv) if (matOK(fid, x, arts)) return It.keyOf(kind, x); return null; }
+    const m = It.bestOf(kind, x => matOK(fid, x, arts)); return m ? It.keyOf(kind, m) : null; };
   Inv.made = (kind, v) => (v ? made(kind, G.Fac.idOfV(v), artsOf(v)) : null);
+  // (the same for a people: the thing of the place it would have — the house's deck of a tavern; T5)
+  Inv.madeBy = (kind, fid) => { const f = G.Fac.get(fid); return f ? made(kind, fid, f.tech ? f.tech.known : null) : null; };
   // the fisher's gear by the way the people fish (G.Pesca.how: the net, the line, the harpoon, the hands)
   const fishGear = v => { const P = G.Pesca; const how = P && P.how ? P.how(G.Fac.idOfV(v)) : 'linha'; return how === 'rede' ? 'rede' : how === 'arpao' ? 'lanca' : how === 'maos' ? null : 'vara'; };
   // what a person carries by trade alone, with the hands free (no act, no load): the things that are theirs by trade — the ones

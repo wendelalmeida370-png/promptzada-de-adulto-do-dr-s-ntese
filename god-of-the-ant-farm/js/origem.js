@@ -131,7 +131,8 @@
   // true source or from another people that had it; the day it first came is kept (the kit and the fight read it)
   // (and the pottery's ware: the fired clay a cup is made of — 22c, D-612)
   // (and the loom's cloth: the wool a rag is of where the people has had woven cloth — P7, D-805)
-  O.MAT_OF = { couro: 'couro', cobre: 'cobre', estanho: 'estanho', ouro: 'ouro', minerio: 'minerio', ceramica: 'barro', tecido: 'la' };
+  // (and the apiary's wax: the boards of a deck of the Tabuletas are coated with it — T5, D-868)
+  O.MAT_OF = { couro: 'couro', cobre: 'cobre', estanho: 'estanho', ouro: 'ouro', minerio: 'minerio', ceramica: 'barro', tecido: 'la', cera: 'cera' };
   const ownerFac = ref => { const o = D.owner(ref); return o && o.fac ? o.fac : 0; };
   function mark(fid, m) { if (!fid || !m || m === '?' || O.PLAIN[m]) return; const o = st(); const h = o.had[fid] || (o.had[fid] = {}); if (!h[m]) h[m] = G.S.day || 1; }
   O.had = (fid, m) => { const o = G.S && G.S.orig; const h = o && o.had[fid]; return h ? h[m] || 0 : 0; };
@@ -147,13 +148,28 @@
   // iron with the art and the metal had (D-442)
   // (the straw: the dry stalks every people cuts for its roofs and its beds — P7, D-805; the bone: the carcass's, of the beast slaughtered,
   // hunted or offered — the meat made of it, or a hide had, which came of one)
-  O.PLAIN = { madeira: 1, pedra: 1, vime: 1, corda: 1, palha: 1 };
+  // (the amate: the inner bark of the fig beaten flat — the wood's fibres, as the wicker and the cord, every people fells — T5, D-868)
+  O.PLAIN = { madeira: 1, pedra: 1, vime: 1, corda: 1, palha: 1, amate: 1 };
   O.matOK = function (fid, m, arts) {
     if (O.PLAIN[m]) return true;
-    if (m === 'couro' || m === 'ouro' || m === 'barro' || m === 'la') return !!O.had(fid, m);
+    if (m === 'couro' || m === 'ouro' || m === 'barro' || m === 'la' || m === 'cera') return !!O.had(fid, m);
+    if (m === 'papiro') return O.junco(fid);
     if (m === 'osso') return !!O.had(fid, 'osso') || !!O.had(fid, 'couro');
     if (m === 'bronze' || m === 'ferro') return !!(arts && arts[m] !== undefined) && !!O.had(fid, m);
     return false;
+  };
+  // (the papyrus is the pith of the reed that grows in fresh water: a people with a town by a river or a lake — the water within
+  // O.JUNCO tiles of its centre — has it; read from the map, the same for the same ground: T5, D-868)
+  O.JUNCO = 9;
+  let jKey = '', jMap = null;
+  G.worldHooks.push(() => { jKey = ''; jMap = null; });
+  O.junco = function (fid) {
+    const S = G.S; if (!S || !fid || !S.type) return false; const key = (S.typeVer || 0) + ':' + S.settlements.size;
+    if (jKey !== key) { jKey = key; jMap = new Map(); } if (jMap.has(fid)) return jMap.get(fid);
+    const N = G.N, RIV = G.T.RIVER, R = O.JUNCO; let ok = false;
+    for (const s of S.settlements.values()) { if (ok || s.fac !== fid) continue; const cx = s.cx | 0, cy = s.cy | 0;
+      for (let y = Math.max(0, cy - R); y <= Math.min(N - 1, cy + R) && !ok; y++) for (let x = Math.max(0, cx - R); x <= Math.min(N - 1, cx + R); x++) if (S.type[y * N + x] === RIV) { ok = true; break; } }
+    jMap.set(fid, ok); return ok;
   };
   // the art of a metal, and the metal had: what the fight and the kit read where they read «bronze» or «ferro» (D-443)
   O.forged = (fid, m) => !!(G.Civ && G.Civ.has(fid, m)) && !!O.had(fid, m);
