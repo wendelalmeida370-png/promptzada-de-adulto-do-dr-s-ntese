@@ -36,7 +36,9 @@ const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const frame = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); };
 const fast = () => { G.debug.step(0.1); G.Avatar.frame(RDT); };
 const until = (f, sec) => { const t0 = S().clock; while (!f() && S().clock - t0 < sec) fast(); return f(); };
-const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; if (!(S().divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); for (const s of S().settlements.values()) { if (s.alarmT > 0) s.alarmT = 0; } };
+// (the night of the proof with no feast of a tavern — T1's, D-818: its dish, its round and its bards are the taverna-vida's v12, not the body's
+// — T-1884)
+const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; if (!(S().divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); for (const s of S().settlements.values()) { if (s.alarmT > 0) s.alarmT = 0; } god(() => { G.mod('tf.olha', S().clock + 1e9); for (const b of S().buildings.values()) if (b.type === 'taverna' && b.festa) delete b.festa; }); };
 // (the ledger as it is written: [n, day, clock, from, to, good, n, op, code, by])
 const seen = []; D.onMove.push(e => { seen.push({ t: e[2], from: e[3], to: e[4], k: e[5], n: e[6], op: e[7], c: e[8], by: e[9] }); });
 const bad = []; const watch = () => { for (const q of QA.check().filter(q => q.sev <= 2 && (q.sys === 'taverna' || q.sys === 'oficio' || q.sys === 'int' || q.sys === 'lar'))) { const m = `S${q.sev} ${q.sys}: ${q.msg}`; if (bad.length < 8 && !bad.includes(m)) bad.push(m); } };
@@ -149,9 +151,10 @@ if (on('c3')) {
     const op = OP().id; const t1 = S().clock; const d0 = v.drinks || 0;
     const { it, r: res } = order(x => x.sort === 'beber'); until(() => mine() && mine().cv === 'servido', 120);
     const cup = G.Inv.held(v).mao || ''; let n = 0, last = null; while (v.carry && v.carry.op === op && n < 6) { last = bite(); n++; }
-    const W = G.Atmos.within(B()); const q = W.mesa.find(x => x.id === v.id);
-    ok('c3 a caneca na mão, três goles, o efeito no último, a caneca deixada na mesa', !!res && res.ok && /^caneca\./.test(cup) && n === T.SIPS && last && last.last && (v.drinks || 0) === d0 + 1 && mine().r === 1 && !!q && !!q.cup,
-      `«${it ? it.nome : '-'}»: na mão ${cup || 'nada'}; ${n} goles; bebidas ${d0} → ${v.drinks || 0}; na mesa: ${q ? q.cup : 'nada'}`);
+    // (the cup left on the table: the day's record of the vessels left — d.sujo, what the drawing reads since P5, T-1886)
+    const q = (OP().data.sujo || []).find(x => x.who === v.id && x.k !== 'food');
+    ok('c3 a caneca na mão, três goles, o efeito no último, a caneca deixada na mesa', !!res && res.ok && /^caneca\./.test(cup) && n === T.SIPS && last && last.last && (v.drinks || 0) === d0 + 1 && mine().r === 1 && !!q,
+      `«${it ? it.nome : '-'}»: na mão ${cup || 'nada'}; ${n} goles; bebidas ${d0} → ${v.drinks || 0}; na mesa: ${q ? q.k : 'nada'}`);
     watch(); ok('c3 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
   }
 }
@@ -210,11 +213,18 @@ if (on('c6')) {
   if (r.fail || !r.got) ok('c6 o taverneiro morto', false, r.why || 'o cardápio não abriu');
   else {
     const op = OP(); order(x => x.sort === 'beber');
-    until(() => kp.task && kp.task.type === 'atender' && kp.task.st >= 12, 60);
+    // (with the order still his to bring — filling it, or on the way —: the serving got quicker since, and «12 or more» caught him handing it
+    // over, T-1887)
+    const hit = until(() => kp.task && kp.task.type === 'atender' && (kp.task.st === 12 || kp.task.st === 13) && mine() && mine().cv === 'pedido', 60); if (!hit) console.log(`   (c6: o taverneiro nunca pegou o pedido: ${kp.task ? kp.task.type + ':' + kp.task.st : '-'}, a entrada ${mine() ? mine().cv : '-'})`);
     // (the test's hand, as taverna-vida v3: the keeper dies with the cup in his hands — a town of this world may have no jail, T-1820)
     god(() => G.Village.kill(kp, 'teste', true));
-    until(() => mine() && mine().so > 0, 40); const m = mine();
-    ok('c6 o taverneiro morre no meio: o pedido chamado de novo, e ninguém vem — o corpo é mandado ao balcão', !!m && !m.srv && m.so > 0 && !S().villagers.has(kp.id), `${kp.name} ${S().villagers.has(kp.id) ? 'vivo' : 'morto'}; a entrada: ${m ? m.cv + ' srv ' + m.srv + ' so ' + m.so : 'nada'}`);
+    until(() => mine() && (mine().so > 0 || mine().cv === 'servido'), 40); const m = mine();
+    // (the order called again: nobody comes and the body is sent to the counter — or the one the house has now at the counter, the keeper
+    // the trades gave it at once or one of its staff, brings it — T3's house, T-1887)
+    const other = !!m && m.cv === 'servido' && T.keeperOf(B()) && T.keeperOf(B()).id !== kp.id;
+    ok('c6 o taverneiro morre no meio: o pedido chamado de novo, e ninguém vem — o corpo é mandado ao balcão', !!m && !S().villagers.has(kp.id) && ((!m.srv && m.so > 0) || other), `${kp.name} ${S().villagers.has(kp.id) ? 'vivo' : 'morto'}; a entrada: ${m ? m.cv + ' srv ' + m.srv + ' so ' + m.so : 'nada'}${other ? ` — servido por ${T.keeperOf(B()).name}, o taverneiro de agora` : ''}`);
+    if (other) { ok('c6 no balcão, o corpo se serve da prateleira e paga', true, 'o novo taverneiro serviu: o balcão não foi preciso'); watch(); ok('c6 o verificador limpo', !bad.length, bad.join(' | ') || 'nada'); }
+    else {
     // (up and to the counter: the buyer's place)
     const c = T.corpo(v).counter; G.Avatar.input.mz = 1; frame(); G.Avatar.input.mz = 0; for (let k = 0; k < 20; k++) frame();
     G.Avatar.detach(); god(() => { v.x = c[0]; v.y = c[1]; }); G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame();
@@ -224,6 +234,7 @@ if (on('c6')) {
     ok('c6 no balcão, o corpo se serve da prateleira e paga', !!tg && prov.label(I.ctx(), tg) === 'Servir-se no balcão' && !!ask.res && ask.res.ok && !!res && res.ok && v.carry && v.carry.op === op.id && paid === 1,
       `o E: «${tg ? prov.label(I.ctx(), tg) : '-'}»; ${it ? it.nome : '-'}: ${res ? res.msg || res.why : '-'}; pago ${paid}×`);
     watch(); ok('c6 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
+    }
   }
 }
 
@@ -272,7 +283,10 @@ if (on('c10')) {
     until(() => kp.task && kp.task.type === 'atender' && kp.task.st === 12, 60); outOfHouse(B(), v);
     until(() => mine() && mine().cv === 'mesa', 60); const f0 = D.get(shelf, 'food');
     const back = until(() => !mine() && !T.mesas(B()).some(q => q.estado === 'pedido') && !(kp.carry && kp.carry.op === op), T.FORA + 60);
-    const up = seen.filter(e => e.t >= t1 && e.c === 'taverna-mesa-volta' && e.from === 't:' + op).length, shelfBack = seen.filter(e => e.t >= t1 && e.c === 'taverna-volta' && e.to === shelf && e.k === 'food').reduce((a, e) => a + e.n, 0);
+    // (the plate of the body's order: from the table to the keeper's hands, and from them to the shelf — the rounds the keeper takes back from
+    // other tables the same moment are not this order's, T-1885)
+    const upE = seen.filter(e => e.t >= t1 && e.c === 'taverna-mesa-volta' && e.from === 't:' + op); const up = upE.length; const tUp = up ? upE[0].t : Infinity;
+    const shelfBack = seen.filter(e => e.t >= tUp && e.c === 'taverna-volta' && e.to === shelf && e.k === 'food' && e.from === 'v:' + kp.id).slice(0, 1).reduce((a, e) => a + e.n, 0);
     const tally = OP() ? (OP().data.atos || {})['pedido-volta'] || {} : {};
     ok('c10 sem o corpo, o pedido esfria e o taverneiro o leva de volta à prateleira: nada pago, nada some', back && up === 1 && Math.abs(shelfBack - 1) < 1e-6 && paidBy(v, op, t1) === 0 && tally.esfriou === 1,
       `${it ? it.nome : '-'}: de volta ${back ? 'sim' : 'não'} (da mesa às mãos ${up}×, das mãos à prateleira ${shelfBack}); pago ${paidBy(v, op, t1)}×; a prateleira ${f0} → ${D.get(shelf, 'food')}`);

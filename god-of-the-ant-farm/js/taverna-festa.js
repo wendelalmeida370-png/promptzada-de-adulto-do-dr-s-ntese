@@ -276,14 +276,14 @@
     const S = S_(); const f = TF.noiteDe(b); if (!f) return; const d = op.data; const In = G.Interiors; const lt = lead.task; const mp = In && In.placeOf ? In.placeOf(lead) : null;
     const coro = [];
     for (const id of f.bardos) {
-      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v)) continue;
+      if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || m.vem || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v)) continue;
       TF.toStage(op, v); if (v.carry && v.carry.n > EPS) continue; const t = v.task; m.use = t.use; t.use = 'dancar'; t.near = mp && mp.item ? [mp.item, mp.q] : null; t.st = 6; m.st = 6; t.coro = 1; t.mw = lt.mw; t.me = lt.me; v.actT = 0; coro.push(id);
       if (!d.musicos.includes(id)) d.musicos.push(id);
     }
     d.coro = coro; f.tocaram = Array.from(new Set((f.tocaram || []).concat([lead.id], coro)));
   };
   // (the feast's music: the bards before anyone, from the opening — the first of them at the tables)
-  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; const v = m && S_().villagers.get(id); if (v && (m.st === 5 || m.st === 2 || m.st === 3) && !m.zz && v.task && v.task.type === 'tavern' && v.task.op === op.id && !G.Vg.entering(v) && !(v.carry && v.carry.k === 'food')) return v; } return null; };
+  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; const v = m && S_().villagers.get(id); if (v && (m.st === 5 || m.st === 2 || m.st === 3) && !m.vem && !m.zz && v.task && v.task.type === 'tavern' && v.task.op === op.id && !G.Vg.entering(v) && !(v.carry && v.carry.k === 'food')) return v; } return null; };
 
   // ------------------------------ the drinking match and the arm wrestle (D-823, D-824) ------------------------------
   const compete = v => 0.5 * fac(v, 'ambicioso') + 0.3 * ax(v, 'ext') + 0.2 * (1 - ax(v, 'con'));
@@ -308,11 +308,12 @@
     const S = S_(); if (TC() && TC().calado(b)) return; const B = d.braco || (d.braco = {});
     const w = B[g];
     if (w) { if (S.clock >= w.ate + TF.FIM_T || !d.mesa[w.a] || !d.mesa[w.b]) { if (!w.fim && d.mesa[w.a] && d.mesa[w.b]) end(op, b, w); delete B[g]; } else if (S.clock >= w.ate && !w.fim) end(op, b, w); return; }
-    if (d.jogo && d.jogo[g]) return;
-    const k = Math.floor(S.clock / TF.BRACO_JAN); const jk = d.bk || (d.bk = {}); if (jk[g] === k) return; jk[g] = k;
-    const fest = !!TF.noiteDe(b); const gn = T.gk ? T.gk(g) : 0;
-    if (G.hash(Math.imul(op.id | 0, 31) + Math.imul(gn, 7) + Math.imul(k, 977) + 11) >= (fest ? TF.BRACO_PF : TF.BRACO_P)) return;
-    const C = L.filter(([v, m]) => (m.st === 5 || m.st === 2) && seated(v, m, op) && !(v.carry && v.carry.n > EPS) && v.age >= 18 && v.age < 58 && v.hp > 50 && drank(v, m, op) && TF.forca(v) >= TF.FORTE && compete(v) >= TF.BRACO_X && !(d.concurso && d.concurso.quem.includes(v.id)))
+    const busyG = v => !!(d.jogo && d.jogo[g] && d.jogo[g].quem.includes(v.id)) || !!(G.JogoDados && G.JogoDados.ato && G.JogoDados.ato(v)); // (at the bones or the dice of the table: not now)
+    // (the table's moment for one: once a while, by the hash; within it, the first look that finds the two free)
+    const k = Math.floor(S.clock / TF.BRACO_JAN); const jk = d.bk || (d.bk = {}); const fest = !!TF.noiteDe(b); const gn = T.gk ? T.gk(g) : 0;
+    if (jk[g] !== k && jk[g] !== -k - 1) jk[g] = G.hash(Math.imul(op.id | 0, 31) + Math.imul(gn, 7) + Math.imul(k, 977) + 11) < (fest ? TF.BRACO_PF : TF.BRACO_P) ? -k - 1 : k;
+    if (jk[g] !== -k - 1) return;
+    const C = L.filter(([v, m]) => (m.st === 5 || m.st === 2) && !m.vem && seated(v, m, op) && !(v.carry && v.carry.n > EPS) && v.age >= 18 && v.age < 58 && v.hp > 50 && drank(v, m, op) && TF.forca(v) >= TF.FORTE && compete(v) >= TF.BRACO_X && !(d.concurso && d.concurso.quem.includes(v.id)) && !busyG(v))
       .map(([v]) => v).sort((p, q) => TF.forca(q) - TF.forca(p) || p.id - q.id);
     if (C.length < 2) return;
     const a = C[0], c = C[1];
@@ -321,7 +322,7 @@
     const h1 = G.hash(Math.imul(a.id | 0, 53) + Math.imul(k, 17) + 5), h2 = G.hash(Math.imul(c.id | 0, 53) + Math.imul(k, 17) + 5);
     const vence = TF.forca(a) + 0.25 * h1 >= TF.forca(c) + 0.25 * h2 ? a.id : c.id;
     const bet = coin(b) && E.purse(a) >= TF.APOSTA + T.PRICE.drink && E.purse(c) >= TF.APOSTA + T.PRICE.drink && E.coinRef(a) !== E.coinRef(c) ? TF.APOSTA : 0;
-    B[g] = { a: a.id, b: c.id, t0: r1(S.clock), ate: r1(S.clock + TF.BRACO_T + 3 * G.hash(Math.imul(a.id | 0, 7) + Math.imul(c.id | 0, 11) + k)), vence, aposta: bet, por: fest ? 'festa' : (a.drinks || 0) >= 2 ? 'bebida' : 'indole' };
+    jk[g] = k; B[g] = { a: a.id, b: c.id, t0: r1(S.clock), ate: r1(S.clock + TF.BRACO_T + 3 * G.hash(Math.imul(a.id | 0, 7) + Math.imul(c.id | 0, 11) + k)), vence, aposta: bet, por: fest ? 'festa' : (a.drinks || 0) >= 2 ? 'bebida' : 'indole' };
   };
   function end(op, b, w) {
     w.fim = r1(S_().clock); const S = S_(); const W = S.villagers.get(w.vence), Lo = S.villagers.get(w.vence === w.a ? w.b : w.a); if (!W || !Lo) return;
@@ -373,6 +374,8 @@
       // (out: up and gone — the drink's own fall takes one from the table —, fainted, out of coin, or past what one takes)
       if (!v || !m || !v.task || v.task.type !== 'tavern' || (G.Ebrio && G.Ebrio.desmaiado(v))) { c.fora[id] = 'caiu'; continue; }
       if (m.zz) { c.fora[id] = 'cochilou'; continue; }
+      if (m.st === 6 || v.task.st === 6) { c.fora[id] = 'tocar'; continue; } // (gone up to play: out of the match)
+      if (m.vem) continue; // (a round of his own on its way from the keeper's hands: the match's waits for it)
       if (TF.bebado(v) >= limite(v)) { c.fora[id] = 'desistiu'; continue; }
       if (coin(b) && E.purse(v) + EPS < T.PRICE.drink) { c.fora[id] = 'sem-dinheiro'; continue; }
       // (the round of each, by his own coin: poured from the shelf — by the keeper's hand, or one's own — and downed at once)

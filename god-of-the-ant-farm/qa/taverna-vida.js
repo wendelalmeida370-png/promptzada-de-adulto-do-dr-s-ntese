@@ -62,13 +62,18 @@ const atTables = op => Object.keys(op.data.mesa).length;
 const ACTS = ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar'];
 const actSeen = {}; const said = [];
 const tpl = key => { const out = []; for (const c of Object.keys(G.Falas.PACK)) for (const t of G.Falas.PACK[c][key] || []) out.push(new RegExp('^' + t.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{\w+\}/g, '.+') + '$', 'i')); return out; };
-const TALK = ['mesa_festa', 'mesa_guerra', 'mesa_colheita', 'mesa_bebida'].map(k => [k, tpl(k)]);
-const OWN = ['pedir_taverna', 'sem_servico', 'sem_dinheiro', 'rodada_mesa', 'gorjeta_obrigado', 'musica_sim', 'musica_nao', 'acabou', 'cheia'].map(k => [k, tpl(k)]);
+const TALK = ['mesa_festa', 'mesa_guerra', 'mesa_colheita', 'mesa_bebida', 'mesa_luto', 'mesa_festa_casa'].map(k => [k, tpl(k)]);
+// (and the tavern's words of the world that happens — T1: the memory's toast, the feast's speech, the slate, the match, the shelter)
+const OWN = ['pedir_taverna', 'sem_servico', 'sem_dinheiro', 'rodada_mesa', 'gorjeta_obrigado', 'musica_sim', 'musica_nao', 'acabou', 'cheia',
+  'brinde_memoria', 'festa_discurso', 'fiado_sim', 'fiado_nao', 'fiado_paga', 'concurso_desafio', 'concurso_vence', 'abrigar_chama', 'abrigar_tranca'].map(k => [k, tpl(k)]);
 { const say0 = G.Talk.say; G.Talk.say = function (v, txt) {
   if (v && v.task && v.task.type === 'tavern' && v.inside) { let why = null; const Bo = G.Boatos;
     if (Bo) for (const r of Bo.list()) { const how = Bo.sabe(v, r); if (how && Bo.frase(r, Bo.deQuem(v, r), how) === txt) { why = 'boato'; break; } }
     if (!why) for (const [k, L] of TALK) if (L.some(re => re.test(txt))) { why = k; break; }
     if (!why) for (const [k, L] of OWN) if (L.some(re => re.test(txt))) { why = 'taverna:' + k; break; }
+    // (the words of a game of dice — the call, the guess, the hit, the out, the cheat seen —: said by one of a game of now, still in it or
+    // just out of it, T4's)
+    if (!why && G.JogoDados && G.JogoDados.jogos && G.JogoDados.jogos().some(op => op.data.quem.includes(v.id))) why = 'dados';
     said.push({ id: v.id, txt, why, drunk: !!(G.Ebrio && G.Ebrio.alegre(v)) }); }
   return say0.apply(this, arguments); }; }
 const SEATK = { banquinho: 1, banco: 1, cadeira: 1 };
@@ -165,7 +170,7 @@ if (OLD) {
     const loose = said.filter(x => !x.why); const talk = said.filter(x => x.why === 'boato' || TALK.some(([k]) => k === x.why));
     const jokes = said.filter(x => x.why === 'mesa_bebida'); const soberJ = jokes.filter(x => !x.drunk).length;
     const by = {}; for (const x of said) by[x.why || '?'] = (by[x.why || '?'] || 0) + 1;
-    console.log(`   as falas das mesas: ${Object.keys(by).map(k => k + ' ' + by[k]).join(', ')}; no livro: ${JSON.stringify(falas)}${loose.length ? '; SOLTAS: ' + loose.slice(0, 3).map(x => '«' + x.txt + '»').join(' ') : ''}`);
+    console.log(`   as falas das mesas: ${Object.keys(by).map(k => k + ' ' + by[k]).join(', ')}; no livro: ${JSON.stringify(falas)}${loose.length ? '; SOLTAS: ' + [...new Set(loose.map(x => x.txt))].slice(0, 8).map(x => '«' + x + '»').join(' ') : ''}`);
     if (talk.length) console.log(`   (por exemplo: ${talk.slice(0, 4).map(x => '«' + x.txt + '»').join(' ')})`);
     ok('v7 a conversa das mesas fala do mundo: cada fala com a sua fonte', talk.length >= 5 && !loose.length && !soberJ && Object.keys(falas).every(w => G.Taverna.WHY_FALA.includes(w)),
       `${talk.length} falas das mesas (${Object.keys(falas).map(w => w + ' ' + falas[w]).join(', ')}), ${loose.length} sem causa, ${soberJ} brincadeiras de bêbado ditas sóbrio`);
@@ -284,7 +289,11 @@ if (WANT('v9') || WANT('v10') || WANT('v11') || WANT('v12') || WANT('v13') || WA
   // ---------------- v9 the war at the door ----------------
   if (WANT('v9')) {
     base(); liveTo(0.66); const bad = [];
-    const b = fullest(); const set = S().settlements.get(b.set); const P = G.Fac.get(set.fac); const k = T.keeperOf(b); const guests = Object.keys(T.dia(b).data.mesa).length;
+    // (of the taverns with people at the tables, the one with the fewest armed of its people round it — the town's defenders would keep the
+    // raid off its door: T-1880)
+    const armedNear = q => { const dr = G.Vg.door(q); const fid = V.facOfSet(q.set); let n = 0; for (const o of S().villagers.values()) if (!o.inside && G.Fac.idOfV(o) === fid && G.Vg.armedFor(o) && G.dist(o.x, o.y, dr[0], dr[1]) < 24) n++; return n; };
+    const cands = taverns().filter(q => T.dia(q) && Object.keys(T.dia(q).data.mesa).length >= 4 && T.keeperOf(q)).sort((p, q) => armedNear(p) - armedNear(q) || p.id - q.id);
+    const b = cands[0] || fullest(); const set = S().settlements.get(b.set); const P = G.Fac.get(set.fac); const k = T.keeperOf(b); const guests = Object.keys(T.dia(b).data.mesa).length;
     const Q = G.Fac.all().filter(f => f.alive && f.id !== P.id).sort((a, c) => G.Fac.pop(c.id) - G.Fac.pop(a.id))[0];
     S().divinePeace = 0; god1(() => G.Politics.declareWar(Q, P, 'ambicao'));
     // (the alarm of the town: the day shuts, who is at the tables hides there, the keeper bars or opens the house — his choice)
@@ -313,7 +322,8 @@ if (WANT('v9') || WANT('v10') || WANT('v11') || WANT('v12') || WANT('v13') || WA
     // (the danger past — the band retreats, the god's hand: G.War.retreat —: the all clear, the door stays broken till the keeper mends it
     // with wood by the ledger, and the tavern opens again)
     god1(() => { if (G.War.bands.has(band.id)) G.War.retreat(band); set2.alarmT = 0; }); const l2 = led.length; let still = 0, mended = 0;
-    for (let i = 0; i < 800; i++) { M.viver(0.25); if (set2.alarmT > 0) set2.alarmT = 0; if (b2.porta) still++; else { mended = S().clock; break; } }
+    // (the god's peace over the war — calm(): the fights end, the mending is the keeper's, whoever keeps the house now)
+    for (let i = 0; i < 1600; i++) { calm(); M.viver(0.5); if (b2.porta) still++; else { mended = S().clock; break; } }
     const wood = led.slice(l2).filter(e => e.c === 'porta-madeira' || e.c === 'porta-conserto'); const st3 = In.doorState(b2, In.plan(b2).entrance.door).state;
     if (!mended) { const kk = T.keeperOf(b2); console.log(`   (o conserto: taverneiro ${kk ? kk.name + ' ' + (kk.task ? kk.task.type : '-') : 'nenhum'}; devido ${TC.consertoDue(b2)}; a lenha da casa ${D.free('b:' + b2.id, 'wood')}; a sobra do povo ${G.Casa.spare(set2, 'wood')}; o contexto ${JSON.stringify(TC.of(b2))})`); }
     // (and the tavern opens again: at once within its hours, else at its next opening)
@@ -341,13 +351,16 @@ if (WANT('v9') || WANT('v10') || WANT('v11') || WANT('v12') || WANT('v13') || WA
     ok('v10 o verificador', !bad.length, bad.join(' / ') || 'limpo');
   }
   // ---------------- v11 the storm ----------------
+  // (the same evening from the same moment, with the storm and without it: who is under the roofs of the taverns at the hour many go home,
+  // and who of those caught out in the street by an open tavern's door — nearer to it than to home — goes in)
   if (WANT('v11')) {
-    const count = storm => { base(); liveTo(0.6); const S0 = S(); const e0 = entered.length;
-      if (storm) { S0.weather.storm = G.DAY_LEN * 0.4; S0.weather.rain = 0.9; } let n = 0, ab = 0;
-      while (S().time < 0.7 && n < 600) { if (storm) { S0.weather.storm = Math.max(S0.weather.storm, 30); S0.weather.rain = 0.9; } else calm(); M.viver(0.5); n++; }
-      for (const e of entered.slice(e0)) ab++; return ab; };
-    const calmN = count(false); const stormN = count(true);
-    ok('v11 a tempestade: mais gente se abriga na taverna', stormN > calmN, `das 0,60 às 0,70: ${calmN} entradas nas tavernas sem chuva, ${stormN} com a tempestade`);
+    const caught = () => { const L = []; for (const v of S().villagers.values()) { if (v.inside || v.age < 16 || v.captive || v.aboard || v.jail || A.isBody(v) || (v.task && v.task.type === 'tavern')) continue; for (const b of taverns()) { if (!T.aberta(b) || b.set !== v.set) continue; const dr = G.Vg.door(b); const d = G.dist(v.x, v.y, dr[0], dr[1]); if (d > 14) continue; const h = v.home && S().buildings.get(v.home); const hd = h ? G.Vg.door(h) : null; if (hd && G.dist(v.x, v.y, hd[0], hd[1]) <= d) continue; L.push(v.id); break; } } return L; };
+    const count = storm => { base(); liveTo(0.66); const ids = new Set(caught()); const e0 = entered.length; const S0 = S(); let most = 0;
+      while (S().time < 0.8) { if (storm) { S0.weather.storm = Math.max(S0.weather.storm || 0, 40); S0.weather.rain = 0.9; } else calm(); M.viver(0.5); if (S().time > 0.76) { let n = 0; for (const b of taverns()) { const op = T.dia(b); if (op) n += Object.keys(op.data.mesa).length; } most = Math.max(most, n); } }
+      const went = new Set(entered.slice(e0).filter(e => ids.has(e.v)).map(e => e.v)); return [ids.size, went.size, most]; };
+    const [n0, calmN, calmM] = count(false); const [n1, stormN, stormM] = count(true);
+    // (more of those caught out go in, and nobody under a roof goes out into it — a full house stays full: the tables are as many, T-1883)
+    ok('v11 a tempestade: mais gente se abriga na taverna', n0 === n1 && stormN > calmN && stormM >= calmM, `das 0,66 às 0,80: às mesas depois das 0,76, ${calmM} sem chuva e ${stormM} com a tempestade (quem está fica sob o teto); de ${n0} na rua junto à porta de uma taverna aberta, mais perto dela que de casa, ${calmN} entraram sem chuva e ${stormN} com ela`);
   }
   // ---------------- v12 the feasts, one of each cause ----------------
   if (WANT('v12') || WANT('v13')) {
@@ -432,29 +445,39 @@ if (WANT('v9') || WANT('v10') || WANT('v11') || WANT('v12') || WANT('v13') || WA
       const b2 = b, c2 = c, k2 = T.keeperOf(b2) || k;
       god1(() => { const n = D.get(G.Eco.coinRef(c2), 'moedas'); if (n > 0) D.move(G.Eco.coinRef(c2), 'f:' + V.facOfSet(b2.set), 'moedas', n, { code: 'prova', by: c2.id }); });
       const l1 = led.length; const nao0 = talks.length;
-      god1(() => G.Vg.setTask(c2, { type: 'tavern', id: b2.id, op: T.dia(b2).id, pri: 0.5, st: 0 })); for (let i = 0; i < 80; i++) M.viver(0.5);
+      // (with the keeper at his counter: the slate is his — one serving oneself in his absence is not served by him)
+      for (let i = 0; i < 240 && !(T.dia(b2) && T.serving(b2)); i++) { calm(); M.viver(0.5); }
+      god1(() => G.Vg.setTask(c2, { type: 'tavern', id: b2.id, op: T.dia(b2).id, pri: 0.5, st: 0 })); for (let i = 0; i < 80 && !talks.slice(nao0).some(x => /deve|Fiado não/.test(x.txt)); i++) M.viver(0.5);
       const servedC = led.slice(l1).filter(e => (e.c === 'taverna' || e.c === 'fiado') && e.to === 'v:' + c2.id && e.k !== 'moedas').length; const said = talks.slice(nao0).some(x => /deve|Fiado não/.test(x.txt));
       // (with the coins for it: he pays the slate at the counter, by the ledger, and the ties are put right)
       god1(() => { D.move('f:' + V.facOfSet(b2.set), G.Eco.coinRef(c2), 'moedas', 4, { code: 'prova', by: c2.id }); G.Vg.setTask(c2, { type: 'tavern', id: b2.id, op: T.dia(b2).id, pri: 0.5, st: 0 }); c2.tavDay = -1; });
+      for (let i = 0; i < 240 && !(T.dia(b2) && T.serving(b2)); i++) { calm(); M.viver(0.5); }
       const l2 = led.length; for (let i = 0; i < 120 && T.fiado(b2, c2); i++) M.viver(0.5);
       const paid = led.slice(l2).filter(e => e.c === 'fiado' && e.k === 'moedas' && e.from === G.Eco.coinRef(c2)).length; const pagou = G.Lacos.lembra(k2, c2.id).some(x => x[0] === 'pagou');
       ok('v14 a conta com prazo: quem não paga fica marcado nos laços do taverneiro e não é servido até pagar; com o dinheiro, paga', cal && traiu && servedC === 0 && said && paid >= 1 && !T.fiado(b2, c2) && pagou,
-        `passado o prazo: caloteiro ${cal ? 'sim' : 'não'}, «traiu» nos laços ${traiu ? 'sim' : 'não'}; na noite seguinte ${servedC} rodadas servidas a ele${said ? ' («pague a conta»)' : ''}; com o dinheiro: ${paid} pagamentos pelo livro, a conta ${T.fiado(b2, c2) ? 'aberta' : 'zerada'}, «pagou» ${pagou ? 'sim' : 'não'}`);
+        `passado o prazo: caloteiro ${cal ? 'sim' : 'não'}, «traiu» nos laços ${traiu ? 'sim' : 'não'}; na noite seguinte ${servedC} rodadas servidas a ele${said ? ' («pague a conta»)' : ''}; com o dinheiro: ${paid} pagamentos pelo livro, a conta ${T.fiado(b2, c2) ? 'aberta' : 'zerada'}, «pagou» ${pagou ? 'sim' : 'não'}${paid ? '' : ` (ele: ${c2.task ? c2.task.type + ':' + c2.task.st : '-'}${T.dia(b2) && T.dia(b2).data.mesa[c2.id] ? ', à mesa st ' + T.dia(b2).data.mesa[c2.id].st + (T.dia(b2).data.mesa[c2.id].out ? ' out ' + T.dia(b2).data.mesa[c2.id].out : '') : ', fora da mesa'}; dentro ${c2.inside === b2.id ? 'sim' : 'não'}; ${G.Eco.purse(c2)} moedas; o taverneiro ${k2.task ? k2.task.type + ':' + k2.task.st : '-'})`}`);
       watchW(bad); ok('v14 o verificador', !bad.length, bad.join(' / ') || 'limpo'); }
   }
   // ---------------- v15 the arm wrestle ----------------
+  // (a feast night: at each table of three or more, two are given by the proof's hand the heavy trade, the drink of the night and the índole
+  // for it — T-1882 —; the world decides when, at which table and who wins)
   if (WANT('v15')) {
-    base(); liveTo(0.64); const bad = [];
-    // (two at a table: the proof's hand gives them the heavy trade and the drink of the night — the índole for it is theirs)
-    let pick = null; for (const b of taverns()) { const op = T.dia(b); if (!op) continue; const by = {}; for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const v = S().villagers.get(+id); if (!v || m.corpo || !m.g || v.age < 20 || v.age > 50) continue; (by[m.g] = by[m.g] || []).push(v); } for (const g of Object.keys(by)) if (by[g].length >= 3) { pick = { b, g, L: by[g] }; break; } if (pick) break; }
-    if (!pick) ok('v15 a queda de braço', false, 'nenhuma mesa com três');
-    else { const { b, g, L } = pick; const [a, c] = L; const l0 = led.length;
-      god1(() => { for (const v of [a, c]) { v.role = 'ferreiro'; v.hp = 100; v.drinks = Math.max(2, v.drinks || 0); const I = v.indole; if (I) { I[0] = Math.max(I[0], 80); I[6] = Math.max(I[6], 85); I[2] = Math.min(I[2], 30); } } });
-      let w = null, fim = null, seenA = 0, seenT = 0;
-      for (let i = 0; i < 600 && !fim; i++) { M.viver(0.5); const op = T.dia(b); if (!op) break; const B = op.data.braco || {}; const x = B[g] || Object.values(B).find(q => q.a === a.id || q.b === a.id || q.a === c.id || q.b === c.id); if (x && !w) w = x; if (w && x === w && (a.act === 'queda-de-braco' || c.act === 'queda-de-braco')) seenA++; if (w && L.slice(2).some(v => v.act === 'torcer')) seenT++; if (w && w.fim) fim = w; }
-      const bet = led.slice(l0).filter(e => e.c === 'aposta-braco').length; const op = T.dia(b) || A.all().filter(o => o.def === 'taverna' && o.at === b.id).pop();
-      ok('v15 a queda de braço: dois fortes à mesa, pela índole e pela bebida, a aposta pelo livro, a mesa torcendo', !!w && !!fim && seenA >= 1 && seenT >= 1 && (w.vence === w.a || w.vence === w.b) && (!w.aposta || bet >= 1) && !!(op && op.data.atos && op.data.atos['queda-de-braco']),
-        `${a.name} (força ${TF.forca(a)}) e ${c.name} (${TF.forca(c)}): ${w ? `a queda de braço (${w.por}), venceu ${S().villagers.get(w.vence) ? S().villagers.get(w.vence).name : '-'}; aposta ${w.aposta} (${bet} pelo livro)` : 'NENHUMA'}; ${seenA} instantes no ato, ${seenT} com a mesa torcendo`);
+    base(); const bad = []; god1(() => { for (const b of taverns()) { delete b.festa; TF.plan(b, 'cidade', 'a cidade cresceu'); } }); liveTo(0.62);
+    const pairs = [];
+    for (let i = 0; i < 40 && !pairs.length && S().time < 0.78; i++) { M.viver(1);
+      for (const b of taverns()) { const op = T.dia(b); if (!op) continue; const by = {}; for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const v = S().villagers.get(+id); if (!v || m.corpo || !m.g || v.age < 20 || v.age > 50) continue; (by[m.g] = by[m.g] || []).push(v); } for (const g of Object.keys(by)) if (by[g].length >= 3 && pairs.length < 6) pairs.push({ b, g, L: by[g] }); } }
+    if (!pairs.length) ok('v15 a queda de braço', false, 'nenhuma mesa com três');
+    else { const l0 = led.length;
+      god1(() => { for (const { L } of pairs) for (const v of L.slice(0, 2)) { v.role = 'ferreiro'; v.hp = 100; v.energy = Math.max(v.energy, 80); v.drinks = Math.max(2, v.drinks || 0); const I = v.indole; if (I) { I[0] = Math.max(I[0], 80); I[6] = Math.max(I[6], 85); I[2] = Math.min(I[2], 30); } } });
+      let w = null, wb = null, fim = null, seenA = 0, seenT = 0, seenR = 0;
+      for (let i = 0; i < 600 && !fim; i++) { M.viver(0.5);
+        for (const { b, g, L } of pairs) { const op = T.dia(b); if (!op) continue; const x = (op.data.braco || {})[g]; if (x && !w) { w = x; wb = { b, g, L }; } }
+        if (w) { const op = T.dia(wb.b); const P = [S().villagers.get(w.a), S().villagers.get(w.b)]; if (P.some(v => v && v.act === 'queda-de-braco')) seenA++; if (op && !w.fim) { const by = Object.keys(op.data.mesa).filter(id => String(op.data.mesa[id].g) === String(wb.g) && +id !== w.a && +id !== w.b).map(id => S().villagers.get(+id)).filter(Boolean); if (by.length) seenR++; if (by.some(v => v.act === 'torcer')) seenT++; } if (w.fim) fim = w; if (!op) break; }
+        if (!w && S().time > 0.86) break; }
+      const bet = led.slice(l0).filter(e => e.c === 'aposta-braco').length; const op = wb && (T.dia(wb.b) || A.all().filter(o => o.def === 'taverna' && o.at === wb.b.id).pop());
+      const A1 = w && S().villagers.get(w.a), C1 = w && S().villagers.get(w.b);
+      ok('v15 a queda de braço: dois fortes à mesa, pela índole e pela bebida, a aposta pelo livro, a mesa torcendo', !!w && !!fim && seenA >= 1 && seenT >= 1 && !!(op && op.data.atos && op.data.atos.torcer && op.data.atos.torcer.braco >= 1) && (w.vence === w.a || w.vence === w.b) && (!w.aposta || bet >= 1) && !!(op && op.data.atos && op.data.atos['queda-de-braco']),
+        `${pairs.length} mesas com dois fortes; ${w ? `${A1 ? A1.name : '-'} (força ${A1 ? TF.forca(A1) : '-'}) e ${C1 ? C1.name : '-'} (${C1 ? TF.forca(C1) : '-'}), a queda de braço (${w.por}), venceu ${S().villagers.get(w.vence) ? S().villagers.get(w.vence).name : '-'}; aposta ${w.aposta} (${bet} pelo livro)` : 'NENHUMA'}; ${seenA} instantes no ato, ${seenT} com a mesa torcendo (${seenR} com alguém mais à mesa); a torcida contada ${op && op.data.atos && op.data.atos.torcer ? op.data.atos.torcer.braco || 0 : 0}×`);
       watchW(bad); ok('v15 o verificador', !bad.length, bad.join(' / ') || 'limpo'); }
   }
   // ---------------- v16 the context: the fire close by, the hunger, the sickness, the town's feast ----------------
@@ -474,13 +497,14 @@ if (WANT('v9') || WANT('v10') || WANT('v11') || WANT('v12') || WANT('v13') || WA
     const bought = led.slice(l0).filter(e => e.from === 'f:' + fid2 && e.to === 'v:' + (k2 && k2.id) && e.k === 'food').length;
     ok('v16 a fome do povo: sem comida na taverna, e a bebida pelo estoque', TC.fome(b2) && !menuFood && !carta && bought === 0, `a fome ${TC.fome(b2) ? 'sim' : 'não'}; o prato no cardápio ${menuFood ? 'sim' : 'não'}, na carta ${carta ? 'sim' : 'não'}; ${bought} compras de comida para a prateleira; a bebida: ${T.menu(b2).filter(x => x.k !== 'food').map(x => x.k).join(', ') || 'nenhuma'}`);
     // (the sickness of the town: the sick do not go, the others fewer; the town's feast: more)
-    base(); liveTo(0.6); const b3 = fullest(); const s3 = S().settlements.get(b3.set); god1(() => { delete b3.festa; }); M.viver(0.1);
+    // (no feast at all for the baseline: the tavern's, and the town's afterglow of its last festival, set.feast)
+    base(); liveTo(0.6); const b3 = fullest(); const s3 = S().settlements.get(b3.set); god1(() => { delete b3.festa; s3.feast = 0; }); M.viver(0.1);
     // (of the town, the ones whose wish is not at either end — the share of the nights moves in the middle)
     const folk = [...S().villagers.values()].filter(v => v.set === s3.id && v.age >= 16 && !v.captive && !v.inside && T.wish(v, b3) > 0.05 && T.wish(v, b3) < 0.6);
     const w0 = folk.slice(0, 40).reduce((n, v) => n + T.wish(v, b3), 0);
     god1(() => { for (const v of folk.slice(0, Math.ceil(folk.length * 0.15))) v.sick = 60; }); M.viver(0.1); // (the context is read once a moment)
     const sickW = folk.slice(0, Math.ceil(folk.length * 0.15)).reduce((n, v) => n + T.wish(v, b3), 0); const w1 = folk.slice(0, 40).reduce((n, v) => n + (v.sick > 0 ? 0 : T.wish(v, b3)), 0);
-    god1(() => { for (const v of folk) v.sick = 0; s3.festPlan = { day: S().day, key: 'colheita', done: true }; }); M.viver(0.1);
+    god1(() => { for (const v of folk) v.sick = 0; s3.feast = 140; }); M.viver(0.1); // (the feast of the town: a victory's, going on)
     const w2 = folk.slice(0, 40).reduce((n, v) => n + T.wish(v, b3), 0);
     ok('v16 a doença na cidade: pouca gente, e os doentes nenhum; a festa da cidade: a taverna cheia', sickW === 0 && w1 < w0 && w2 > w0, `a vontade de 40 da cidade: ${w0.toFixed(1)} sem doença; com 15% doentes, ${w1.toFixed(1)} (os doentes ${sickW.toFixed(1)}); no dia da festa da cidade, ${w2.toFixed(1)}`);
     watchW(bad); ok('v16 o verificador', !bad.length, bad.join(' / ') || 'limpo');

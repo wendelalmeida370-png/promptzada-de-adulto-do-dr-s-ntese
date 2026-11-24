@@ -4077,6 +4077,9 @@
 (function () {
   if (!window.QA || !QA.more) return;
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
+  // (a thing wrong for more than the day's look — the tables keep a second whoever left by another door, L-435 —: first seen when)
+  const seenAt = new Map(); let seenS = null;
+  const late = (k, s) => { if (seenS !== s) { seenAt.clear(); seenS = s; } if (seenAt.size > 400) seenAt.clear(); const e = seenAt.get(k); if (!e || s.clock < e[0] || s.clock - e[1] > 10) { seenAt.set(k, [s.clock, s.clock]); return false; } e[1] = s.clock; return s.clock - e[0] > 2.5; };
   const SEAT = { sentar: 1, comer: 1 };
   const rule = function (add, s) {
     const T = G.Taverna, In = G.Interiors; if (!T || !In || !In.placeOf || !In.places) return;
@@ -4113,7 +4116,8 @@
       const b = s.buildings.get(op.at); if (!b || !b.built) continue; const d = op.data || {};
       // (the cups of the day: in the hands of who is at its tables or of who serves in it)
       for (const v of s.villagers.values()) { const c = v.carry; if (!c || c.op !== op.id || !(c.n > 1e-6)) continue; const t = v.task;
-        if (!(d.mesa && d.mesa[v.id]) && !(t && t.type === 'atender' && t.op === op.id)) add('taverna', 3, `${v.name} #${v.id}: com ${c.k} do dia da taverna #${op.at} nas mãos, sem estar às mesas nem servindo nela`); }
+        // (taken from the round by another errand a moment ago — the war, the cave —: the day's next look puts the cup down; past it, wrong — L-1986)
+        if (!(d.mesa && d.mesa[v.id]) && !(t && t.type === 'atender' && t.op === op.id) && late('c' + v.id + ':' + op.id, s)) add('taverna', 3, `${v.name} #${v.id}: com ${c.k} do dia da taverna #${op.at} nas mãos, sem estar às mesas nem servindo nela`); }
       // (the god's body at the tables — D-767)
       for (const id in d.mesa || {}) {
         const m = d.mesa[id]; if (!m || !m.corpo) continue; const v = s.villagers.get(+id); const nm = v ? `${v.name} #${v.id}` : `#${id}`;
@@ -4134,7 +4138,7 @@
       for (const x of Array.isArray(d.chao) ? d.chao : []) if ((x.k !== 'cacos' && x.k !== 'poca') || !Number.isFinite(x.x) || !Number.isFinite(x.z)) add('taverna', 3, `taverna #${op.at}: no chão ${x.k} sem lugar (D-801)`);
       if (G.Taverna.luz) { const L = G.Taverna.luz(b); if (L && !((L.vela === undefined || (L.vela >= 0 && L.vela <= 1)) && (L.azeite === undefined || (L.azeite >= 0 && L.azeite <= 1)) && L.lenha >= 0)) add('taverna', 3, `taverna #${op.at}: o fogo e a luz da noite fora da conta (${JSON.stringify(L)}: D-811)`); }
       if (d.jogo) for (const g of Object.keys(d.jogo)) for (const id of d.jogo[g].quem || []) { const m = d.mesa && d.mesa[id]; if (!m || String(m.g) !== g) add('taverna', 3, `taverna #${op.at}: #${id} no jogo de ossinhos da mesa ${g} sem estar a ela (D-806)`); }
-      if (d.mus) { const m = d.mesa && d.mesa[d.mus]; const v = s.villagers.get(d.mus); if (!m || m.st !== 6 || !v || !v.task || v.task.type !== 'tavern' || v.task.st !== 6) add('taverna', 3, `taverna #${op.at}: o músico #${d.mus} não está no estrado`); }
+      if (d.mus) { const m = d.mesa && d.mesa[d.mus]; const v = s.villagers.get(d.mus); if ((!m || m.st !== 6 || !v || !v.task || v.task.type !== 'tavern' || v.task.st !== 6) && late('m' + d.mus + ':' + op.id, s)) add('taverna', 3, `taverna #${op.at}: o músico #${d.mus} não está no estrado`); }
       if (T.aberta(b) && b.ip && In.doorState && In.plan(b) && In.plan(b).entrance) { const ds = In.doorState(b, In.plan(b).entrance.door); if (ds && ds.state !== 'aberta' && ds.state !== 'bloqueada' && ds.state !== 'arrombada') add('taverna', 4, `taverna #${op.at}: aberta, e a porta ${ds.state} (D-766)`); }
     }
   };
@@ -4146,6 +4150,7 @@
   };
   // (the tavern in the world that happens — T1: the context, the hiding, the door, the feast, the games of a feast, the slate)
   const KINDS = { guirlanda: 1, petalas: 1, fita: 1, pano: 1, estandarte: 1, vela: 1 };
+  const LOUD = { attack: 1, battle: 1, fight: 1, alarm: 1 }; // (the town under attack: the bar stays)
   const shutSince = new Map(); let shutS = null;
   const mundo = function (add, s) {
     const T = G.Taverna, TC = G.TavernaContexto, TF = G.TavernaFesta; if (!T || !TC || !TF) return;
@@ -4164,7 +4169,7 @@
       else if (b.porta && b.porta.k === 'arrombada' && b.porta.t < s.clock - 1 && b.porta.t >= (t.t0 || 0)) add('taverna', 3, `${v.name} #${v.id}: ainda escondid${v.g === 'f' ? 'a' : 'o'} na taverna #${b.id} arrombada (D-814)`); }
     for (const b of s.buildings.values()) { if (b.type !== 'taverna') continue;
       if (b.tranca !== undefined && !(b.tranca && Number.isFinite(b.tranca.t))) add('taverna', 3, `taverna #${b.id}: a tranca mal formada (D-812)`);
-      else if (b.tranca && !TC.of(b).perigo && s.clock - Math.max(b.tranca.t, (b.abrigo && b.abrigo.calma) || 0) > TC.CALMA + 10) add('taverna', 3, `taverna #${b.id}: a porta trancada sem perigo à porta (D-812)`);
+      else if (b.tranca && !TC.of(b).perigo && !LOUD[TC.of(b).guerra] && s.clock - Math.max(b.tranca.t, (b.abrigo && b.abrigo.calma) || 0) > TC.CALMA + 10) add('taverna', 3, `taverna #${b.id}: a porta trancada sem perigo à porta nem ataque à cidade (D-812)`);
       if (b.porta !== undefined && !(b.porta && b.porta.k === 'arrombada' && Number.isFinite(b.porta.d) && Number.isFinite(b.porta.t))) add('taverna', 3, `taverna #${b.id}: a porta arrombada mal formada (D-814)`);
       if (b.abrigo !== undefined && !(b.abrigo && (b.abrigo.k === 'abrigar' || b.abrigo.k === 'trancar'))) add('taverna', 3, `taverna #${b.id}: o abrigo mal formado (D-813)`);
       const f = b.festa;
