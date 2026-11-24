@@ -477,15 +477,22 @@
     cravou: { win: () => ['Vitória!', 'Você cravou a soma: os outros ficaram sem dados.'], lose: e => ['Derrota', `${e} cravou a soma e levou o pote.`] },
     sobrou: { win: () => ['Vitória!', 'Você ficou com o último dado.'], lose: e => ['Derrota', `${e} ficou com o último dado e levou o pote.`], tie: () => ['Empate', 'Todos perderam o último dado na mesma rodada: cada um leva o que pôs.'] },
     vazio: { int: () => ['Partida interrompida', 'Ninguém ficou à mesa: cada um leva o que pôs.'] },
-    parou: { int: (e, fechou) => ['Partida interrompida', `${fechou ? 'A taverna fechou' : 'A partida parou antes do fim'}: cada um leva o que pôs.`] },
+    parou: { int: (motivo, fechou) => ['Partida interrompida', `${motivo ? cap(motivo) : fechou ? 'A taverna fechou' : 'A partida parou antes do fim'}: cada um leva o que pôs.`] },
   };
   const FORA_DE = { saiu: 'largou a mesa', dormiu: 'dormiu na mesa', pego: 'foi pego virando um dado' };
   // the end of a view (the world's end, or 'parou') → { tipo: win | lose | tie | int | ver, tit, sub }
+  // (o porquê de uma partida desfeita é do mundo, pela leitura G.JogoDados.parou — D-966: «o dono levou os dados» fecha com quem ficou com
+  // mais dados, e o fim diz o porquê; a casa fechada ou o jogo sumido, cada um leva o que pôs)
   function fimDe(s, L, por) {
+    const F = fimDe0(s, L, por); const p = por || s.fim || 'parou';
+    if (s.motivo && p === 'sobrou' && (F.tipo === 'win' || F.tipo === 'lose' || F.tipo === 'ver')) F.sub = `${cap(s.motivo)}: o pote ficou com quem tinha mais dados.`;
+    return F;
+  }
+  function fimDe0(s, L, por) {
     por = por || s.fim || 'parou'; const nm = id => { const p = L.find(q => q.id === id); return p ? cap(p.nome) : 'Alguém'; };
     const me = L.find(p => p.eu); const outros = L.filter(p => !p.eu); const row = FIM_COPO[por] || {};
     const b = G.S && s.b ? G.S.buildings.get(s.b) : null; const fechou = !b || !!(G.Taverna && G.Taverna.aberta && !G.Taverna.aberta(b));
-    if (por === 'parou' || por === 'vazio' || !(s.venc > 0) && por !== 'sobrou') { const [tit, sub] = (row.int || FIM_COPO.parou.int)('', fechou); return { tipo: s.eu ? 'int' : 'ver', tit, sub }; }
+    if (por === 'parou' || por === 'vazio' || !(s.venc > 0) && por !== 'sobrou') { const [tit, sub] = (row.int || FIM_COPO.parou.int)(s.motivo || '', fechou); return { tipo: s.eu ? 'int' : 'ver', tit, sub }; }
     if (s.venc === -1) { const [tit, sub] = (row.tie || FIM_COPO.sobrou.tie)(); return { tipo: s.eu ? 'tie' : 'ver', tit, sub }; }
     if (s.venc === s.eu && s.eu) {
       // (the others gone from the table — up, asleep, caught —: the win says who left; quem larga a mesa perde)
@@ -502,6 +509,15 @@
   function plateia(s) {
     const b = G.S && s.b ? G.S.buildings.get(s.b) : null; if (!b || !G.Atmos || !G.Atmos.awake) return 0; let n = G.Atmos.awake(b);
     for (const p of s.jogadores) { const o = G.S.villagers.get(p.id); if (o && o.inside === b.id && !o.sleeping) n--; } return Math.max(0, n);
+  }
+  // (the body's game gone from the table in the middle: what the world says of it — G.JogoDados.parou, D-966 —; the dice taken away by
+  // their owner end with who had the most dice, 'sobrou'; the house shut or the set gone, 'parou' with the why)
+  function desfeito(s0) {
+    const v = P().body(); const p = v && JD() && JD().parou ? JD().parou(v) : null; const L0 = seated(s0);
+    if (!p || p.op !== s0.op) return [s0, L0, 'parou'];
+    const L = L0.map(q => Object.assign({}, q, { fora: (p.fora && p.fora[q.id]) || q.fora }));
+    if (p.fim === 'sobrou' && p.venc) return [Object.assign({}, s0, { fim: 'sobrou', venc: p.venc, motivo: p.por || '' }), L, 'sobrou'];
+    return [Object.assign({}, s0, { motivo: p.por || '' }), L, 'parou'];
   }
   // the end's card over the table: the title and what happened, the purse, the room's applause, and again — the revenge first, after a loss
   function mostraFim(s, L, por) {
@@ -672,7 +688,7 @@
       // (the end shown stays while the world lets the table go, and over another game of the table the body is not in — D-953)
       if (fimMostrado && (!s || (s.op !== fimMostrado.op && !s.eu))) return;
       // (the body's game gone from the table in the middle — the house shut, the dice taken away —: the end says so, never just a blank — L-2211)
-      if (!s) { if (lastS && lastS.eu && lastS.jogo && lastS.fase !== 'fim' && lastS.fase !== 'convite') { mostraFim(lastS, seated(lastS), 'parou'); return; } hide(true); return; }
+      if (!s) { if (lastS && lastS.eu && lastS.jogo && lastS.fase !== 'fim' && lastS.fase !== 'convite') { mostraFim(...desfeito(lastS)); return; } hide(true); return; }
       lastS = s; render(s, Math.min(0.05, rdt || 0)); return; }
     upT -= rdt || 0; if (upT > 0) return; upT = 0.2;
     if (!s) return;

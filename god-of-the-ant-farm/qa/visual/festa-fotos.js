@@ -194,6 +194,9 @@ async function tabuletas(P, cam) {
     const bad = L.filter(x => (x.meu === 0 && x.por !== 'gloria' && (/Empate/.test(x.tit) || x.tipo !== 'int' || !/^Partida (interrompida|desfeita)$/.test(x.tit))) || (x.meu === 0 && x.por === 'gloria' && x.tit !== 'Empate')
       || (x.meu > 0 && !/^Vitória/.test(x.tit)) || (x.meu < 0 && !/^(Derrota|Pego na trapaça)/.test(x.tit)) || (x.meu > 0 && ['recusa', 'desiste', 'trapaca', 'abandono'].includes(x.por) && !x.tit.includes('Nezahualcóyotl')));
     const ab1 = L.find(x => x.por === 'abandono' && x.meu === 1), ab0 = L.find(x => x.por === 'abandono' && x.meu === 0);
+    // (a causa de quem largou a partida do corpo, que o mundo diz — D-966: o desmaio é vitória; a morte, sem festa)
+    const ca = await page.evaluate(() => ({ desmaio: G.CartasUI.fimDe({ por: 'abandono', w: 0, meu: 1, causa: 'desmaio' }, 'Nezahualcóyotl', [10, 8]), morreu: G.CartasUI.fimDe({ por: 'abandono', w: 0, meu: 1, causa: 'morreu' }, 'Nezahualcóyotl', [10, 8]) }));
+    if (!(ca.desmaio.tipo === 'win' && ca.desmaio.tit === 'Vitória — Nezahualcóyotl apagou na mesa' && ca.morreu.tipo === 'int' && ca.morreu.tit === 'Partida encerrada' && /morreu à mesa/.test(ca.morreu.sub))) bad.push({ por: 'abandono/causa', tit: `${ca.desmaio.tit} | ${ca.morreu.tit}` });
     const d0 = await fim({ gl: [10, 8], fim: { w: -1, por: 'abandono', meu: 0 }, aposta: 0.2 }); await wait(500); await cam.foto('tab-fim-interrompida');
     const d1 = await fim({ gl: [10, 8], fim: { w: 0, por: 'abandono', meu: 1 }, aposta: 0.2 }); await wait(900); await cam.foto('tab-fim-largou-a-mesa');
     await calma(P, 9000);
@@ -287,8 +290,11 @@ async function copo(P, cam) {
     await wait(500); await cam.foto('copo-partida-interrompida');
     const L = await page.evaluate(() => { const F = window.__F; const P4 = F.P4; const base = { b: 0, eu: P4[0].id, jogadores: P4.map((v, i) => ({ id: v.id, nome: i ? v.name : 'Você', eu: !i, n: 1, fora: '' })) };
       const f = (o, por) => G.JogoDadosUI.fimDe(Object.assign({}, base, o), por);
-      return { cravou: f({ venc: P4[0].id, fim: 'cravou' }), perde: f({ venc: P4[1].id, fim: 'cravou' }), empate: f({ venc: -1, fim: 'sobrou' }), vazio: f({ venc: -1, fim: 'vazio' }), parou: f({ venc: 0, fim: '' }, 'parou') }; });
-    ok('c6 a-partida-que-parou-e-os-fins-do-copo', r.aberto && r.t === 'Partida interrompida' && /cada um leva o que pôs/.test(r.sub) && L.cravou.tit === 'Vitória!' && L.perde.tit === 'Derrota' && L.empate.tit === 'Empate' && L.vazio.tit === 'Partida interrompida' && L.parou.tit === 'Partida interrompida' && !/Empate/.test(L.vazio.tit + L.parou.tit),
+      return { cravou: f({ venc: P4[0].id, fim: 'cravou' }), perde: f({ venc: P4[1].id, fim: 'cravou' }), empate: f({ venc: -1, fim: 'sobrou' }), vazio: f({ venc: -1, fim: 'vazio' }), parou: f({ venc: 0, fim: '' }, 'parou'),
+        // (o porquê do mundo numa partida desfeita, pelo G.JogoDados.parou — D-966)
+        porque: f({ venc: 0, fim: '', motivo: 'o dono levou os dados' }, 'parou'), levou: f({ venc: P4[0].id, fim: 'sobrou', motivo: 'o dono levou os dados' }) }; });
+    ok('c6 a-partida-que-parou-e-os-fins-do-copo', r.aberto && r.t === 'Partida interrompida' && /cada um leva o que pôs/.test(r.sub) && L.cravou.tit === 'Vitória!' && L.perde.tit === 'Derrota' && L.empate.tit === 'Empate' && L.vazio.tit === 'Partida interrompida' && L.parou.tit === 'Partida interrompida' && !/Empate/.test(L.vazio.tit + L.parou.tit)
+      && /^O dono levou os dados: cada um leva o que pôs/.test(L.porque.sub) && L.levou.tipo === 'win' && /^O dono levou os dados: o pote ficou com quem tinha mais dados/.test(L.levou.sub),
       `a partida sumiu da mesa no meio: «${r.t}» — ${r.sub}; cravou «${L.cravou.tit}», perdeu «${L.perde.tit}», todos sem dados «${L.empate.tit}», ninguém ficou «${L.vazio.tit}», parou «${L.parou.tit}»`);
     await page.evaluate(() => { G.JogoDadosUI.close(); G.JogoFX.limpa(); });
   }

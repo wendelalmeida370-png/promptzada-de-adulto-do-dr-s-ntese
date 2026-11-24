@@ -242,6 +242,10 @@
   // fim do mundo (com o meu: 1 venci, −1 perdi, 0 ninguém) → { tipo: win | lose | tie | int, tit, sub }
   function fimDe(fim, e, gl) {
     const m = fim && fim.meu; const por = (fim && fim.por) || ''; const tipo = m > 0 ? 'win' : m < 0 ? 'lose' : por === 'gloria' ? 'tie' : 'int';
+    // (quem largou a partida do corpo pelo corpo dele — a causa que o mundo diz, D-966: o desmaio da bebida é vitória com riso; a morte à
+    // mesa, nenhuma festa — o pote fica, a tela fica séria)
+    if (por === 'abandono' && m > 0 && fim.causa === 'desmaio') return { tipo: 'win', tit: `Vitória — ${e || 'O outro'} apagou na mesa`, sub: 'Bebeu demais e não terminou a partida: quem não termina perde.' };
+    if (por === 'abandono' && m > 0 && fim.causa === 'morreu') return { tipo: 'int', tit: 'Partida encerrada', sub: `${e || 'O outro'} morreu à mesa. O pote fica com você.` };
     const L = FIM[por] || {}; const f = L[tipo] || FIM0[tipo] || FIM0.int; const [tit, sub] = f(e || 'O outro', gl ? Math.abs(gl[0] - gl[1]) : 9);
     return { tipo, tit, sub };
   }
