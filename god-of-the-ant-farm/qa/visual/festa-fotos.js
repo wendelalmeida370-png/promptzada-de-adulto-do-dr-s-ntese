@@ -48,6 +48,8 @@ async function abre(browser, dev, reduz) {
     const v0 = people.find(q => G.Eco.coinRef(q) && G.Depot.get(G.Eco.coinRef(q), 'moedas') >= 0.8) || people[0];
     const o = people.find(q => q.id !== v0.id && G.Fac.idOfV(q) === G.Fac.idOfV(v0)) || people[1];
     const bs = [...G.S.buildings.values()].filter(b => b.built && b.type !== 'ruin');
+    // (o mundo pronto pode abrir de madrugada, com todos dormindo: vive até haver uma sala com gente acordada — T-2115)
+    for (let k = 0; k < 4000 && !bs.some(b => G.Atmos.awake(b) >= 3); k++) G.debug.step(0.1);
     const cheio = bs.filter(b => G.Atmos.awake(b) >= 3).sort((a, b) => G.Atmos.awake(b) - G.Atmos.awake(a))[0] || null;
     const vazio = bs.find(b => G.Atmos.inside(b) === 0) || null;
     // (o corpo das fotos: a pessoa, num prédio dado — um retrato, nunca uma pessoa do mundo mudada)
