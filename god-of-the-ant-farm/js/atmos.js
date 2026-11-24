@@ -28,7 +28,7 @@
   // (one pass over the people for every question of the same instant of the world: who is inside each building — awake, at
   // the house's fire, cooking —, who has each house for home and their trades)
   let cen = null, cenS = null, cenK = -1, cenN = -1;
-  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); now.clear(); nowS = null; wet.clear(); win.clear(); winS = null; };
+  const drop = () => { cen = null; cenS = null; fir = null; firS = null; arts.clear(); now.clear(); nowS = null; wet.clear(); win.clear(); winS = null; gua.clear(); guaS = null; };
   G.worldHooks.push(drop);
   At.flush = drop; // (for the proofs: the world changed by hand within the same instant)
   function census() {
@@ -620,7 +620,8 @@
       const povo = P.filter(m => m.dep === 'povo');
       if (povo.length && D.share) { const sh = D.share(b); const ents = povo.map(m => ({ m, left: m.cap || 0 }));
         for (const k of Object.keys(sh).sort()) { let n = sh[k] || 0; if (!(n > EPS) || k === 'moedas' || k === 'water') continue;
-          for (const pass of [0, 1]) for (const e of ents) { if (n <= EPS) break; if (pass === 0 ? !(Array.isArray(e.m.keys) && e.m.keys.includes(k)) : e.m.keys !== '*') continue; const t = Math.min(e.left, n); if (t <= EPS) continue; e.left -= t; n -= t; add(e.m.id, k, t); } } }
+          for (const pass of [0, 1]) for (const e of ents) { if (n <= EPS) break; if (pass === 0 ? !(Array.isArray(e.m.keys) && e.m.keys.includes(k)) : e.m.keys !== '*') continue; const t = Math.min(e.left, n); if (t <= EPS) continue; e.left -= t; n -= t; add(e.m.id, k, t); }
+          if (n > EPS) add(0, k, n); } } // (what fits in no piece lies in a pile on the floor, as the depot puts it away)
     }
     out = Object.freeze([...rows.values()].map(r => Object.freeze(Object.assign(r, { bens: Object.freeze(r.bens) }))));
     gua.set(b.id, out); if (gua.size > 600) gua.clear();

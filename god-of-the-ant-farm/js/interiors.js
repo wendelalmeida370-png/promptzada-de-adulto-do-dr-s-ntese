@@ -2638,13 +2638,13 @@
     for (const it of p.items) if (it.store) { const f = fillOf(b, it); if (f !== null) (items[it.id] = items[it.id] || { occ: [] }).fill = f; }
     return { doors, items, inside: inn, dmg: b.maxHp ? r2(1 - G.clamp(b.hp / b.maxHp, 0, 1)) : 0, ruin: b.type === 'ruin' ? 1 : 0, left: b.ip.ab ? 1 : 0 };
   };
-  // how full a keeping piece is: its share of the store it shows (a view of the world's own numbers, never a number of its own)
+  // how full a keeping piece is: what it holds by the book over its room — G.Atmos.guardado, the depot's own split (the household's and
+  // the building's pieces as G.Depot.slots puts their goods away, a stall's by its business, the people's bays and bins by the share of
+  // the people's store the building keeps, G.Depot.share) — a view of the world's own numbers, never a number of its own; the one the
+  // decoration reads too (L-2250: it was the share of the whole house, of the whole shelf, of the people's food, wood and stone)
   function fillOf(b, it) {
-    const st = it.store; const p = In.plan(b);
-    if (st.dep === 'casa') { const v = st.key === 'pantry' ? b.pantry || 0 : st.key === 'inv' ? Object.values(b.inv || {}).reduce((n, q) => n + (q || 0), 0) + (st.coin ? (b.coin || 0) / 10 : 0) : 0; const all = p.items.filter(q => q.store && q.store.dep === 'casa' && q.store.key === st.key); const cap = all.reduce((n, q) => n + q.store.cap, 0) || 1; return r2(G.clamp(v / cap, 0, 1)); }
-    if (st.dep === 'predio') { const v = Object.values(b.inv || {}).reduce((n, q) => n + (q || 0), 0); const all = p.items.filter(q => q.store && q.store.dep === 'predio'); const cap = all.reduce((n, q) => n + q.store.cap, 0) || 1; return r2(G.clamp(v / cap, 0, 1)); }
-    if (st.dep === 'povo') { const fid = G.Village.facOfSet(b.set); const f = G.Fac.get(fid); if (!f) return 0; const cap = G.Village.cap(fid) || 1; const tot = (f.stock.food || 0) + (f.stock.wood || 0) + (f.stock.stone || 0); return r2(G.clamp(tot / (cap * 3), 0, 1)); }
-    return null;
+    const st = it.store; if (!st || !(st.cap > 0)) return null; const A = G.Atmos; if (!A || !A.guardado) return null;
+    const g = A.guardado(b).find(q => q.it === it.id); return g ? r2(G.clamp(g.n / st.cap, 0, 1)) : 0;
   }
 
   // ------------------------------ the side of the door: where the way in fits (L-195) ------------------------------

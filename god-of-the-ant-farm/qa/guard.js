@@ -3056,5 +3056,12 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
       if (/\b(?:b|v|f|h|op|m|S|G\.S|I|p|it|pl|q|W|ctx\.W)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} escreve num campo do mundo, da planta ou do within (D-1010): ${l.trim().slice(0, 100)}`);
       if (WORLD_WRITE.test(c) || /\b(?:setTask|Vg\.give|Urban\.(?:note|noteB|mourn|remember)|touchWalk)\s*\(/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} abre uma porta que muda o mundo (D-1010): ${l.trim().slice(0, 100)}`);
       if (bld && /\bG\.(?:Depot|Origem|Eco)\.|\.inv\b|\.pantry\b|f\.stock\b/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} constrói lendo o livro, o armazém ou a origem por conta própria (a regra do within lê pelo c; o construtor, só o W — D-1010): ${l.trim().slice(0, 100)}`); }); } }
+// 501. "o que uma peça guarda é o do livro" (D-1011, L-2250): o enchimento das peças de guardar que as caixas desenham (o fillOf do
+// interiors.js, o cx.fill) é o G.Atmos.guardado — a divisão do G.Depot.slots, o negócio da banca, a parte do G.Depot.share do povo —, a
+// mesma leitura da decoração; nunca uma conta própria do b.inv, do b.pantry ou do f.stock
+{ const ir = (src['interiors.js'] || []).join('\n'); const i = ir.indexOf('function fillOf(b, it) {'), j = ir.indexOf('\n  }', i); const f = i < 0 ? '' : ir.slice(i, j);
+  if (!f || !/A\.guardado\(b\)\.find\(q => q\.it === it\.id\)/.test(f) || /\.inv\b|\.pantry\b|\.stock\b|\.coin\b/.test(f)) fails.push('o que uma peça guarda é o do livro: o fillOf do interiors.js não lê o G.Atmos.guardado, ou conta o b.inv, a despensa, as moedas ou o armazém do povo por conta própria (L-2250)');
+  const at = (src['atmos.js'] || []).join('\n'); const a = at.indexOf('At.guardado = function (b) {'), z = at.indexOf('\n  };', a); const g = a < 0 ? '' : at.slice(a, z);
+  if (!g || !/D\.slots\(/.test(g) || !/D\.share\(b\)/.test(g) || !/In\.depotStores\(b\)/.test(g)) fails.push('o que uma peça guarda é o do livro: o G.Atmos.guardado não lê as peças da planta (In.depotStores), o G.Depot.slots e o G.Depot.share (D-1011)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

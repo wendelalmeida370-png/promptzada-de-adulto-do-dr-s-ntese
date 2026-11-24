@@ -46,10 +46,14 @@ const In = G.Interiors;
     ok('o armazém de planta: a parte de cada peça de guardar é a do mundo (Interiors.state)', kp > 0 && !bad.length, `${planned.length} armazéns, ${kp} peças${bad.length ? '; ' + bad.slice(0, 3).join(' · ') : ''}`);
     const b = planned[0]; const f = G.Fac.ofSet(b.set); const p = In.plan(b); const keep = Object.assign({}, f.stock); const cap = G.Village.cap(f.id); const [cx, cy] = chunkOf(b);
     const shown = () => { const out = B3.interior(p, b, { fine: true, fill: B3.fillOf(b) }); let n = 0; for (const it of p.items) if (it.store && it.store.dep === 'povo') { const R = out.item[it.id]; n += R ? R[2] - R[1] : 0; } return n; };
-    const set = q => { f.stock.wood = cap * q; f.stock.stone = cap * q; f.stock.food = cap * q; };
+    // (what each piece keeps is the book's — the share of the people's store the building keeps, G.Depot.share, put away in its pieces by
+    // the depot's rule, L-2250 —: the whole store emptied, then one good only, the wood, at three and at nine tenths of the pieces' room)
+    const room = p.items.reduce((n, it) => n + (it.store && it.store.dep === 'povo' ? it.store.cap : 0), 0);
+    const part = (() => { const w0 = f.stock.wood; f.stock.wood = 1000; G.Atmos.flush(); const s = G.Depot.share(b).wood || 0; f.stock.wood = w0; G.Atmos.flush(); return s / 1000; })();
+    const set = q => { for (const k in f.stock) if (k !== 'moedas') f.stock[k] = 0; f.stock.wood = part > 0 ? room * q / part : 0; G.Atmos.flush(); };
     set(0); const n0 = shown(), s0 = B3.fillSig(b), c0 = B3.sig(cx, cy, C); set(0.3); const n1 = shown(), s1 = B3.fillSig(b), c1 = B3.sig(cx, cy, C);
-    f.stock.wood += cap * 0.005; const s2 = B3.fillSig(b); set(0.9); const n3 = shown(), s3 = B3.fillSig(b);
-    Object.assign(f.stock, keep);
+    f.stock.wood += part > 0 ? room * 0.005 / part : 0; G.Atmos.flush(); const s2 = B3.fillSig(b); set(0.9); const n3 = shown(), s3 = B3.fillSig(b);
+    for (const k in f.stock) if (!(k in keep)) delete f.stock[k]; Object.assign(f.stock, keep); G.Atmos.flush();
     ok('o armazém de planta mostra o estoque dentro: vazio, nada nas peças; mais estoque, mais; desenhado de novo quando a parte muda, e só então', n1 > n0 && n3 > n1 && s1 !== s0 && s2 === s1 && s3 !== s1 && c1 === c0,
       `${b.type}#${b.id}: vértices das peças de guardar ${n0} (vazio) → ${n1} (30%) → ${n3} (90%); assinatura ${s1 !== s0 ? 'mudou' : 'igual'} · +0,5%: ${s2 === s1 ? 'igual' : 'mudou'} · 90%: ${s3 !== s1 ? 'mudou' : 'igual'}; o pedaço de fora ${c1 === c0 ? 'igual' : 'refeito'}`);
   }
