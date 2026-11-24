@@ -1,11 +1,13 @@
-# deco: the small things the interiors show, modelled by code in Blender and written as one data file the game reads without
-# fetching anything — js/decomesh.js: each thing a G.MESH3D entry 'deco-<coisa>' (and 'deco-<coisa>@1', its middle level of
-# detail), in the format G.Mesh3D reads (the furniture's: arte/blender/moveis.py), with what the game needs to set it down: its
+# deco: the small things the interiors show, modelled by code in Blender and written as data files the game reads without
+# fetching anything — js/decomesh.js (the index: which pack holds each thing) and a pack a family, js/decomesh-<família>.js (the
+# families: arte/blender/pacotes.py, D-1020): each thing a G.MESH3D entry 'deco-<coisa>' (and 'deco-<coisa>@1', its middle level of
+# detail), in the 16-bit form G.Mesh3D reads (arte/blender/pacotes.py, D-1021), with what the game needs to set it down: its
 # kind, its size, how it rests (pousa: 'base' on its foot, 'pende' hung by its top, 'parede' flat on a wall) and its anchors
 # (the flame of a lamp, of a candle). The interiors 2.0, the front P5 (D-740 to D-749): the things are drawn by js/dentro3d.js
-# (G.Dentro3D) where G.Atmos.within says the building has them — the decoration has its cause, never a draw.
-#   VENV/bin/python arte/blender/deco.py                     → every thing, the file written again
-#   VENV/bin/python arte/blender/deco.py jarra pao           → only those (the others kept from the file)
+# (G.Dentro3D) where G.Atmos.within says the building has them — the decoration has its cause, never a draw; in packs, the
+# interiors 3, the front X (D-1020 to D-1029).
+#   VENV/bin/python arte/blender/deco.py                     → every thing, the files written again
+#   VENV/bin/python arte/blender/deco.py jarra pao           → only those (the others kept from the files)
 #   VENV/bin/python arte/blender/deco.py --folha SAIDA.png [--lod 1]   → the sheet of them all, by Cycles (nothing written)
 #   VENV/bin/python arte/blender/deco.py --conta             → the triangles and the size of each (nothing written)
 #   VENV/bin/python arte/blender/deco.py --confere           → every thing built again beside the file (nothing written): the file is
@@ -13,10 +15,10 @@
 #   VENV/bin/python arte/blender/deco.py --prev SAIDA.png coisa ...   → those things in their own colours, by Cycles (nothing written)
 # The shapes: arte/blender/deco_coisas.py and, what is served at the tables and the marks of the night, deco_comida.py (on the
 # furniture's moveis_forma.py). The dishes and the drinks are G.MESH3D 'comida-<prato>' and 'bebida-<bebida>' (the part of the food
-# they are made of, the drink — js/act-taverna.js), the others 'deco-<coisa>'. The budget (D-745, D-748, D-889): the file ≤ 3.5 MB, each
-# thing ≤ 700 triangles at its near level (the rug, the hanging, the cauldron, the firewood ≤ 1,400; a dish or a drink, with its
-# bites, its levels and its steam, ≤ 1,600), its middle level ≤ 70 % of it (or ≤ 200). Nothing is drawn by chance: the same
-# script, the same file, byte for byte.
+# they are made of, the drink — js/act-taverna.js), the others 'deco-<coisa>'. The budget (D-745, D-748, D-889, D-1020): each pack
+# ≤ 3.5 MiB, the index ≤ 0.1, all ≤ 64; each thing ≤ 700 triangles at its near level (the rug, the hanging, the cauldron, the firewood
+# ≤ 1,400; a dish or a drink, with its bites, its levels and its steam, ≤ 1,600), its middle level ≤ 70 % of it (or ≤ 200). Nothing is
+# drawn by chance: the same script, the same files, byte for byte.
 import sys, os, re, json, math
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import moveis_forma as F
@@ -27,7 +29,7 @@ import deco_comida as C2  # (its colours of each point hook the shapes: imported
 import deco_festa as C3   # (the fourth wave's: the feast, the door, the games — T7)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, 'js', 'decomesh.js')
+JS = os.path.join(ROOT, 'js'); LIB = 'decomesh'
 PARTS = ['louca', 'barro', 'tampa', 'madeira', 'madeira2', 'pano', 'pano2', 'corda', 'palha', 'saco', 'comida', 'conteudo', 'liquido', 'pao', 'carne',
          'peixe', 'alho', 'erva', 'milho', 'cabaca', 'queijo', 'lampada', 'cera', 'castical', 'panela', 'ferro', 'carvao', 'teia',
          # (what is served — its bites, its levels, its remains, a beer's head, the steam, what lies under it: deco_comida.py —, the
@@ -38,7 +40,7 @@ PARTS = ['louca', 'barro', 'tampa', 'madeira', 'madeira2', 'pano', 'pano2', 'cor
          # feast's platter by the part of the food each is)
          'flor', 'dado', 'pinta', 'copo', 'verso', 'face', 'borda', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho']
 BIG = {'tapete', 'tapecaria', 'caldeirao', 'lenha', 'guirlanda-flores', 'guirlanda-horta', 'bandeirolas', 'pano-festa', 'porta-caida', 'cartas', 'monte'} | {'estandarte-' + c for c in ('classico', 'romano', 'grego', 'egipcio', 'nordico', 'asteca')}
-BUDGET = {'coisa': 700, 'grande': 1400, 'prato': 1600, 'meio': 0.7, 'meioMin': 200, 'arquivo': 3.5}
+BUDGET = {'coisa': 700, 'grande': 1400, 'prato': 1600, 'meio': 0.7, 'meioMin': 200, 'arquivo': 3.5, 'indice': 0.1, 'todos': 64}
 SERVED = ('comida-', 'bebida-')  # (the dishes and the drinks: named as they are, their budget a dish's)
 # (kind, w, d, h, the builder, how it rests)
 TABLE = [
@@ -178,35 +180,43 @@ def encode(M, s):
 
 def line(name, d): return f"  M[{json.dumps(name)}] = {json.dumps(d, separators=(',', ':'))};"
 
-def read_old():
-    if not os.path.exists(OUT): return {}
-    old = {}
-    for l in open(OUT, encoding='utf8'):
-        m = re.match(r'  M\["([^"]+)"\] = ', l)
-        if m: old[m.group(1)] = l.rstrip('\n')
-    return old
+def read_old(): return PK.read(JS, LIB)
 
-def text(lines):
-    body = '\n'.join(lines[k] for k in sorted(lines))
+HEAD = ["// (the shapes deco_coisas.py, deco_comida.py and deco_festa.py, on the furniture's moveis_forma.py; the families pacotes.py) and",
+        "// written by it: do not edit by hand, make it again. Each thing a G.MESH3D entry 'deco-<coisa>' — a dish 'comida-<prato>', a drink",
+        "// 'bebida-<bebida>' (D-748) — ('@1' its middle level), in the 16-bit form G.Mesh3D reads (v 2, D-1021): metres, Y up, the front",
+        "// toward +Z, centred on its box; the parts by what each is made of; the ambient light it gives itself in its points. Besides: its",
+        "// kind, its size, how it rests (pousa: 'base' on its foot at y = 0, 'pende' hung from (0, h, 0), 'parede' flat on a wall at",
+        "// z = -d/2, 'canto' in a top corner), its anchors (anc: the flame of a lamp)."]
+def index_text(base, of, meta):
+    total = len(base) + sum(m['n'] for m in meta.values()); body = '\n'.join(base[k] for k in sorted(base))
     js = ["'use strict';",
           "// decomesh: the small things the interiors show (the interiors 2.0, the front P5, D-740) — made in Blender by arte/blender/deco.py",
-          "// (the shapes deco_coisas.py and deco_comida.py, on the furniture's moveis_forma.py) and written by it: do not edit by hand, make it",
-          "// again. Each thing a G.MESH3D entry 'deco-<coisa>' — a dish 'comida-<prato>', a drink 'bebida-<bebida>' (D-748) — ('@1' its middle",
-          "// level), in the format G.Mesh3D reads: metres, Y up, the front toward +Z, centred",
-          "// on its box; the parts by what each is made of; the ambient light it gives itself in the vertex colours. Besides: its kind, its size,",
-          "// how it rests (pousa: 'base' on its foot at y = 0, 'pende' hung from (0, h, 0), 'parede' flat on a wall at z = -d/2, 'canto' in a top",
-          f"// corner), its anchors (anc: the flame of a lamp). {len(lines)} entries. Read by js/dentro3d.js (G.Dentro3D) only.",
+          *HEAD,
+          "// This file is the library's index (the interiors 3, the front X: D-1020) — G.DECO: which pack holds each thing (of), the packs",
+          "// (js/decomesh-<família>.js, asked for by js/dentro3d.js when a thing of their family is drawn — never by index.html), the parts,",
+          f"// the budget, the big things. {total} entries in all. Read by js/dentro3d.js (G.Dentro3D) only.",
+          'window.G = window.G || {};',
+          '(function (G) {',
+          '  const M = G.MESH3D = G.MESH3D || {};',
+          *([body] if body else []),
+          f"  G.DECO = {json.dumps({'v': 2, 'parts': PARTS, 'budget': BUDGET, 'big': sorted(BIG), 'of': of, 'packs': meta}, separators=(',', ':'))};",
+          '})(window.G);', '']
+    return '\n'.join(js)
+def pack_text(fam, lines):
+    body = '\n'.join(lines[k] for k in sorted(lines))
+    js = ["'use strict';",
+          f"// decomesh-{fam}: the things of the family «{fam}» — {PK.FAMILIA.get(fam, 'a family of interior')} — made in Blender by arte/blender/deco.py",
+          *HEAD,
+          f"// {len(lines)} entries. A pack of the library (the interiors 3, the front X: D-1020): asked for by js/dentro3d.js (G.Dentro3D.want)",
+          "// when a thing of its family is drawn — never by index.html —; js/decomesh.js is the index that names it.",
           'window.G = window.G || {};',
           '(function (G) {',
           '  const M = G.MESH3D = G.MESH3D || {};',
           body,
-          f"  G.DECO = {json.dumps({'v': 1, 'parts': PARTS, 'budget': BUDGET, 'big': sorted(BIG)}, separators=(',', ':'))};",
+          f"  (G.PACOTES = G.PACOTES || {{}})[{json.dumps('deco:' + fam)}] = {len(lines)}; if (G.Movel3D && G.Movel3D.got) G.Movel3D.got('deco', {json.dumps(fam)});",
           '})(window.G);', '']
     return '\n'.join(js)
-
-def write(lines):
-    with open(OUT, 'w', encoding='utf8') as f: f.write(text(lines))
-    return os.path.getsize(OUT)
 
 def built():
     """every thing of the table built again, at both levels: {name: its line}"""
@@ -221,15 +231,15 @@ def built():
     return lines
 
 def confere():
-    """every thing built again and set beside the file, nothing written: the file is what this script makes today — no line of an
-    older shape kept from a partial run after the shapes changed (L-2260)"""
-    lines = built(); old = read_old()
-    bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k))
-    same = os.path.exists(OUT) and open(OUT, encoding='utf8').read() == text(lines)
-    for k in bad: print(f'  {k}: ' + ('só no arquivo' if k not in lines else 'falta no arquivo' if k not in old else 'outra forma'))
-    print(f'decomesh.js: {len(lines)} entradas feitas de novo, {len(bad)} diferentes' + ('' if same or bad else ' (o resto do arquivo difere)'))
-    if bad or not same: raise SystemExit('FALHOU: o js/decomesh.js não é o que o deco.py faz hoje — rode VENV/bin/python arte/blender/deco.py')
-    print('PASSOU: o js/decomesh.js é o que o deco.py faz hoje')
+    """every thing built again and the library's files set beside what that makes, nothing written: the files are what this script
+    makes today — no line of an older shape kept from a partial run after the shapes changed (L-2260), each thing in its family's pack"""
+    lines = built(); old = read_old(); out, loose = PK.files(LIB, lines, index_text, pack_text, BUDGET)
+    bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k)); fb = PK.confere(JS, LIB, out)
+    for k in bad: print(f'  {k}: ' + ('só nos arquivos' if k not in lines else 'falta nos arquivos' if k not in old else 'outra forma'))
+    for f in fb: print(f'  js/{f}')
+    print(f'decomesh: {len(lines)} entradas feitas de novo, {len(bad)} diferentes; {len(out)} arquivos, {len(fb)} diferentes')
+    if bad or fb: raise SystemExit('FALHOU: os js/decomesh*.js não são o que o deco.py faz hoje — rode VENV/bin/python arte/blender/deco.py')
+    print('PASSOU: os js/decomesh*.js são o que o deco.py faz hoje')
 
 def export(args):
     specs = [spec(r) for r in TABLE]
@@ -248,15 +258,18 @@ def export(args):
             if lod == 0: t0 = d['t']
             elif d['t'] > max(t0 * BUDGET['meio'], BUDGET['meioMin']): raise SystemExit(f"{nm}: o nível do meio com {d['t']} de {t0} triângulos")
             lines[nm] = line(nm, d); rep.append((nm, d['t'], len(lines[nm]) / 1024))
-    size = write(lines)
+    out, loose = PK.files(LIB, lines, index_text, pack_text, BUDGET); sizes = PK.write(JS, LIB, out)
     for nm, t, kb in rep: print(f'  {nm}: {t} triângulos, {kb:.1f} KB')
-    print(f'decomesh.js: {len(lines)} entradas, {size / 1024:.0f} KB · {PK.worst()}')
+    for f, sz in sizes.items(): print(f'  js/{f}: {sz / 1024:.0f} KB')
+    if loose: print(f"  (sem família dita no arte/blender/pacotes.py — no pacote 'comum': {', '.join(loose)})")
+    print(f'decomesh: {len(lines)} entradas em {len(out)} arquivos, {sum(sizes.values()) / 1024:.0f} KB · {PK.worst()}')
 
 def count():
-    old = read_old(); tot = 0
+    old = read_old(); tot = 0; per = {}
     for k in sorted(old):
         m = re.search(r'"t":(\d+)', old[k]); tot += len(old[k]); print(f'{k}: {m.group(1) if m else "?"} triângulos, {len(old[k]) / 1024:.1f} KB')
-    print(f'{len(old)} entradas, {tot / 1024:.0f} KB')
+        fam = PK.familia('deco', PK.KIND.search(old[k]).group(1))[0]; per[fam] = per.get(fam, 0) + len(old[k])
+    print(f'{len(old)} entradas, {tot / 1024:.0f} KB · ' + ', '.join(f'{f} {v / 1024:.0f} KB' for f, v in sorted(per.items())))
 
 def folha(out, lod):
     """every thing side by side on a floor, its name under it, by Cycles"""

@@ -1,10 +1,12 @@
-# moveis: the furniture of the interiors, modelled by code in Blender and written as one data file the game reads without
-# fetching anything — js/movelmesh.js: each model a G.MESH3D entry 'movel-<peça>-<povo>-<largura>x<fundo>x<altura>' (in cm; and
-# the same name with '@1' for its middle level of detail), in the format G.Mesh3D reads (arte/ESTUDIO.md §2, the BIBLIA §8),
-# with what the game needs to fit it to the plan's piece (its kind, its people, its nominal size, its anchors) — and the table of
-# which people use which model (G.MOVEIS.alias). The interiors 2.0, the front P2 (D-710 to D-719).
-#   VENV/bin/python arte/blender/moveis.py                       → every model, the file written again
-#   VENV/bin/python arte/blender/moveis.py banquinho [mesa ...]   → only those kinds' models (the others kept from the file)
+# moveis: the furniture of the interiors, modelled by code in Blender and written as data files the game reads without fetching
+# anything — js/movelmesh.js (the index: which pack holds each kind, and the base — the models the shell and the street draw at first
+# sight) and a pack a family, js/movelmesh-<família>.js (the families: arte/blender/pacotes.py, D-1020): each model a G.MESH3D entry
+# 'movel-<peça>-<povo>-<largura>x<fundo>x<altura>' (in cm; and the same name with '@1' for its middle level of detail), in the 16-bit
+# form G.Mesh3D reads (arte/blender/pacotes.py, D-1021), with what the game needs to fit it to the plan's piece (its kind, its people,
+# its nominal size, its anchors) — and the table of which people use which model (G.MOVEIS.alias). The interiors 2.0, the front P2
+# (D-710 to D-719); in packs, the interiors 3, the front X (D-1020 to D-1029).
+#   VENV/bin/python arte/blender/moveis.py                       → every model, the files written again
+#   VENV/bin/python arte/blender/moveis.py banquinho [mesa ...]   → only those kinds' models (the others kept from the files)
 #   VENV/bin/python arte/blender/moveis.py banquinho:grego        → only that people's model of the kind
 #   VENV/bin/python arte/blender/moveis.py --prev SAIDA.png peça:povo   → four views of one model (nothing written)
 #   VENV/bin/python arte/blender/moveis.py --folha PASTA [povo ...] [--lod 1]   → the sheet of every people's pieces (nothing written)
@@ -21,7 +23,6 @@ import moveis_tabela as PC
 import pacotes as PK
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUT = os.path.join(ROOT, 'js', 'movelmesh.js')
 CIVS = PC.CIVS
 
 def srgb(x):
@@ -64,48 +65,64 @@ def encode(M, spec):
 
 def line(name, d): return f"  M[{json.dumps(name)}] = {json.dumps(d, separators=(',', ':'))};"
 
-def read_old():
-    if not os.path.exists(OUT): return {}
-    old = {}
-    for l in open(OUT, encoding='utf8'):
-        m = re.match(r'  M\["([^"]+)"\] = ', l)
-        if m: old[m.group(1)] = l.rstrip('\n')
-    return old
+JS = os.path.join(ROOT, 'js'); LIB = 'movelmesh'
+# (the furniture's budget, MiB: the index with the base, each pack — a family —, all of them; and a model's line, KB: D-715, D-1020)
+BUDGET = {'indice': 0.5, 'arquivo': 3.5, 'todos': 64, 'modelo': 70}
+def read_old(): return PK.read(JS, LIB)
 
-def text(lines, alias):
-    n = len(lines); body = '\n'.join(lines[k] for k in sorted(lines))
+HEAD = ["// (the shapes moveis_forma.py, the pieces moveis_pecas.py, the families pacotes.py) and written by it: do not edit by hand, make it",
+        "// again. Each model a G.MESH3D entry 'movel-<kind>-<people>-<w>x<d>x<h>' (cm; '@1' its middle level of detail), in the 16-bit form",
+        "// G.Mesh3D reads (v 2, D-1021): metres, Y up, the front toward +Z, its foot at y = 0, centred on its rectangle; the parts by material;",
+        "// uv in metres (v along the grain); the ambient light it gives itself in a grey byte a point. Besides: its kind, its people, its",
+        "// nominal size (the plan's piece it was made for), its level, its anchors (anc: where a thing may rest on it)."]
+def index_text(base, of, meta):
+    total = len(base) + sum(m['n'] for m in meta.values()); body = '\n'.join(base[k] for k in sorted(base))
     js = ["'use strict';",
           "// movelmesh: the furniture of the interiors (the interiors 2.0, the front P2, D-710) — made in Blender by arte/blender/moveis.py",
-          "// (the shapes moveis_forma.py, the pieces moveis_pecas.py) and written by it: do not edit by hand, make it again. Each model a",
-          "// G.MESH3D entry 'movel-<kind>-<people>-<w>x<d>x<h>' (cm; '@1' its middle level of detail), in the format G.Mesh3D reads:",
-          "// metres, Y up, the front toward +Z, its foot at y = 0, centred on its rectangle; the parts by material; uv in metres (v along",
-          "// the grain); the ambient light it gives itself in the vertex colours. Besides: its kind, its people, its nominal size (the",
-          "// plan's piece it was made for), its level, its anchors (anc: where a thing may rest on it). G.MOVEIS.alias: the people that",
-          f"// use another people's model of a kind. {n} models. Read by js/movel3d.js (G.Movel3D).",
+          *HEAD,
+          "// This file is the library's index (the interiors 3, the front X: D-1020) — G.MOVEIS: which pack holds each kind (of), the packs",
+          "// (js/movelmesh-<família>.js, asked for by js/movel3d.js when a piece of their family is drawn — never by index.html), the people",
+          "// that use another people's model of a kind (alias), the parts, the budget —, and its base: the models the shell and the street",
+          f"// draw at first sight (the leaf of a door, the pieces of a yard: {len(base)} here, never waiting for a pack). {total} models in all.",
           'window.G = window.G || {};',
           '(function (G) {',
           '  const M = G.MESH3D = G.MESH3D || {};',
           body,
-          f"  G.MOVEIS = {json.dumps({'v': 1, 'alias': alias, 'parts': PC.PART_ORDER}, separators=(',', ':'))};",
+          f"  G.MOVEIS = {json.dumps({'v': 2, 'alias': PC.alias(), 'parts': PC.PART_ORDER, 'budget': BUDGET, 'of': of, 'packs': meta}, separators=(',', ':'))};",
+          '})(window.G);', '']
+    return '\n'.join(js)
+def pack_text(fam, lines):
+    body = '\n'.join(lines[k] for k in sorted(lines))
+    js = ["'use strict';",
+          f"// movelmesh-{fam}: the furniture of the family «{fam}» — {PK.FAMILIA.get(fam, 'a family of interior')} — made in Blender by arte/blender/moveis.py",
+          *HEAD,
+          f"// {len(lines)} models. A pack of the library (the interiors 3, the front X: D-1020): asked for by js/movel3d.js (G.Movel3D.want) when a",
+          "// piece of its family is drawn — never by index.html —; js/movelmesh.js is the index that names it.",
+          'window.G = window.G || {};',
+          '(function (G) {',
+          '  const M = G.MESH3D = G.MESH3D || {};',
+          body,
+          f"  (G.PACOTES = G.PACOTES || {{}})[{json.dumps('movel:' + fam)}] = {len(lines)}; if (G.Movel3D && G.Movel3D.got) G.Movel3D.got('movel', {json.dumps(fam)});",
           '})(window.G);', '']
     return '\n'.join(js)
 
-def write(lines, alias):
-    with open(OUT, 'w', encoding='utf8') as f: f.write(text(lines, alias))
-    return os.path.getsize(OUT)
-
-def confere():
-    """every model built again and set beside the file, nothing written: the file is what this script makes today — no line of an
-    older shape kept from a partial run after the shapes changed (L-2260)"""
+def every():
+    """every model of the table built again, at both levels: {name: its line}"""
     lines = {}
     for s in PC.specs():
         for lod in (0, 1): nm = s['nome'] + ('@1' if lod else ''); lines[nm] = line(nm, encode(build(s, lod), s))
-    old = read_old(); bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k))
-    same = os.path.exists(OUT) and open(OUT, encoding='utf8').read() == text(lines, PC.alias())
-    for k in bad: print(f'  {k}: ' + ('só no arquivo' if k not in lines else 'falta no arquivo' if k not in old else 'outra forma'))
-    print(f'movelmesh.js: {len(lines)} modelos feitos de novo, {len(bad)} diferentes' + ('' if same or bad else ' (o resto do arquivo difere)'))
-    if bad or not same: raise SystemExit('FALHOU: o js/movelmesh.js não é o que o moveis.py faz hoje — rode VENV/bin/python arte/blender/moveis.py')
-    print('PASSOU: o js/movelmesh.js é o que o moveis.py faz hoje')
+    return lines
+
+def confere():
+    """every model built again and the library's files set beside what that makes, nothing written: the files are what this script
+    makes today — no line of an older shape kept from a partial run after the shapes changed (L-2260), each model in its family's pack"""
+    lines = every(); old = read_old(); out, loose = PK.files(LIB, lines, index_text, pack_text, BUDGET)
+    bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k)); fb = PK.confere(JS, LIB, out)
+    for k in bad: print(f'  {k}: ' + ('só nos arquivos' if k not in lines else 'falta nos arquivos' if k not in old else 'outra forma'))
+    for f in fb: print(f'  js/{f}')
+    print(f'movelmesh: {len(lines)} modelos feitos de novo, {len(bad)} diferentes; {len(out)} arquivos, {len(fb)} diferentes')
+    if bad or fb: raise SystemExit('FALHOU: os js/movelmesh*.js não são o que o moveis.py faz hoje — rode VENV/bin/python arte/blender/moveis.py')
+    print('PASSOU: os js/movelmesh*.js são o que o moveis.py faz hoje')
 
 def wanted(args):
     specs = PC.specs()
@@ -127,15 +144,19 @@ def export(args):
         for lod in (0, 1):
             M = build(s, lod); d = encode(M, s); nm = s['nome'] + ('@1' if lod else '')
             lines[nm] = line(nm, d); rep.append((nm, d['t'], len(lines[nm]) / 1024))
-    size = write(lines, PC.alias())
+            if len(lines[nm]) / 1024 > BUDGET['modelo']: raise SystemExit(f"{nm}: {len(lines[nm]) / 1024:.0f} KB (cada modelo ≤ {BUDGET['modelo']} KB)")
+    out, loose = PK.files(LIB, lines, index_text, pack_text, BUDGET); sizes = PK.write(JS, LIB, out)
     for nm, t, kb in rep: print(f'  {nm}: {t} triângulos, {kb:.1f} KB')
-    print(f'movelmesh.js: {len(lines)} modelos, {size / 1024:.0f} KB · {PK.worst()}')
+    for f, sz in sizes.items(): print(f'  js/{f}: {sz / 1024:.0f} KB')
+    if loose: print(f"  (sem família dita no arte/blender/pacotes.py — no pacote 'comum': {', '.join(loose)})")
+    print(f'movelmesh: {len(lines)} modelos em {len(out)} arquivos, {sum(sizes.values()) / 1024:.0f} KB · {PK.worst()}')
 
 def count():
-    old = read_old(); tot = 0
+    old = read_old(); tot = 0; per = {}
     for k in sorted(old):
         m = re.search(r'"t":(\d+)', old[k]); tot += len(old[k]); print(f'{k}: {m.group(1) if m else "?"} triângulos, {len(old[k]) / 1024:.1f} KB')
-    print(f'{len(old)} modelos, {tot / 1024:.0f} KB')
+        fam = PK.familia('movel', PK.KIND.search(old[k]).group(1))[0]; per[fam] = per.get(fam, 0) + len(old[k])
+    print(f'{len(old)} modelos, {tot / 1024:.0f} KB · ' + ', '.join(f'{f} {v / 1024:.0f} KB' for f, v in sorted(per.items())))
 
 # ------------------------------ the pictures (Cycles, on the processor) ------------------------------
 # (each people's colours as the game paints its pieces — js/movel3d.js V.WOOD, V.PAINT, V.CLAY and the palette's walls and stones,

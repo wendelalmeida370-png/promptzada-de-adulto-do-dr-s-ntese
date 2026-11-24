@@ -12,7 +12,7 @@ exports.load = function (o) {
   const three = all.slice(all.indexOf('js/lib/three.min.js'));
   global.atob = global.atob || (s => Buffer.from(s, 'base64').toString('binary'));
   global.performance = global.performance || { now: () => Date.now() };
-  const G = M.load({ qa: o.qa !== false, extra: three.concat(o.extra || []) });
+  const G = M.load({ qa: o.qa !== false, extra: three.concat(o.extra || []), pacotes: o.pacotes }); // (pacotes: false — the libraries' indexes alone: F8)
   global.THREE = window.THREE;
   G.Realm.shapes(); G.Build3D.init(THREE, G.Realm);
   // (the people's meshes in a scene of their own: no renderer, nothing drawn — the instances counted)

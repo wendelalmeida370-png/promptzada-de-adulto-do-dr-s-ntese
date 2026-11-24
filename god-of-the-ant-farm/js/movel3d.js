@@ -4,9 +4,12 @@
 //  2.0, D-650; the front P2 — planos/interiores-2-contrato.md,
 //  D-710 to D-719): the pieces of the plan's catalogue (int-moveis.js)
 //  as Blender shapes, written by arte/blender/moveis.py into
-//  js/movelmesh.js, for each kind, people and size — read back
-//  through G.Mesh3D. Where there is no model, has() says false and
-//  the 3D draws the piece as it did before (Build3D's FURN).
+//  js/movelmesh*.js — an index and its packs, a file a family of
+//  interior, loaded when a piece of it is drawn (the interiors 3,
+//  the front X: D-1020 to D-1022) —, for each kind, people and size,
+//  read back through G.Mesh3D. Where there is no model — or its pack
+//  is not in yet —, has() says false and the 3D draws the piece as
+//  it did before (Build3D's FURN).
 //  A model fits the plan's piece: the nearest of its kind for the
 //  piece's people (or the people whose model it borrows:
 //  G.MOVEIS.alias), turned a quarter when the piece lies the other
@@ -31,8 +34,65 @@
   // the parts a model is made of, in the order the file keeps them (arte/blender/moveis_pecas.py)
   V.PARTS = ['madeira', 'madeira2', 'pintura', 'ferro', 'bronze', 'pano', 'pano2', 'couro', 'palha', 'barro', 'pedra', 'reboco', 'liquido', 'brasa'];
 
+  // ------------------------------ the packs: the libraries in files by family, loaded when needed (F8 — D-1020, D-1022) ------------------------------
+  // Two libraries, each an index the page loads — js/movelmesh.js (G.MOVEIS: the furniture, with its base: the models the shell and the
+  // street draw at first sight, there already) and js/decomesh.js (G.DECO: the decoration) — saying which pack holds each kind (of): a
+  // family of interior's file (packs: js/movelmesh-<família>.js, js/decomesh-<família>.js; arte/blender/pacotes.py says the families),
+  // never loaded by index.html. A pack is asked for when a piece of its family is drawn (pick here, the decoration's MESH in the
+  // dentro3d.js) or by anyone who knows it will be (want); its file by a script tag, in the background, one at a time (the game opens
+  // from the disk: a fetch would be refused) — the early ones (every inside's: cedo in the index) a few seconds after the page opens.
+  // Until a pack comes its pieces are drawn as before — the boxes of the FURN, the inside without those things —; when it comes, the
+  // look of every building says so (V.gen, in its signature) and the insides open are drawn again by themselves. A file that does not
+  // come is a failure where every module's is (G.modErr), asked again only a while later. Only seen: nothing of the world read or written
+  const LIBS = { movel: () => G.MOVEIS, deco: () => G.DECO };
+  const inn = () => (G.PACOTES = G.PACOTES || {}); // (lib:família → its models in: each pack's own file writes it, as it runs)
+  V.RETRY = 30000; // (a pack whose file did not come is asked again no sooner than this, in ms of the page)
+  const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : 0);
+  let GEN = 0, busy = null; const asked = new Map(), queue = [];
+  V.gen = () => GEN; // (how many packs came: the look's signature carries it, so what is drawn of an inside is made again when one comes)
+  // the family a kind's models are in, by the library's index (lib: 'movel' | 'deco'); null for a kind with no model
+  V.familyOf = (lib, kind) => { const P = LIBS[lib] && LIBS[lib](); return (P && P.of && P.of[kind]) || null; };
+  // is a pack in (the base always is: it came with the index)
+  V.ready = (lib, fam) => !fam || fam === 'base' || !!inn()[lib + ':' + fam];
+  // ask for a pack — lib 'movel' or 'deco', a family of its index —: true when it is in; else its file is asked for (once; again after
+  // V.RETRY where it failed) and false until it comes
+  V.pacote = function (lib, fam) {
+    if (V.ready(lib, fam)) return true; const P = LIBS[lib] && LIBS[lib](); if (!P || !P.packs || !P.packs[fam]) return false;
+    const k = lib + ':' + fam, t = asked.get(k); if (t !== undefined && (t === 0 || now() - t < V.RETRY)) return false;
+    asked.set(k, 0); queue.push(k); pump(); return V.ready(lib, fam);
+  };
+  V.want = fam => V.pacote('movel', fam); // (the furniture's packs; the decoration's: G.Dentro3D.want)
+  // (a pack's own file, as it runs: its models are in — G.PACOTES says so —, and every look is another now)
+  V.got = function (lib, fam) { asked.delete(lib + ':' + fam); GEN++; };
+  // how a pack's file is fetched: a script tag in the page's head (done(ok) when it ran or failed); the proofs in Node give their own
+  V.fetch = function (file, done) {
+    const doc = typeof document !== 'undefined' ? document : null; if (!doc || typeof doc.createElement !== 'function' || !doc.head) { done(false); return; }
+    const s = doc.createElement('script'); s.async = true; s.src = file;
+    s.onload = () => { s.remove(); done(true); }; s.onerror = () => { s.remove(); done(false); }; doc.head.appendChild(s);
+  };
+  // (one file at a time: the next asked once the last has run)
+  function pump() {
+    while (!busy && queue.length) {
+      const k = queue.shift(); const [lib, fam] = k.split(':'); if (V.ready(lib, fam)) { asked.delete(k); continue; }
+      const P = LIBS[lib](); const f = P && P.packs && P.packs[fam] && P.packs[fam].f; if (!f) { asked.delete(k); continue; }
+      busy = k;
+      V.fetch(f, ran => { busy = null; if (!V.ready(lib, fam)) fail(k, f, ran ? 'o arquivo não trouxe o pacote' : 'o arquivo não abriu'); pump(); });
+    }
+  }
+  function fail(k, f, why) { asked.set(k, now() || 1); G.modErr = G.modErr || {}; G.modErr.Pacotes = (G.modErr.Pacotes || 0) + 1; console.error('[Pacotes]', k, why + ':', f); }
+  // (for the proofs and the developer: each library's packs — in, asked, failed —, the queue, how many came)
+  V.packs = () => { const out = { gen: GEN, busy, queue: queue.slice() };
+    for (const lib in LIBS) { const P = LIBS[lib](); const o = out[lib] = {}; if (P && P.packs) for (const fam of Object.keys(P.packs)) { const t = asked.get(lib + ':' + fam); o[fam] = V.ready(lib, fam) ? 'in' : t === undefined ? '-' : t === 0 ? 'pedido' : 'falhou'; } }
+    return out; };
+  // (every pack of both libraries asked for — the photos before and after, a world opened for all of them; and the early ones a few
+  // seconds after the page opens: every inside's, cedo in the index — the decoration's, its own loader asks: G.Dentro3D)
+  V.wantAll = () => { let all = true; for (const lib in LIBS) { const P = LIBS[lib](); if (P && P.packs) for (const fam of Object.keys(P.packs)) all = V.pacote(lib, fam) && all; } return all; };
+  V.early = lib => { const P = LIBS[lib] && LIBS[lib](); if (P && P.packs) for (const fam of Object.keys(P.packs)) if (P.packs[fam].cedo) V.pacote(lib, fam); };
+  if (typeof setTimeout === 'function') setTimeout(() => V.early('movel'), 2500);
+
   // ------------------------------ the models of the file ------------------------------
-  // (kind → the people's tag — 'romano', 'romano~rico' — → its models, by size; made once, from what the file holds)
+  // (kind → the people's tag — 'romano', 'romano~rico' — → its models, by size; made once, from what the files hold — the index's
+  // base and the packs in)
   let IDX = null, IDXN = -1;
   function index() {
     const M = G.MESH3D || {}; const names = Object.keys(M);
@@ -55,6 +115,7 @@
   // the model that fits a piece of the plan — { name, lod1, e, rot (a quarter turn: the model's width along the piece's depth),
   // sx, sy, sz (its stretch, in the model's own axes) } — or null. vr: the rich house's ('rico'), if its people has one
   V.pick = function (kind, civ, w, d, h, vr) {
+    if (!V.pacote('movel', V.familyOf('movel', kind))) return null; // (its pack not in yet: asked for; the piece drawn as before till it comes)
     const t = tagOf(kind, civ, vr); if (!t) return null; const L = index()[kind][t]; let best = null, bs = 1e9;
     const lo = V.FIT[0], hi = V.FIT[1];
     for (const e of L) for (const rot of [0, 1]) {
@@ -125,7 +186,8 @@
     const L = f && f.eco && f.eco.last; const w = L && L.veste; const weave = w && typeof w === 'object' ? w.tear > 0 || w.pano >= 1 : true;
     const r = V.rico(b);
     const out = { civ, metal, bronze: ok('bronze'), couro: ok('couro'), barro: ok('barro'), weave, rico: r, id: b.id | 0 };
-    out.sig = [civ, metal || '-', out.bronze ? 1 : 0, out.couro ? 1 : 0, out.barro ? 1 : 0, weave ? 1 : 0, r].join('|');
+    // (and the packs come so far: one more in, and what is drawn of an inside is made again — its pieces by their models, D-1022)
+    out.sig = [civ, metal || '-', out.bronze ? 1 : 0, out.couro ? 1 : 0, out.barro ? 1 : 0, weave ? 1 : 0, r, 'p' + GEN].join('|');
     return out;
   };
   // (a number of the piece, the same at every look: its building and its own key — the wood's tone, the paint's choice)

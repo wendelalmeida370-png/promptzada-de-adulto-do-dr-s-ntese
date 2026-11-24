@@ -33,8 +33,17 @@
   const FLOOR_UP = 0.012; // (the floor a hair over the plinth's top — Build3D's: what stands on it stands on that)
   // (a thing's model: the dishes and the drinks by their own names — 'comida-<prato>', 'bebida-<bebida>', D-748 —, the rest 'deco-<coisa>')
   const NAME = k => (k.startsWith('comida-') || k.startsWith('bebida-') ? k : 'deco-' + k);
-  const MESH = k => (G.MESH3D ? G.MESH3D[NAME(k)] : null);
+  // ---- the models of the things, in packs by family (the front X: F8, D-1020, D-1022): the index — js/decomesh.js, G.DECO.of — says
+  // which pack holds each; a thing whose pack is not in yet is not there (the inside drawn without it), its pack asked for by the
+  // loader of the furniture's (G.Movel3D.pacote), and when it comes the look's signature tells and the inside is drawn again
+  const MESH = k => { const m = G.MESH3D ? G.MESH3D[NAME(k)] : null; if (m || !G.DECO || !G.DECO.of || !G.Movel3D || !G.Movel3D.pacote) return m || null;
+    G.Movel3D.pacote('deco', G.DECO.of[k]); return null; };
   D.has = k => !!MESH(k);
+  // ask for a pack of the things — a family of the index —: true when it is in; and is it in
+  D.want = fam => !!(G.Movel3D && G.Movel3D.pacote && G.Movel3D.pacote('deco', fam));
+  D.ready = fam => !!(G.Movel3D && G.Movel3D.ready && G.Movel3D.ready('deco', fam));
+  // (the early ones — every inside's: cedo in the index — a few seconds after the page opens)
+  if (typeof setTimeout === 'function') setTimeout(() => { if (G.Movel3D && G.Movel3D.early) G.Movel3D.early('deco'); }, 2500);
   // (a number of the building, the same at every look: which of the true ways)
   const hv = (b, k) => G.hash(Math.imul((b.id | 0) + 101, 7919) + (k | 0) * 131 + 17);
   const r3 = x => Math.round(x * 1000) / 1000;
