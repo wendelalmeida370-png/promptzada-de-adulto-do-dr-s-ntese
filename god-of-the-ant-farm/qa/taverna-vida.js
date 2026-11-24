@@ -46,7 +46,7 @@ const OWN = ['pedir_taverna', 'sem_servico', 'sem_dinheiro', 'rodada_mesa', 'gor
     if (Bo) for (const r of Bo.list()) { const how = Bo.sabe(v, r); if (how && Bo.frase(r, Bo.deQuem(v, r), how) === txt) { why = 'boato'; break; } }
     if (!why) for (const [k, L] of TALK) if (L.some(re => re.test(txt))) { why = k; break; }
     if (!why) for (const [k, L] of OWN) if (L.some(re => re.test(txt))) { why = 'taverna:' + k; break; }
-    said.push({ id: v.id, txt, why, drunk: v.drunk > S().clock }); }
+    said.push({ id: v.id, txt, why, drunk: !!(G.Ebrio && G.Ebrio.alegre(v)) }); }
   return say0.apply(this, arguments); }; }
 const SEATK = { banquinho: 1, banco: 1, cadeira: 1 };
 // (a place's key — the piece and its place —, and the errand's phase: a place that changes with the same phase is a push)
@@ -237,7 +237,7 @@ if (SNAP) {
   if (!pick) ok('v8 a expulsão', false, 'nenhuma mesa com dois para brigar');
   else {
     const { b, a, o, brave } = pick; const A1 = S().villagers.get(a), O1 = S().villagers.get(o); const k = T.keeperOf(b);
-    god(() => { A1.drunk = S().clock + 80; A1.drinks = 3; O1.drunk = S().clock + 80; T.briga(A1, O1); });
+    god(() => { G.Ebrio.prova(A1, G.Ebrio.limiar(A1, 'bebado') + 0.1); A1.drinks = 3; G.Ebrio.prova(O1, G.Ebrio.limiar(O1, 'bebado') + 0.1); T.briga(A1, O1); });
     let blood = false, outT = 0; const t0 = S().clock;
     while (S().clock - t0 < 30) { M.viver(0.25); const op = T.dia(b); if (!op) break; if (op.data.briga) blood = true; if (!op.data.mesa[a] && !outT) outT = S().clock; if (outT && S().clock - outT > 4) break; watch(bad); }
     const op = T.dia(b); const back = !!op && !!op.data.mesa[a]; const n = op ? (op.data.atos && op.data.atos.expulsar ? op.data.atos.expulsar.briga : 0) : 0;
