@@ -180,7 +180,7 @@
     // (the room's box the eye keeps to — the plan's room the body is in, else inside the shell's walls —, and the ceiling of the slab
     // over the storey, where there is one: as the eye's own solid has it, planSolid)
     const sh = p.shell; const t = sh.t || 0.3; const box = rm ? rm.r : (was && was.b === b && was.rm) ? was.rm : sh.kind === 'round' ? [sh.cx - sh.r + t, sh.cz - sh.r + t, sh.cx + sh.r - t, sh.cz + sh.r - t] : sh.r ? [sh.r[0] + t, sh.r[1] + t, sh.r[2] - t, sh.r[3] - t] : [0, 0, b.w * L, b.h * L];
-    // (and over the hole of that slab — the hatch a flight comes up through, an open height —, the storey over it: its own slab
+    // (and over the hatch of that slab — the hole a flight comes up through; an open height keeps the slab's, its gallery round it —, the storey over it: its own slab
     // over, or its height — the body on the flight had its head over the slab, and the eye was inside its own pivot)
     const up2 = up && p.levels.filter(q => q.y > up.y + 0.05).sort((a, c) => a.y - c.y)[0];
     return { b, p, lv: inn.lv, y0, fy: Math.min(y0 + l.y, body.Y), fc: y0 + Math.max(l.y + 1.9, top), ceilUp: up ? y0 + up.y - (up.slab || 0.2) - 0.02 : null, lyMin: y0 + l.y + 1.9,
@@ -203,7 +203,7 @@
     if (sh.kind === 'round') { const dx = x - sh.cx, dz = z - sh.cz, d = Math.hypot(dx, dz), m = sh.r - 0.01; if (d > m) { x = sh.cx + dx * m / d; z = sh.cz + dz * m / d; } }
     else if (sh.r) { x = G.clamp(x, sh.r[0] + 0.01, sh.r[2] - 0.01); z = G.clamp(z, sh.r[1] + 0.01, sh.r[3] - 0.01); }
     if (o.ceilUp !== null) { const c = G.Space.cellIn(p, o.upLv, x, z), C = G.Interiors.CELL;
-      if (noHole || (c !== C.HATCH && c !== C.VOID)) return Math.max(o.lyMin, o.ceilUp);
+      if (noHole || c !== C.HATCH) return Math.max(o.lyMin, o.ceilUp); // (an open height under a gallery: the eye over the gallery's floor had its slab between it and the body, L-1872)
       return Math.max(o.upMin, o.upTop !== null ? o.upTop : o.y0 + roofIn(p, x, z) - 0.3); } // (over the slab's hole)
     return Math.max(o.fc, o.y0 + roofIn(p, x, z) - 0.3);
   }
@@ -394,8 +394,20 @@
   // inside the room. Build3D.insideTick puts them first in its list (the town's material and the inside's give way there); the
   // furniture by the body and beyond it is never in them
   C3.CUT_MAX = 6; C3.CUT_NEAR = 0.45; C3.CUT_W = 0.75; C3.CUT_SPAN = 1.3; // (metres: the shell's wall cut so far each way of the eye)
-  const NONE = []; let cuts = NONE;
+  const NONE = []; let cuts = NONE, keeps = NONE;
   C3.cutBoxes = () => cuts;
+  // (the pieces the body sits on and uses — the one it is seated on, and every piece of its storey a stride from it: the stool, the
+  // table at it, the bench —, as boxes over their tops by a hand and a little more for what stands on them: the furniture's and the
+  // decoration's material is never cut by the eye, and in its boxes these never go into the weave either — L-1872, Build3D's M3FADE)
+  C3.KEEP_NEAR = 0.6; C3.keepBoxes = () => keeps;
+  function keepFor(o, body) {
+    const p = o.p, l = p.levels.find(q => q.lv === o.lv) || { y: 0 }, y = o.y0 + l.y, x = body.X - o.X0, z = body.Z - o.Z0;
+    const sn = G.Avatar && G.Avatar.seatNow ? G.Avatar.seatNow() : null; const on = sn && sn.b === o.b.id ? sn.it : null; const out = [];
+    for (const it of p.items) { if ((it.lv || 0) !== (o.lv || 0) || !it.r) continue; const r = it.r;
+      const d = Math.hypot(Math.max(r[0] - x, 0, x - r[2]), Math.max(r[1] - z, 0, z - r[3])); if (it.id !== on && d > C3.KEEP_NEAR) continue;
+      out.push({ d: it.id === on ? -1 : d, c: [o.X0 + r[0] - 0.05, y - 0.05, o.Z0 + r[1] - 0.05, o.X0 + r[2] + 0.05, y + (it.h || 1) + 0.35, o.Z0 + r[3] + 0.05] }); }
+    return out.sort((a, c) => a.d - c.d).slice(0, 4).map(q => q.c);
+  }
   C3.cutBox = () => (cuts.length ? cuts[0] : null); // (the contract's port: the first — the line from the eye to the body —, or null)
   C3.inCut = (X, Y, Z) => cuts.some(c => X > c[0] && Y > c[1] && Z > c[2] && X < c[3] && Y < c[4] && Z < c[5]);
   function cutFor(o, P, body, piv) {
@@ -403,7 +415,8 @@
     // body and where the eye came into the room, the box's nearest point)
     const nb = [G.clamp(P.X, o.X0 + o.box[0], o.X0 + o.box[2]), G.clamp(P.Z, o.Z0 + o.box[1], o.Z0 + o.box[3])]; const dc = (X, Z) => ceilAt(o, X, Z) + (o.ceilUp !== null ? 0.02 : 0.3);
     const out = []; const pad = 0.3; const y0 = o.fy + 0.02, top = Math.min(Math.max(P.Y, piv.Y) + 0.3, Math.min(dc(piv.X, piv.Z), dc(nb[0], nb[1])) - 0.03 + allowV); const lot = [o.X0 - pad, o.Z0 - pad, o.X1 + pad, o.Z1 + pad];
-    const push = c => { if (out.length >= C3.CUT_MAX) return; c[0] = Math.max(c[0], lot[0]); c[2] = Math.max(c[2], lot[1]); c[3] = Math.min(c[3], lot[2]); c[5] = Math.min(c[5], lot[3]); if (c[0] < c[3] - 0.01 && c[2] < c[5] - 0.01 && c[1] < c[4]) out.push(c); };
+    // (each box in the lot, and under the ceiling drawn over all of it: its corners' and its middle's)
+    const push = c => { if (out.length >= C3.CUT_MAX) return; c[0] = Math.max(c[0], lot[0]); c[2] = Math.max(c[2], lot[1]); c[3] = Math.min(c[3], lot[2]); c[5] = Math.min(c[5], lot[3]); c[4] = Math.min(c[4], Math.min(dc(c[0], c[2]), dc(c[3], c[2]), dc(c[0], c[5]), dc(c[3], c[5]), dc((c[0] + c[3]) / 2, (c[2] + c[5]) / 2)) - 0.03 + allowV); if (c[0] < c[3] - 0.01 && c[2] < c[5] - 0.01 && c[1] < c[4]) out.push(c); };
     // (a rectangle's sides that face the eye — the eye past its inner face —: a slab from the wall's outer face — out — to a hair
     // inside the inner one; along the side, only so far each way of the eye (sp: C3.CUT_SPAN) — the shell's wall cut whole
     // along a side the eye grazed showed the street beside a body walked along it)
@@ -443,7 +456,7 @@
   // building of the other body, metres away, for a minute: the photos of the house#3582)
   function freshIn() { eb = null; kept = null; room = null; vistaOn = false; vistaK = 0; vistaMemo = null; allowH = allowV = 0; boxKey = ''; poCap = 2; lastOk = false; }
   let lastOk = false;
-  G.worldHooks.push(() => { freshIn(); inK = 0; fade = 0; });
+  G.worldHooks.push(() => { freshIn(); inK = 0; fade = 0; cuts = keeps = NONE; });
   // every frame: follow the body, keep clear of the world, place the camera
   C3.update = function (rdt, body, cam) {
     clock += rdt; let inn = G.Avatar && G.Avatar.indoors ? G.Avatar.indoors() : null;
@@ -582,7 +595,7 @@
       P.X = G.lerp(P.X, vp.E[0], vistaK); P.Y = G.lerp(P.Y, vp.E[1], vistaK); P.Z = G.lerp(P.Z, vp.E[2], vistaK); cam.position.set(P.X, P.Y, P.Z); cam.fov = G.lerp(fovNow, vp.fov, vistaK); cam.updateProjectionMatrix(); }
     cam.lookAt(aim[0], aim[1], aim[2]);
     // (the cut of the fourth wall, and the body in a weave when the eye is at its head)
-    cuts = eb ? cutFor(eb, P, body, piv) : NONE;
+    cuts = eb ? cutFor(eb, P, body, piv) : NONE; keeps = eb && eb !== kept ? keepFor(eb, body) : NONE;
     { const dH = Math.hypot(P.X - piv.X, P.Y - piv.Y, P.Z - piv.Z); fade = G.clamp((C3.FADE_NEAR - dH) / C3.FADE_SPAN, 0, 1); }
     C3.last = { pos: [P.X, P.Y, P.Z], at: aim, fov: cam.fov, cur: C3.cur, sh: shD, piv: [piv.X, piv.Y, piv.Z], body: [body.X, body.Y, body.Z] }; lastOk = true;
   };

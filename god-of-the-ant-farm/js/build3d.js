@@ -38,7 +38,8 @@
     THREE = three; R3 = realm; SH = realm.SH; glass = new THREE.MeshLambertMaterial({ color: WIN_DARK, emissive: 0xffb860, emissiveIntensity: 0 });
     PM = new THREE.Matrix4(); IDM = new THREE.Matrix4(); // (a slanted box's frame, and the frame of the sheets already in place)
     for (let k = 0; k < CUT_N; k++) { CUTU.a.value.push(new THREE.Vector3()); CUTU.b.value.push(new THREE.Vector3()); }
-    for (let k = 0; k < EYE_N; k++) { EYEU.a.value.push(new THREE.Vector3()); EYEU.b.value.push(new THREE.Vector3()); } CUTU.lo.value = new THREE.Vector3(); CUTU.hi.value = new THREE.Vector3();
+    for (let k = 0; k < EYE_N; k++) { EYEU.a.value.push(new THREE.Vector3()); EYEU.b.value.push(new THREE.Vector3()); }
+    for (let k = 0; k < KEEP_N; k++) { KEEPU.a.value.push(new THREE.Vector3()); KEEPU.b.value.push(new THREE.Vector3()); } CUTU.lo.value = new THREE.Vector3(); CUTU.hi.value = new THREE.Vector3();
     for (let k = 0; k < 4; k++) { SUNKU.a.value.push(new THREE.Vector3()); SUNKU.b.value.push(new THREE.Vector3()); }
     // (a timber's end out of a gable: eight sides, its end chamfered — a purlin, a peg; open at its foot, in the wall)
     PEG = new THREE.LatheGeometry([[0.5, 0], [0.5, 0.88], [0.4, 1], [0, 1]].map(([r, y]) => new THREE.Vector2(r, y)), 8);
@@ -389,8 +390,17 @@ float m3scale(float p) {
   // (and the eye's own box — the front P4's quarta parede, G.Cam3D.cutBox, given by B3.eyeBox —: the inside's material gives way in it
   // too, so the wall behind the body is not drawn between the eye and the room: M3EYE, the inside's only — the town's own cut holds the
   // doors of the outside, the inside keeps its reveals and its leaves there)
+  // (the furniture and the decoration — M3FADE, their own material: never cut by the eye, L-1872 —: in the eye's boxes a weave of
+  // holes, the screen's noise under 0,6, the same pixels from frame to frame; never in the boxes of the pieces the body sits on and
+  // uses — Cam3D.keepBoxes: the stool, the table at it and what stands on it)
+  const KEEP_N = 4;
   const EYEFRAG = `#ifdef M3EYE
   for (int i = 0; i < ${EYE_N}; i++) { if (i >= uEyeN) break; vec3 ea = uEyeA[i], eb = uEyeB[i]; if (vPP.x > ea.x && vPP.y > ea.y && vPP.z > ea.z && vPP.x < eb.x && vPP.y < eb.y && vPP.z < eb.z) discard; }
+  #endif
+  #ifdef M3FADE
+  { bool fIn = false; for (int i = 0; i < ${EYE_N}; i++) { if (i >= uEyeN) break; vec3 ea = uEyeA[i], eb = uEyeB[i]; if (vPP.x > ea.x && vPP.y > ea.y && vPP.z > ea.z && vPP.x < eb.x && vPP.y < eb.y && vPP.z < eb.z) { fIn = true; break; } }
+    if (fIn) { bool fKeep = false; for (int j = 0; j < ${KEEP_N}; j++) { if (j >= uKeepN) break; vec3 ka = uKeepA[j], kb = uKeepB[j]; if (vPP.x > ka.x && vPP.y > ka.y && vPP.z > ka.z && vPP.x < kb.x && vPP.y < kb.y && vPP.z < kb.z) { fKeep = true; break; } }
+      if (!fKeep && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) < 0.6) discard; } }
   #endif
   `;
   const CUTFRAG = `#ifdef M3CUT
@@ -403,7 +413,7 @@ float m3scale(float p) {
     mat.onBeforeCompile = sh => {
       sh.uniforms.uDet = { value: G.Ground3D.detail() }; Object.assign(sh.uniforms, G.Ground3D.U3());
       if (G.Agua3D && mat === (G.Realm.mats && G.Realm.mats().solid)) { Object.assign(sh.uniforms, G.Agua3D.wetU()); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + G.Agua3D.solidGLSL()).replace('#include <opaque_fragment>', 'outgoingLight += gAgSheen;\n#include <opaque_fragment>'); } // (21c: the rain wets the roofs and the walls out of doors)
-      Object.assign(sh.uniforms, { uCutA: CUTU.a, uCutB: CUTU.b, uCutN: CUTU.n, uCutLo: CUTU.lo, uCutHi: CUTU.hi, uEyeA: EYEU.a, uEyeB: EYEU.b, uEyeN: EYEU.n });
+      Object.assign(sh.uniforms, { uCutA: CUTU.a, uCutB: CUTU.b, uCutN: CUTU.n, uCutLo: CUTU.lo, uCutHi: CUTU.hi, uEyeA: EYEU.a, uEyeB: EYEU.b, uEyeN: EYEU.n, uKeepA: KEEPU.a, uKeepB: KEEPU.b, uKeepN: KEEPU.n });
       // (the world's place of a point — a piece drawn as one of many, the furniture of an inside (Movel3D, D-712): its own frame first,
       // then the object's; its normal through the instance as three's own normal is, the stretch undone —, and with M3UV its own
       // coordinates in metres, so a piece's grain runs along it: the leg of a table, the board of a bench, D-709)
@@ -427,7 +437,7 @@ float m3scale(float p) {
  #endif
 `);
       if (G.Ground3D.hiU) Object.assign(sh.uniforms, G.Ground3D.hiU());
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n#ifdef M3HI\nvarying vec2 vM3hu; flat varying float vM3hi;\n#endif\n#ifdef M3CUT\nuniform vec3 uCutA[' + CUT_N + ']; uniform vec3 uCutB[' + CUT_N + ']; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n#ifdef M3EYE\nuniform vec3 uEyeA[' + EYE_N + ']; uniform vec3 uEyeB[' + EYE_N + ']; uniform int uEyeN;\n#endif\n' + [G.Ground3D.texGLSL(), PFRAG, G.Ground3D.hiGLSL ? G.Ground3D.hiGLSL(PAT) : ''].join('\n'))
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n#ifdef M3UV\nvarying vec2 vM3uv;\n#endif\n#ifdef M3HI\nvarying vec2 vM3hu; flat varying float vM3hi;\n#endif\n#ifdef M3CUT\nuniform vec3 uCutA[' + CUT_N + ']; uniform vec3 uCutB[' + CUT_N + ']; uniform int uCutN; uniform vec3 uCutLo; uniform vec3 uCutHi;\n#endif\n#if defined(M3EYE) || defined(M3FADE)\nuniform vec3 uEyeA[' + EYE_N + ']; uniform vec3 uEyeB[' + EYE_N + ']; uniform int uEyeN;\n#endif\n#ifdef M3FADE\nuniform vec3 uKeepA[' + KEEP_N + ']; uniform vec3 uKeepB[' + KEEP_N + ']; uniform int uKeepN;\n#endif\n' + [G.Ground3D.texGLSL(), PFRAG, G.Ground3D.hiGLSL ? G.Ground3D.hiGLSL(PAT) : ''].join('\n'))
         .replace('#include <clipping_planes_fragment>', CUTFRAG + EYEFRAG + '#include <clipping_planes_fragment>').replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         float pp = floor(vPat + 0.5);
         #ifdef M3SPEC
@@ -5038,6 +5048,7 @@ float m3scale(float p) {
   const OPEN_R = 8, CLOSE_R = 12, OPEN_MAX = 3, CUT_MAX = CUT_N;
   let opened = new Map(); const CUTU = { a: { value: [] }, b: { value: [] }, n: { value: 0 }, lo: { value: null }, hi: { value: null } };
   const EYEU = B3.eyeU = { a: { value: [] }, b: { value: [] }, n: { value: 0 } }; let eyeWant = null;
+  const KEEPU = B3.keepU = { a: { value: [] }, b: { value: [] }, n: { value: 0 } }; // (the pieces the body uses: never in the weave — M3FADE)
   // the eye's box (the front P4's: G.Cam3D.cutBox() — [x0, y0, z0, x1, y1, z1] in the world, or null): the town's solid and the inside's
   // give way in it, the next frame and every frame until it is given again (D-708)
   B3.eyeBox = box => { eyeWant = box && box.length === 6 && box.every(Number.isFinite) ? box.slice() : null; };
@@ -5049,7 +5060,7 @@ float m3scale(float p) {
   B3.insideGroups = () => [...opened.values()].map(o => o.grp).filter(g => g.parent); // (the insides drawn: the flames' lights' pictures of the shadows take only them, D-707)
   // (for the tests: what is drawn open — its leaves' and lids' turns, its cuts)
   B3.opened = () => [...opened.values()].map(o => ({ id: o.b.id, leaves: o.leaves.map(l => +l.cur.toFixed(2)), lids: o.lids.map(l => +l.cur.toFixed(2)), cuts: o.cuts.length, people: o.people || 0, open: o.open ? [...o.open] : [], src: (o.src || []).length }));
-  B3.insideClear = function () { for (const o of opened.values()) dropOpen(o); opened = new Map(); CUTU.n.value = 0; SUNKU.n.value = 0; EYEU.n.value = 0; B3.flames.length = 0; placeMemo.clear(); };
+  B3.insideClear = function () { for (const o of opened.values()) dropOpen(o); opened = new Map(); CUTU.n.value = 0; SUNKU.n.value = 0; EYEU.n.value = 0; KEEPU.n.value = 0; B3.flames.length = 0; placeMemo.clear(); };
   B3.insideTick = function (rdt, focus) {
     if (!THREE || !focus || !R3.scene || !R3.mats().inner || !G.Space.plan) return;
     const S = G.S, L = TL(); const v0 = G.Possess && G.Possess.body && G.Possess.body();
@@ -5085,6 +5096,8 @@ float m3scale(float p) {
     if (G.Modes && G.Modes.inc && G.Modes.inc() && G.Cam3D && G.Cam3D.cutBoxes) for (const c of G.Cam3D.cutBoxes()) if (eyes.length < EYE_N) eyes.push(c);
     if (eyeWant && eyes.length < EYE_N) eyes.push(eyeWant);
     eyes.forEach((c, k) => { boxes.push(c); EYEU.a.value[k].set(c[0], c[1], c[2]); EYEU.b.value[k].set(c[3], c[4], c[5]); }); EYEU.n.value = eyes.length;
+    { const ks = G.Modes && G.Modes.inc && G.Modes.inc() && G.Cam3D && G.Cam3D.keepBoxes ? G.Cam3D.keepBoxes() : []; let n = 0; // (the pieces the body uses: whole in the weave)
+      for (const c of ks) { if (n >= KEEP_N) break; KEEPU.a.value[n].set(c[0], c[1], c[2]); KEEPU.b.value[n].set(c[3], c[4], c[5]); n++; } KEEPU.n.value = n; }
     // (the one the body is in first: its cut is never the one left out)
     for (const o of [...opened.values()].sort((a, c) => (c.b.id === (inB && inB.id)) - (a.b.id === (inB && inB.id)))) { stepOpen(o, rdt, focus); if (G.Dentro3D && G.Dentro3D.step) G.Dentro3D.step(o); for (const c of o.cuts) if (boxes.length < CUT_MAX) boxes.push(c);
       for (const c of o.sunk) if (ns < 4) { SUNKU.a.value[ns].set(c[0], c[1], c[2]); SUNKU.b.value[ns].set(c[3], c[4], c[5]); ns++; } }
@@ -5101,7 +5114,10 @@ float m3scale(float p) {
   B3.fillSig = b => fillSig(B3.fillOf(b));
   function makeOpen(b, p) {
     // (the shell this frame — the floors, the walls, the stairs, the roof, the leaves —, the furniture in another: makeItems, D-708)
-    const q = R3.Q(); const MI = q.shine && R3.mats().innerHi ? R3.mats().innerHi : R3.mats().inner; const out = B3.interior(p, b, { fine: q.detail ? undefined : false, part: 'shell' }); if (!out) return null;
+    // (the shell in the inside's material — cut by the eye, M3EYE —; the furniture and the decoration in their own, never cut — o.MI:
+    // the makeItems', the Dentro3D's —, L-1872)
+    const q = R3.Q(); const MI = q.shine && R3.mats().innerHi ? R3.mats().innerHi : R3.mats().inner; const MF = q.shine && R3.mats().innerFHi ? R3.mats().innerFHi : R3.mats().innerF || MI;
+    const out = B3.interior(p, b, { fine: q.detail ? undefined : false, part: 'shell' }); if (!out) return null;
     const grp = new THREE.Group(); grp.matrixAutoUpdate = false; const geos = [];
     // (its meshes cast the shadows of the flames' lights inside — on the insides' own layer, G.Luz3D.LAYER, which only those lights'
     // pictures read — and the sun's through its windows: D-707)
@@ -5115,7 +5131,7 @@ float m3scale(float p) {
     // (the floors under the street — a sunken one, a cellar: the ground over them given way, from their floor to the plinth's top)
     const L = TL(), X0 = b.x * L, Z0 = b.y * L, Y0 = G.Space.plinth(b).y0; const sunk = [];
     for (const l of p.levels) if (l.y < -0.05 && l.area) sunk.push([X0 + l.area[0] + 0.02, Y0 + l.y - 0.1, Z0 + l.area[1] + 0.02, X0 + l.area[2] - 0.02, Y0 - 0.01, Z0 + l.area[3] - 0.02]);
-    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: null, fillT: G.S.clock, items: null, itemsDue: true, MI, shade, lod: -1, look: null };
+    return { b, p, out, grp, geos, leaves, lids, cuts: B3.cuts(b, B3.shellOf(b)), sunk, homeT: -1, home: false, fill: null, fillT: G.S.clock, items: null, itemsDue: true, MI: MF, MS: MI, shade, lod: -1, look: null };
   }
   // the furniture of an inside open — in a frame of its own after its shell, and made again alone when what its keeping pieces hold,
   // what it is made of or the level it is wanted at changes (the old one drawn until the new one is in: D-708, D-712)

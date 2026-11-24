@@ -2084,6 +2084,20 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   const blk = a < 0 || b < a ? '' : lic.slice(a, b); if (!blk) fails.push('toda fotografia com a sua licença: o arte/LICENCAS.md sem as marcas do tex_alta (D-771)');
   for (const x of mats) if (x.src) { const line = blk.split('\n').find(l => l.includes(`polyhaven.com/a/${x.src} `) && l.includes(`\`${x.n}\``));
     if (!line || !/\*\*CC0\*\*/.test(line) || !/dl\.polyhaven\.org\/file\/ph-assets\/Textures\/jpg\/2k\//.test(line)) fails.push(`toda fotografia com a sua licença: a textura ${x.src} (o material ${x.n}) sem a sua linha no arte/LICENCAS.md — nome, endereço, autor, arquivos, CC0 (D-771)`); } }
+// 289. "o corte do olho é só da casca" (L-1872): o corte do olho (as caixas do C3.cutBoxes, M3EYE) tira só a casca do prédio do
+// corpo — as paredes, os tetos, o telhado, as folhas das portas: o material de dentro (MAT.inner, MAT.innerHi) —; os móveis e a
+// decoração desenham-se num material próprio (MAT.innerF, MAT.innerFHi, o o.MI do makeItems e do Dentro3D), sem o M3EYE: nas caixas do
+// olho ficam em trama (M3FADE), nunca somem, e a peça em que o corpo senta e a que ele usa nem em trama ficam (C3.keepBoxes). As
+// pessoas são do Body3D. O corte da linha do olho apagava a mesa e os banquinhos em que o corpo estava sentado (o dono, à noite, numa
+// taverna asteca)
+{ const r3 = (src['realm3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/defines\.M3EYE\s*=/.test(c) && !(f === 'realm3d.js' && /for \(const m of \[MAT\.inner, MAT\.innerHi\]\) if \(m\) m\.defines\.M3EYE = 1;/.test(c))) fails.push(`o corte do olho é só da casca (L-1872): ${f}:${k + 1} põe o corte do olho num material que não é o da casca: ${l.trim().slice(0, 100)}`); });
+  if (!/for \(const m of \[MAT\.innerF, MAT\.innerFHi\]\) if \(m\) m\.defines\.M3FADE = 1;/.test(r3)) fails.push('o corte do olho é só da casca (L-1872): o material dos móveis e da decoração sem a trama (M3FADE)');
+  const i = b3.indexOf('function makeOpen('), j = b3.indexOf('function instGroups(', i); const f = i < 0 || j < 0 ? '' : b3.slice(i, j);
+  if (!/const MF = q\.shine && R3\.mats\(\)\.innerFHi \? R3\.mats\(\)\.innerFHi : R3\.mats\(\)\.innerF/.test(f) || !/MI: MF, MS: MI,/.test(f)) fails.push('o corte do olho é só da casca (L-1872): o makeOpen do build3d.js não dá aos móveis e à decoração (o.MI) o material deles');
+  const mi = f.slice(f.indexOf('function makeItems(')); if ((mi.match(/new THREE\.(?:Instanced)?Mesh\(geo, o\.MI\b/g) || []).length < 2 || /new THREE\.(?:Instanced)?Mesh\(geo, (?!o\.MI\b)/.test(mi)) fails.push('o corte do olho é só da casca (L-1872): o makeItems desenha um móvel fora do material dos móveis (o.MI)');
+  if (!/if \(!fKeep && fract\(52\.9829189/.test(b3)) fails.push('o corte do olho é só da casca (L-1872): a trama dos móveis (M3FADE) some com eles, ou não poupa as peças do corpo (uKeep)');
+  if (!/new THREE\.InstancedMesh\(geo, o\.MI,/.test((src['dentro3d.js'] || []).join('\n'))) fails.push('o corte do olho é só da casca (L-1872): a decoração do Dentro3D fora do material dos móveis (o.MI)'); }
 // 290. "o que o prédio mostra só se lê" (D-740, D-651): o G.Atmos.within (o within e o withinOf do atmos.js) só lê o mundo — nenhuma
 // atribuição a um campo do mundo (do prédio, da pessoa, do povo, da operação), nenhum movimento do livro (G.Depot.move / take / put)
 { const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('At.within = function (b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
