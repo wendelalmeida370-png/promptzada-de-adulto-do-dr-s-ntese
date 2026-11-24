@@ -53,7 +53,8 @@
 //     perto, o luto que abafa, o arrombar com o estado da porta, a tempestade no telhado; d a cuba (a fervura só com a fornada no fogo),
 //     o cozinhar, os dados e as cartas no material da mão, a queda de braço com o seu fim, a trapaça quase nada, a torcida; e o tocador:
 //     o estrondo da porta uma vez, na hora em que ela vira arrombada, as notas dos dois da banda, o baque quando a queda de braço acaba;
-//     f a porta de som da tela: cada nome da lista toca, o osso e a madeira, nada para um nome que não há nem com os efeitos desligados
+//     f a porta de som da tela: cada nome da lista toca — os jogos e a festa das mesas (a frente F) —, o osso e a madeira, nada para um nome
+//     que não há nem com os efeitos desligados
 //  e nenhum erro de módulo nem aviso, e o verificador sem nada novo (as regras do som entre elas).
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
@@ -817,11 +818,15 @@ function s16() {
     // switch of the effects is obeyed; the dice of bone and of wood both
     const mk = () => FakeAC.last.made; const keep2 = [A.mute, A.sfxOn]; A.mute = false; A.sfxOn = true; const rows = []; let good = true;
     try {
-      for (const n of ['dados-copo', 'dados-rolar', 'dados-parar', 'cartas-embaralhar', 'cartas-dar', 'cartas-jogar', 'cartas-virar', 'aposta', 'vitoria', 'derrota']) { FakeAC.last.currentTime += 0.5; const m0 = mk(); const r = A.ui(n); const d = mk() - m0; if (!r || d <= 0) good = false; rows.push(`${n} ${d}`); }
+      // (and the feast of the tables, the front F — D-950 to D-959: each moment of a game, each a sound with nodes, with and without what it is given)
+      const LISTA = ['dados-copo', 'dados-rolar', 'dados-parar', 'cartas-embaralhar', 'cartas-dar', 'cartas-jogar', 'cartas-virar', 'aposta', 'vitoria', 'derrota',
+        'pouso', 'suspense', 'rodada-ganha', 'rodada-perdida', 'rodada-empate', 'gloria-tique', 'moeda-bolsa', 'vitoria-fanfarra', 'aplauso', 'derrota-suave', 'cravou', 'dado-voa', 'tensao', 'dado-conta'];
+      for (const n of LISTA) { FakeAC.last.currentTime += 0.5; const m0 = mk(); const r = A.ui(n); const d = mk() - m0; if (!r || d <= 0) good = false; rows.push(`${n} ${d}`); }
+      for (const [n, o] of [['rodada-ganha', { n: 3 }], ['moeda-bolsa', { i: 4, ultima: 1 }], ['aplauso', { n: 9, povo: 'asteca' }], ['cravou', { n: 3, mat: 'osso', povo: 'grego' }], ['tensao', { n: 2 }], ['dado-conta', { i: 12, mat: 'madeira' }], ['gloria-tique', { i: 30 }]]) { FakeAC.last.currentTime += 0.5; const m0 = mk(); const r = A.ui(n, o); if (!r || mk() - m0 <= 0) { good = false; rows.push(`${n} com ${JSON.stringify(o)} CALADO`); } }
       FakeAC.last.currentTime += 0.5; const bone = mk(); const rb = A.ui('dados-rolar', 'osso'); const nb = mk() - bone; FakeAC.last.currentTime += 0.5; const wood = mk(); const rw = A.ui('dados-rolar', { mat: 'madeira', n: 3 }); const nw = mk() - wood;
       const none = A.ui('nada-disso'); A.sfxOn = false; FakeAC.last.currentTime += 0.5; const off = A.ui('aposta');
-      good = good && rb && rw && nb > 0 && nw > nb && none === false && off === false && A.UI.length === 10;
-      ok('s16f a-porta-da-tela', good, `${rows.join(', ')} (nós de som); os dados de osso ${nb}, de madeira com três ${nw}; um nome que não há: ${none ? 'TOCA' : 'nada'}; com os efeitos desligados: ${off ? 'TOCA' : 'nada'}`);
+      const fora = A.UI.filter(n => !LISTA.includes(n)); good = good && rb && rw && nb > 0 && nw > nb && none === false && off === false && A.UI.length === LISTA.length && !fora.length;
+      ok('s16f a-porta-da-tela', good, `${rows.join(', ')} (nós de som); os dados de osso ${nb}, de madeira com três ${nw}; um nome que não há: ${none ? 'TOCA' : 'nada'}; com os efeitos desligados: ${off ? 'TOCA' : 'nada'}; ${A.UI.length} sons na tabela${fora.length ? ', FORA DA LISTA DA PROVA: ' + fora.join(', ') : ''}`);
     } finally { [A.mute, A.sfxOn] = keep2; }
   } finally { undo(); }
 }

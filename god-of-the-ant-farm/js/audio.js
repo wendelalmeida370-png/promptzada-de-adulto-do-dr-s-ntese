@@ -455,6 +455,17 @@
     cook: (t, v) => { const s = ac.createBufferSource(); s.buffer = noise; s.loop = true; const f = ac.createBiquadFilter(), g = ac.createGain(), am = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain(); f.type = 'highpass'; f.frequency.value = 3200; lfo.type = 'square'; lfo.frequency.value = G.vrr(20, 40); lg.gain.value = 0.35; am.gain.value = 0.65; lfo.connect(lg); lg.connect(am.gain); env(g, t, 0.05, 0.035 * v, 0.6); s.connect(f); f.connect(am); am.connect(g); g.connect(out(sfx)); s.start(t, G.VR()); lfo.start(t); s.stop(t + 0.8); lfo.stop(t + 0.8); if (G.VR() < 0.5) { osc('sine', 2350, t + 0.3, 0.12, 0.02 * v, sfx, 2300); osc('sine', 3650, t + 0.3, 0.08, 0.012 * v, sfx); } for (let k = 0; k < 2; k++) { const f0 = G.vrr(260, 380); osc('sine', f0, t + 0.15 + k * 0.2, 0.05, 0.03 * v, sfx, f0 * 1.9); } },
   });
   // ---------------- the screen's own sounds (T8, D-896): a sound of no place, for the screen — the games of the body ----------------
+  // (the feast's own voices — the front F, D-950 to D-959 —: a bell of a few partials, the coin's and the altar's; a brass voice for the
+  // fanfare, a sawtooth and its twin a hair apart through a mouth that opens with the breath; the feast's drum)
+  function sino(f, t, peak, dur, rev) { for (const [k, a] of [[1, 1], [2.76, 0.42], [5.4, 0.18]]) { const n = osc('sine', f * k, t, (dur || 0.6) / Math.sqrt(k), peak * a, sfx, f * k * 0.998); if (rev) n.g.connect(revIn); } }
+  function metal(f, t, dur, peak) {
+    const g = ac.createGain(), lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.1;
+    lp.frequency.setValueAtTime(f * 1.4, t); lp.frequency.linearRampToValueAtTime(f * 5, t + 0.05); lp.frequency.exponentialRampToValueAtTime(f * 2.4, t + dur + 0.1);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.025); g.gain.setValueAtTime(peak * 0.85, t + Math.max(0.04, dur - 0.06)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.14);
+    for (const k of [1, 1.0045]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(f * k, t); o.connect(lp); o.start(t); o.stop(t + dur + 0.2); }
+    lp.connect(g); g.connect(out(sfx)); g.connect(revIn);
+  }
+  function tambor(t, peak) { osc('sine', 98, t, 0.5, peak, sfx, 62); osc('sine', 147, t, 0.16, peak * 0.3, sfx, 110); nz(t, 0.05, peak * 0.35, 'lowpass', 900); }
   // G.Audio.ui(nome, o): the dice game and the cards of the T4 and the T5 call it (o: { mat — 'osso', 'madeira', the cards' stuff —, n — how
   // many dice, coins —, vol }, or the material alone). No owner in the world: the screen is its owner; nothing of the world is read
   const UI = {
@@ -479,9 +490,55 @@
     vitoria: (t, v) => { [392, 493.9, 587.3, 783.99].forEach((f, k) => { const n = pluckStr(f, t + k * 0.09, 0.2 * v, 3600); n.connect(revIn); }); for (let k = 0; k < 5; k++) osc('sine', G.vrr(3200, 4400), t + 0.35 + k * 0.05, 0.12, 0.018 * v, sfx); },
     // the loss: down the lyre, softly, and the hand on the table
     derrota: (t, v) => { [392, 349.2, 293.7].forEach((f, k) => { const n = pluckStr(f, t + k * 0.16, 0.16 * v, 1800); n.connect(revIn); }); osc('sine', 120, t + 0.55, 0.12, 0.14 * v, sfx, 75); nz(t + 0.55, 0.04, 0.08 * v, 'lowpass', 600); },
+    // ---- the feast of the tables (the front F, D-950 to D-959): each moment of a game with its weight ----
+    // the tablet played lands on the table, with its weight: the board's thump under it, its own knock (the stuff of the deck), the dust
+    pouso: (t, v, o) => { const m = o.mat || 'madeira'; osc('sine', 128, t, 0.1, 0.3 * v, sfx, 62); nz(t, 0.05, 0.12 * v, 'lowpass', 700); tick(t + 0.004, 0.9 * v, m, 0.75); nz(t + 0.02, 0.18, 0.025 * v, 'bandpass', 1800, 0.8, sfx, 700); },
+    // the held breath before the reveal: fingertips drumming on the board, quicker and louder, over a tone that rises
+    suspense: (t, v) => { let at = t; for (let k = 0; k < 12; k++) { nz(at, 0.018, (0.02 + 0.007 * k) * v, 'bandpass', 700 + k * 45, 2.2); at += 0.055 - k * 0.0025; } const T = at - t; osc('sine', 196, t, T, 0.035 * v, sfx, 294, T * 0.8); nz(t, T, 0.018 * v, 'bandpass', 1500, 1, sfx, 4200, T * 0.85); },
+    // a round won: the lyre up a major chord and a bell over it — a step higher for each won in a row (n: 1, 2, 3, 4), the coins'
+    // shimmer from the second on
+    'rodada-ganha': (t, v, o) => { const n = Math.max(1, Math.min(4, (o.n | 0) || 1)); const f0 = 392 * Math.pow(2, [0, 0, 2, 4, 5][n] / 12); const notas = n >= 3 ? [1, 1.25, 1.5, 2, 2.5] : [1, 1.25, 1.5, 2];
+      notas.forEach((r, k) => { const g = pluckStr(f0 * r, t + k * 0.065, 0.15 * v, 4200); g.connect(revIn); });
+      const top = t + notas.length * 0.065; sino(f0 * 2, top, 0.045 * v, 0.9, true); for (const r of [1, 1.25, 1.5]) osc('triangle', f0 * r, top - 0.02, 0.6, 0.02 * v, sfx, f0 * r, 0.04);
+      if (n >= 2) for (let k = 0; k < 3 * n; k++) osc('sine', G.vrr(3000, 4600), top + G.vrr(0, 0.45), 0.1, 0.012 * v, sfx); },
+    // a round lost: short and muffled — a hand set down flat on the table, a low string; never a punishment
+    'rodada-perdida': (t, v) => { osc('sine', 150, t, 0.14, 0.22 * v, sfx, 85); nz(t, 0.05, 0.1 * v, 'lowpass', 480); pluckStr(146.83, t + 0.03, 0.07 * v, 900); },
+    // a round tied: two soft equal notes — «hm-hm» — and the offering's coin set down on the altar, waiting for the next
+    'rodada-empate': (t, v) => { pluckStr(329.63, t, 0.08 * v, 2400); pluckStr(329.63, t + 0.15, 0.065 * v, 2200); sino(2637, t + 0.32, 0.018 * v, 0.5, true); tick(t + 0.32, 0.4 * v, 'madeira', 1.4); },
+    // a point of glory counted: a bright little note, up the scale with each one (i)
+    'gloria-tique': (t, v, o) => { const i = Math.max(0, Math.min(10, o.i | 0)); const f = 784 * Math.pow(2, [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24][i] / 12); osc('triangle', f, t, 0.07, 0.05 * v, sfx, f * 1.003); osc('sine', f * 2, t, 0.04, 0.016 * v, sfx); },
+    // a coin into the purse: its ring, a little higher each one (i) — and the last (ultima): the purse's thump and the shine
+    'moeda-bolsa': (t, v, o) => { const i = Math.max(0, Math.min(12, o.i | 0)); const f = G.vrr(2900, 3200) * Math.pow(2, i / 24); osc('sine', f, t, 0.12, 0.04 * v, sfx, f * 0.995); osc('sine', f * 1.51, t, 0.07, 0.022 * v, sfx); nz(t, 0.006, 0.05 * v, 'bandpass', 5200, 3);
+      if (o.ultima) { osc('sine', 180, t + 0.03, 0.12, 0.14 * v, sfx, 110); nz(t + 0.03, 0.06, 0.06 * v, 'bandpass', 600, 1.5); sino(1568, t + 0.06, 0.035 * v, 0.7, true); sino(2093, t + 0.1, 0.025 * v, 0.6, true); } },
+    // the fanfare of a game won: the brass up the major chord — sol, dó, mi — to the held chord, the drum under it, the lyre's run and the
+    // coins' shimmer over it
+    'vitoria-fanfarra': (t, v) => { const f0 = 261.63; for (const [r, at] of [[0.75, 0], [1, 0.12], [1.25, 0.24]]) metal(f0 * 2 * r, t + at, 0.1, 0.05 * v);
+      const h = t + 0.38; for (const r of [1, 1.25, 1.5]) metal(f0 * 2 * r, h, 0.95, 0.04 * v); metal(f0, h, 0.95, 0.035 * v); tambor(h, 0.3 * v);
+      [1, 1.25, 1.5, 2, 2.5].forEach((r, k) => { const g = pluckStr(f0 * 2 * r, h + 0.1 + k * 0.05, 0.08 * v, 4600); g.connect(revIn); });
+      for (let k = 0; k < 10; k++) osc('sine', G.vrr(3200, 5200), h + 0.2 + G.vrr(0, 0.8), 0.12, 0.012 * v, sfx); },
+    // the room applauding (n: how many are there to clap; povo: their tongue): the claps thick at first and thinning, voices cheering, a whistle
+    aplauso: (t, v, o) => { const n = Math.max(1, Math.min(12, (o.n | 0) || 3)); const k = Math.min(70, 10 + n * 6);
+      for (let i = 0; i < k; i++) { const u = Math.pow(G.VR(), 1.6); LIB.palmas(t + u * 2, (0.22 + 0.18 * (1 - u)) * v * G.vrr(0.6, 1), { tom: G.vrr(0.8, 1.25) }); }
+      multidao(t + 0.15, 0.55 * v, o, Math.min(8, n + 1), 'e', 1.3); if (n >= 3) osc('sine', 1900, t + 0.4, 0.35, 0.03 * v, sfx, 2600, 0.03); },
+    // a game lost: short and warm — the lyre steps down and comes home soft, the low strings under it
+    'derrota-suave': (t, v) => { [[392, 0], [329.63, 0.17], [261.63, 0.36]].forEach(([f, at], k) => { const g = pluckStr(f, t + at, (0.11 - k * 0.015) * v, 1700); g.connect(revIn); }); for (const f of [130.81, 196]) osc('sine', f, t + 0.36, 0.7, 0.03 * v, sfx, f, 0.08); },
+    // «Cravou!»: the hand slammed on the table, the brass's stab of the chord, the cymbal's wash, a bell — and the table's «oh!» (n: how many)
+    cravou: (t, v, o) => { const m = o.mat || 'madeira'; osc('sine', 110, t, 0.24, 0.32 * v, sfx, 52); nz(t, 0.06, 0.2 * v, 'lowpass', 1100); tick(t, v, m, 0.8);
+      for (const r of [1, 1.25, 1.5, 2]) metal(523.25 * r, t + 0.03, 0.22, 0.035 * v); const c = nz(t + 0.02, 0.7, 0.04 * v, 'highpass', 6500, 0, sfx, 0, 0.01); c.connect(revIn);
+      sino(1046.5, t + 0.05, 0.03 * v, 0.9, true); if ((o.n | 0) > 0) multidao(t + 0.18, 0.5 * v, o, Math.min(6, (o.n | 0) + 1), 'o', 1.15); },
+    // a die lost: it flies off the table — the whoosh — and lands far off, two little knocks
+    'dado-voa': (t, v, o) => { const m = o.mat || 'madeira'; nz(t, 0.32, 0.05 * v, 'bandpass', 2600, 1.2, sfx, 600, 0.03); tick(t + 0.4, 0.4 * v, m, 0.9); tick(t + 0.52, 0.18 * v, m, 1.05); },
+    // the last die: the heart — lub, dub —, quicker when the game is on the edge for both (n 2)
+    // (the beat's harmonic, an octave up, is what a phone's small speaker can play of it)
+    tensao: (t, v, o) => { const q = (o.n | 0) >= 2 ? 0.17 : 0.22; osc('sine', 72, t, 0.12, 0.3 * v, sfx, 50); osc('sine', 150, t, 0.06, 0.08 * v, sfx, 100); nz(t, 0.04, 0.08 * v, 'lowpass', 260); osc('sine', 66, t + q, 0.1, 0.22 * v, sfx, 48); osc('sine', 138, t + q, 0.05, 0.06 * v, sfx, 96); },
+    // a die counted as the cups come up: its knock, and a soft note up the scale with each one (i)
+    'dado-conta': (t, v, o) => { const m = o.mat || 'madeira'; const i = Math.max(0, Math.min(14, o.i | 0)); tick(t, 0.55 * v, m); const f = Math.min(2400, 523.25 * Math.pow(2, [0, 2, 4, 7, 9][i % 5] / 12 + Math.floor(i / 5))); osc('sine', f, t, 0.08, 0.028 * v, sfx, f); },
   };
   // (the level of each, measured — T-2021: the dice and the cards about the clatter of a table, the win and the loss under the buttons)
-  const UI_GAIN = { 'dados-copo': 2.4, 'dados-rolar': 2, 'dados-parar': 2.2, 'cartas-embaralhar': 2, 'cartas-dar': 2, 'cartas-jogar': 1.3, 'cartas-virar': 2.4, aposta: 1.3, vitoria: 0.6, derrota: 0.75 };
+  const UI_GAIN = { 'dados-copo': 2.4, 'dados-rolar': 2, 'dados-parar': 2.2, 'cartas-embaralhar': 2, 'cartas-dar': 2, 'cartas-jogar': 1.3, 'cartas-virar': 2.4, aposta: 1.3, vitoria: 0.6, derrota: 0.75,
+    // (the feast's, measured in a context with no speaker by the same chain as the speakers' — G.Audio.pico, qa/visual/festa-fotos.js, D-956: each one
+    // under the clatter of the tablets and the dice it goes with, the fanfare and the applause the loudest, none of them nor all of a win together clipping)
+    pouso: 1.4, suspense: 1.2, 'rodada-ganha': 1, 'rodada-perdida': 1, 'rodada-empate': 1.2, 'gloria-tique': 3.3, 'moeda-bolsa': 1.3, 'vitoria-fanfarra': 0.6, aplauso: 2.1, 'derrota-suave': 0.9, cravou: 1.1, 'dado-voa': 3, tensao: 0.85, 'dado-conta': 3.5 };
   for (const k in UI_GAIN) { const f0 = UI[k]; UI[k] = (t, v, o) => f0(t, v * UI_GAIN[k], o); }
   A.UI = Object.freeze(Object.keys(UI));
   A.tocouUi = []; // (what the screen rang — kept while A.gravar is on: the proofs')
@@ -492,6 +549,25 @@
     bus = null; fn(now + 0.01, opt.vol === undefined ? 1 : opt.vol, opt);
     if (A.gravar) { A.tocouUi.push({ t: now, s: nome, mat: opt.mat || null }); if (A.tocouUi.length > 200) A.tocouUi.splice(0, 100); }
     return true;
+  };
+  // (for the proofs, in the browser — D-956: the screen's sounds played into a context with no speaker, one or a mix ([[nome, o, at], …]: a win
+  // as it comes), by the same chain as the speakers' — the effects' gain, the master and its compressor, the echo —; → the peak of the wave
+  // that would reach the speakers (over 1, it clips). The real context, if any, is untouched: the chain is built and let go here)
+  A.pico = async function (lista) {
+    const OAC = typeof OfflineAudioContext !== 'undefined' ? OfflineAudioContext : typeof webkitOfflineAudioContext !== 'undefined' ? webkitOfflineAudioContext : null; if (!OAC) return null;
+    const L = typeof lista === 'string' ? [[lista, NONE, 0]] : lista; const sr = 44100; const off = new OAC(2, Math.ceil(sr * (Math.max(0, ...L.map(x => x[2] || 0)) + 4)), sr);
+    const keep = [ac, master, sfx, rev, revIn, noise, bus];
+    try {
+      ac = off; bus = null; master = off.createGain(); master.gain.value = 0.85; const comp = off.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; master.connect(comp); comp.connect(off.destination);
+      sfx = off.createGain(); sfx.gain.value = 0.9; sfx.connect(master);
+      rev = off.createConvolver(); const rl = Math.floor(sr * 2.6), ir = off.createBuffer(2, rl, sr); for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < rl; i++) d[i] = (G.VR() * 2 - 1) * Math.pow(1 - i / rl, 2.6); }
+      rev.buffer = ir; revIn = off.createGain(); revIn.gain.value = 0.35; revIn.connect(rev); const rg = off.createGain(); rg.gain.value = 0.5; rev.connect(rg); rg.connect(master);
+      noise = off.createBuffer(1, sr * 2, sr); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = G.VR() * 2 - 1;
+      for (const [nome, o, at] of L) { const fn = UI[nome]; if (fn) fn(0.01 + (at || 0), o && o.vol !== undefined ? o.vol : 1, o || NONE); }
+    } finally { [ac, master, sfx, rev, revIn, noise, bus] = keep; }
+    const buf = await off.startRendering(); let peak = 0;
+    for (let ch = 0; ch < buf.numberOfChannels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < d.length; i++) { const a = d[i] < 0 ? -d[i] : d[i]; if (a > peak) peak = a; } }
+    return Math.round(peak * 1000) / 1000;
   };
   // the talk at a speaker's side, in the timbre of the speaker's people: two to four syllables (the voice of one, P9 — D-780)
   LIB.voz = (t, v, o) => { const L = lingua(o), tom = (o && o.tom) || 1, f0 = 118 * tom; const n = 2 + (G.VR() * 3 | 0); let at = t; for (let k = 0; k < n; k++) { const f = f0 * G.vrr(0.9, 1.22); at += cons(at, 0.05 * v, L); const d = 1 / L.ritmo * G.vrr(0.6, 1); syl(f, at, d, 0.085 * v, G.vpick(L.v), f * G.vrr(0.86, 1.1), 0.02, sfx, tom); at += d; } };
