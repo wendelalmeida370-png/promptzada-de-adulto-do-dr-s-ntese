@@ -65,10 +65,10 @@
     panel = document.createElement('div'); panel.id = 'tab-panel'; panel.className = 'tb hidden';
     panel.innerHTML = `<div class="tb-mesa">
       <header class="tb-top"><div class="tb-who"><span class="tb-face"><canvas width="128" height="128"></canvas></span><span class="tb-nm"><b></b><small></small></span></div>
-        <div class="tb-gl tb-gl-o" title="A glória do outro"><b>0</b><small>glória</small></div><button class="tb-x" data-a="sair" aria-label="Sair" title="Sair (Esc)">×</button></header>
+        <div class="tb-gl tb-gl-o" title="A glória do outro"><b>0</b><small>glória</small></div><button class="tb-ajuda" data-a="ajuda" aria-label="Como se joga" title="Como se joga">?</button><button class="tb-x" data-a="sair" aria-label="Sair" title="Sair (Esc)">×</button></header>
       <div class="tb-mo"></div>
       <div class="tb-centro"><div class="tb-trilha"></div>
-        <div class="tb-campo"><div class="tb-slot tb-so"></div><div class="tb-altar"><div class="tb-of"></div><div class="tb-pote"></div></div><div class="tb-slot tb-sm"></div></div>
+        <div class="tb-campo"><div class="tb-lado tb-lado-o"><div class="tb-slot tb-so"></div><span class="tb-slot-n tb-so-n"></span></div><div class="tb-altar"><div class="tb-of"></div><div class="tb-pote"></div></div><div class="tb-lado tb-lado-m"><div class="tb-slot tb-sm"></div><span class="tb-slot-n tb-sm-n">Você</span></div></div>
         <div class="tb-msg" aria-live="polite"></div></div>
       <div class="tb-eu"><div class="tb-gl tb-gl-m" title="A sua glória"><b>0</b><small>glória</small></div><div class="tb-info"></div><div class="tb-monte" title="O seu monte"></div></div>
       <div class="tb-mao"></div>
@@ -135,13 +135,15 @@
     for (let i = 0; i < L.length; i++) { await wait(110); if (t !== tok) return; L[i].classList.remove('tb-in'); if (i % 2 === 0) som('cartas-dar'); }
   }
   // (o que se mostra: tudo do que o mundo diz agora — ou do retrato da animação, enquanto ela corre)
-  function render0() { const top = panel.querySelector('.tb-top'); top.querySelector('b').textContent = ''; top.querySelector('small').textContent = ''; ['.tb-mo', '.tb-trilha', '.tb-so', '.tb-sm', '.tb-of', '.tb-pote', '.tb-msg', '.tb-mao', '.tb-info', '.tb-monte', '.tb-hint'].forEach(q => { panel.querySelector(q).innerHTML = ''; }); }
+  function render0() { const top = panel.querySelector('.tb-top'); top.querySelector('b').textContent = ''; top.querySelector('small').textContent = ''; ['.tb-mo', '.tb-trilha', '.tb-so', '.tb-sm', '.tb-so-n', '.tb-of', '.tb-pote', '.tb-msg', '.tb-mao', '.tb-info', '.tb-monte', '.tb-hint'].forEach(q => { panel.querySelector(q).innerHTML = ''; }); }
   function quem(v) { const o = v && G.S.villagers.get(v.o); return o; }
   function render(full) {
     const v = view; if (!v || !panel) return; const me = P().body(); const o = quem(v); const civT = (G.S.buildings.get((C.jogo(v.jogo) || {}).b) || {}).set; void civT;
     panel.className = `tb t-${v.civ[0]}${busy ? ' busy' : ''}`;
     // (quem joga: o rosto e o nome, como o corpo o sabe)
-    if (o && faceOf !== o.id) { faceOf = o.id; const top = panel.querySelector('.tb-top'); top.querySelector('b').textContent = cap(me ? P().knows.call(me, o) : o.name); top.querySelector('small').textContent = `as tabuletas ${(G.CIVS[v.civ[1]] || { adj: 'clássica' }).adj}s`; face(top.querySelector('canvas'), o); }
+    if (o && faceOf !== o.id) { faceOf = o.id; const top = panel.querySelector('.tb-top'); const nm = cap(me ? P().knows.call(me, o) : o.name); top.querySelector('b').textContent = nm; top.querySelector('small').textContent = `as tabuletas ${(G.CIVS[v.civ[1]] || { adj: 'clássica' }).adj}s`; face(top.querySelector('canvas'), o);
+      panel.querySelector('.tb-so-n').textContent = nm; fitW = 0; } // (whose table is whose, under each one: D-943)
+    fitTop();
     panel.querySelector('.tb-gl-o b').textContent = v.gl[1]; panel.querySelector('.tb-gl-m b').textContent = v.gl[0];
     // (a mão do outro: os versos em leque, quantas ele tem)
     panel.querySelector('.tb-mo').innerHTML = Array.from({ length: v.maoOutro }, (_, i) => Ar.htmlVerso(v.civ[1], 'tb-vo').replace('class="ct-card', `style="--i:${i};--n:${v.maoOutro}" class="ct-card`)).join('');
@@ -156,22 +158,31 @@
     panel.querySelector('.tb-monte').innerHTML = `${Ar.htmlVerso(v.civ[0], 'tb-mini')}<b>${v.monte[0]}</b>`;
     // (a minha mão em leque)
     const n = v.mao.length; if (sel >= n) sel = -1;
-    panel.querySelector('.tb-mao').innerHTML = v.mao.map((id, i) => Ar.html(id, { cls: `tb-c${i === sel ? ' sel' : ''}` }).replace('class="ct-card', `style="--i:${i};--n:${n}" data-i="${i}" class="ct-card`)).join('');
+    panel.querySelector('.tb-mao').innerHTML = v.mao.map((id, i) => Ar.html(id, { mini: true, cls: `tb-c${i === sel ? ' sel' : ''}` }).replace('class="ct-card', `style="--i:${i};--n:${n}" data-i="${i}" class="ct-card`)).join('');
     botoes();
+  }
+  // (o nome do outro e o subtítulo inteiros numa linha: a letra desce aos poucos até caber, uma vez por nome e por largura da mesa — L-2201)
+  let fitW = 0;
+  function fitTop() {
+    const nm = panel.querySelector('.tb-nm'); const w = +nm.clientWidth || 0; if (!w || w === fitW || typeof getComputedStyle !== 'function') return; fitW = w; // (no navegador: a prova em Node tem um DOM de mentira)
+    for (const [el, min] of [[nm.querySelector('b'), 11], [nm.querySelector('small'), 10]]) { el.style.fontSize = ''; let fs = parseFloat(getComputedStyle(el).fontSize) || 14;
+      for (let k = 0; k < 16 && el.scrollWidth > el.clientWidth + 0.5 && fs > min; k++) { fs = Math.max(min, fs - 0.5); el.style.fontSize = fs + 'px'; } }
   }
   function botoes() {
     const v = view; if (!v) return; const pronto = !busy && !v.fim && !v.dobra && !v.posta;
-    const go = panel.querySelector('.tb-go'); go.disabled = !(pronto && sel >= 0); go.textContent = sel >= 0 && v.mao[sel] ? `Jogar ${C.card(v.mao[sel]).nome}` : 'Escolha uma';
+    // (o nome da erguida embaixo do «Jogar», como o preço embaixo do «Dobrar»: o botão cabe na tela estreita — L-2201)
+    const go = panel.querySelector('.tb-go'); go.disabled = !(pronto && sel >= 0); go.innerHTML = sel >= 0 && v.mao[sel] ? `Jogar<small>${esc(C.card(v.mao[sel]).nome)}</small>` : 'Escolha uma';
     const db = panel.querySelector('.tb-dobra'); db.disabled = !(pronto && v.podeDobrar); db.innerHTML = v.moeda && v.aposta > 0 ? `Dobrar<small>+${esc(String(v.preco(v.aposta * v.x)).split(' ')[0])}</small>` : 'Dobrar';
     db.classList.toggle('hidden', !(v.moeda && v.aposta > 0));
     const mg = panel.querySelector('.tb-manga'); mg.classList.toggle('on', manga); mg.disabled = !pronto || !v.monte[0] || !!v.trap;
     const touch = !!(G.Input3D && G.Input3D.touch);
-    panel.querySelector('.tb-hint').innerHTML = touch ? 'Toque para erguer, toque de novo para jogar · segure para ver grande' : `<kbd>←</kbd><kbd>→</kbd> ou <kbd>1</kbd>–<kbd>5</kbd> escolhe · <kbd>${esc(G.Input3D.label('interagir'))}</kbd> joga · <kbd>${esc(G.Input3D.label('outra'))}</kbd> dobra · <kbd>${esc(G.Input3D.label('pular'))}</kbd> mostra · <kbd>Esc</kbd> sai`;
+    panel.querySelector('.tb-hint').innerHTML = touch ? 'Toque para erguer, toque de novo para jogar · segure para ver grande' : `<kbd>←</kbd><kbd>→</kbd> ou <kbd>1</kbd>–<kbd>5</kbd> escolhe · <kbd>${esc(G.Input3D.label('interagir'))}</kbd> joga · <kbd>${esc(G.Input3D.label('outra'))}</kbd> dobra · <kbd>${esc(G.Input3D.label('pular'))}</kbd> mostra · <kbd>?</kbd> regras · <kbd>Esc</kbd> sai`;
     if (!busy && v.dobra === 'outro') pedido();
     if (!busy && v.fim && fimVisto !== v.jogo) fimTela();
   }
   // (a tabuleta na mesa: o verso e a face, para virar)
-  const flip = (id, povo, aberta, f) => `<div class="tb-flip${aberta ? ' open' : ''}" data-id="${esc(id)}"><div class="tb-fr">${Ar.html(id, Number.isFinite(f) ? { f } : null)}</div><div class="tb-bk">${Ar.htmlVerso(povo)}</div></div>`;
+  // (a pequena, como na mão: só o que cabe inteiro — a grande é a que se segura: D-941)
+  const flip = (id, povo, aberta, f) => `<div class="tb-flip${aberta ? ' open' : ''}" data-id="${esc(id)}"><div class="tb-fr">${Ar.html(id, Number.isFinite(f) ? { f, mini: true } : { mini: true })}</div><div class="tb-bk">${Ar.htmlVerso(povo)}</div></div>`;
   function moedas(k) { const n = Math.max(1, Math.min(8, Math.round(k * 2))); let s = ''; for (let i = 0; i < n; i++) s += `<i style="--k:${i}"></i>`; return `<span class="tb-coins">${s}</span>`; }
   // (o rosto: o retrato do 3D onde se pode, senão o desenho do deus — G.Retrato3D, D-645)
   function face(canvas, o) {
@@ -215,6 +226,8 @@
     const a = e.target.closest('[data-a]'); const act = a && a.dataset.a;
     if (act === 'zoom') { esconde(); return; }
     if (zoom) { esconde(); return; }
+    // (o «?»: as regras, curtas e com figuras, e o guia de novo — do jogos-ensina.js: D-945)
+    if (act === 'ajuda') { if (G.JogosEnsina) G.JogosEnsina.ajuda('tabuletas'); return; }
     if (act === 'sair') { pedeSair(); return; } if (act === 'fica') { panel.querySelector('.tb-over').classList.add('hidden'); return; }
     if (act === 'desiste') { panel.querySelector('.tb-over').classList.add('hidden'); G.IncUI.when(P().apply(w => C.desisteCorpo(w, gid)), r => toast(r.msg, 2.6), deny); return; }
     if (act === 'fecha') { hide(); return; } if (act === 'desafia') { desafia(); return; }

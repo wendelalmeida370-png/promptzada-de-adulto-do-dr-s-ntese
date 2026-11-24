@@ -1951,11 +1951,25 @@ canvas#game3d { touch-action: none; transition: none; }
 .ct-card .ct-ti { width: 6cqw; height: 6cqw; color: #fff3d6; }
 .ct-card .ct-nome { position: absolute; left: 7%; right: 7%; top: 59.2%; height: 7.2%; display: flex; align-items: center; justify-content: center; text-align: center; font: 800 var(--nf, 7.2cqw)/1.3 'Cinzel', Georgia, serif; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 .ct-card .ct-nome span { padding-top: .6cqw; }
-.ct-card .ct-pw { position: absolute; left: 11.5%; right: 11.5%; top: 67.4%; height: 17%; display: flex; gap: 2.2cqw; align-items: flex-start; font-size: 5.6cqw; line-height: 1.2; font-weight: 600; }
-.ct-card .ct-pw.none { align-items: center; justify-content: center; font-style: italic; opacity: .7; }
+/* (a grande: a regra e, logo embaixo, o mito inteiro, os dois no painel claro — D-942) */
+.ct-card .ct-tx { position: absolute; left: 11.5%; right: 11.5%; top: 67.1%; bottom: 6.4%; display: flex; flex-direction: column; justify-content: space-between; gap: 1.2cqw; }
+.ct-card .ct-pw { display: flex; gap: 2.2cqw; align-items: flex-start; font-size: 5.6cqw; line-height: 1.18; font-weight: 600; }
+.ct-card .ct-pw.none { flex: 1; align-items: center; justify-content: center; font-style: italic; opacity: .7; }
 .ct-card .ct-pw b { font-weight: 900; letter-spacing: .01em; }
 .ct-card .ct-pi { flex: none; width: 7.6cqw; height: 7.6cqw; margin-top: .1cqw; }
-.ct-card .ct-mito { position: absolute; left: 12%; right: 12%; top: 84.4%; font-size: 4.2cqw; line-height: 1.16; font-style: italic; opacity: .78; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ct-card .ct-mito { font-size: 4.2cqw; line-height: 1.16; font-style: italic; opacity: .78; padding: 0 .5cqw; }
+/* (a pequena — a mão e a mesa: só o que cabe inteiro, numa letra que se lê: o nome, a força, o símbolo e a regra com a palavra-chave
+   em negrito; a frase do mito fica na grande, a que se segura — D-941. As letras crescem com a tabuleta, e a mesa nunca a faz menor
+   que 100 px no celular: 8,3 % dela passam dos 8 px que o WebView do Android impõe, e nada é empurrado para fora da caixa, L-2200) */
+.ct-card.ct-mini .ct-nome { left: 6%; right: 6%; top: 48%; height: 7.4%; font-size: var(--nf); line-height: 1; }
+.ct-card.ct-mini .ct-nome span { display: inline-block; padding-top: .5cqw; transform: scaleX(var(--nx, 1)); }
+.ct-card.ct-mini.ct-n2 .ct-nome { height: 14%; white-space: normal; }
+.ct-card.ct-mini.ct-n2 .ct-nome span { line-height: .98; padding-top: .3cqw; }
+.ct-card.ct-mini .ct-pw { position: absolute; left: 12.6%; right: 12.6%; top: 57.4%; bottom: 6.4%; align-items: center; font-size: 8.3cqw; line-height: 1.17; font-weight: 700; }
+.ct-card.ct-mini.ct-n2 .ct-pw { top: 63.4%; }
+.ct-card.ct-mini .ct-pw p { margin: 0; }
+.ct-card.ct-mini .ct-pw.none { justify-content: center; text-align: center; }
+.ct-card.ct-mini .ct-pi { display: inline-block; width: 1.1em; height: 1.1em; margin: 0 .2em 0 0; vertical-align: -.2em; }
 .ct-card .ct-rar { display: none; }
 .ct-card .ct-foil { position: absolute; inset: 0; border-radius: 5.6cqw; pointer-events: none; }
 /* (o tema de cada povo: a cor do nome, da força, do texto) */
@@ -1981,7 +1995,11 @@ canvas#game3d { touch-action: none; transition: none; }
 #inc-root.tb-on .ih-touch, #inc-root.tb-on .ih-corner, #inc-root.tb-on .ih-hotbar { visibility: hidden; }
 #tab-panel { position: absolute; inset: 0; z-index: 7; pointer-events: auto; display: flex; align-items: center; justify-content: center; font-family: 'Nunito', system-ui, sans-serif; color: #f6ead0; user-select: none; -webkit-user-select: none; background: radial-gradient(ellipse at 50% 40%, rgba(20, 12, 6, .55), rgba(8, 5, 2, .88)); }
 #tab-panel.hidden { display: none; }
-#tab-panel .tb-mesa { --cwh: 90px; --cws: 100px; position: relative; width: min(100vw, 1000px); height: min(100%, 860px); display: grid; grid-template-rows: auto auto 1fr auto auto auto auto; padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(6px, env(safe-area-inset-bottom, 0px));
+/* (a mesa é uma grade de zonas, cada uma no seu lugar — o rosto e o nome do outro, a mão dele, a trilha e as duas mesas, a faixa da rodada,
+   a sua glória e as etiquetas, a sua mão com lugar para a erguida, os botões, a dica —: nenhuma sobre outra, em toda tela, L-2201, D-943.
+   As tabuletas medem pela própria mesa (cq: a mesa é o recipiente), nunca menos de 100 px no celular: a letra da pequena passa dos 8 px) */
+#tab-panel .tb-mesa { --cwh: clamp(100px, min(15cqh, 28cqw), 124px); --cws: clamp(100px, min(19cqh, (100cqw - 150px) / 2), 150px); --cwo: clamp(26px, 4.2cqh, 32px);
+  position: relative; width: min(100vw, 1000px); height: min(100%, 860px); container-type: size; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto auto auto; padding: max(8px, env(safe-area-inset-top, 0px)) 10px max(6px, env(safe-area-inset-bottom, 0px));
   background: radial-gradient(ellipse 85% 60% at 50% 46%, var(--pano2, #3e6a4a), var(--pano, #234030) 72%, rgba(0, 0, 0, 0) 100%), repeating-linear-gradient(92deg, rgba(0, 0, 0, .14) 0 2px, transparent 2px 13px), linear-gradient(180deg, var(--tampo, #5a3a20), var(--tampo2, #3a2414)); box-shadow: inset 0 0 0 8px var(--borda, #2c1a0c), inset 0 0 60px rgba(0, 0, 0, .6); border-radius: 0; overflow: hidden; }
 #tab-panel.t-grego { --pano: #6a2c14; --pano2: #a4522a; --tampo: #5a3420; --borda: #1c120b; }
 #tab-panel.t-egipcio { --pano: #1c3576; --pano2: #2e57a8; --tampo: #8a6a2a; --borda: #5a4214; }
@@ -1989,26 +2007,34 @@ canvas#game3d { touch-action: none; transition: none; }
 #tab-panel.t-asteca { --pano: #6e1416; --pano2: #a8302a; --tampo: #7a5a2a; --borda: #140b06; }
 #tab-panel.t-romano { --pano: #5c0d09; --pano2: #8e1b14; --tampo: #b9aea0; --tampo2: #8a8072; --borda: #4a3a2a; }
 #tab-panel.t-classico { --pano: #141434; --pano2: #2a2a62; --tampo: #2a2232; --borda: #0b0b14; }
-#tab-panel .tb-top { display: flex; align-items: center; gap: 10px; padding: 4px 6px 2px; }
-#tab-panel .tb-who { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
-#tab-panel .tb-face { flex: none; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px #d9b46a, 0 4px 10px rgba(0, 0, 0, .5); }
+#tab-panel .tb-top { display: flex; align-items: center; gap: 8px; padding: 2px 0 4px; min-width: 0; }
+#tab-panel .tb-who { flex: 1; display: flex; align-items: center; gap: 9px; min-width: 0; }
+#tab-panel .tb-face { flex: none; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 2px #d9b46a, 0 4px 10px rgba(0, 0, 0, .5); }
 #tab-panel .tb-face canvas { display: block; width: 100%; height: 100%; }
-#tab-panel .tb-nm { display: flex; flex-direction: column; min-width: 0; }
-#tab-panel .tb-nm b { font: 800 16px/1.15 'Cinzel', Georgia, serif; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); }
-#tab-panel .tb-nm small { font-size: 12px; opacity: .78; }
-#tab-panel .tb-gl { display: flex; flex-direction: column; align-items: center; min-width: 52px; padding: 2px 8px; border-radius: 12px; background: rgba(0, 0, 0, .32); box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .25); }
-#tab-panel .tb-gl b { font: 900 26px/1 'Cinzel', Georgia, serif; color: #ffd98a; text-shadow: 0 2px 0 rgba(0, 0, 0, .6); }
-#tab-panel .tb-gl small { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
-#tab-panel .tb-x { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .35); color: #f6ead0; font-size: 26px; line-height: 1; cursor: pointer; }
-#tab-panel .tb-mo { position: relative; height: 54px; display: flex; justify-content: center; }
-#tab-panel .tb-mo .ct-card { --cw: 38px; position: absolute; top: 2px; left: calc(50% - 19px + (var(--i) - (var(--n) - 1) / 2) * 16px); transform: rotate(calc((var(--i) - (var(--n) - 1) / 2) * 5deg)); transform-origin: 50% 160%; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5)); }
-#tab-panel .tb-centro { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0; }
-#tab-panel .tb-trilha { display: flex; gap: 6px; }
+#tab-panel .tb-nm { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+/* (o nome inteiro numa linha: a tela desce a letra até caber — fitNome no cartas-ui.js, L-2201) */
+#tab-panel .tb-nm b { font: 800 16px/1.38 'Cinzel', Georgia, serif; letter-spacing: .04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); }
+#tab-panel .tb-nm small { font-size: 12px; line-height: 1.36; opacity: .78; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tab-panel .tb-gl { flex: none; display: flex; flex-direction: column; align-items: center; min-width: 50px; padding: 2px 7px; border-radius: 12px; background: rgba(0, 0, 0, .32); box-shadow: inset 0 0 0 1px rgba(255, 220, 160, .25); }
+#tab-panel .tb-gl b { font: 900 24px/1.05 'Cinzel', Georgia, serif; color: #ffd98a; text-shadow: 0 2px 0 rgba(0, 0, 0, .6); }
+#tab-panel .tb-gl small { font-size: 9.5px; line-height: 1.2; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+#tab-panel .tb-x, #tab-panel .tb-ajuda { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .35); color: #f6ead0; font-size: 26px; line-height: 1; cursor: pointer; }
+/* (o «?»: as regras e o guia de novo — D-945) */
+#tab-panel .tb-ajuda { font: 900 21px/1 'Cinzel', Georgia, serif; box-shadow: inset 0 0 0 1.5px rgba(255, 220, 160, .45); }
+#tab-panel .tb-ajuda:hover, #tab-panel .tb-x:hover { background: rgba(0, 0, 0, .5); }
+#tab-panel .tb-mo { position: relative; height: calc(var(--cwo) * 1.4 + 6px); }
+#tab-panel .tb-mo .ct-card { --cw: var(--cwo); position: absolute; top: 2px; left: calc(50% - var(--cwo) / 2 + (var(--i) - (var(--n) - 1) / 2) * var(--cwo) * .42); transform: rotate(calc((var(--i) - (var(--n) - 1) / 2) * 4deg)); transform-origin: 50% 160%; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5)); }
+#tab-panel .tb-centro { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 0; }
+#tab-panel .tb-trilha { display: flex; gap: 6px; padding: 3px 0; }
 #tab-panel .tb-tk { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 14px/1 'Cinzel', serif; color: #f6ead0; background: rgba(0, 0, 0, .35); box-shadow: inset 0 0 0 1.5px rgba(255, 220, 160, .35); transition: transform .3s, background .3s; }
-#tab-panel .tb-tk.agora { background: radial-gradient(circle at 40% 35%, #ffe7a6, #d49a2e); color: #3a2208; box-shadow: 0 0 0 2px #fff3d2, 0 0 14px rgba(255, 210, 110, .8); transform: scale(1.15); animation: tb-pulso 1.6s ease-in-out infinite; }
+#tab-panel .tb-tk.agora { background: radial-gradient(circle at 40% 35%, #ffe7a6, #d49a2e); color: #3a2208; box-shadow: 0 0 0 2px #fff3d2, 0 0 14px rgba(255, 210, 110, .8); transform: scale(1.12); animation: tb-pulso 1.6s ease-in-out infinite; }
 #tab-panel .tb-tk.eu { background: #2f7a3e; box-shadow: inset 0 0 0 1.5px #9be0a8; } #tab-panel .tb-tk.ele { background: #8a2a1e; box-shadow: inset 0 0 0 1.5px #f0a090; } #tab-panel .tb-tk.emp { background: #5a5048; opacity: .8; }
 @keyframes tb-pulso { 0%, 100% { box-shadow: 0 0 0 2px #fff3d2, 0 0 10px rgba(255, 210, 110, .6); } 50% { box-shadow: 0 0 0 2px #fff3d2, 0 0 20px rgba(255, 210, 110, 1); } }
-#tab-panel .tb-campo { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+/* (as duas mesas lado a lado — a do outro à esquerda, a sua à direita, o nome de cada um embaixo —, e no meio a oferenda e o pote: D-943) */
+#tab-panel .tb-campo { display: flex; flex-direction: row; align-items: flex-start; justify-content: center; gap: 8px; }
+#tab-panel .tb-lado { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: var(--cws); }
+#tab-panel .tb-lado-o { order: 0; } #tab-panel .tb-altar { order: 1; } #tab-panel .tb-lado-m { order: 2; }
+#tab-panel .tb-slot-n { max-width: 100%; min-height: 14px; font-size: 11.5px; font-weight: 800; line-height: 1.15; text-align: center; opacity: .88; text-shadow: 0 1px 2px #000; overflow-wrap: anywhere; }
 #tab-panel .tb-slot { position: relative; width: var(--cws); aspect-ratio: 250 / 350; border-radius: 6px; box-shadow: inset 0 0 0 2px rgba(255, 230, 180, .22), inset 0 0 18px rgba(0, 0, 0, .35); perspective: 900px; }
 #tab-panel .tb-slot:empty::after { content: ''; position: absolute; inset: 22%; border-radius: 50%; border: 2px dashed rgba(255, 230, 180, .18); }
 #tab-panel .tb-slot.vence { animation: tb-vence 1s ease-out; } @keyframes tb-vence { 0% { filter: none; } 30% { filter: drop-shadow(0 0 16px #ffe08a) brightness(1.15); } 100% { filter: none; } }
@@ -2017,32 +2043,38 @@ canvas#game3d { touch-action: none; transition: none; }
 #tab-panel .tb-fr, #tab-panel .tb-bk { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 #tab-panel .tb-fr { transform: rotateY(180deg); }
 #tab-panel .tb-flip .ct-card { --cw: var(--cws); filter: none; }
-#tab-panel .tb-altar { display: flex; align-items: center; gap: 14px; min-height: 40px; }
-#tab-panel .tb-of { display: flex; flex-direction: column; align-items: center; } #tab-panel .tb-of b { font: 900 24px/1 'Cinzel', serif; color: #ffe7a6; text-shadow: 0 2px 0 #000; } #tab-panel .tb-of small { font-size: 10px; opacity: .75; }
-#tab-panel .tb-pote { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 13px; } #tab-panel .tb-pote em { color: #ffd98a; font-style: normal; } #tab-panel .tb-pote .seco { opacity: .6; font-style: italic; font-weight: 600; }
+#tab-panel .tb-altar { flex: none; width: 92px; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 40px; text-align: center; }
+#tab-panel .tb-of { display: flex; flex-direction: column; align-items: center; } #tab-panel .tb-of b { font: 900 24px/1 'Cinzel', serif; color: #ffe7a6; text-shadow: 0 2px 0 #000; } #tab-panel .tb-of small { font-size: 10px; line-height: 1.2; opacity: .75; }
+#tab-panel .tb-pote { display: flex; flex-direction: column; align-items: center; gap: 3px; font-weight: 800; font-size: 12.5px; line-height: 1.2; } #tab-panel .tb-pote em { color: #ffd98a; font-style: normal; } #tab-panel .tb-pote .seco { opacity: .6; font-style: italic; font-weight: 600; }
 #tab-panel .tb-coins { position: relative; width: 26px; height: 30px; } #tab-panel .tb-coins i { position: absolute; left: 0; bottom: calc(var(--k) * 3.2px); width: 26px; height: 9px; border-radius: 50%; background: radial-gradient(ellipse at 40% 35%, #fff0b0, #c9962e 60%, #7a5414); box-shadow: 0 1px 0 #5a3a0a; }
-#tab-panel .tb-msg { min-height: 40px; max-width: 94%; text-align: center; }
-#tab-panel .tb-ev { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, .5); font-size: 14px; font-weight: 700; line-height: 1.2; animation: tb-ev .35s ease-out; } #tab-panel .tb-ev .ct-ico { width: 18px; height: 18px; flex: none; color: #ffd98a; }
+#tab-panel .tb-msg { align-self: stretch; min-height: 40px; display: flex; align-items: center; justify-content: center; text-align: center; } /* (a faixa tem o seu lugar mesmo vazia: o guia desvia dela, D-945) */
+#tab-panel .tb-ev { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, .5); font-size: 14px; font-weight: 700; line-height: 1.2; animation: tb-ev .35s ease-out; } #tab-panel .tb-ev .ct-ico { width: 18px; height: 18px; flex: none; color: #ffd98a; }
 #tab-panel .tb-ev.big { font: 800 16px/1.2 'Cinzel', serif; letter-spacing: .03em; } #tab-panel .tb-ev.up { background: rgba(30, 110, 50, .7); } #tab-panel .tb-ev.down { background: rgba(140, 30, 20, .7); }
 @keyframes tb-ev { from { transform: translateY(6px) scale(.96); opacity: 0; } }
-#tab-panel .tb-eu { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
-#tab-panel .tb-info { flex: 1; display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-#tab-panel .tb-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: rgba(0, 0, 0, .4); font-size: 12px; font-weight: 700; } #tab-panel .tb-tag .ct-ico { width: 14px; height: 14px; } #tab-panel .tb-tag.up { color: #a6f0b0; } #tab-panel .tb-tag.down { color: #ffb0a0; }
-#tab-panel .tb-monte { display: flex; align-items: center; gap: 4px; font: 800 14px 'Cinzel', serif; } #tab-panel .tb-monte .ct-card { --cw: 26px; filter: drop-shadow(0 2px 2px #000); }
-#tab-panel .tb-mao { position: relative; height: calc(var(--cwh) * 1.4 + 46px); margin-bottom: 8px; }
-#tab-panel .tb-mao .ct-card { --cw: var(--cwh); position: absolute; bottom: 16px; left: calc(50% - var(--cwh) / 2 + (var(--i) - (var(--n) - 1) / 2) * min(var(--cwh) * .66, (100vw - var(--cwh) - 44px) / max(1, var(--n) - 1))); transform: translateY(calc(abs(var(--i) - (var(--n) - 1) / 2) * 4px)) rotate(calc((var(--i) - (var(--n) - 1) / 2) * 4deg)); transform-origin: 50% 120%; transition: transform .22s ease, bottom .22s ease, filter .2s, opacity .3s; cursor: pointer; z-index: var(--i); }
-#tab-panel .tb-mao .ct-card.sel { transform: translateY(-26px) scale(1.12); z-index: 30; filter: drop-shadow(0 0 10px rgba(255, 220, 120, .85)) drop-shadow(0 10px 14px rgba(0, 0, 0, .6)); }
+#tab-panel .tb-eu { display: flex; align-items: center; gap: 8px; padding: 2px 0; min-width: 0; }
+#tab-panel .tb-info { flex: 1; min-width: 0; display: flex; gap: 4px 6px; flex-wrap: wrap; justify-content: center; }
+#tab-panel .tb-tag { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 3px 8px; border-radius: 12px; background: rgba(0, 0, 0, .4); font-size: 11.5px; font-weight: 700; line-height: 1.25; text-align: center; } #tab-panel .tb-tag .ct-ico { width: 14px; height: 14px; flex: none; } #tab-panel .tb-tag.up { color: #a6f0b0; } #tab-panel .tb-tag.down { color: #ffb0a0; }
+#tab-panel .tb-monte { flex: none; display: flex; align-items: center; gap: 4px; font: 800 14px 'Cinzel', serif; } #tab-panel .tb-monte .ct-card { --cw: 26px; filter: drop-shadow(0 2px 2px #000); }
+/* (a mão em leque: a zona tem o lugar da erguida em cima e o do leque embaixo — a erguida não cobre as etiquetas, o leque não desce nos
+   botões nem sai da tela; a erguida sobe 18 px e cresce 6 %, as de fora giram até 4° e descem até 5 px, mais juntas quanto mais tabuletas:
+   o passo deixa de cada lado o que a de fora gira, 13 % da largura dela) */
+#tab-panel .tb-mao { position: relative; height: calc(var(--cwh) * 1.4 + 46px); }
+#tab-panel .tb-mao .ct-card { --cw: var(--cwh); --k: calc(var(--i) - (var(--n) - 1) / 2); --ka: max(var(--k), calc(0 - var(--k))); position: absolute; bottom: 14px;
+  left: calc(50% - var(--cwh) / 2 + var(--k) * min(var(--cwh) * .7, (100% - var(--cwh) * 1.26) / max(1, var(--n) - 1)));
+  transform: translateY(calc(var(--ka) * min(2.5px, 10px / max(1, var(--n) - 1)))) rotate(calc(var(--k) * min(2deg, 8deg / max(1, var(--n) - 1)))); transform-origin: 50% 120%; transition: transform .22s ease, bottom .22s ease, filter .2s, opacity .3s; cursor: pointer; z-index: var(--i); }
+#tab-panel .tb-mao .ct-card.sel { transform: translateY(-18px) scale(1.06); z-index: 30; filter: drop-shadow(0 0 10px rgba(255, 220, 120, .85)) drop-shadow(0 10px 14px rgba(0, 0, 0, .6)); }
 #tab-panel .tb-mao .ct-card.tb-in { opacity: 0; transform: translate(40vw, -30vh) rotate(30deg) scale(.6); }
-@media (hover: hover) { #tab-panel .tb-mao .ct-card:hover:not(.sel) { transform: translateY(-12px) scale(1.05); z-index: 20; } }
-#tab-panel .tb-btns { display: flex; gap: 8px; justify-content: center; padding: 2px 6px 4px; }
-#tab-panel .tb-b { min-height: 46px; min-width: 88px; padding: 0 16px; border-radius: 12px; border: 0; font: 800 14px 'Nunito', sans-serif; color: #2a1606; background: linear-gradient(#f3d79a, #c99a4a); box-shadow: 0 3px 0 #6a4a1a, 0 6px 12px rgba(0, 0, 0, .4); cursor: pointer; }
+@media (hover: hover) { #tab-panel .tb-mao .ct-card:hover:not(.sel) { transform: translateY(-10px) scale(1.04); z-index: 20; } }
+#tab-panel .tb-btns { display: flex; gap: 8px; justify-content: center; padding: 2px 0 4px; min-width: 0; }
+#tab-panel .tb-b { min-height: 46px; min-width: 88px; padding: 0 14px; border-radius: 12px; border: 0; font: 800 14px/1.15 'Nunito', sans-serif; color: #2a1606; background: linear-gradient(#f3d79a, #c99a4a); box-shadow: 0 3px 0 #6a4a1a, 0 6px 12px rgba(0, 0, 0, .4); cursor: pointer; }
 #tab-panel .tb-b small { display: block; font-size: 11px; font-weight: 700; opacity: .8; margin-top: -1px; }
 #tab-panel .tb-b:disabled { opacity: .45; cursor: default; filter: grayscale(.4); }
-#tab-panel .tb-b.tb-go { min-width: 140px; background: linear-gradient(#ffe7a6, #e0a83a); } #tab-panel .tb-b.danger { background: linear-gradient(#f2a090, #b8402c); color: #fff6ee; }
+#tab-panel .tb-b.tb-go { flex: 1 1 0; min-width: 0; max-width: 260px; background: linear-gradient(#ffe7a6, #e0a83a); } #tab-panel .tb-b.danger { background: linear-gradient(#f2a090, #b8402c); color: #fff6ee; }
+#tab-panel .tb-b.tb-go small { overflow-wrap: anywhere; }
 #tab-panel .tb-b.tb-manga { background: linear-gradient(#6a5a7a, #3e3250); color: #efe4ff; box-shadow: 0 3px 0 #1e162a, 0 6px 12px rgba(0, 0, 0, .4); } #tab-panel .tb-b.tb-manga.on { background: linear-gradient(#b48ae8, #6a3ab0); box-shadow: 0 0 0 2px #e6d0ff, 0 3px 0 #2a1640; }
 #tab-panel .tb-b.tb-no { background: rgba(0, 0, 0, .35); color: #f6ead0; box-shadow: inset 0 0 0 1.5px rgba(255, 230, 180, .4); }
 #tab-panel .tb-b.hidden { display: none; }
-#tab-panel .tb-hint { text-align: center; font-size: 11px; opacity: .7; padding-bottom: 2px; } #tab-panel .tb-hint kbd { font: 700 10px 'Nunito', sans-serif; padding: 0 4px; border-radius: 4px; background: rgba(255, 240, 210, .15); }
+#tab-panel .tb-hint { text-align: center; font-size: 11px; line-height: 1.25; opacity: .7; padding: 0 4px 2px; } #tab-panel .tb-hint kbd { font: 700 10px 'Nunito', sans-serif; padding: 0 4px; border-radius: 4px; background: rgba(255, 240, 210, .15); }
 #tab-panel .tb-zoom { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(5, 3, 1, .72); backdrop-filter: blur(2px); animation: tb-zin .2s ease-out; }
 #tab-panel .tb-zoom.hidden { display: none; } #tab-panel .tb-zoom .ct-card { --cw: min(82vw, 330px, calc(78vh / 1.4)); }
 @keyframes tb-zin { from { opacity: 0; } }
@@ -2076,14 +2108,21 @@ canvas#game3d { touch-action: none; transition: none; }
 #tab-panel .fx-buff { animation: tb-buff .8s ease-out; } @keyframes tb-buff { 40% { filter: drop-shadow(0 0 14px #8af09a) brightness(1.15); transform: scale(1.05); } }
 #tab-panel .fx-debuff { animation: tb-debuff .8s ease-out; } @keyframes tb-debuff { 40% { filter: drop-shadow(0 0 14px #8a3aff) brightness(.7) saturate(.6); transform: scale(.96); } }
 #tab-panel.busy .tb-mao .ct-card { cursor: default; }
-/* (o PC: a mesa larga, as tabuletas maiores, as duas na mesa lado a lado) */
+/* (o PC: a mesa larga; embaixo, a sua glória, o monte e as etiquetas à esquerda da mão, e os botões à direita, como numa mesa de jogo —
+   a mesa do meio fica alta e as tabuletas, maiores: D-943) */
 @media (min-width: 760px) and (min-height: 600px) {
-  #tab-panel .tb-mesa { --cwh: 118px; --cws: 136px; width: min(96vw, 1040px); height: min(96vh, 820px); border-radius: 26px; }
-  #tab-panel .tb-campo { flex-direction: row; gap: 30px; }
-  #tab-panel .tb-altar { flex-direction: column; order: 1; } #tab-panel .tb-sm { order: 2; } #tab-panel .tb-so { order: 0; }
-  #tab-panel .tb-mo { height: 70px; } #tab-panel .tb-mo .ct-card { --cw: 50px; left: calc(50% - 25px + (var(--i) - (var(--n) - 1) / 2) * 22px); }
+  #tab-panel .tb-mesa { --cwh: clamp(112px, 17.5cqh, 140px); --cws: clamp(128px, 23cqh, 172px); --cwo: 36px; width: min(96vw, 1040px); height: min(96vh, 820px); border-radius: 26px; padding: 14px 20px 10px;
+    grid-template-columns: 200px minmax(0, 1fr) 200px; grid-template-rows: auto auto minmax(0, 1fr) auto auto; grid-template-areas: "top top top" "mo mo mo" "centro centro centro" "eu mao btns" "hint hint hint"; }
+  #tab-panel .tb-top { grid-area: top; } #tab-panel .tb-mo { grid-area: mo; } #tab-panel .tb-centro { grid-area: centro; } #tab-panel .tb-mao { grid-area: mao; } #tab-panel .tb-hint { grid-area: hint; }
+  #tab-panel .tb-face { width: 52px; height: 52px; } #tab-panel .tb-nm b { font-size: 19px; } #tab-panel .tb-nm small { font-size: 13px; }
+  #tab-panel .tb-gl { min-width: 60px; } #tab-panel .tb-gl b { font-size: 28px; }
   #tab-panel .tb-tk { width: 36px; height: 36px; font-size: 16px; }
-  #tab-panel .tb-mao .ct-card { left: calc(50% - var(--cwh) / 2 + (var(--i) - (var(--n) - 1) / 2) * var(--cwh) * .78); }
+  #tab-panel .tb-campo { gap: 22px; } #tab-panel .tb-altar { width: 120px; } #tab-panel .tb-slot-n { font-size: 13px; }
+  #tab-panel .tb-eu { grid-area: eu; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 10px; padding: 0 0 16px; }
+  #tab-panel .tb-info { flex: none; width: 100%; flex-direction: column; align-items: flex-start; justify-content: flex-end; }
+  #tab-panel .tb-tag { text-align: left; }
+  #tab-panel .tb-btns { grid-area: btns; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 10px; padding: 0 0 16px; }
+  #tab-panel .tb-b.tb-go { order: -1; flex: none; max-width: none; min-height: 58px; font-size: 16px; }
 }
 
 /* === Onda 4 — I: a interação clara (acoes-ui.js, D-915 a D-929) === */
@@ -2258,3 +2297,74 @@ canvas#game3d { touch-action: none; transition: none; }
 .jfx-raios::before { content: ''; position: absolute; left: 50%; top: 50%; width: 260%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: -1; pointer-events: none; background: repeating-conic-gradient(from 0deg, rgba(255, 215, 110, .32) 0deg 9deg, rgba(255, 215, 110, 0) 9deg 22deg); -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); animation: jfx-gira 14s linear infinite; }
 @keyframes jfx-gira { to { transform: translate(-50%, -50%) rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .jfx-pop, .jfx-sobe, .jfx-pega { animation: none; } .jfx-raios::before { animation: none; } }
+
+/* ------------------------------ os jogos se ensinam (js/jogos-ensina.js, a frente E da onda 4: D-945 a D-949) ------------------------------ */
+/* o guia da primeira partida, por cima da mesa de verdade: o véu com um buraco em cada coisa que ele mostra, a luz que pulsa nelas, o balão
+   de pergaminho com a seta para elas, o dedo que toca no que se faz; nada disto pega o toque, menos os botões do balão (a partida segue por
+   baixo, tocada como sempre). Acima das tabuletas e da mão, abaixo da tabuleta grande e dos pedidos da mesa */
+.ens { position: absolute; inset: 0; z-index: 35; pointer-events: none; font-family: 'Nunito', system-ui, sans-serif; }
+#dados-panel > .ens { z-index: 4; }
+.ens.hidden { display: none; }
+.ens-veu { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ens-veu path { fill: rgba(12, 7, 3, .5); }
+.ens.claro .ens-veu path { fill: rgba(12, 7, 3, .14); }
+.ens-luz { position: absolute; border-radius: 12px; box-shadow: 0 0 0 2.5px #ffd877, 0 0 0 5px rgba(255, 200, 90, .28), 0 0 26px rgba(255, 200, 90, .55); animation: ens-luz 1.6s ease-in-out infinite; transition: left .2s ease, top .2s ease, width .2s ease, height .2s ease; }
+@keyframes ens-luz { 0%, 100% { box-shadow: 0 0 0 2.5px #ffd877, 0 0 0 5px rgba(255, 200, 90, .22), 0 0 18px rgba(255, 200, 90, .4); } 50% { box-shadow: 0 0 0 2.5px #fff1c4, 0 0 0 7px rgba(255, 200, 90, .34), 0 0 34px rgba(255, 205, 100, .8); } }
+.ens-balao { position: absolute; left: 10px; top: 10px; box-sizing: border-box; padding: 11px 14px 12px; border-radius: 14px; pointer-events: auto; color: #2a1606; text-align: left;
+  background: repeating-radial-gradient(circle at 27% 33%, rgba(120, 80, 30, .03) 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 0%, #fffaea, #f2dfb2 68%, #dcbd82);
+  box-shadow: 0 0 0 2px #7a5420, 0 0 0 4.5px rgba(255, 222, 150, .38), 0 16px 38px rgba(0, 0, 0, .62); transition: left .22s ease, top .22s ease; }
+.ens-balao.pop { animation: ens-pop .32s cubic-bezier(.25, 1.5, .5, 1); }
+@keyframes ens-pop { from { opacity: 0; transform: translateY(8px) scale(.95); } }
+.ens-seta { position: absolute; width: 14px; height: 14px; background: #f6e6bd; transform: rotate(45deg); }
+.ens-seta.nao { display: none; }
+.ens-seta.baixo { top: -8px; margin-left: -7px; box-shadow: -2px -2px 0 0 #7a5420; background: #fff8e4; }
+.ens-seta.cima { bottom: -8px; margin-left: -7px; box-shadow: 2px 2px 0 0 #7a5420; background: #e2c590; }
+.ens-seta.dir { left: -8px; margin-top: -7px; box-shadow: -2px 2px 0 0 #7a5420; }
+.ens-seta.esq { right: -8px; margin-top: -7px; box-shadow: 2px -2px 0 0 #7a5420; }
+.ens-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -3px -4px 2px 0; }
+.ens-pts { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ens-pts i { width: 7px; height: 7px; border-radius: 50%; background: rgba(122, 84, 32, .25); flex: none; }
+.ens-pts i.on { background: #b88a3e; } .ens-pts i.agora { background: #8a2f1c; box-shadow: 0 0 0 2px rgba(138, 47, 28, .22); }
+.ens-pts span { margin-left: 4px; font-size: 11.5px; font-weight: 800; color: rgba(42, 22, 6, .6); }
+.ens-pular { min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: rgba(42, 22, 6, .66); font: 800 12.5px 'Nunito', sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ens-pular:hover { background: rgba(122, 84, 32, .12); color: #2a1606; }
+.ens-balao h4 { margin: 0 0 4px; font: 800 15.5px/1.3 'Cinzel', Georgia, serif; letter-spacing: .04em; color: #7a2a14; }
+.ens-txt { font-size: 14px; line-height: 1.42; font-weight: 600; }
+.ens-txt b { font-weight: 900; color: #5a1a0c; }
+.ens-acao { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; border-radius: 10px; background: #7a2a14; color: #fff3d6; font-weight: 800; font-size: 13.5px; line-height: 1.3; }
+.ens-acao.hidden { display: none; }
+.ens-acao .ens-mao { flex: none; width: 18px; height: 21px; animation: ens-toque 1.1s ease-in-out infinite; } .ens-acao .ens-mao svg { width: 100%; height: 100%; display: block; }
+.ens-btns { display: flex; justify-content: flex-end; margin-top: 9px; }
+.ens-btns:has(.ens-go.hidden) { display: none; }
+.ens-btns .ens-go.hidden { display: none; }
+.ens-go, .ens-no { min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; font: 900 14.5px 'Nunito', sans-serif; cursor: pointer; }
+.ens-go { color: #2a1606; background: linear-gradient(#ffe7a6, #e0a83a); box-shadow: 0 3px 0 #6a4a1a, 0 6px 12px rgba(0, 0, 0, .28); }
+.ens-go:active { transform: translateY(2px); box-shadow: 0 1px 0 #6a4a1a; }
+.ens-no { color: #2a1606; background: rgba(90, 50, 10, .13); }
+/* (o dedo que toca: no meio do que se faz, apontando de baixo) */
+.ens-dedo { position: absolute; width: 38px; height: 44px; margin: 2px 0 0 -10px; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .55)); animation: ens-toque 1.1s ease-in-out infinite; transform-origin: 30% 10%; }
+.ens-dedo.hidden { display: none; } .ens-dedo svg { width: 100%; height: 100%; display: block; }
+@keyframes ens-toque { 0%, 100% { transform: translateY(6px) scale(1); } 45% { transform: translateY(-2px) scale(.92); } 55% { transform: translateY(-2px) scale(.9); } }
+/* (os poderes, lidos das tabuletas: o símbolo, a palavra-chave, a regra — e, nas regras do «?», as tabuletas que os têm) */
+.ens-poderes { list-style: none; margin: 7px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.32; }
+.ens-poderes li { display: flex; gap: 7px; align-items: flex-start; }
+.ens-poderes .ens-ico { flex: none; width: 16px; height: 16px; margin-top: 1px; color: #8a2f1c; }
+.ens-poderes em { display: block; font-size: 11.5px; font-style: italic; font-weight: 700; color: rgba(42, 22, 6, .6); }
+/* (as regras, curtas e com figuras: o «?» da mesa das Tabuletas) */
+.ens-regras { position: absolute; inset: 0; z-index: 44; display: grid; place-items: center; padding: 12px; background: rgba(5, 3, 1, .66); pointer-events: auto; font-family: 'Nunito', system-ui, sans-serif; }
+.ens-regras.hidden { display: none; }
+.ens-folha { box-sizing: border-box; width: min(100%, 460px); max-height: 100%; overflow-y: auto; padding: 16px 16px 14px; border-radius: 16px; color: #2a1606;
+  background: repeating-radial-gradient(circle at 27% 33%, rgba(120, 80, 30, .03) 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 0%, #fff6dc, #ecd6a4 70%, #d7b878); box-shadow: 0 0 0 3px #6a4a1a, 0 20px 60px rgba(0, 0, 0, .7); animation: ens-pop .3s ease-out; }
+.ens-folha h3 { margin: 0 0 8px; text-align: center; font: 900 23px/1.2 'Cinzel', Georgia, serif; letter-spacing: .08em; color: #7a2a14; }
+.ens-folha h4 { margin: 2px 0 2px; font: 800 13px/1.3 'Cinzel', serif; letter-spacing: .14em; text-transform: uppercase; color: #7a2a14; }
+.ens-sec > p { margin: 5px 0; font-size: 14px; line-height: 1.42; }
+.ens-sec { padding: 8px 0; border-top: 1px dashed rgba(122, 84, 32, .35); }
+.ens-sec:first-of-type { border-top: 0; }
+.ens-fig { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 6px; }
+.ens-trilha i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 800 13px/1 'Cinzel', serif; font-style: normal; color: #f6ead0; background: #6a3a1c; box-shadow: inset 0 0 0 1.5px rgba(255, 220, 160, .4); }
+.ens-trilha i.agora { background: radial-gradient(circle at 40% 35%, #ffe7a6, #d49a2e); color: #3a2208; box-shadow: 0 0 0 2px #fff3d2; }
+.ens-duelo { gap: 12px; } .ens-duelo > b { font: 900 22px 'Cinzel', serif; color: #7a2a14; }
+.ens-duelo .ct-card { --cw: 104px; }
+.ens-btns2 { position: sticky; bottom: -14px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px -16px -14px; padding: 10px 16px 14px; background: linear-gradient(rgba(215, 184, 120, 0), #d7b878 30%); }
+.ens-btns2 .ens-go { flex: 1 1 180px; } .ens-btns2 .ens-no { flex: 0 1 auto; }
+@media (prefers-reduced-motion: reduce) { .ens-luz, .ens-dedo, .ens-acao .ens-mao { animation: none; } .ens-balao.pop, .ens-folha { animation: none; } .ens-balao { transition: none; } }
