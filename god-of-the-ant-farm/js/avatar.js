@@ -625,7 +625,9 @@
   // a step of the feet on the ground or in the air (and, with act, of an act that still lets the feet go — its drive, its
   // moveScale: JOGABILIDADE.md §4.5)
   function move(v, h, caps, onGround, act) {
-    const [wx, wz, wl] = wish();
+    let [wx, wz, wl] = wish();
+    // (the drink in the body: the way the hands want swayed to one side and the other — the turn stays the controller's: G.EbrioCorpo, T2)
+    { const q = G.EbrioCorpo ? G.EbrioCorpo.puxa(wx, wz, wl, h) : null; if (q) { wx = q[0]; wz = q[1]; wl = q[2]; } }
     const here = G.Space.surface(b.X, b.Z);
     const P = paces(v, caps, here, wx, wz, wl);
     // the target held or the aim: the body faces it and steps round it (the sprint breaks the strafe — D-364)

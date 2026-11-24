@@ -52,7 +52,8 @@
       const D = At.dress(v); const want = v.captive || v.age < 16 ? '' : (v.grp || 'povo');
       if (D.grp !== want && nd++ < 3) add('atmos', 3, `${v.name}#${v.id} é d${want ? 'o grupo ' + want : 'e nenhum grupo'} e veste-se como ${D.grp || 'nenhum'}`, v.id);
       if (D.cold && (v.inside || v.aboard) && nd++ < 3) add('atmos', 3, `${v.name}#${v.id} agasalhado para o frio da rua dentro de ${v.inside ? 'casa' : 'um navio'}`, v.id);
-      if ((At.drunk(v) > 0) !== (v.drunk > s.clock) && nd++ < 3) add('atmos', 3, `${v.name}#${v.id} ${v.drunk > s.clock ? 'bêbado sem cambalear' : 'cambaleando sem ter bebido'}`, v.id);
+      // (the drink in the blood, past one's merry mark — G.Ebrio, T2: one truth with the look)
+      { const dk = !!(G.Ebrio && G.Ebrio.alegre(v)); if ((At.drunk(v) > 0) !== dk && nd++ < 3) add('atmos', 3, `${v.name}#${v.id} ${dk ? 'bêbado sem cambalear' : 'cambaleando sem ter bebido'}`, v.id); }
     }
   });
 })();

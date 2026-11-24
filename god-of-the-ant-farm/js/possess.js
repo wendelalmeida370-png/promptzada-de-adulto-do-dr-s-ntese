@@ -337,7 +337,31 @@
   }
   Po.sleep = function (v) { if (!Po.is(v) || v.sleeping) return false; v.sleeping = true; v.act = ''; v.moving = false; return true; };
   // waking: out of bed, and out of the house by its door if it slept at home
-  Po.wake = function (v) { if (!v || !v.sleeping) return; v.sleeping = false; if (v.inside && !indoorOK(v, G.S.avatar)) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; Po.setLevel(null); } };
+  // (out of drink, no key wakes it: the drink lets go — G.Ebrio, D-836)
+  Po.wake = function (v) { if (!v || !v.sleeping) return; if (G.Ebrio && G.Ebrio.desmaiado(v)) return; v.sleeping = false; if (v.inside && !indoorOK(v, G.S.avatar)) { const b = G.S.buildings.get(v.inside); if (b) { const d = G.Vg.door(b); v.x = d[0]; v.y = d[1]; } v.inside = 0; Po.setLevel(null); } };
+  // the drink took the body (G.Ebrio, D-836): it falls where it is — the world's own sleep, the time passing fast, no key to wake it —
+  // and the world has it while it is out: the keeper of a tavern drags it to the street (Po.arrasta: the world moves it, and it is
+  // let out of the building), and the drink lets it go (Po.acorda): the player's hands again, the cause said on the screen. Only in
+  // the world's step; only this file writes the body's mark of it (a.dz)
+  Po.desmaia = function (v) {
+    const a = G.S.avatar; if (!Po.is(v) || !G.inSim || !a) return false;
+    v.sleeping = true; v.act = ''; v.moving = false; a.dz = { t: G.S.clock, inB: v.inside || 0, arr: 0 };
+    G.IncUI && G.IncUI.toast && G.IncUI.toast('Você bebeu demais… tudo gira, e o chão vem ao seu encontro.', 4);
+    return true;
+  };
+  Po.arrasta = function (v, x, y) {
+    const a = G.S.avatar; if (!Po.is(v) || !G.inSim || !a || !(G.Ebrio && G.Ebrio.desmaiado(v)) || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+    if (v.inside) { if (a.use) Po.unuse(v); v.inside = 0; Po.setLevel(null); }
+    v.x = x; v.y = y; if (a.dz) a.dz.arr = 1; return true;
+  };
+  Po.acorda = function (v, why) {
+    const a = G.S.avatar; if (!Po.is(v) || !a) return;
+    const dz = a.dz; a.dz = null; Po.wake(v);
+    const txt = why === 'perigo' ? 'Você acorda num susto, ainda tonto da bebida.' : dz && dz.arr ? 'Você acorda no chão da rua, com a cabeça latejando: alguém te arrastou para fora da taverna.' : v.inside ? 'Você acorda no chão, com a cabeça latejando: tinha bebido demais.' : 'Você acorda na rua, com a cabeça latejando: tinha bebido demais.';
+    G.IncUI && G.IncUI.toast && G.IncUI.toast(txt, 5);
+  };
+  // (the body out of drink, for the screen: since when, and whether it was dragged)
+  Po.desmaio = () => { const a = G.S.avatar; const v = Po.body(); return v && a && G.Ebrio && G.Ebrio.desmaiado(v) ? { t: a.dz ? a.dz.t : v.ebrioD, arr: !!(a.dz && a.dz.arr) } : null; };
   // the world's step for the incarnation: is the body still the player's?
   Po.update = function (dt) {
     const S = G.S; const a = S.avatar; if (!a) return;
@@ -658,6 +682,8 @@
   // they heard, «Dizem que…» (G.Boatos.doCorpo; the god, nothing: the chronicle is the god's). And the chronicle's line told far
   // off reaches the ears at once only from the person's own town or of no place: of another town it comes as the talk brings it
   K.boatos = function (v) { if (god(v) || !G.Boatos) return []; return G.Boatos.doCorpo(v); };
+  // (how drunk one feels — one's own body: the merry, the drunk, the floor turning, the hangover — G.Ebrio, D-838; the god knows nothing of it)
+  K.ebrio = v => (god(v) || !G.Ebrio ? '' : G.Ebrio.palavra(v));
   K.hearsNow = function (v, e) {
     if (god(v) || !e || !Number.isFinite(e.x)) return true;
     if (!G.Boatos) return K.hears(v, e);

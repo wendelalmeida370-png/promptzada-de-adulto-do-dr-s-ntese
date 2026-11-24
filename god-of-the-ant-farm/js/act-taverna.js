@@ -531,26 +531,26 @@
     if (v.task && v.task.type === 'atender' && v.task.op === op.id) return null;
     const k = c.k; const r = D.use('v:' + v.id, k, c.n, { op: op.id, code: k === 'food' ? 'refeicao' : 'bebida', by: v.id, mine: true });
     if (!r.ok) return null;
-    taste(v, k, S_().buildings.get(op.at)); return k;
+    taste(v, k, S_().buildings.get(op.at), r.n); return k;
   }
   // what a meal or a round does to one (from one's own cup, or from the server's hand)
-  function taste(v, k, b) {
+  // (n: what of the good went down — a round when not said; 0, already in the body sip by sip: the god's, T.bite)
+  function taste(v, k, b, n) {
     const S = S_();
     if (k === 'food') { v.hunger = Math.max(0, v.hunger - 35); return; }
-    // the second round makes one tipsy, the third drunk for a long while (tavern.js counts the morning after)
+    // (the rounds of the day, for the morning after — tavern.js —; the drink in the body is G.Ebrio's, by what the drink is: T2, D-831)
     v.drinks = (v.drinks || 0) + 1; v.drinkDay = S.day;
     if (b) b.served = (b.served || 0) + 1;
-    const heavy = (v.traits || []).includes('Glutão') || (v.traits || []).includes('Sociável');
-    if (v.drinks >= 2 || (heavy && G.R() < 0.35)) v.drunk = Math.max(v.drunk || 0, S.clock + 30 + v.drinks * 22);
+    if (G.Ebrio && n !== 0) G.Ebrio.dose(v, k, n);
   }
   // what one asks for: a meal when hungry (and there is one), a round otherwise
   const want = (v, b) => (v.hunger > 40 && D.free('b:' + b.id, 'food') >= 1 - EPS ? 'food' : 'drink');
   // another round? a free evening, a sorrow, merry company — fewer with each one, none past the purse or the shelf
   function again(v, b, m) {
-    if (m.r >= 4 || !T.menu(b).some(x => x.k !== 'food')) return false;
+    if (m.r >= 4 + (G.Ebrio ? G.Ebrio.mais(v) : 0) || !T.menu(b).some(x => x.k !== 'food')) return false; // (the drunk past the usual four: T2)
     if (coin(b) && E.purse(v) + EPS < T.PRICE.drink && !T.fiadoOk(b, v, T.PRICE.drink)) return false;
     const tr = v.traits || [];
-    const w = 0.25 + (tr.includes('Sociável') ? 0.25 : 0) + (tr.includes('Glutão') ? 0.2 : 0) + (v.mourn > 0 ? 0.3 : 0) - (tr.includes('Devoto') ? 0.15 : 0) - m.r * 0.12;
+    const w = 0.25 + (tr.includes('Sociável') ? 0.25 : 0) + (tr.includes('Glutão') ? 0.2 : 0) + (v.mourn > 0 ? 0.3 : 0) - (tr.includes('Devoto') ? 0.15 : 0) - m.r * 0.12 + (G.Ebrio ? G.Ebrio.sede(v) : 0);
     return G.R() < w;
   }
   // (time to go home: the person's own hour — the bed time and a night out, T.leaveOf —; past the closing, or before the dawn)
@@ -603,7 +603,7 @@
   function order(v, t, b, op) { const S = S_(); const d = op.data; const m = d.mesa[v.id]; m.want = want(v, b); m.st = 2; if (!d.fila.includes(v.id)) d.fila.push(v.id); t.st = 2; t.wt = 0; v.actT = 0; m.nx = r1(S.clock + T.TALK); callKeeper(b, op); }
   function runFregues(v, t, dt, H) {
     const S = S_(); const b = S.buildings.get(t.id); const op = t.op ? A.get(t.op) : null;
-    if (!b || !b.built || !op || !live(op)) return leave(v, t, op, H);
+    if (!b || !b.built || !op || !live(op)) return v.ebrioD > 0 && G.Ebrio ? G.Ebrio.aoChao(v) : leave(v, t, op, H); // (out of drink as the day ended: down at the door — T2)
     const d = op.data;
     if (t.st === 0) {
       if (!T.aberta(b)) return H.end(v);
@@ -623,6 +623,7 @@
       t.st = 1; v.actT = 0; return;
     }
     const m = d.mesa[v.id]; if (!m) return leave(v, t, op, H);
+    if (v.ebrioD > 0 || m.dz) return caidoMesa(v, t, b, op, m, H); // (passed out of drink at the tables: the house's — T2, below)
     if (t.st === 1) { // walking from the door to the seat
       if (G.Vg.entering(v)) { v.act = ''; return; }
       say(v, 'pedir_taverna', { bem: m.want === 'food' ? T.dish(b) : T.nome(drinkOn(b) || 'cerveja') });
@@ -635,7 +636,7 @@
     if (t.st === 7 || t.st === 8) return selfServe(v, t, b, op, dt, H);
     if (t.st === 9) { // dancing by the stage while the song is on (D-806); the song over, or worn out, back to one's seat — kept for one
       v.act = 'danca'; t.pose = undefined; life(v, t, b, op, dt);
-      if (musicOn(op) && v.energy > T.DANCA_E - 12 && !brawls.has(v.id)) return;
+      if ((musicOn(op) || ebDanca(v, m)) && v.energy > T.DANCA_E - 12 && !brawls.has(v.id)) return;
       t.use = m.use || 'sentar'; t.near = null; t.st = 5; m.st = 5; m.nx = r1(S.clock + T.TALK); v.actT = 0; return;
     }
     const talk = company(v, b, op); const sit = talk ? 'sittalk' : 'sit';
@@ -731,12 +732,13 @@
       if (G.R() < dt * 1.5) { if (o.hp > 25) { G.Vg.damage(o, 2, 'brawl'); blood(op, br); if (G.R() < T.DERRUBA) spill(op, b, o); } o.stagT = S.clock + 0.3; G.Audio && G.Audio.at(v.x, v.y, 'hit'); }
       return;
     }
+    if (ebLife(v, t, b, op, dt)) return; // (what the drink has one do at the tables, by who one is — T2, below)
     // (a fight has a cause: how quarrelsome the drunk one is, and whom of the drunk at the tables he dislikes — G.Convivio, 22b D-581)
     const cv = G.Convivio;
-    if (v.drunk > S.clock && night && G.R() < dt * 0.006 * (cv ? cv.briga(v) : 1) && v.age >= 18) {
+    if (G.Ebrio && G.Ebrio.bebado(v) && night && G.R() < dt * 0.006 * (cv ? cv.briga(v) : 1) && v.age >= 18) {
       let o = null;
       if (cv) o = cv.rival(v, Object.keys(op.data.mesa).filter(id => !brawls.has(+id) && !op.data.mesa[id].body));
-      else for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && q.drunk > S.clock && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
+      else for (const id of Object.keys(op.data.mesa)) { const q = S.villagers.get(+id); if (q && q !== v && G.Ebrio.bebado(q) && !brawls.has(q.id) && !op.data.mesa[id].body) { o = q; break; } }
       if (o) brawl(v, o, b, op);
     }
   }
@@ -900,6 +902,8 @@
       // and his strength —, before anything else, D-809)
       { const br = d.briga; if (br && !br.k) { const o = S.villagers.get(br.a); br.k = -1;
         if (o && brawls.has(o.id) && d.mesa[o.id] && brave(v)) { br.k = v.id; t.ex = o.id; t.corpo = null; t.cust = null; walkTo(v, t, b, o.id); t.st = 30; tally(d, 'expulsar', 'briga'); return; } } }
+      // (one passed out of drink at the tables or on the floor of the house: dragged out to the street — T2, below)
+      if (ebKeeper(v, t, b, op)) return;
       // (a feast tonight: the speech from the counter, when the room has its people — D-821)
       if (TF() && TF().fala(v, t, b, op)) return;
       // (the god's body at a table, calling — or its order nobody is fetching —: to it before the guests of the world, D-767)
@@ -1031,6 +1035,7 @@
       if (G.Lacos) G.Lacos.ato(v, o, 'atrito'); outOf(o, op); d.expulsos = (d.expulsos || 0) + 1; delete d.expulsa; delete d.briga; t.ex = 0;
       return corpoBack(v, t, b);
     }
+    if (t.st === 40 || t.st === 41) return ebDrag(v, t, b, op, H); // (the one out of drink dragged out — T2, below)
     if (t.st === 7) { // the god's body at the counter: served there, from the shelf
       v.act = AN.servir.act; if (v.actT < AN.servir.dur) return;
       const c = S.villagers.get(t.cust[0]); if (c && d.mesa[c.id]) serve(op, v, c); else d.fila = d.fila.filter(q => q !== t.cust[0]);
@@ -1359,10 +1364,10 @@
     const one = food ? 1 / T.BITES : (T.DOSE[k] || c.n) / T.SIPS; const n = c.n <= one * 1.5 ? c.n : one;
     const r = D.use('v:' + v.id, k, n, { op: op.id, code: food ? 'refeicao' : 'bebida', by: v.id, mine: true, part: true });
     if (!r.ok) return { ok: false, why: 'Não deu.' };
-    if (food) v.hunger = Math.max(0, v.hunger - 35 * r.n);
+    if (food) v.hunger = Math.max(0, v.hunger - 35 * r.n); else if (G.Ebrio) G.Ebrio.dose(v, k, r.n); // (the sip in the body: T2)
     const left = holding(v, op) ? v.carry.n : 0; const last = !(left > EPS); if (food) m.comido = r2(1 - left); // (how much of the plate is eaten: P5)
     if (last) {
-      if (food) m.pr = (m.pr || 0) + 1; else { taste(v, k, b); m.r++; }
+      if (food) m.pr = (m.pr || 0) + 1; else { taste(v, k, b, 0); m.r++; }
       if (m.seat) leaveVessel(op.data, b, m, v, k, food ? m.pof || null : null, 0, 0); // (the cup drunk, the plate scraped, left on the table)
       delete m.comido;
       m.cv = 'entre'; m.st = 5; m.nx = r1(S_().clock + T.TALK); G.Possess.deed(food ? 'refeicao' : 'rodada');
@@ -1523,7 +1528,7 @@
   T.cancao = function (b) { const op = T.dia(b); if (!op || !musicOn(op)) return null; const d = op.data; const mu = S_().villagers.get(d.mus); return d.pedida && d.pedida.mus === d.mus ? d.pedida.civ : mu ? G.Fac.civOfV(mu) : null; };
   // (the doze: worn out, or drunk past the third round; awake again rested, or the drink worn off)
   function doze(v, m, d) {
-    const S = S_(); const drunk = v.drunk > S.clock && (v.drinks || 0) >= 3;
+    const S = S_(); const drunk = G.Ebrio ? G.Ebrio.tonto(v) : false; // (past the staggering mark of one's own: G.Ebrio, T2)
     if (m.zz) { if (!drunk && v.energy > T.SONO + 10) m.zz = 0; return !!m.zz; }
     if (v.energy < T.SONO || drunk) { m.zz = r1(S.clock); tally(d, 'cochilo', drunk ? 'bebida' : 'cansaco'); return true; }
     return false;
@@ -1533,7 +1538,7 @@
     if (d.mus === v.id) return ''; // (the musician plays: his own song is not his to clap)
     if (m.mx === d.sets) return m.ma || ''; m.mx = d.sets; const S = S_();
     // (who drank livens up: a round in one, or the cup in the hand)
-    const h = G.hash(Math.imul(v.id | 0, 113) + Math.imul(d.sets | 0, 433) + 61); const lit = v.drunk > S.clock || (v.drinks || 0) >= 1 || !!(v.carry && v.carry.k !== 'food' && v.carry.op);
+    const h = G.hash(Math.imul(v.id | 0, 113) + Math.imul(d.sets | 0, 433) + 61); const lit = (G.Ebrio && G.Ebrio.alegre(v)) || (v.drinks || 0) >= 1 || !!(v.carry && v.carry.k !== 'food' && v.carry.op);
     let a = '';
     if (ax(v, 'ext') >= T.DANCA_X && v.energy > T.DANCA_E && v.age >= 14 && v.age < 60 && h < 0.4 + (lit ? 0.25 : 0)) a = 'danca';
     else if (lit && h < 0.75) a = 'cantar-junto';
@@ -1629,7 +1634,7 @@
     if (fd && FE.window && FE.window(set)) { const t = line('mesa_festa', { bem: fd.name }); if (t) L.push({ txt: t, why: 'festa' }); }
     const en = f ? G.Fac.enemiesOf(f.id).sort((a, c) => a.id - c.id) : []; if (en.length) { const t = line('mesa_guerra', { bem: 'os de ' + en[0].name }); if (t) L.push({ txt: t, why: 'guerra' }); }
     if (f && G.Village.foodSafe && !G.Village.foodSafe(f.id)) { const t = line('mesa_colheita'); if (t) L.push({ txt: t, why: 'colheita' }); }
-    if (v.drunk > S.clock) { const t = line('mesa_bebida'); if (t) L.push({ txt: t, why: 'bebida' }); }
+    if (G.Ebrio && G.Ebrio.alegre(v)) { const t = line('mesa_bebida'); if (t) L.push({ txt: t, why: 'bebida' }); }
     return L.length ? L[Math.floor(G.hash(Math.imul(v.id | 0, 17) + Math.imul(n, 613) + 11) * L.length) % L.length] : null;
   }
 
@@ -1843,14 +1848,16 @@
     text(v, t, op) {
       const S = S_();
       if (t.type === 'atender' && t.st >= 10 && t.st <= 14) { const c = t.corpo && S.villagers.get(t.corpo); const nm = c ? c.name : 'um freguês'; return t.st <= 11 ? `Atendendo à mesa de ${nm}` : t.st === 12 ? `Enchendo o pedido de ${nm}` : `Levando o pedido à mesa de ${nm}`; }
+      if (t.type === 'atender' && (t.st === 40 || t.st === 41)) { const c = S.villagers.get(t.ex); return `Tirando ${c ? c.name : 'um bêbado'} da taverna`; } // (T2)
       if (t.type === 'atender') { const c = t.cust && S.villagers.get(t.cust[0]); return t.st < 1 ? 'Indo para a taverna' : t.st === 2 && c ? `Enchendo ${t.cust.length > 1 ? 'as canecas' : 'a caneca'} de ${c.name}` : (t.st === 3 || t.st === 4) && c ? `Levando ${t.k === 'food' ? 'o prato' : 'a bebida'} à mesa de ${c.name}` : 'No balcão da taverna'; }
       if (t.type === 'tavern') {
         if (t.st === 6) return 'Tocando música na taverna';
         if (brawls.has(v.id)) return 'Brigando na taverna';
+        if (v.ebrioD > 0) return 'Desmaiado de bêbado na taverna'; // (T2)
         if (t.st === 0) return 'Indo para a taverna';
         if (t.st === 1) return 'Entrando na taverna';
         if (t.st === 2) return 'Sentado na taverna, esperando ser servido';
-        if (t.st === 3) return v.carry && v.carry.k === 'food' ? 'Comendo na taverna' : v.drunk > S.clock ? 'Bebendo além da conta na taverna' : 'Bebendo e conversando na taverna';
+        if (t.st === 3) return v.carry && v.carry.k === 'food' ? 'Comendo na taverna' : G.Ebrio && G.Ebrio.bebado(v) ? 'Bebendo além da conta na taverna' : 'Bebendo e conversando na taverna';
         if (t.st === 5) return 'Conversando à mesa da taverna';
         if (t.st === 7) return 'Servindo-se no balcão da taverna';
         if (t.st === 8) return 'Voltando à mesa da taverna';
@@ -1925,6 +1932,168 @@
       for (const id in op.data.mesa) { const m = op.data.mesa[id]; if (m.corpo && m.srv === v.id) { m.srv = 0; delete m.vem; if (m.cv === 'carta') m.cv = 'chama'; m.cs = r1(S_().clock); } }
     }
   });
+
+  // ------------------------------ a bebedeira (T2, D-830 a D-839) ------------------------------
+  // The drink in each one is G.Ebrio's (embriaguez.js: the stomach, the blood, the faint, the hangover): the tavern gives it its doses
+  // (taste, T.bite) and lives what the drunk do at its tables by who they are (G.Ebrio.impulso, pure) — the act at the table (m.eb:
+  // [act, the other, until, the way of it, the cause, the contact done, since]) and the other's answer (m.ebR: [act, who, until, to hit
+  // back]), in the day's book (op.data: a save keeps them) and counted in it with the way (d.atos); the drink thrown at the other leaves
+  // by the ledger ('jogou') and lies on the floor (d.chao, the 3D's poça: P5); the dance in the middle of the hall with no music on; the
+  // one passed out at the table (m.dz: 'mesa', or 'chao'), dragged out to the street by the keeper (st 40, 41: «arrastar» / «arrastado»)
+  // or home by a friend of the table (G.Ebrio.arrasta); the day ended over one still out puts one down at the door. Nothing drawn by
+  // lot: the índole, the drink, the ids and the clock (G.hash)
+  T.IMP = 6;       // (seconds between two looks of a drunk one at what to do — each at a moment of one's own)
+  T.ARRASTA = 2.2; // (seconds of the keeper taking hold of one out of drink before the drag)
+  T.CAIDO = 3.1;   // (the errand of one out at the table: nothing of the evening takes one from it)
+  T.JOGA = 0.55;   // (seconds into the throw the drink leaves the cup)
+  T.MOLHA = 2;     // (seconds of the wet one's start)
+  const ACTING = { 2: 1, 3: 1, 4: 1, 5: 1 }; // (at the table: waiting, with the cup, given to drink, between rounds)
+  // (who is about at the tables, for the drunk one's look: [person, at one's own table]; and the partner drawn into another's talk)
+  function ebCtx(v, b, op, m, slot) {
+    const S = S_(); const d = op.data; const quem = []; let par = null;
+    for (const id of Object.keys(d.mesa)) {
+      if (+id === v.id) continue; const mo = d.mesa[id]; if (mo.body || mo.corpo || mo.dz || !ACTING[mo.st]) continue;
+      const o = S.villagers.get(+id); if (!o || !o.task || o.task.type !== 'tavern' || o.ebrioD > 0 || brawls.has(o.id)) continue;
+      quem.push([o, !!(m.g && mo.g === m.g)]);
+      const e = mo.eb; if (o.id === v.partner && e && e[1] && e[1] !== v.id && S.clock < e[2] && (e[0] === 'talk' || e[0] === 'hug' || e[3] === 'corte')) { const x = S.villagers.get(e[1]); if (x && x.g !== o.g && !(G.Vg.relatedClose && G.Vg.relatedClose(o, x))) par = [o, x]; }
+    }
+    const c = v.carry;
+    return { slot, quem, cup: !!(c && c.op === op.id && c.k !== 'food' && c.n > EPS), musica: musicOn(op), dito: !!m.ss, cj: m.cj || 0, par };
+  }
+  // the drunk one's act at the tables, each step of one's table life: the other's answer, the act under way, or a look at what to do
+  function ebLife(v, t, b, op, dt) {
+    const S = S_(); const d = op.data; const m = d.mesa[v.id]; if (!m || m.body || m.corpo || !G.Ebrio) return false; void dt;
+    if (m.ebR) {
+      if (S.clock < m.ebR[2] && ACTING[t.st]) { v.act = m.ebR[0]; faceTo(v, S.villagers.get(m.ebR[1])); return true; }
+      const w = m.ebR; delete m.ebR; const o = S.villagers.get(w[1]);
+      if (w[3] && o && d.mesa[o.id] && ACTING[t.st] && !brawls.has(v.id) && !brawls.has(o.id)) { brawl(v, o, b, op); tally(d, 'revida', 'molhado'); return false; } // (the wet one hits back)
+    }
+    if (m.eb) { if (S.clock < m.eb[2]) return ebStep(v, t, b, op, m); ebDone(v, b, op, m); }
+    if (!ACTING[t.st] || m.zz || brawls.has(v.id) || d.mus === v.id || (d.expulsa && d.expulsa.b === v.id) || S.clock < (m.ec || 0) || !G.Ebrio.alegre(v)) return false;
+    const slot = Math.floor((S.clock + T.IMP * G.hash(Math.imul(v.id | 0, 389) + 3)) / T.IMP); if (m.ek === slot) return false; m.ek = slot;
+    const imp = G.Ebrio.impulso(v, ebCtx(v, b, op, m, slot)); if (!imp) return false;
+    return ebStart(v, t, b, op, m, imp, slot);
+  }
+  function ebStart(v, t, b, op, m, imp, slot) {
+    const S = S_(); const d = op.data; const o = imp.o ? S.villagers.get(imp.o) : null; const mo = o ? d.mesa[o.id] : null;
+    tally(d, imp.a, imp.fam); m.ec = r1(S.clock + (imp.dur || 2) + 5 + 7 * G.hash(Math.imul(v.id | 0, 53) + (slot | 0)));
+    { const w = G.Ebrio.fala(v, imp.a, o, imp, slot); if (w && !(G.Skip && G.Skip.on) && G.Talk) G.Talk.say(v, w, { dur: Math.min(5, 1.6 + w.length / 15) }); }
+    if (imp.a === 'briga') { if (o && mo && !brawls.has(o.id) && !brawls.has(v.id)) brawl(v, o, b, op); return false; } // (the call to the fists: the tavern's brawl)
+    m.eb = [imp.a, o ? o.id : 0, r1(S.clock + imp.dur), imp.fam, imp.why, 0, r1(S.clock)];
+    if (imp.fam === 'segredo') m.ss = 1; if (imp.fam === 'corte' && o) m.cj = o.id;
+    if (o && mo && ACTING[mo.st] && !mo.eb && !mo.zz && !brawls.has(o.id)) { const rv = G.Ebrio.resposta(o, imp.a, v, imp.fam); if (rv) mo.ebR = [rv, v.id, r1(S.clock + imp.dur), 0]; }
+    if (imp.a === 'danca') { toDance(v, t, b, op, m); v.act = 'danca'; return false; } // (to the floor, the music or none: st 9)
+    v.act = imp.a; if (o) faceTo(v, o); return true;
+  }
+  function ebStep(v, t, b, op, m) {
+    const S = S_(); const e = m.eb; if (e[0] === 'danca' || !ACTING[t.st]) return false;
+    const o = e[1] ? S.villagers.get(e[1]) : null; v.act = e[0]; if (o) faceTo(v, o);
+    if (e[0] === 'jogar-bebida' && !e[5] && S.clock >= e[6] + T.JOGA) { e[5] = 1; thrown(v, o, b, op); }
+    return true;
+  }
+  // (the drink thrown: out of the cup by the ledger — 'jogou' —, on the floor by the one it was thrown at — a poça, d.chao —, the
+  // other wet a while — G.Ebrio.molha —; the shame of it left in the other, and the quick to anger hit back)
+  function thrown(v, o, b, op) {
+    const S = S_(); const d = op.data; const c = v.carry; if (!o || !c || c.op !== op.id || c.k === 'food' || !(c.n > EPS)) return false;
+    const k = c.k; const r = D.use('v:' + v.id, k, c.n, { op: op.id, code: 'jogou', by: v.id, mine: true, part: true }); if (!r.ok) return false;
+    const mo = d.mesa[o.id]; const In = G.Interiors; const pl = In && In.placeOf ? In.placeOf(o) : null;
+    if (pl) { const L = chaoOf(d); if (L.length >= 12) L.splice(0, 2); const h = G.hash(Math.imul(o.id | 0, 131) + L.length * 7 + 9) * 6.283; const at = mo && mo.it ? { it: mo.it, q: mo.q, g: mo.g || 0 } : {};
+      L.push(Object.assign({ k: 'poca', x: r2(pl.x + Math.cos(h) * 0.3), z: r2(pl.z + Math.sin(h) * 0.3), lv: pl.lv || 0, bebida: k, n: r2(0.6 + r.n / (T.DOSE[k] || r.n) * 0.6), t: r1(S.clock), de: 'jogou' }, at)); }
+    G.Ebrio.molha(o, k); d.jogadas = (d.jogadas || 0) + 1;
+    if (G.Lacos) { G.Lacos.ato(v, o, 'bebida'); G.Lacos.marca(o, 'humilhou', v.id, 35); }
+    if (mo && ACTING[mo.st] && !brawls.has(o.id)) mo.ebR = ['molhado', v.id, r1(S.clock + T.MOLHA), G.Ebrio.revida(o, v) ? 1 : 0];
+    { const w = G.Ebrio.fala(o, 'molhado', v, null, m0(mo)); if (w && !(G.Skip && G.Skip.on) && G.Talk) G.Talk.say(o, w, { dur: 2.4 }); }
+    return true;
+  }
+  const m0 = mo => (mo && mo.ek) || 0;
+  // (the act over: what it leaves between the two — the society's doors, G.Ebrio.fim —; the jealous one's shout ends in the fists)
+  function ebDone(v, b, op, m) {
+    const S = S_(); const d = op.data; const e = m.eb; delete m.eb; if (!e) return;
+    const o = e[1] ? S.villagers.get(e[1]) : null; const there = !!(o && d.mesa[o.id]);
+    const ouv = [];
+    if (e[3] === 'segredo') for (const id of Object.keys(d.mesa)) { const q = d.mesa[id]; const w = S.villagers.get(+id); if (w && w !== v && !q.body && ((m.g && q.g === m.g) || +id === e[1])) ouv.push(w); }
+    if (e[3] === 'ciume' && there && !brawls.has(o.id) && !brawls.has(v.id)) brawl(v, o, b, op);
+    const r = G.Ebrio.fim(v, e[0], there ? o : null, e[3], e[4], ouv);
+    if (r && (e[3] === 'segredo' || e[3] === 'corte')) tally(d, e[3] === 'segredo' ? 'segredo:' + e[4] : 'corte:' + r, 'bebida');
+  }
+  // (the drunk one's dance on the floor of the hall, with no music on: while the act lasts — G.Ebrio)
+  const ebDanca = (v, m) => !!(m && m.eb && m.eb[0] === 'danca' && S_().clock < m.eb[2]);
+  // one out of drink at the tables: the cup falls from the hand — spilt —, down on the table or the floor; nobody of the evening calls
+  // one out of it; a friend of the table, sober and strong, takes one home before the keeper comes; woken, the night is over — home
+  function caidoMesa(v, t, b, op, m, H) {
+    const S = S_(); const d = op.data;
+    if (!(v.ebrioD > 0)) { delete m.dz; delete m.arr; m.zz = 0; t.pri = 0.5; return leave(v, t, op, H); }
+    if (!m.dz) {
+      m.dz = ACTING[t.st] ? 'mesa' : 'chao'; const c = v.carry;
+      if (c && c.op === op.id && c.n > EPS) { if (c.k === 'food') D.use('v:' + v.id, c.k, c.n, { op: op.id, code: 'sobra', by: v.id, mine: true }); else spill(op, b, v); }
+      { const w = brawls.get(v.id); if (w) { brawls.delete(w.with); brawls.delete(v.id); } }
+      // (out is asleep at the table for the rest of the room: no game, no word, no round — m.zz, the doze's mark)
+      if (d.mus === v.id) d.mus = 0; d.fila = d.fila.filter(q => q !== v.id); delete m.eb; delete m.ebR; m.zz = r1(S.clock);
+      if (t.st === 9 || t.st === 7 || t.st === 8 || t.st === 6) { t.use = m.use || t.use; t.near = null; } t.st = 5; m.st = 5;
+      tally(d, 'desmaio', 'bebida');
+    }
+    t.pri = T.CAIDO; t.pose = undefined; v.moving = false;
+    // (the keeper who came for one: still at it, or let go)
+    if (m.arr) { const k = S.villagers.get(m.arr); const kt = k && k.task; if (!kt || kt.type !== 'atender' || kt.ex !== v.id || (kt.st !== 40 && kt.st !== 41)) delete m.arr; }
+    v.act = m.arr && S.villagers.get(m.arr).task.st === 41 ? 'arrastado' : 'desmaio';
+    if (!m.arr && S.clock >= (m.af || 0)) {
+      m.af = r1(S.clock + 2); const f = friendFor(v, b, op);
+      if (f) {
+        const fm = d.mesa[f.id]; if (fm) { finishCup(f, op); delete d.mesa[f.id]; d.fila = d.fila.filter(q => q !== f.id); }
+        delete d.mesa[v.id]; d.fila = d.fila.filter(q => q !== v.id); tally(d, 'arrastar', 'amigo');
+        { const w = G.Ebrio.fala(f, 'levar', v, null, m0(fm)); if (w && !(G.Skip && G.Skip.on) && G.Talk) G.Talk.say(f, w, { dur: 2.6 }); }
+        G.Ebrio.arrasta(f, v, b, 'casa'); return;
+      }
+    }
+    // (the day ending with one still out and nobody to drag one: down at the door)
+    if (!m.arr && d.fecha && S.clock > d.fecha + 3 * T.SAI && !ebKeeperOf(b)) { delete d.mesa[v.id]; d.fila = d.fila.filter(q => q !== v.id); G.Ebrio.aoChao(v); }
+  }
+  // (a friend at the tables who takes one home: one who likes one well — the house's own measure of a friend, T.FOND —, sober and strong,
+  // of one's own town, with one's house to go to and the way there; the fondest first)
+  function friendFor(v, b, op) {
+    const S = S_(); const h = S.buildings.get(v.home); if (!G.Village.livable(h)) return null; const dr = G.Vg.door(h);
+    let best = null, bs = T.FOND - 1;
+    for (const id of Object.keys(op.data.mesa)) {
+      const mo = op.data.mesa[id]; if (+id === v.id || mo.body || mo.corpo || mo.dz || !ACTING[mo.st]) continue; const f = S.villagers.get(+id);
+      if (!f || f.set !== v.set || !G.Ebrio.forte(f) || brawls.has(f.id) || op.data.mus === f.id || (f.carry && f.carry.n > EPS && f.carry.op !== op.id)) continue;
+      const k = fond(f, v); if (k > bs && G.W.reaches(f, dr[0], dr[1])) { bs = k; best = f; }
+    }
+    return best;
+  }
+  // (who is out of drink in the house for the keeper to drag: at the tables, else the god's body on the floor)
+  function caidoDe(b, op) {
+    const S = S_(); const d = op.data;
+    for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (!m.dz || m.arr || m.corpo || m.body) continue; const o = S.villagers.get(+id); if (o && o.ebrioD > 0 && o.inside === b.id && !G.Vg.leaving(o)) return o; }
+    const me = bodyOf(); if (me && me.inside === b.id && me.ebrioD > 0 && !d.arrB) return me;
+    return null;
+  }
+  const ebKeeperOf = b => { const k = keeperOf(b); return k && !A.isBody(k) && G.Ebrio && G.Ebrio.forte(k) && atHand(k) ? k : null; };
+  // the keeper at the counter (st 1), his hands free: one out of drink to drag, before anything else
+  function ebKeeper(v, t, b, op) {
+    if (!G.Ebrio || A.isBody(v) || !G.Ebrio.forte(v) || (v.carry && v.carry.n > EPS)) return false;
+    const d = op.data; const o = caidoDe(b, op); if (!o) return false;
+    t.ex = o.id; t.corpo = null; t.cust = null; walkTo(v, t, b, o.id); t.st = 40;
+    const mo = d.mesa[o.id]; if (mo) mo.arr = v.id; else d.arrB = v.id; tally(d, 'arrastar', 'desmaio');
+    return true;
+  }
+  // (st 40 the walk to the one out, 41 the hold of the two — «arrastar» / «arrastado» —, and out by the door with them: G.Ebrio.arrasta)
+  function ebDrag(v, t, b, op, H) {
+    const S = S_(); const d = op.data; const o = S.villagers.get(t.ex); const mo = o ? d.mesa[o.id] : null; void H;
+    if (!o || !(o.ebrioD > 0) || o.inside !== b.id) { if (mo) delete mo.arr; if (d.arrB === v.id) delete d.arrB; t.ex = 0; return corpoBack(v, t, b); }
+    if (t.st === 40) { t.st = 41; v.actT = 0; return; }
+    v.act = 'arrastar'; faceTo(v, o); if (v.actT < T.ARRASTA) return;
+    { const w = G.Ebrio.fala(v, 'arrastar', o, null, d.q | 0); if (w && !(G.Skip && G.Skip.on) && G.Talk) G.Talk.say(v, w, { dur: 2.6 }); }
+    if (mo) { delete d.mesa[o.id]; d.fila = d.fila.filter(q => q !== o.id); if (d.mus === o.id) d.mus = 0; }
+    delete d.arrB; d.arrastados = (d.arrastados || 0) + 1; t.ex = 0;
+    if (!G.Ebrio.arrasta(v, o, b, 'rua')) return corpoBack(v, t, b);
+  }
+  // (for the proofs only — the god's hand of a proof —: one at the tables does now what the drink would have one do, by the same path)
+  T.ebrioProva = function (v, a, o) {
+    if (!G.inSim || !v || !G.Ebrio) return false; const t = v.task; const op = t && t.type === 'tavern' ? A.get(t.op) : null; const b = op && live(op) ? S_().buildings.get(op.at) : null;
+    const m = b ? op.data.mesa[v.id] : null; if (!m || !ACTING[t.st] || m.eb) return false;
+    const fam = a === 'jogar-bebida' || a === 'insult' || a === 'threaten' || a === 'spit' || a === 'swear' || a === 'shout' || a === 'briga' ? 'agressivo' : a === 'weep' || a === 'tell' ? 'triste' : 'expansivo';
+    const slot = (m.ek | 0) + 1; m.ek = slot; ebStart(v, t, b, op, m, { a, o: o ? o.id : 0, dur: G.Ebrio.DUR[a] || 3, fam, why: fam }, slot); return true;
+  };
 
   // ------------------------------ the task machines, the keeper's job and the words of this file ------------------------------
   const oldRun = E.run;

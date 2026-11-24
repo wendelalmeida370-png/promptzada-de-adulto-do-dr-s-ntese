@@ -72,8 +72,8 @@
   TF.CONC_DEPOIS = 25;  // seconds after the speech before a match may start, and between two of its rounds
   TF.CONC_T = 7;
   TF.CONC_MAX = 4;      // at most in a match
-  TF.CONC_LIM = 0.85;   // how drunk one gives up at — more, the stubborn
-  TF.CONC_TEIMA = 0.45;
+  TF.CONC_LIM = 0.55;   // the share of one's mark of passing out one gives up at — more, the stubborn
+  TF.CONC_TEIMA = 0.4;
   TF.FORTE = 0.6;       // the arm wrestle: strong past this, of the índole past TF.BRACO_X
   TF.BRACO_X = 0.45;
   TF.BRACO_JAN = 20;    // a table's look for one, each this many seconds; its share of the looks, a plain night and a feast
@@ -281,9 +281,10 @@
 
   // ------------------------------ the drinking match and the arm wrestle (D-823, D-824) ------------------------------
   const compete = v => 0.5 * fac(v, 'ambicioso') + 0.3 * ax(v, 'ext') + 0.2 * (1 - ax(v, 'con'));
-  // how drunk one is: the drink's own measure where the world keeps it (v.ebrio, T2's), else the rounds of the night
-  TF.bebado = v => (typeof v.ebrio === 'number' && Number.isFinite(v.ebrio) ? v.ebrio : (v.drinks || 0) * 0.22);
-  const limite = v => TF.CONC_LIM + TF.CONC_TEIMA * (0.6 * fac(v, 'ambicioso') + 0.4 * fac(v, 'confiante'));
+  // how drunk one is — the drink in the blood, G.Ebrio's (T2) —, and how far one goes before giving up: towards one's own mark of passing
+  // out (G.Ebrio.limiar), the farther the more stubborn — the drink still in the stomach takes the stubborn past it, and they fall
+  TF.bebado = v => (G.Ebrio ? G.Ebrio.de(v) : (v.drinks || 0) * 0.22);
+  const limite = v => (G.Ebrio ? G.Ebrio.limiar(v, 'desmaio') : 1.2) * (TF.CONC_LIM + TF.CONC_TEIMA * (0.6 * fac(v, 'ambicioso') + 0.4 * fac(v, 'confiante')));
   TF.limite = limite;
   // (the strength of an arm: the heavy trade — the forge, the mine, the axe, the stone, the quay, the arms —, the years — the best from
   // 22 to 40 —, the health; never the look)
@@ -350,7 +351,8 @@
     for (const id of c.quem) {
       if (c.fora[id]) continue; const v = S.villagers.get(id); const m = d.mesa[id];
       // (out: up and gone — the drink's own fall takes one from the table —, fainted, out of coin, or past what one takes)
-      if (!v || !m || !v.task || v.task.type !== 'tavern' || v.act === 'desmaio') { c.fora[id] = 'caiu'; continue; }
+      if (!v || !m || !v.task || v.task.type !== 'tavern' || (G.Ebrio && G.Ebrio.desmaiado(v))) { c.fora[id] = 'caiu'; continue; }
+      if (m.zz) { c.fora[id] = 'cochilou'; continue; }
       if (TF.bebado(v) >= limite(v)) { c.fora[id] = 'desistiu'; continue; }
       if (coin(b) && E.purse(v) + EPS < T.PRICE.drink) { c.fora[id] = 'sem-dinheiro'; continue; }
       // (the round of each, by his own coin: poured from the shelf — by the keeper's hand, or one's own — and downed at once)
