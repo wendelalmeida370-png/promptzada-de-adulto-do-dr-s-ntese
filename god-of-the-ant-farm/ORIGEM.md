@@ -207,6 +207,17 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   bicho que o povo teve (o material `couro`, `O.matOK`) e da madeira; um povo que nunca caçou nem abateu não tem instrumento, e o
   músico canta. Nenhum é arma, e nenhum entra no armazém como coisa: o que custa é o couro e a madeira (`G.Itens.feitoDe`). O corpo do
   deus, que tem coisas de verdade, toca o que tiver na mochila (o instrumento não está no `PLACE_TOOL`).
+- **A festa da taverna** (T1, D-819 a D-821): os **enfeites** gastam pelo livro (`enfeites`) o que o povo tem — a fita, o pano e o
+  estandarte o `tecido` do armazém do povo, o mastro do estandarte a `wood` da casa (ou do armazém), as velas a `cera` da casa; a
+  guirlanda e as pétalas são as flores colhidas da horta da cidade ou da flora de uma terra sem neve, sem bem no armazém —; o **prato
+  da festa** (`TF.BANQUETE`) é a comida da prateleira da parte de que é feito (`of`: a carne, o peixe, o trigo, a cevada, o milho),
+  uma porção e meia por prato; a **rodada da casa** e a bebida dos bardos saem da prateleira sem moeda (`rodada-casa`), o custo é do
+  taverneiro, que a comprou.
+- **O fiado** (T1, D-825): a rodada na conta sai da prateleira sem moeda (`fiado`); a conta paga no balcão vai das moedas da casa do
+  freguês às do taverneiro (`fiado`), ou pelo dia da cidade (`divida`, `soc-vida.js`).
+- **A porta da taverna** (T1, D-814, D-815): o saque de quem a arrombou leva a comida ou a bebida da prateleira às mãos dele
+  (`saque`), e daí ao armazém do povo dele na volta (`G.Vg.spoils`); o conserto gasta a madeira (`wood`) da casa ou a do armazém do
+  povo que sobra (`G.Casa.spare`), comprada onde há moeda: às mãos do taverneiro (`porta-madeira`) e usada na porta (`porta-conserto`).
 - **O kit** (o que o 3D desenha de cada um, `G.Inv.kit`, puro) e **as coisas do ofício que viram de verdade** (`Inv.realize`) usam o
   melhor material **que o povo teve** (`O.matOK`). Um povo do bronze que nunca teve cobre e estanho desenha os guerreiros de lança de
   pedra e escudo de madeira; sem couro nem metal, sem elmo. O tido é para sempre: a lança de bronze do guerreiro não vira de pedra

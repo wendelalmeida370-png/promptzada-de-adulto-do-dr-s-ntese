@@ -2208,7 +2208,7 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
 // à prateleira ('taverna-volta'); a ronda dele é uma perna da operação do dia (as mãos ocupadas, D-094)
 { const tv = (src['act-taverna.js'] || []).join('\n');
   if (!/D\.move\('b:' \+ b\.id, 'v:' \+ v\.id, t\.k, n, \{ op: op\.id, code: 'taverna-caneca', by: v\.id, to: 'b:' \+ b\.id,/.test(tv)) fails.push('a caneca vai à mesa pelo livro: o taverneiro não enche a caneca da prateleira para as mãos pelo livro (D-763)');
-  if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
+  if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k(?:, null, t\.dish \|\| null, t\.n1)?\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
   if (!/code: 'taverna-volta'/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a caneca que ninguém tomou não volta à prateleira pelo livro (D-763)');
   if (!/leg\(op, v\) \{ const t = v\.task; return t && t\.type === 'atender' && t\.op === op\.id && t\.st >= 2 && t\.st <= \d+/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a ronda de quem serve não é uma perna da operação do dia (D-094, D-763)'); }
 // 314. "o bebê no colo em todo prédio" (D-660): o repartidor dá ao bebê de colo o colo de quem o carrega em todo prédio, antes de
@@ -2287,7 +2287,7 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 // origem de verdade (o que o povo fez, G.Origem.madeBy, ou os meios que tem) —; e os ossinhos e o pano são do que o povo teve (o osso
 // da carcaça, a lã do tear, a palha de todos), e o armazém não os dá do nada
 { const tv = (src['act-taverna.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), iv = (src['inventario.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
-  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/desc: (\(G\.TavernaOficios && G\.TavernaOficios\.desc\(b, 'food', t\)\) \|\| )?descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-803; o prato do cozinheiro, pelo livro dele: T3, D-846)');
+  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/(?:desc: |const ds = )(\(G\.TavernaOficios && G\.TavernaOficios\.desc\(b, 'food', t\)\) \|\| )?descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-803; o prato do cozinheiro, pelo livro dele: T3, D-846)');
   if (!/O\.madeBy = \(fid, t, win\) =>/.test(og) || !/if \(t === 'carne'\) mark\(fid, 'osso'\)/.test(og) || !/if \(m === 'osso'\) return !!O\.had\(fid, 'osso'\) \|\| !!O\.had\(fid, 'couro'\);/.test(og) || !/tecido: 'la'/.test(og)) fails.push('o cardápio só com o que existe: a origem sem o que o povo fez, ou sem o osso e a lã tidos (D-803, D-805)');
   if (!/return !!L && L\.length > 0 && art\(m\)/.test(iv)) fails.push('os ossinhos e o pano: o armazém dá uma coisa que não é feita de nada que ele tem (D-805)');
   if (!/ossinhos: \{[^\n]*mats: \['osso'\]/.test(it) || !/pano: \{[^\n]*mats: \['palha', 'la'\]/.test(it) || !/else if \(d\.mat === 'la' && CLOTH\[d\.kind\]\) out = \[\{ k: 'tecido'/.test(it)) fails.push('os ossinhos e o pano: o catálogo sem o osso, a palha e a lã de que são feitos (D-805)'); }
@@ -2583,6 +2583,55 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const as = (src['audio-src.js'] || []).join('\n'), au = src['audio.js'] || [];
   if (!/const st = In\.doorState\(best\.b, best\.e\.door\); return \{ b: best\.b\.id, door: best\.e\.door,/.test(as)) fails.push('a porta cede pelo mundo: a cena não lê o estado da porta forçada no In.doorState (D-895)');
   au.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'portaCede'/.test(c) && !/f\.porta === 'arrombada' && st\.porta !== undefined && st\.porta !== 'arrombada'/.test(c)) fails.push(`a porta cede pelo mundo: audio.js:${k + 1} toca a porta que cede fora da mudança do estado dela (D-895): ${l.trim().slice(0, 110)}`); }); }
+// 344. "a porta da taverna é do mundo que acontece" (T1, D-812 a D-815): a tranca, a porta arrombada, a força que resta à porta e o
+// abrigo do momento (b.tranca, b.porta, b.portaHp, b.abrigo) só o taverna-contexto.js escreve; a porta trancada e a arrombada entram no
+// estado da porta só pela porta do mundo (In.doorHold: a arrombada antes de quem passa, a trancada depois), e a porta arrombada não se
+// fecha à mão (In.useDoor); o conserto gasta a madeira pelo livro («porta-madeira», «porta-conserto»)
+{ const W = /\b(?:b|bd|bb|q)\.(?:tranca|porta|portaHp|abrigo)\s*(=(?!=)|\+=|-=)|delete (?:b|bd|bb|q)\.(?:tranca|porta|portaHp|abrigo)\b/;
+  for (const f of files) if (f !== 'taverna-contexto.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (W.test(c)) fails.push(`a porta da taverna: ${f}:${k + 1} escreve a tranca, a porta arrombada ou o abrigo fora do taverna-contexto.js (D-812): ${line.trim().slice(0, 110)}`); });
+  const it = (src['interiors.js'] || []).join('\n'), tc = (src['taverna-contexto.js'] || []).join('\n');
+  if (!/if \(held === 'arrombada'\) return \{ state: 'arrombada', by: 'regra' \};/.test(it) || !/if \(held === 'trancada'\) return \{ state: 'trancada', by: 'regra' \};/.test(it) || !/if \(st\.state === 'arrombada'\) return \{ ok: false,/.test(it)) fails.push('a porta da taverna: o estado da porta sem a porta do mundo (In.doorHold: a arrombada, a trancada) ou a arrombada fecha à mão (D-812)');
+  if (!/G\.Interiors\.doorHold\('taverna', hold\)/.test(tc) || !/code: 'porta-madeira'/.test(tc) || !/code: 'porta-conserto'/.test(tc)) fails.push('a porta da taverna: o taverna-contexto.js sem a porta do mundo ou sem o conserto pelo livro (D-812, D-815)'); }
+// 345. "a festa é do mundo, com causa" (T1, D-818 a D-824): a festa de uma taverna (b.festa), as causas já festejadas (b.festas) e as que
+// esperam (b.festaQ) só o taverna-festa.js escreve; o motivo é um dos que o mundo dá (a conquista, a vitória, o governante — nunca o golpe
+// —, a cidade, a colheita, o casamento, o filho, a casa que prosperou); os enfeites gastam pelo livro («enfeites») o que o povo tem; e o
+// «ate» é um dia do mundo (o som o lê assim)
+{ const W = /\b(?:b|bd|bb|q)\.(?:festa|festas|festaQ)\s*(=(?!=)|\+=)|delete (?:b|bd|bb|q)\.(?:festa|festas|festaQ)\b/;
+  for (const f of files) if (f !== 'taverna-festa.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (W.test(c)) fails.push(`a festa é do mundo: ${f}:${k + 1} escreve a festa de uma taverna fora do taverna-festa.js (D-818): ${line.trim().slice(0, 110)}`); });
+  const tf = (src['taverna-festa.js'] || []).join('\n');
+  if (!/const REIGN = \{ heranca: 1, escolha: 1, eleicao: 1, ungido: 1, revolucao: 1, fundacao: 1, secessao: 1, divina: 1 \};/.test(tf) || /golpe: 1/.test(tf)) fails.push('a festa é do mundo: o novo governante festejado sem a lista dos reinados que a taverna brinda, ou com o golpe (D-818)');
+  if (!/const use = \(from, g, n\) => D\.use\(from, g, n, \{ code: 'enfeites', by: k\.id \}\)\.ok;/.test(tf)) fails.push('a festa é do mundo: os enfeites não gastam pelo livro (D-819)');
+  if (!/b\.festa = \{ motivo: q\.m, causa: q\.c, dia, ate: dia,/.test(tf)) fails.push('a festa é do mundo: a festa sem o contrato (motivo, causa, dia, ate — um dia) (D-818)'); }
+// 346. "o contexto e a festa sem sorteio" (T1, D-668): o taverna-contexto.js e o taverna-festa.js não tiram de acaso nenhum — a escolha do
+// taverneiro, a vez de quem força a porta, os bardos, o prato, o concurso, a queda de braço e quem vence vêm da índole, do relógio, do
+// livro e dos ids (G.hash) —, e as leituras (TC.of, TC.escolha, TC.vontade, TF.forca, TF.bebado) não escrevem no mundo
+{ for (const f of ['taverna-contexto.js', 'taverna-festa.js']) { const L = src[f]; if (!L) { fails.push(`o contexto e a festa sem sorteio: js/${f} não existe (D-668)`); continue; }
+    L.forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(c)) fails.push(`o contexto e a festa sem sorteio: ${f}:${k + 1} sorteia (D-668): ${line.trim().slice(0, 110)}`); }); }
+  const tc = (src['taverna-contexto.js'] || []).join('\n'); const body = (t, a, b) => { const i = t.indexOf(a), j = b ? t.indexOf(b, i + 1) : -1; return i < 0 ? null : t.slice(i, j < 0 ? undefined : j); };
+  for (const [n, a, b] of [['TC.of', 'TC.of = function', '// (why the tavern does not open'], ['TC.escolha', 'TC.escolha = function', '// (the door\'s strength'], ['TC.vontade', 'TC.vontade = function', '// (the storm: one caught out']]) { const x = body(tc, a, b); if (!x) { fails.push(`o contexto e a festa sem sorteio: o taverna-contexto.js sem o ${n}`); continue; } if (/\b(?:b|v|k|set|f)\.\w+\s*(=(?!=)|\+=|-=|\+\+|--)/.test(x)) fails.push(`o contexto e a festa sem sorteio: o ${n} escreve no mundo (D-668)`); } }
+// 347. "quem se esconde da guerra, e a porta que segura" (T1, D-813, D-814): o abrigo é uma porta da guerra (G.War.shelters: o esconder-se
+// no abrigo, a porta que segura quem chega a ela, o saqueador que a força) chamada só nos quatro lugares do war.js — o socorro do
+// emergency, o esconder-se, a porta de quem luta contra quem está dentro, o ataque —; quem força uma porta pergunta ao mapa se a alcança
+// (W.reaches, regra 85), e só um bando que saqueia ou caça a força — o bando em retirada (G.War.retreat) não ataca porta nenhuma
+{ const wr = (src['war.js'] || []).join('\n'), tc = (src['taverna-contexto.js'] || []).join('\n');
+  const n = (wr.match(/for \(const sh of Wr\.shelters\)/g) || []).length;
+  if (!/Wr\.shelters = \[\];/.test(wr) || n !== 3 || !/if \(t\.sh\) \{ const sh = shelterOf\(t\); if \(sh\) return sh\.run\(v, t, dt, H\); return H\.end\(v\); \}/.test(wr)) fails.push(`quem se esconde da guerra: o war.js sem a porta dos abrigos nos seus lugares (${n} chamadas; D-813)`);
+  if (!/if \(G\.War && G\.War\.shelters\) G\.War\.shelters\.push\(SH\);/.test(tc) || !/if \(!G\.W\.reaches\(v, dr\[0\], dr\[1\]\)\) continue;/.test(tc) || !/const RAID = \{ saque: 1, captura: 1, massacre: 1 \};/.test(tc)) fails.push('quem se esconde da guerra: o abrigo da taverna sem a porta da guerra, sem perguntar ao mapa, ou forçado por quem não saqueia nem caça (D-814)'); }
+// 348. "a rodada da casa e o fiado pelo livro" (T1, D-821, D-825): a rodada da casa (a da festa, a dos bardos) sai da prateleira sem moeda
+// («rodada-casa»), a rodada fiada também («fiado») e a dívida vai ao livro dos fregueses (b.freg) e aos laços (G.Lacos «deve»); quem paga
+// a conta paga pelo livro («fiado») e os laços se acertam; quem não pagou a conta não é servido até pagar
+{ const tv = (src['act-taverna.js'] || []).join('\n');
+  if (!/const code = casa \? 'rodada-casa' : fiado \? 'fiado' : 'taverna';/.test(tv) || !/const from = coin\(b\) && !casa && !fiado \? E\.coinRef\(payer\) : null;/.test(tv)) fails.push('a rodada da casa e o fiado: a rodada sem moeda não vai ao livro com o seu nome (D-821, D-825)');
+  if (!/if \(G\.Lacos\) G\.Lacos\.marca\(c, 'deve', k\.id, 45, q\.deve\);/.test(tv) || !/if \(!E\.spend\(c, q\.deve, E\.coinRef\(kk\), 'fiado'\)\) return 0;/.test(tv)) fails.push('a rodada da casa e o fiado: a conta sem a dívida dos laços, ou paga fora do livro (D-825)');
+  if (!/if \(coin\(b\) && T\.caloteiro\(b, c\)\) \{ d\.recusas\+\+; say\(v, 'fiado_nao'/.test(tv)) fails.push('a rodada da casa e o fiado: quem não pagou a conta é servido (D-825)'); }
+// 349. "os atos da taverna no mundo têm som e causa" (T1, D-813 a D-824): os atos novos que o mundo dá (trancar, abrigar, esconder,
+// arrombar, discurso, queda-de-braco, concurso-bebida, torcer) têm a sua linha no G.Audio.ATO — a da T8 — e cada um é dado por uma
+// causa do mundo nos arquivos da taverna
+{ const as = (src['audio-src.js'] || []).join('\n'); const ours = ['act-taverna.js', 'taverna-contexto.js', 'taverna-festa.js'].map(f => (src[f] || []).join('\n')).join('\n');
+  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'queda-de-braco', 'concurso-bebida', 'torcer']) {
+    const q = a.includes('-') ? `'${a}'` : a;
+    if (!new RegExp(`(^|[\\s{,])${q.replace(/[-']/g, m => '\\' + m)}:\\s*(\\{|still\\()`).test(as)) fails.push(`os atos da taverna no mundo: o ato «${a}» sem a sua linha no G.Audio.ATO (D-813)`);
+    if (!new RegExp(`'${a}'`).test(ours)) fails.push(`os atos da taverna no mundo: o ato «${a}» que nenhum arquivo da taverna dá (D-813)`); } }
 // ---------------- Onda 4 — T4: o jogo de dados (js/jogo-dados.js, js/jogo-dados-ui.js; D-850 a D-859) ----------------
 // 380. "o lance é do mundo" (D-669, D-850): o js/jogo-dados.js não sorteia — as faces de cada dado são o G.hash da partida, da rodada, de
 // quem joga e do dado (R.face), e os palpites, as apostas, quem joga, quem trapaceia e quem vê saem da índole e da bolsa pelo mesmo hash:

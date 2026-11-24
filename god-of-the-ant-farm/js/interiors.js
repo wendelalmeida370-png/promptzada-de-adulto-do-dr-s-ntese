@@ -2258,8 +2258,10 @@
   // given the rule's own test of a place free, for the body's places: In.freeNear. nobody: the body left out, its place and
   // the point it stands on — where it could be, once there)
   // (skip: one person left out — the share-out without them, for the place they would take: In.hold)
-  function assign(b, t, probe, nobody, skip) {
-    const S = G.S; const T = TYPES[b.ip.t] || {}; const people = skip ? insideOf(b.id).filter(v => v.id !== skip) : insideOf(b.id);
+  // (fresh: who is inside now, not the step's memo of it — the place one takes is asked by each one who comes in, and two who come in
+  // in the same part of a step of the skip took the same seat: the memo of the part did not have the first, L-1980, T-1903)
+  function assign(b, t, probe, nobody, skip, fresh) {
+    const S = G.S; const T = TYPES[b.ip.t] || {}; const inn = fresh ? insideFresh(b.id) : insideOf(b.id); const people = skip ? inn.filter(v => v.id !== skip) : inn;
     const by = new Map(), withM = new Map(); const used = new Set(); const discs = [], rects = [];
     // (a point taken: half a metre round it — but the places on one piece made for several, the double bed's two; and where the
     // body stands, of a piece's places only the one under its feet: walking by a bench, it never puts off who sits on it)
@@ -2429,7 +2431,7 @@
     if (!G.inSim || !v || !v.task) return null;
     b = b || G.S.buildings.get(v.inside); const t = b && b.ip && TYPES[b.ip.t] ? tableOf(b) : null; if (!t) return null;
     const U = [].concat(uses || []);
-    const list = assign(b, t, free => { const out = []; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) out.push(e); } return out; }, false, v.id).probe || [];
+    const list = assign(b, t, free => { const out = []; for (const u of U) { const L = t.byUse.get(u); if (L) for (const e of L) if (free(e)) out.push(e); } return out; }, false, v.id, true).probe || [];
     if (!list.length) { delete v.task.lugar; return null; }
     let e = list[0];
     // (choose saying none: no place held — the floor is no place one keeps)
@@ -2572,13 +2574,21 @@
   // null — the tavern's door open while its day is (act-taverna.js). Pure, as the rest of the door: asked by the step and the frame
   const DOOR_RULES = {};
   In.doorRule = function (use, fn) { if (typeof fn === 'function') DOOR_RULES[use] = fn; else delete DOOR_RULES[use]; };
+  // (and what the world holds an outer door at, past anyone's hand (D-812): fn(b, id) → 'arrombada' — broken in, till it is mended:
+  // before the passage, open to all as it is — or 'trancada' — barred against a danger: after the passage, the bar lifted for who
+  // goes through —, or null. The tavern's (taverna-contexto.js). Pure, as the rest of the door)
+  const DOOR_HOLD = {};
+  In.doorHold = function (use, fn) { if (typeof fn === 'function') DOOR_HOLD[use] = fn; else delete DOOR_HOLD[use]; };
   In.doorState = function (b, id) {
     const p = In.plan(b); if (!p) return null; const d = p.doors[id]; if (!d) return null;
     const S = G.S; const rec = b.ip;
     if (S.fire && S.fire[b.y * N + b.x] > 0.2) return { state: 'bloqueada', by: 'fogo' };
+    const HD = d.outer ? DOOR_HOLD[(TYPES[rec.t] || {}).use] : null; const held = HD ? HD(b, id) : null;
+    if (held === 'arrombada') return { state: 'arrombada', by: 'regra' };
     // (someone passing the way in — in from it or out to it —: the door open for them as they go through, D-766. It stayed shut,
     // and the drawing walked them through the leaf, L-1923)
     if (d.outer && p.entrance && p.entrance.door === id) for (const v of insideOf(b.id)) if (In.passage(v)) return { state: 'aberta', by: 'passagem' };
+    if (held === 'trancada') return { state: 'trancada', by: 'regra' };
     if (rec.dr && rec.dr[id] !== undefined && rec.dr[id] !== null) return { state: DS[rec.dr[id]] || 'fechada', by: 'pessoa' };
     const T = TYPES[rec.t] || {}; const night = G.isNight && G.isNight();
     if (!d.outer) return { state: d.kind === 'vao' ? 'aberta' : 'fechada', by: 'regra' };
@@ -2799,6 +2809,7 @@
     if (!b || !b.ip || !G.inSim) return { ok: false, why: 'fora do passo do mundo' };
     const p = In.plan(b); const d = p && p.doors[id]; if (!d) return { ok: false, why: 'essa porta não existe' };
     const st = In.doorState(b, id); if (st.state === 'bloqueada') return { ok: false, why: 'a porta está bloqueada' };
+    if (st.state === 'arrombada') return { ok: false, why: 'a porta foi arrombada: não fecha até ser consertada' };
     const own = v && (v.home === b.id || v.job === b.id || (b.owner && G.S.buildings.get(b.owner) && v.home === b.owner));
     if ((act === 'trancar' || act === 'destrancar') && !own) return { ok: false, why: 'só quem mora ou trabalha aqui tem a chave' };
     if (act === 'abrir' && st.state === 'trancada') return { ok: false, why: 'está trancada' };

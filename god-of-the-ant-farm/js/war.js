@@ -15,6 +15,12 @@
   Wr.clock = 0;
   Wr.warFacs = new Set();
   Wr.fighters = []; Wr.escapers = [];
+  // (the shelters a module of the world opens to who hides from the war — the tavern of T1, D-813 —: { id, take(v, foe) → the building to
+  // hide in, or 0; run(v, t, dt, H) — the hiding's own errand there —; door(v, t, b, dt, H) → true while its door holds the one at it;
+  // force(v, t, band, set, dt, H) → true while a raider of the band is at a barred door; keeps(v, t); text(v, t) }. A hiding of a shelter
+  // carries its id (t.sh) and its building (t.b); the rest of the war is as it was)
+  Wr.shelters = [];
+  const shelterOf = t => (t && t.sh ? Wr.shelters.find(q => q.id === t.sh) || null : null);
   // the fighters by place: a coarse grid rebuilt with the list, so that "who is near me" does not ask everyone
   const GRID = new Map(); const CS = 8;
   function gridBuild() { GRID.clear(); for (const o of Wr.fighters) { const k = ((o.x / CS) | 0) * 4096 + ((o.y / CS) | 0); let a = GRID.get(k); if (!a) GRID.set(k, a = []); a.push(o); } }
@@ -656,6 +662,8 @@
         H.move(v, dt, 1.2); v.act = '';
         return;
       }
+      // (a shelter's barred door holds the one at it till it gives — D-814)
+      for (const sh of Wr.shelters) if (sh.door && sh.door(v, t, bd, dt, H)) return;
       G.Vg.endTask(o); G.Vg.emote(o, 'fear', 2.5);
       return;
     }
@@ -729,7 +737,7 @@
     const t = v.task;
     if (t && (t.type === 'combat' || t.type === 'band' || t.type === 'condemned' || t.type === 'jail' || t.type === 'escorted' || t.type === 'escape' || t.type === 'escort' || busyDiplomat(v))) return false;
     if (t && t.type === 'scene' && t.calm) return false; // (two who face each other in the middle of the battle do not run from it)
-    if (t && t.type === 'hide' && t.age < 15) return false;
+    if (t && t.type === 'hide' && (t.age < 15 || (shelterOf(t) && shelterOf(t).keeps(v, t)))) return false;
     if (v.captive) return false;
     const fv = fid(v); if (!Wr.warFacs.has(fv)) return false;
     const guard = v.role === 'guerreiro';
@@ -751,6 +759,8 @@
     const canFight = v.age >= 16 && v.age < 62 && v.hp > 35 && !(v.preg > 0);
     const brave = guard || v.role === 'cacador' || v.courage > 0.52 || v.fury > 0;
     if (canFight && brave) { H.setTask(v, { type: 'combat', id: e.id, pri: 4.2, def: true, kind: 'combat' }); G.Vg.emote(v, 'angry', 2); return true; }
+    // (a shelter open nearer than home — or the one one is in —: there, D-813)
+    for (const sh of Wr.shelters) { const id = sh.take(v, e); if (id) { H.setTask(v, { type: 'hide', pri: 4.4, kind: 'hide', b: id, sh: sh.id, st: v.inside === id ? 2 : 0, stay: v.inside === id ? id : undefined }); G.Vg.emote(v, 'fear', 2.5); return true; } }
     const h = S.buildings.get(v.home);
     if (h && h.built && h.type !== 'ruin' && G.dist(v.x, v.y, h.x, h.y) < 14 && bd > 9) { H.setTask(v, { type: 'hide', pri: 4.4, kind: 'hide' }); G.Vg.emote(v, 'fear', 2.5); return true; }
     H.flee(v, e.x, e.y, 8, 'war'); G.Vg.emote(v, 'fear', 2.5); return true;
@@ -860,6 +870,8 @@
       }
     }
     if (t.burnT !== undefined) t.burnT -= dt;
+    // (a barred shelter with people in it: the raider who loots or hunts may force its door — D-814)
+    for (const sh of Wr.shelters) if (sh.force && sh.force(v, t, b, set, dt, H)) return;
     // loot the stores
     if ((b.goal === 'saque' || b.goal === 'captura' || b.goal === 'massacre') && !v.carry && en && en.stock.food + en.stock.wood + en.stock.stone >= 1) {
       const drop = G.Village.nearestDropoff(set.cx, set.cy, set.id);
@@ -892,6 +904,7 @@
     fightStep(v, t, o, dt, H, null);
   }
   function runHide(v, t, dt, H) {
+    if (t.sh) { const sh = shelterOf(t); if (sh) return sh.run(v, t, dt, H); return H.end(v); } // (a shelter's hiding: its own, D-813)
     const S = G.S; const h = S.buildings.get(v.home);
     if (!h || !h.built || h.type === 'ruin') return H.end(v);
     if (t.st === 0) { const [fx, fy] = G.Village.frontTile(h); if (!H.goto(v, fx, fy, true)) return H.end(v); t.st = 1; }
@@ -1033,6 +1046,7 @@
     return false;
   };
   const MAT = { wood: 'madeira', food: 'comida', stone: 'pedra' };
+  const mat = k => MAT[k] || (G.Eco && G.Eco.name ? G.Eco.name(k) : k); // (and what else a raider took: the drink of a tavern's shelf, D-814)
   Wr.taskText = function (v, t) {
     const S = G.S; const pn = id => { const o = S.villagers.get(id); return o ? o.name : 'alguém'; };
     switch (t.type) {
@@ -1042,18 +1056,18 @@
         if (t.foe) return `Lutando contra ${pn(t.foe)}!`;
         if (b.st === 'reunir') return `Reunindo-se para atacar ${en}`;
         if (b.st === 'marcha') return `Marchando contra ${en}`;
-        if (b.st === 'ataque') return v.carry ? `Saqueando ${MAT[v.carry.k]} de ${en}` : t.gotCaptive ? `Levando ${pn(t.gotCaptive)} como cativ${oa(S.villagers.get(t.gotCaptive))}` : b.goal === 'massacre' ? `Massacrando ${en}` : `Atacando ${en}`;
-        return v.carry ? `Voltando com o saque (${v.carry.n} de ${MAT[v.carry.k]})` : 'Voltando da guerra';
+        if (b.st === 'ataque') return v.carry ? `Saqueando ${mat(v.carry.k)} de ${en}` : t.gotCaptive ? `Levando ${pn(t.gotCaptive)} como cativ${oa(S.villagers.get(t.gotCaptive))}` : b.goal === 'massacre' ? `Massacrando ${en}` : `Atacando ${en}`;
+        return v.carry ? `Voltando com o saque (${v.carry.n} de ${mat(v.carry.k)})` : 'Voltando da guerra';
       }
       case 'combat': return t.coup ? `Tentando matar ${pn(t.id)} para tomar o trono!` : t.rebel ? `Rebelando-se contra ${pn(t.id)}!` : t.rebelCaptive ? `Lutando pela liberdade contra ${pn(t.id)}!` : t.recapture ? `Perseguindo ${pn(t.id)}, que fugiu` : t.guard ? `Defendendo o trono de ${pn(t.id)}` : t.skirmish ? `Brigando com ${pn(t.id)} na fronteira` : `Lutando contra ${pn(t.id)}!`;
-      case 'hide': return v.inside ? 'Escondid' + oa(v) + ' em casa, com medo' : 'Correndo para se esconder!';
+      case 'hide': { const sh = shelterOf(t); if (sh && sh.text) return sh.text(v, t); return v.inside ? 'Escondid' + oa(v) + ' em casa, com medo' : 'Correndo para se esconder!'; }
       case 'escorted': return `Levad${oa(v)} como cativ${oa(v)} por ${pn(t.by)}`;
       case 'escort': return `Levando ${pn(t.id)} de volta ao cativeiro`;
       case 'escape': { const s = S.settlements.get(t.to); return `Fugindo do cativeiro para ${s ? s.name : 'casa'}!`; }
       case 'condemned': return 'Condenad' + oa(v) + ', esperando a execução';
       case 'assembly': return 'Assistindo a uma execução';
       case 'envoy': { const f = G.Fac.get(t.to); const m = { paz: 'uma proposta de paz', alianca: 'uma proposta de aliança', contato: 'presentes' }[t.msg] || 'uma mensagem'; return t.st >= 3 ? 'Voltando da missão diplomática' : `Levando ${m} para ${f ? f.name : 'outro povo'}`; }
-      case 'trade': { if (t.lux && G.Trade) return G.Trade.taskText(v, t); const f = G.Fac.get(t.st ? t.from : t.to); return t.st ? `Voltando da caravana${v.carry ? ' com ' + v.carry.n + ' de ' + MAT[v.carry.k] : ''}` : `Levando ${t.n} de ${MAT[t.give]} para ${f ? f.name : 'outro povo'}`; }
+      case 'trade': { if (t.lux && G.Trade) return G.Trade.taskText(v, t); const f = G.Fac.get(t.st ? t.from : t.to); return t.st ? `Voltando da caravana${v.carry ? ' com ' + v.carry.n + ' de ' + mat(v.carry.k) : ''}` : `Levando ${t.n} de ${MAT[t.give]} para ${f ? f.name : 'outro povo'}`; }
       case 'drill': return 'Treinando para a guerra';
     }
     return null;
