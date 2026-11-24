@@ -3,21 +3,21 @@
 G.Ready.list({
  "cidade": {
   "day": 15,
-  "pop": 133,
+  "pop": 142,
   "peoples": 4,
   "towns": 4,
   "N": 128,
   "map": "continente",
   "seed": 3101,
   "city": {
-   "name": "Mênfis",
+   "name": "Roma",
    "tier": 3,
-   "pop": 33
+   "pop": 35
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1159743
+  "bytes": 1189330
  },
  "metropole": {
   "day": 61,
