@@ -87,6 +87,19 @@
       mesa_guerra: ['Essa guerra com {bem} não acaba nunca.', 'Meu primo foi para a guerra contra {bem}. Que volte inteiro.', 'Se {bem} vierem até aqui, quem segura?'],
       mesa_colheita: ['O armazém está quase vazio. Se a colheita não vier, vamos passar fome.', 'Pouca comida no celeiro... o pão vai faltar.', 'Com o armazém assim, quem não plantou vai apertar o cinto.'],
       mesa_bebida: ['Mais uma! A noite é uma criança!', 'Quem pagou esta? Eu é que não fui!', 'Eu? Bêbado? Só um pouquinho...', 'Ninguém canta como eu depois da terceira!', 'Amanhã eu trabalho dobrado. Hoje, não!'],
+      // the tavern in the world that happens and its feasts (T1, D-813 to D-825): the keeper who opens to the street and bars the door;
+      // the mourning's word and toast; the feast's speech and its talk; the slate; the drinking match
+      abrigar_chama: ['Entrem! Depressa, todos para dentro!', 'Para dentro, rápido! Aqui eles não entram!', 'Venham! A taverna é de quem precisa!'],
+      abrigar_tranca: ['Tranquem tudo! Ninguém abre essa porta!', 'Silêncio agora. E longe da porta.', 'A tranca está passada. Fiquem quietos.'],
+      mesa_luto: ['Que os deuses guardem {bem}.', 'Sem {bem}... não sei o que vem agora.', 'Gente como {bem} não nasce todo dia.'],
+      brinde_memoria: ['À memória de {bem}.', 'Por {bem}, que descanse em paz.'],
+      festa_discurso: ['Bebam, amigos! Hoje a festa é por {bem}!', 'Ergam as canecas: {bem}! A primeira rodada é da casa!', 'Um instante de silêncio! Esta noite brindamos a {bem} — e a casa paga a primeira!'],
+      mesa_festa_casa: ['Que festa! Tudo isto por {bem}.', 'Você soube? A festa de hoje é por {bem}.', 'Por {bem}, mais uma!'],
+      fiado_sim: ['Fica na conta, {nome}. Mas não esqueça.', 'Pode beber, {nome}: eu anoto.', 'Por hoje vai fiado, {nome}.'],
+      fiado_nao: ['Primeiro paga o que deve, {nome}.', 'Fiado não, {nome}. Pague a conta antes.'],
+      fiado_paga: ['Aqui está o que eu devia. Estamos quites.', 'Toma: a conta paga.'],
+      concurso_desafio: ['Quem bebe mais que eu? Quem aguenta até o fim?', 'Uma aposta: quem cair primeiro paga a vergonha!'],
+      concurso_vence: ['Ninguém bebe como eu!', 'Ganhei! E ainda estou de pé!'],
       // the baths (act-servicos.js)
       banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
       banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
@@ -119,6 +132,7 @@
       carta_taverna: ['{nome} Senta aí. O que vai ser?', '{nome} Tem {bem} no salão. O que te trago?'],
       carta_sempre: ['{nome}! O de sempre? {bem}?', 'Senta, {nome}. {bem}, como sempre?'],
       expulsar: ['Fora do meu salão! Vai brigar lá fora!', 'Chega! Para a rua, e só volta sóbrio.'],
+      festa_discurso: ['Encham os cornos! Hoje bebemos a {bem}!', 'Skál! Por {bem}! A primeira é do salão!'],
       pedir_ajuda: ['Ei! Uma mão nesta caixa de {bem}, que pesa como um touro.', 'Preciso de outro braço aqui!'],
       pregao: ['{bem}! Pesado na balança, honesto no preço!', 'Olha o {bem}, trazido pelo mar!'],
       preco: ['{bem}? {preco}, pesadas na balança.', '{preco}. Pode pesar.'],

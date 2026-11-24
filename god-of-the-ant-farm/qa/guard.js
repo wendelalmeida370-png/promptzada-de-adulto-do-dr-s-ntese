@@ -2186,7 +2186,7 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
 // à prateleira ('taverna-volta'); a ronda dele é uma perna da operação do dia (as mãos ocupadas, D-094)
 { const tv = (src['act-taverna.js'] || []).join('\n');
   if (!/D\.move\('b:' \+ b\.id, 'v:' \+ v\.id, t\.k, n, \{ op: op\.id, code: 'taverna-caneca', by: v\.id, to: 'b:' \+ b\.id,/.test(tv)) fails.push('a caneca vai à mesa pelo livro: o taverneiro não enche a caneca da prateleira para as mãos pelo livro (D-763)');
-  if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
+  if (!/serve\(op, v, c, false, 'v:' \+ v\.id, t\.k(?:, null, t\.dish \|\| null, t\.n1)?\)/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a rodada não é entregue à mesa das mãos de quem serve (D-763)');
   if (!/code: 'taverna-volta'/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a caneca que ninguém tomou não volta à prateleira pelo livro (D-763)');
   if (!/leg\(op, v\) \{ const t = v\.task; return t && t\.type === 'atender' && t\.op === op\.id && t\.st >= 2 && t\.st <= \d+/.test(tv)) fails.push('a caneca vai à mesa pelo livro: a ronda de quem serve não é uma perna da operação do dia (D-094, D-763)'); }
 // 314. "o bebê no colo em todo prédio" (D-660): o repartidor dá ao bebê de colo o colo de quem o carrega em todo prédio, antes de

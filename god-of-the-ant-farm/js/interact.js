@@ -502,12 +502,13 @@
     },
     label(ctx, t) {
       const st = G.Interiors.doorState(t.b, t.d.id); const s2 = st ? st.state : 'fechada';
-      return s2 === 'aberta' ? 'Fechar a porta' : s2 === 'trancada' ? (own(ctx.v, t.b) ? 'Destrancar e abrir a porta' : 'Bater à porta') : s2 === 'bloqueada' ? 'A porta está bloqueada' : 'Abrir a porta';
+      return s2 === 'aberta' ? 'Fechar a porta' : s2 === 'trancada' ? (own(ctx.v, t.b) ? 'Destrancar e abrir a porta' : 'Bater à porta') : s2 === 'bloqueada' ? 'A porta está bloqueada' : s2 === 'arrombada' ? 'A porta foi arrombada' : 'Abrir a porta';
     },
     can(ctx, t) {
       if (!G.S.buildings.has(t.b.id)) return { ok: false, why: 'Não existe mais.' };
       const st = G.Interiors.doorState(t.b, t.d.id); if (!st) return { ok: false, why: '' };
       if (st.state === 'bloqueada') return { ok: false, why: st.by === 'fogo' ? 'O fogo tomou a porta!' : 'A porta está bloqueada.' };
+      if (st.state === 'arrombada') return { ok: false, why: 'A porta foi arrombada: está aberta e não fecha até ser consertada.' }; // (T1, D-812)
       return { ok: true };
     },
     run(ctx, t) {
@@ -527,7 +528,7 @@
     },
     // (20e: F — one's own door locked or unlocked with one's key; someone else's shut door knocked at before going in)
     verbs(ctx, t) {
-      const st = (G.Interiors.doorState(t.b, t.d.id) || {}).state; if (!st || st === 'bloqueada') return [];
+      const st = (G.Interiors.doorState(t.b, t.d.id) || {}).state; if (!st || st === 'bloqueada' || st === 'arrombada') return [];
       if (own(ctx.v, t.b)) return [{ id: 'chave', k: 'outra', label: st === 'trancada' ? 'Destrancar a porta' : 'Trancar a porta', run: (c2, t2) => keyDoor(c2, t2, st === 'trancada' ? 'destrancar' : 'trancar') }];
       // (the door of one's own people's store: its things, by the screen of what is kept; one knocks only at a home's)
       const fid = G.Fac.idOfV(ctx.v); if (t.b.built && isStore(t.b) && G.Village.facOfSet(t.b.set) === fid) return [{ id: 'armazem', k: 'outra', label: `Abrir o ${t.b.type === 'celeiro' ? 'celeiro' : 'armazém'}`, run: () => ({ ok: true, panel: { kind: 'guardados', ref: 'f:' + fid, b: t.b.id } }) }];

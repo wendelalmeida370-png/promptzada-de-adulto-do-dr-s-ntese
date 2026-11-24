@@ -57,6 +57,8 @@
     nome: { re: 15, es: 0 }, mentiu: { re: 3, es: -10 },
     // (P7, D-808: a round paid for the whole table of a tavern — the god's body's hands)
     rodada: { re: 3, es: 4, rot: 'generoso' },
+    // (T1, D-823, D-824: who won the drinking match of a feast, the arm wrestle of a table)
+    concurso: { re: 5, es: 0 }, braco: { re: 3, es: 1 },
   };
   F.FEITOS = () => Object.keys(FEITO);
   F.feito = function (v, tipo, sid) {
