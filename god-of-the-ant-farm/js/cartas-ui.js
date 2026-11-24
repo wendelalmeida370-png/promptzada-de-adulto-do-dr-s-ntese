@@ -146,7 +146,7 @@
   function botoes() {
     const v = view; if (!v) return; const pronto = !busy && !v.fim && !v.dobra && !v.posta;
     const go = panel.querySelector('.tb-go'); go.disabled = !(pronto && sel >= 0); go.textContent = sel >= 0 && v.mao[sel] ? `Jogar ${C.card(v.mao[sel]).nome}` : 'Escolha uma';
-    const db = panel.querySelector('.tb-dobra'); db.disabled = !(pronto && v.podeDobrar); db.innerHTML = v.moeda && v.aposta > 0 ? `Dobrar<small>+${esc(v.preco(v.aposta * v.x))}</small>` : 'Dobrar';
+    const db = panel.querySelector('.tb-dobra'); db.disabled = !(pronto && v.podeDobrar); db.innerHTML = v.moeda && v.aposta > 0 ? `Dobrar<small>+${esc(String(v.preco(v.aposta * v.x)).split(' ')[0])}</small>` : 'Dobrar';
     db.classList.toggle('hidden', !(v.moeda && v.aposta > 0));
     const mg = panel.querySelector('.tb-manga'); mg.classList.toggle('on', manga); mg.disabled = !pronto || !v.monte[0] || !!v.trap;
     const touch = !!(G.Input3D && G.Input3D.touch);

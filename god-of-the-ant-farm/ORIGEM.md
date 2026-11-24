@@ -199,7 +199,7 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   **papiro** — o junco da água doce —, o asteca no **amate**, o romano na **cera** das colmeias, o grego no **barro** da olaria, o nórdico
   na **madeira**; sem o seu, a madeira de sempre). Só se joga onde há um baralho: o da casa (`G.Cartas.baralhoCasa`) ou o que o corpo
   leva na mochila (`G.Cartas.baralhoDe`); o armazém dá o baralho do que tem (a madeira, a cerâmica, a cera e a madeira — o papiro não,
-  que não é de nada que ele guarde). As **apostas** vão pelo livro: o lugar `'k:'` é o pote de uma partida ou de um torneio (`aposta`,
+  que não é de nada que ele guarde). As **apostas** vão pelo livro: o lugar `'u:'` (a urna) é o pote de uma partida ou de um torneio (`aposta`,
   `pote`, `pote-volta`, `torneio`): o que entra nele sai para quem venceu, ou volta a quem pôs.
 - **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
   instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a

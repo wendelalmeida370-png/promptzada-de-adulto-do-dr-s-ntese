@@ -23,7 +23,7 @@ const POVOS = (process.env.POVOS || 'romano,grego,egipcio,nordico,asteca,classic
       for (const el of document.querySelectorAll('.ct-foil')) el.style.animationPlayState = 'paused'; }, [p, CW]);
     await shot(p + '.png');
   }
-  await page.evaluate(([CW]) => { document.body.innerHTML = ''; const L = G.Cartas.all().filter(c => c.rar === 'unica' || c.rar === 'lendaria'); const h = document.createElement('div'); h.innerHTML = `<h2>As únicas e as lendárias</h2><div class="row">${L.map(c => G.CartasArte.html(c.id, { cls: 'ct-big' }).replace('class="ct-card', `style="--cw:${Math.round(CW * 1.3)}px" class="ct-card`)).join('')}</div>`; document.body.appendChild(h); for (const el of document.querySelectorAll('.ct-foil')) { el.style.animationDelay = '-1.6s'; el.style.animationPlayState = 'paused'; } }, [CW]);
+  await page.evaluate(([CW]) => { document.body.innerHTML = ''; G.CartasArte.pronto(document); const L = G.Cartas.all().filter(c => c.rar === 'unica' || c.rar === 'lendaria'); const h = document.createElement('div'); h.innerHTML = `<h2>As únicas e as lendárias</h2><div class="row">${L.map(c => G.CartasArte.html(c.id, { cls: 'ct-big' }).replace('class="ct-card', `style="--cw:${Math.round(CW * 1.3)}px" class="ct-card`)).join('')}</div>`; document.body.appendChild(h); for (const el of document.querySelectorAll('.ct-foil')) { el.style.animationDelay = '-1.6s'; el.style.animationPlayState = 'paused'; } }, [CW]);
   await shot('raras.png');
   const bad = await page.evaluate(() => G.CartasArte.check());
   console.log(`${POVOS.length} povos em ${OUT}; as figuras: ${bad.length ? bad.join('; ') : 'todas'}; ${errs.length ? 'ERROS: ' + errs.slice(0, 5).join(' | ') : 'sem erros'}`);

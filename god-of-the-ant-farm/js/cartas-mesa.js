@@ -10,7 +10,7 @@
 //     da taverna, quem é de jogar (a índole: o expansivo, o que
 //     arrisca, o ambicioso), com o baralho da casa — o do povo, no
 //     material que ele teve (G.Inv: o kit do lugar) —, e a aposta
-//     de cada um no pote (o lugar 'k:' do livro), pela bolsa da
+//     de cada um no pote (o lugar 'u:' do livro), pela bolsa da
 //     casa; quem vence leva o pote, pelo livro.
 //   - O corpo do deus pede pelas mãos (G.Possess.apply): desafia
 //     quem está à mesa, escolhe a aposta, joga, dobra, desiste —
@@ -48,7 +48,7 @@
 
   // ------------------------------ o registro (S.cartas, no save) ------------------------------
   // j: as partidas, pelo id — { id, b, op, g, quem: [a, b], corpo (o lado do corpo, −1 nenhum), s (o estado da regra), aposta, pago:
-  // [n, n], pote (o que está no lugar 'k:'), prox (a próxima rodada dos fregueses), fase ('jogo' | 'fim'), fimT, trap, conf, tor };
+  // [n, n], cofre (o que está no lugar 'u:', a urna), prox (a próxima rodada dos fregueses), fase ('jogo' | 'fim'), fimT, trap, conf, tor };
   // tor: os torneios da noite, pela taverna — { id, b, dia, pote, pagos: { ref: n }, vit: { id: n }, gl: { id: n } }; n: as contas
   const st = () => { const S = S_(); if (!S.cartas || typeof S.cartas !== 'object') S.cartas = { j: {}, tor: {}, n: {} }; return S.cartas; };
   C.estado = () => (S_() && S_().cartas) || null;
@@ -61,11 +61,11 @@
   C.de = function (v) { if (!v) return null; for (const j of jogos()) if (j.quem.includes(v.id) && (j.fase === 'jogo' || (S_().clock - (j.fimT || 0) < C.FIM_T))) return j; return null; };
   C.vivoDe = function (v) { if (!v) return null; for (const j of jogos()) if (j.fase === 'jogo' && j.quem.includes(v.id)) return j; return null; };
 
-  // ------------------------------ o pote: um lugar do livro ('k:', o jogo ou o torneio) ------------------------------
+  // ------------------------------ o pote: um lugar do livro ('u:', a urna do jogo ou do torneio) ------------------------------
   // só moedas; quem o tem é o povo da taverna; o que entra e sai dele vai pelo G.Depot, com a causa — a aposta, o pote ganho, o pote
   // devolvido, a inscrição e o prêmio do torneio (regra 392)
   const potOf = id => jogoDe(id) || torPorId(id);
-  D.addKind('k', {
+  D.addKind('u', {
     obj: id => potOf(id),
     get: (o, k) => (k === 'moedas' ? o.cofre || 0 : 0),
     room: (o, k) => (k === 'moedas' ? Infinity : 0),
@@ -80,14 +80,14 @@
   const dinheiro = (b, n) => (G.Falas ? G.Falas.price((G.Fac.get(G.Village.facOfSet(b.set)) || {}).civ || 'classico', n) : String(n));
   C.preco = (b, n) => dinheiro(b, n);
   // (a aposta de um lado entra no pote, pelo livro)
-  function poe(j, i, n) { if (!(n > EPS)) return true; const v = S_().villagers.get(j.quem[i]); if (!v || !tem(v, n)) return false; const r = D.move(E.coinRef(v), 'k:' + j.id, 'moedas', n, { code: 'aposta', by: v.id }); if (!r.ok) return false; j.pago[i] = r4(j.pago[i] + r.n); conta('apostado', r.n); return true; }
+  function poe(j, i, n) { if (!(n > EPS)) return true; const v = S_().villagers.get(j.quem[i]); if (!v || !tem(v, n)) return false; const r = D.move(E.coinRef(v), 'u:' + j.id, 'moedas', n, { code: 'aposta', by: v.id }); if (!r.ok) return false; j.pago[i] = r4(j.pago[i] + r.n); conta('apostado', r.n); return true; }
   // (o pote sai: tudo para quem venceu, ou cada um recebe de volta o que pôs)
   function paga(j) {
     if (!(j.cofre > EPS)) return; const w = j.s.fim ? j.s.fim.w : -1; const S = S_();
-    if (w >= 0) { const v = S.villagers.get(j.quem[w]); if (v) { const r = D.move('k:' + j.id, E.coinRef(v), 'moedas', j.cofre, { code: 'pote', by: v.id }); if (r.ok) conta('ganho', r.n); } }
-    for (const i of [0, 1]) { if (!(j.cofre > EPS)) break; const v = S.villagers.get(j.quem[i]); const n = Math.min(j.cofre, j.pago[i]); if (v && n > EPS) D.move('k:' + j.id, E.coinRef(v), 'moedas', n, { code: 'pote-volta', by: v.id }); }
+    if (w >= 0) { const v = S.villagers.get(j.quem[w]); if (v) { const r = D.move('u:' + j.id, E.coinRef(v), 'moedas', j.cofre, { code: 'pote', by: v.id }); if (r.ok) conta('ganho', r.n); } }
+    for (const i of [0, 1]) { if (!(j.cofre > EPS)) break; const v = S.villagers.get(j.quem[i]); const n = Math.min(j.cofre, j.pago[i]); if (v && n > EPS) D.move('u:' + j.id, E.coinRef(v), 'moedas', n, { code: 'pote-volta', by: v.id }); }
     // (quem pôs já não existe — morreu no meio —: o que sobra vai ao armazém do povo da taverna, pelo livro)
-    if (j.cofre > EPS) { const b = S.buildings.get(j.b); const fid = b ? G.Village.facOfSet(b.set) : 0; if (fid && G.Fac.get(fid)) D.move('k:' + j.id, 'f:' + fid, 'moedas', j.cofre, { code: 'pote-volta' }); }
+    if (j.cofre > EPS) { const b = S.buildings.get(j.b); const fid = b ? G.Village.facOfSet(b.set) : 0; if (fid && G.Fac.get(fid)) D.move('u:' + j.id, 'f:' + fid, 'moedas', j.cofre, { code: 'pote-volta' }); }
   }
 
   // ------------------------------ o baralho de verdade (D-868) ------------------------------
@@ -256,26 +256,26 @@
     if (t) fimTorneio(t, true);
     t = T0[b.id] = { id: S.nextId++, b: b.id, dia: S.day, cofre: 0, pagos: {}, vit: {}, gl: {}, insc: [] };
     o = o || {}; const de = o.de ? (typeof o.de === 'object' ? o.de : S.villagers.get(o.de)) : null;
-    if (de && o.premio > EPS && moeda(b) && tem(de, o.premio)) { const ref = E.coinRef(de); if (D.move(ref, 'k:' + t.id, 'moedas', o.premio, { code: 'torneio', by: de.id }).ok) t.pagos[ref] = r4((t.pagos[ref] || 0) + o.premio); }
+    if (de && o.premio > EPS && moeda(b) && tem(de, o.premio)) { const ref = E.coinRef(de); if (D.move(ref, 'u:' + t.id, 'moedas', o.premio, { code: 'torneio', by: de.id }).ok) t.pagos[ref] = r4((t.pagos[ref] || 0) + o.premio); }
     conta('torneios'); return t;
   };
   const torneioDe = b => { const t = st().tor[b.id]; return t && t.dia === S_().day ? t : null; };
   C.torneioDe = b => { const s = S_() && S_().cartas; const t = s && b && s.tor[b.id]; return t && t.dia === S_().day ? t : null; };
   function inscreve(t, v) {
     if (t.insc.includes(v.id)) return; t.insc.push(v.id); const b = S_().buildings.get(t.b);
-    if (moeda(b) && tem(v, C.INSCRICAO)) { const ref = E.coinRef(v); if (D.move(ref, 'k:' + t.id, 'moedas', C.INSCRICAO, { code: 'torneio', by: v.id }).ok) t.pagos[ref] = r4((t.pagos[ref] || 0) + C.INSCRICAO); }
+    if (moeda(b) && tem(v, C.INSCRICAO)) { const ref = E.coinRef(v); if (D.move(ref, 'u:' + t.id, 'moedas', C.INSCRICAO, { code: 'torneio', by: v.id }).ok) t.pagos[ref] = r4((t.pagos[ref] || 0) + C.INSCRICAO); }
   }
   function fimTorneio(t, ja) {
     const S = S_(); const b = S.buildings.get(t.b); const aberto = b && T() && T().aberta(b) && t.dia === S.day;
     if (aberto && !ja) return; if (jogos().some(j => j.tor === t.id && j.fase === 'jogo') && !ja) return;
     const ids = Object.keys(t.vit).map(Number).sort((x, y) => (t.vit[y] - t.vit[x]) || ((t.gl[y] || 0) - (t.gl[x] || 0)) || x - y);
     const w = ids.length ? S.villagers.get(ids[0]) : null;
-    if (w && t.cofre > EPS) { D.move('k:' + t.id, E.coinRef(w), 'moedas', t.cofre, { code: 'torneio', by: w.id }); if (G.Fama && G.Fama.feito) G.Fama.feito(w, 'nome'); conta('campeoes');
+    if (w && t.cofre > EPS) { D.move('u:' + t.id, E.coinRef(w), 'moedas', t.cofre, { code: 'torneio', by: w.id }); if (G.Fama && G.Fama.feito) G.Fama.feito(w, 'nome'); conta('campeoes');
       if (b && G.Village && G.Village.log) G.Village.log(`${w.name} venceu o torneio de tabuletas da festa${S.settlements.get(b.set) ? ' em ' + S.settlements.get(b.set).name : ''}, com ${t.vit[w.id]} ${t.vit[w.id] === 1 ? 'vitória' : 'vitórias'}.`, 'gold', b.x, b.y); }
     else if (w) conta('campeoes');
     // (sem campeão — ninguém venceu —: cada um recebe de volta o que pôs)
-    for (const ref of Object.keys(t.pagos).sort()) { if (!(t.cofre > EPS)) break; const n = Math.min(t.cofre, t.pagos[ref]); if (n > EPS && D.exists(ref)) D.move('k:' + t.id, ref, 'moedas', n, { code: 'torneio' }); }
-    if (t.cofre > EPS && b) { const fid = G.Village.facOfSet(b.set); if (fid && G.Fac.get(fid)) D.move('k:' + t.id, 'f:' + fid, 'moedas', t.cofre, { code: 'torneio' }); }
+    for (const ref of Object.keys(t.pagos).sort()) { if (!(t.cofre > EPS)) break; const n = Math.min(t.cofre, t.pagos[ref]); if (n > EPS && D.exists(ref)) D.move('u:' + t.id, ref, 'moedas', n, { code: 'torneio' }); }
+    if (t.cofre > EPS && b) { const fid = G.Village.facOfSet(b.set); if (fid && G.Fac.get(fid)) D.move('u:' + t.id, 'f:' + fid, 'moedas', t.cofre, { code: 'torneio' }); }
     t.campeao = w ? w.id : 0; if (!(t.cofre > EPS)) delete st().tor[t.b];
   }
 

@@ -114,7 +114,7 @@ if (on('c3')) {
 
 // ---------------- o mundo ----------------
 const NEEDW = ['c4', 'c5', 'c6', 'c7', 'c8'].some(on);
-const lines = []; D.onMove.push(e => { if (e[5] === 'moedas' && (String(e[3]).startsWith('k:') || String(e[4]).startsWith('k:'))) lines.push({ from: e[3], to: e[4], n: e[6], c: e[8] }); });
+const lines = []; D.onMove.push(e => { if (e[5] === 'moedas' && (String(e[3]).startsWith('u:') || String(e[4]).startsWith('u:'))) lines.push({ from: e[3], to: e[4], n: e[6], c: e[8] }); });
 const fp = () => JSON.stringify(S().cartas || null);
 // (o livro dos potes conta de cada abertura de um retrato: o que estava nos potes ao abrir é a base)
 let BASE = 0; const heldNow = () => { const c = S() && S().cartas; let h = 0; if (c) { for (const k of Object.keys(c.j)) h += c.j[k].cofre || 0; for (const k of Object.keys(c.tor)) h += c.tor[k].cofre || 0; } return h; };
@@ -123,7 +123,7 @@ const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0
 // (até a noite: as tavernas abertas e cheias)
 const toNight = () => { let k = 0; while (!(S().time > 0.6 && S().time < 0.7) && k++ < 4000) { calm(); M.viver(1); } };
 const potesVazios = () => { const s = S().cartas; if (!s) return 0; let n = 0; for (const k of Object.keys(s.j)) if (s.j[k].fase === 'fim' && s.j[k].cofre > 1e-6 && S().clock - s.j[k].fimT > C.FIM_T + 2) n++; return n; };
-const livro = () => { const bal = {}; for (const l of lines) { if (l.to.startsWith('k:')) bal[l.to] = (bal[l.to] || 0) + l.n; if (l.from.startsWith('k:')) bal[l.from] = (bal[l.from] || 0) - l.n; } let held = 0; const s = S().cartas; if (s) for (const k of Object.keys(s.j)) held += s.j[k].cofre || 0; if (s) for (const k of Object.keys(s.tor)) held += s.tor[k].cofre || 0; const sum = Object.keys(bal).reduce((a, k) => a + bal[k], 0); return { sum: Math.round(sum * 1e4) / 1e4, held: Math.round((held - BASE) * 1e4) / 1e4 }; };
+const livro = () => { const bal = {}; for (const l of lines) { if (l.to.startsWith('u:')) bal[l.to] = (bal[l.to] || 0) + l.n; if (l.from.startsWith('u:')) bal[l.from] = (bal[l.from] || 0) - l.n; } let held = 0; const s = S().cartas; if (s) for (const k of Object.keys(s.j)) held += s.j[k].cofre || 0; if (s) for (const k of Object.keys(s.tor)) held += s.tor[k].cofre || 0; const sum = Object.keys(bal).reduce((a, k) => a + bal[k], 0); return { sum: Math.round(sum * 1e4) / 1e4, held: Math.round((held - BASE) * 1e4) / 1e4 }; };
 let SNAP = null;
 if (NEEDW) { M.pronto(world); M.viver(10); toNight(); }
 const SNAP0 = NEEDW ? G.Save.serialize() : null; // (o retrato da noite: o começo de cada parte que vive o mundo)
@@ -133,7 +133,7 @@ if (on('c4')) {
   const bad = []; const actSeen = new Set(); const held = {}; const decks = {}; let t = 0;
   const n0 = Object.assign({}, (S().cartas && S().cartas.n) || {});
   for (; t < 200; t++) { calm(); M.viver(1);
-    for (const v of S().villagers.values()) { if (v.act === 'jogo-cartas' || v.act === 'trapaca' || v.act === 'trapaca-pega') { actSeen.add(v.id); const h = G.Inv.held(v).mao; const k = h ? h.split('.')[0] : 'nada'; held[k] = (held[k] || 0) + 1; if (h) decks[(G.Fac.get(G.Fac.idOfV(v)) || {}).civ + ':' + h.split('.')[1]] = 1; } }
+    for (const v of S().villagers.values()) { if (v.act === 'jogo-cartas' || v.act === 'jogo-cartas-ganha' || ((v.act === 'trapaca' || v.act === 'trapaca-pega') && C.de(v))) { /* (a trapaça dos dados da T4 é a dela) */ actSeen.add(v.id); const h = G.Inv.held(v).mao; const k = h ? h.split('.')[0] : 'nada'; held[k] = (held[k] || 0) + 1; if (h) decks[(G.Fac.get(G.Fac.idOfV(v)) || {}).civ + ':' + h.split('.')[1]] = 1; } }
     if (!SNAP && S().cartas && Object.keys(S().cartas.j).some(k => S().cartas.j[k].fase === 'jogo' && S().cartas.j[k].s.r >= 2)) SNAP = G.Save.serialize(); }
   const n = (S().cartas && S().cartas.n) || {}; const jogos = (n.jogos || 0) - (n0.jogos || 0), rodadas = (n.rodadas || 0) - (n0.rodadas || 0);
   if (jogos < 2) bad.push(`só ${jogos} partidas numa noite`); if (rodadas < 6) bad.push(`só ${rodadas} rodadas`); if (!actSeen.size) bad.push('ninguém mostrou o ato jogo-cartas');

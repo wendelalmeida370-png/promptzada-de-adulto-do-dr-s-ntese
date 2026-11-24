@@ -2644,13 +2644,15 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   for (const d of ['desafia', 'lance', 'dobrar', 'respondeCorpo', 'desisteCorpo']) if (!new RegExp(`C\\.${d} = function \\(v[^)]*\\) \\{\\n\\s*if \\(!bodyOk\\(v\\)\\) return`).test(cm)) fails.push(`o resultado é do mundo: a porta C.${d} do cartas-mesa.js não pergunta primeiro pelo passo do mundo e pelo corpo (bodyOk, D-669)`);
   if (!/const bodyOk = v => !!G\.inSim && !!v && A\.isBody\(v\);/.test(cm) || !/C\.torneio = function \(b, o\) \{\n\s*if \(!G\.inSim/.test(cm)) fails.push('o resultado é do mundo: o bodyOk ou o torneio do cartas-mesa.js sem o G.inSim (D-669)'); }
 // 392. "a aposta pelo livro" (T5, D-865): as moedas de uma partida e de um torneio só andam pelo G.Depot, com a causa — a aposta, o pote
-// ganho, o pote devolvido, o torneio —, e o pote é o lugar 'k:' do livro: só o adaptador dele escreve o .cofre; nenhuma moeda à mão
+// ganho, o pote devolvido, o torneio —, e o pote é o lugar 'u:' do livro (a urna): só o adaptador dele escreve o .cofre; nenhuma moeda à mão
 { const L = src['cartas-mesa.js'] || [];
   L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
-    if (/\.cofre\s*(=(?!=)|\+=|-=)/.test(c) && !/^\s*(take|put): \(o, /.test(c)) fails.push(`a aposta pelo livro: cartas-mesa.js:${k + 1} escreve o pote fora do lugar 'k:' do livro (D-865): ${l.trim().slice(0, 110)}`);
+    if (/\.cofre\s*(=(?!=)|\+=|-=)/.test(c) && !/^\s*(take|put): \(o, /.test(c)) fails.push(`a aposta pelo livro: cartas-mesa.js:${k + 1} escreve o pote fora do lugar 'u:' do livro (D-865): ${l.trim().slice(0, 110)}`);
     if (/(\.coin|\.purse|\.stock\[[^\]]+\]|\.pantry|\.carry)\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`a aposta pelo livro: cartas-mesa.js:${k + 1} mexe em moedas ou bens à mão (D-865): ${l.trim().slice(0, 110)}`);
     for (const m of c.matchAll(/D\.move\([^;]*?'moedas'[^;]*?code: '([\w-]+)'/g)) if (!['aposta', 'pote', 'pote-volta', 'torneio'].includes(m[1])) fails.push(`a aposta pelo livro: cartas-mesa.js:${k + 1} move moedas com a causa «${m[1]}» (D-865)`); });
-  if (!/D\.addKind\('k', \{/.test(L.join('\n'))) fails.push("a aposta pelo livro: o pote não é um lugar do livro (D.addKind('k'), D-865)"); }
+  if (!/D\.addKind\('u', \{/.test(L.join('\n'))) fails.push("a aposta pelo livro: o pote não é um lugar do livro (D.addKind('u'), D-865)");
+  // (a letra do lugar é uma só: outro arquivo que registre 'u' apaga a urna das Tabuletas — a despensa da T3 tomou a 'k', L-2064)
+  for (const f of files) if (f !== 'cartas-mesa.js') (src[f] || []).forEach((l, k) => { if (/addKind\('u'/.test(l)) fails.push(`a aposta pelo livro: ${f}:${k + 1} registra o lugar 'u:' do livro, que é a urna das Tabuletas (L-2064)`); }); }
 // 393. "cada tabuleta tem o seu desenho" (T5, D-862): toda tabuleta das linhas do cartas.js tem a sua figura no cartas-arte.js (def), e
 // todo poder e todo tipo, o seu símbolo
 { const cj = (src['cartas.js'] || []).join('\n'), ca = (src['cartas-arte.js'] || []).join('\n'); let povo = null; const ids = [];
