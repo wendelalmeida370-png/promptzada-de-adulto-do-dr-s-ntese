@@ -275,6 +275,10 @@
     const sc = scene; const now = s.now; const F = (s.fase === 'revela' || s.fase === 'fim') ? 1 : 0; void F;
     const L = seated(s); const me = L.find(p => p.eu) || null;
     const { w, h, dpr } = fit(); const geo = geoOf(w, h, L.length); const set = s.set || { mat: 'osso' }; const mat = set.mat;
+    // (the table resized — the hands' strip taller in another phase, the window turned —: the body's dice go with the board, not the pixels)
+    const gk = `${geo.mx}:${geo.my}:${geo.tw}:${geo.th}`;
+    if (sc.geo && sc.geo.k !== gk) for (const d of sc.dice) { d.x = geo.mx + (d.x - sc.geo.mx) * geo.tw / sc.geo.tw; d.y = geo.my + (d.y - sc.geo.my) * geo.th / sc.geo.th; }
+    sc.geo = { k: gk, mx: geo.mx, my: geo.my, tw: geo.tw, th: geo.th };
     // (a new round: the scene's round moments again; the body's dice thrown as the cups are slammed)
     const key = `${s.op}:${s.rodada}:${s.fase}`;
     if (key !== lastKey) { const was = lastKey; lastKey = key; onPhase(s, sc, geo, me, mat, was); }
@@ -311,7 +315,7 @@
     if (sc.coinsFly) flyK = clamp((performance.now() - sc.coinsFly.t) / 900, 0, 1);
     if (potN > 0 && !(sc.coinsFly && flyK >= 1)) coins(c, geo.cx, geo.cy - geo.m * 0.02, geo.m * 0.075, potN, COIN[s.tema] || 'bronze');
     if (sc.coinsFly && sc.coinsFly.to > 0) { const i = L.findIndex(p => p.id === sc.coinsFly.to); const st = i >= 0 ? geo.seats[i] : null; const n = Math.max(3, Math.round((s.ganho || s.pote || 0.3) / 0.1));
-      if (st) for (let k = 0; k < Math.min(14, n); k++) { const t = clamp(flyK * 1.4 - k * 0.04, 0, 1); if (t <= 0 || t >= 1) continue; const e = ease(t); const x = geo.cx + (st.x - geo.cx) * e, y = geo.cy + (st.y - geo.cy) * e - Math.sin(e * Math.PI) * geo.m * 0.15; coin(c, x, y, geo.m * 0.07, COIN[s.tema] || 'bronze', k % 5); } }
+      if (st) for (let k = 0; k < Math.min(14, n); k++) { const t = clamp(flyK * 1.4 - k * 0.04, 0, 1); if (t <= 0 || t >= 1) continue; const e = ease(t); const x = geo.cx + (st.x - geo.cx) * e + Math.sin(k * 2.3) * geo.m * 0.05 * Math.sin(e * Math.PI), y = geo.cy + (st.y - geo.cy) * e - Math.sin(e * Math.PI) * geo.m * 0.15; coin(c, x, y, geo.m * 0.07, COIN[s.tema] || 'bronze', k % 5); } }
     // (the cups and the dice of each one)
     const T = performance.now(); const shaking = s.fase === 'sacode' && T - sc.shake < 1100;
     const order = s.ordem && s.ordem.length ? s.ordem : L.map(p => p.id);

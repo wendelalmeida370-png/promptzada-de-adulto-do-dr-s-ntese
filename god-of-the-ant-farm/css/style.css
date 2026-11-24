@@ -1746,8 +1746,8 @@ canvas#game3d { touch-action: none; transition: none; }
 #dados-panel .jd-seat.cravou .jd-bal { background: #ffd56a; box-shadow: 0 0 0 3px #fff3c4, 0 0 24px rgba(255, 200, 80, .9); }
 #dados-panel .jd-seat[data-side="t"] .jd-bal { top: 100%; margin-top: 8px; }
 #dados-panel .jd-seat[data-side="t"] .jd-bal::after { top: -4px; }
-#dados-panel .jd-seat[data-side="b"] .jd-bal { left: 50%; bottom: 100%; margin-bottom: 8px; transform: translateX(-50%); --bt: translateX(-50%); }
-#dados-panel .jd-seat[data-side="b"] .jd-bal::after { bottom: -4px; }
+#dados-panel .jd-seat[data-side="b"] .jd-bal { right: 100%; top: 50%; margin-right: 12px; transform: translateY(-50%); --bt: translateY(-50%); }
+#dados-panel .jd-seat[data-side="b"] .jd-bal::after { right: -4px; top: calc(50% - 5px); }
 #dados-panel .jd-seat[data-side="l"] .jd-bal { left: 100%; margin-left: 10px; top: 4px; }
 #dados-panel .jd-seat[data-side="l"] .jd-bal::after { left: -4px; top: 14px; }
 #dados-panel .jd-seat[data-side="r"] .jd-bal { right: 100%; margin-right: 10px; top: 4px; }
@@ -1863,6 +1863,7 @@ canvas#game3d { touch-action: none; transition: none; }
   #dados-panel .jd-mesa { grid-column: 1; grid-row: 3; }
   #dados-panel .jd-ctl { grid-column: 2; grid-row: 3; justify-content: center; border-top: 0; border-left: 1px solid var(--line); overflow-y: auto; padding: 14px 16px; gap: 10px; }
   #dados-panel .jd-btns, #dados-panel .jd-go.big, #dados-panel .jd-regua { width: 100%; }
+  #dados-panel .jd-ctl > .jd-go { flex: none; }
 }
 /* the phone held upright: the whole screen; the table above, the hands below */
 @media (max-width: 720px) {
