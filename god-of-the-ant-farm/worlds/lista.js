@@ -2,8 +2,8 @@
 // os mundos prontos que vêm com o jogo: o que cada um é, sem o seu peso (escrito por qa/prontos.js — não editar à mão)
 G.Ready.list({
  "cidade": {
-  "day": 13,
-  "pop": 132,
+  "day": 15,
+  "pop": 133,
   "peoples": 4,
   "towns": 4,
   "N": 128,
@@ -12,48 +12,48 @@ G.Ready.list({
   "city": {
    "name": "Mênfis",
    "tier": 3,
-   "pop": 35
+   "pop": 33
   },
   "wars": 0,
   "ww": null,
   "world": "Neria",
-  "bytes": 1125182
+  "bytes": 1159743
  },
  "metropole": {
-  "day": 60,
-  "pop": 868,
+  "day": 61,
+  "pop": 913,
   "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3202,
   "city": {
-   "name": "Mênfis",
+   "name": "Delfos",
    "tier": 4,
-   "pop": 117
+   "pop": 71
   },
   "wars": 0,
   "ww": null,
   "world": "Selia",
-  "bytes": 4173122
+  "bytes": 4043226
  },
  "mega": {
-  "day": 74,
-  "pop": 953,
+  "day": 93,
+  "pop": 1740,
   "peoples": 5,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Hedeby",
+   "name": "Mênfis",
    "tier": 5,
-   "pop": 153
+   "pop": 206
   },
-  "wars": 2,
+  "wars": 0,
   "ww": null,
   "world": "Corante",
-  "bytes": 4576457
+  "bytes": 6679337
  },
  "mundial": {
   "day": 58,
