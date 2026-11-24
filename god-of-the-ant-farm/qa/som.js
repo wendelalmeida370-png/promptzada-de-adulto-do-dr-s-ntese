@@ -15,10 +15,11 @@
 //     nenhuma entre os dois no mesmo prédio
 //  s3 o cais: com a descarga viva, as fontes são os estivadores da operação, onde cada um está; de noite, sem mãos, o cais
 //     não soa — nem as fontes, nem o fundo
-//  s4 a forja: com a fornada na bigorna, o martelo é do ferreiro, da operação e do prédio dele — abafado da rua, limpo de
-//     dentro; as forjas sem ninguém martelando não soam
-//  s5 a taverna: com gente às mesas, o burburinho é do prédio e da operação do dia, mais forte com mais gente; vazia, calada;
-//     e o alaúde só soa com alguém tocando — a fonte é quem toca, na escala do povo dele
+//  s4 a forja: com a fornada na bigorna, o martelo é do ferreiro, da operação e do prédio dele — abafado da rua, limpo e mais
+//     alto de dentro (P9: de dentro, na escala da sala; de fora, só de perto); as forjas sem ninguém martelando não soam
+//  s5 a taverna: com gente conversando às mesas, o burburinho é do prédio e da operação do dia, mais forte com mais conversa
+//     (P9, D-780: quem fala agora, mais alto com a bebida); sem conversa, calada; e o alaúde só soa com alguém tocando — a fonte
+//     é quem toca, na escala do povo dele
 //  s6 as termas: a água soa com alguém no banho — a fonte é quem se banha —, a fornalha só ronca acesa; sem banhista, nada
 //  s7 o fundo do bairro: o hábito segue a vida contada (sobe e desce devagar, um quinto por dia), o peso é o hábito vezes as
 //     mãos de agora (o bairro de hábito cheio, sem mãos, não soa), a chuva encobre, e a mistura de quem ouve anda devagar
@@ -36,6 +37,15 @@
 //     mundo diz; devolvido o corpo, o ouvido volta a ser o do deus
 //  s14 o verificador vê (qa/som-inv.js): as regras do som — toda fonte da cena de cada cidade com dono vivo e números de
 //     verdade, o fundo sem peso onde não há mãos, a tabela cobrindo todo gesto — limpas no mundo e acusando cada defeito posto
+//  s15 a taverna por dentro (P9, D-780 a D-789; ≈ 35 s): numa noite da metrópole pronta, o ouvido no meio de cada taverna aberta,
+//     a cada segundo do mundo das 0,70 até perto de fechar: a o burburinho só com dois ou mais conversando agora, a conta dele a da
+//     sala, mais alto com mais vozes (e a bebida) na mesma sala; b o fogo crepita só aceso (G.Atmos.fire), da peça de fogo da planta;
+//     c a porta soa só com alguém passando pela entrada (In.passage), e de quem passa, e os passos no chão da planta debaixo deles;
+//     d o gole na caneca da mão (o barro ou a madeira do povo), a voz arrastada só de quem bebeu, a música de quem toca com o
+//     instrumento da mão e o compasso do povo dele; e a chuva no telhado só com chuva (a mão da prova no tempo, desfeita na hora),
+//     no telhado que o 3D põe (a turfa, o terraço, a telha), só de dentro; f o eco da planta (a sala dura soa mais que a mole);
+//     g os atos da noite da P7 com o seu som e as palmas, a dança e o canto no compasso; h o deus a ouve só de perto (de longe nada
+//     da sala; de perto o burburinho abafado); i depois de fechar, a taverna calada
 //  e nenhum erro de módulo nem aviso, e o verificador sem nada novo (as regras do som entre elas).
 const fs = require('fs'), path = require('path');
 const M = require('./nodemundo.js');
@@ -59,12 +69,14 @@ const townOf = b => G.S.settlements.get(b.set);
 
 // ---- what every scene of the proof is held to (s10) and every act the world showed (s1): gathered as the proof goes
 const orphans = []; let scenes = 0, sources = 0;
+// (who plays in a tavern now: the musician of its day — op.data.mus, D-764 —, at the stage and playing; T-1863)
+const musicoDe = b => { const op = b && G.Taverna && G.Taverna.dia ? G.Taverna.dia(b) : null; const v = op && op.data && op.data.mus ? G.S.villagers.get(op.data.mus) : null; return v && v.act === 'play' && v.inside === b.id ? v : null; };
 function causal(c, tag) {
   const S = G.S; scenes++;
   const bad = (f, why) => { if (orphans.length < 8) orphans.push(`${tag}: ${f.k} (${f.tipo} ${f.s}) ${why}`); };
   const one = f => {
     sources++; const de = f.de || {};
-    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo === 'ocio') { const oc = G.Audio.ocioSom ? G.Audio.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) return bad(f, 'de uma coisinha do ócio que não está acontecendo'); return; } if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); if (f.tipo !== 'luta' && (Math.abs(f.x - v.x) > 0.002 || Math.abs(f.y - v.y) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
+    if (de.v !== undefined) { const v = S.villagers.get(de.v); if (!v) return bad(f, 'de ninguém'); if (v.sleeping) return bad(f, 'de quem dorme'); if (f.tipo === 'ocio') { const oc = G.Audio.ocioSom ? G.Audio.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) return bad(f, 'de uma coisinha do ócio que não está acontecendo'); return; } if (f.tipo === 'passos' || f.tipo === 'porta') { if (!G.Interiors.passage(v) && !(G.S.avatar && G.S.avatar.id === v.id)) return bad(f, 'de quem não está passando'); } else if (f.tipo !== 'luta' && !v.act) return bad(f, 'de quem não faz nada'); const [wx, wy] = A.lugarDe(v, c.ear); if (f.tipo !== 'luta' && f.tipo !== 'porta' && (Math.abs(f.x - r3(wx)) > 0.002 || Math.abs(f.y - r3(wy)) > 0.002)) return bad(f, 'fora do lugar de quem a faz'); }
     if (de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) return bad(f, 'de uma operação que não está viva'); }
     // (a gesture is the one its person is making: its act is the act the world shows; the water is of who bathes, the
     // watching of who is at the play, the lute of the one the tavern has playing, the anvil of a batch at its hammering)
@@ -72,7 +84,7 @@ function causal(c, tag) {
       if (!g || g.act !== v.act) return bad(f, `com o gesto «${f.g}», que não é do ato «${v.act}»`);
       if (f.g === 'banhar' && t.type !== 'termas') return bad(f, 'a água de quem não está no banho');
       if (f.g === 'assistir' && t.type !== 'teatro') return bad(f, 'a plateia de quem não está no espetáculo');
-      if (f.g === 'tocar') { const b = S.buildings.get(v.inside); if (!b || b._music !== v.id) return bad(f, 'o alaúde de quem não está tocando'); }
+      if (f.g === 'tocar') { const b = S.buildings.get(v.inside); if (!b || musicoDe(b) !== v) return bad(f, 'o alaúde de quem não está tocando'); }
       if (f.g === 'forjar') { const op = G.Act.get(t.op); const s = op && G.Oficio.stage(op); if (t.type !== 'oficio' || !s || s.anim !== 'forjar') return bad(f, 'o martelo de quem não está numa fornada na bigorna'); } }
     if (de.b) { if (!S.buildings.has(de.b)) return bad(f, 'de um prédio que não existe'); }
     if (de.navio !== undefined) { const s = S.ships.find(x => x.id === de.navio); if (!s || !s.moving) return bad(f, 'de um navio parado ou que não existe'); }
@@ -145,7 +157,7 @@ function day() {
       const ear = earAt(v.x + spot[0], v.y + spot[1]);
       const c = scene(ear, 's3'); const mine = c.fontes.find(f => f.de.v === v.id);
       const quay = c.fontes.filter(f => f.fam === 'cais');
-      const all = quay.every(f => { const p = S.villagers.get(f.de.v); const o = f.de.op ? G.Act.get(f.de.op) : null; return p && f.x === r3(p.x) && f.y === r3(p.y) && (f.de.op ? !!(o && o.def === 'descarga' && o.roles[p.id]) : ['cais', 'conferir', 'descarga'].includes((p.task || {}).type)); });
+      const all = quay.every(f => { const p = S.villagers.get(f.de.v); const o = f.de.op ? G.Act.get(f.de.op) : null; return p && f.x === r3(A.ondeDe(p)[0]) && f.y === r3(A.ondeDe(p)[1]) && (f.de.op ? !!(o && o.def === 'descarga' && o.roles[p.id]) : ['cais', 'conferir', 'descarga'].includes((p.task || {}).type)); });
       kept.quay = { ear, dock, op: op.id };
       ok('s3a o-cais-vivo', !!mine && mine.de.op === op.id && mine.fam === 'cais' && ['levantar', 'pousar'].includes(mine.g) && ['heave', 'thud'].includes(mine.s) && mine.x === r3(v.x) && mine.y === r3(v.y) && mine.gain > 0.1 && mine.muf === 0 && all && c.fundo && c.fundo.agora.cais > 0,
         `${townOf(dock) ? townOf(dock).name : '?'}, cais #${dock.id}, hora ${S.time.toFixed(2)}: ${v.name} #${v.id} num «${mine ? mine.g : '?'}» da descarga #${op.id} → som «${mine ? mine.s : '?'}» em (${mine ? mine.x + ', ' + mine.y : '?'}), onde ela está (${r3(v.x)}, ${r3(v.y)}), ganho ${mine ? mine.gain : '?'}, pan ${mine ? mine.pan : '?'}; ${quay.length} fonte(s) do cais, ${all ? 'todas de gente da operação, cada uma no seu lugar' : 'ALGUMA SEM DONO'}; mãos no cais agora: ${c.fundo ? c.fundo.maos.cais || 0 : '?'}${qOwn ? '' : ' (ela de pé fora de toda cidade, ao lado do cais: as mãos dela contam no bairro do cais)'}`);
@@ -176,7 +188,7 @@ function day() {
       kept.forge = { out, b, v };
       // the forges where nobody hammers now
       const idle = forges.filter(x => x !== hit && !(x.smith.act === 'forge')).map(x => { const [x0, y0] = mid(x.b); const c = scene(earAt(x0 + 2, y0), 's4 parada'); return { id: x.b.id, anvil: c.fontes.filter(f => f.s === 'anvil' && f.de.b === x.b.id).length, stage: G.Oficio.batches(x.b).map(op => (G.Oficio.stage(op) || {}).id).join('+') || 'sem fornada' }; });
-      ok('s4a a-forja-viva', !!fo && fo.g === 'forjar' && fo.s === 'anvil' && fo.de.op === v.task.op && fo.de.b === b.id && fo.fam === 'oficio' && fo.x === r3(v.x) && (!shutB || (fo.muf === 1 && fi && fi.muf === 0 && Math.abs(fo.gain - r3(fi.gain * A.WALL)) < 0.01)),
+      ok('s4a a-forja-viva', !!fo && fo.g === 'forjar' && fo.s === 'anvil' && fo.de.op === v.task.op && fo.de.b === b.id && fo.fam === 'oficio' && fo.x === r3(A.ondeDe(v)[0]) && (!shutB || (fo.muf === 1 && fi && fi.muf === 0 && fo.gain < fi.gain)),
         `${townOf(b).name}, forja #${b.id} (${shutB ? 'fechada' : 'aberta'}), hora ${S.time.toFixed(2)}: ${v.name} #${v.id} num «${fo ? fo.g : '?'}» da fornada #${v.task.op} → som «${fo ? fo.s : '?'}», do prédio #${fo ? fo.de.b : '?'}; da rua ganho ${fo ? fo.gain : '?'} abafado ${fo ? fo.muf : '?'}, de dentro da forja ganho ${fi ? fi.gain : '?'} abafado ${fi ? fi.muf : '?'}`);
       ok('s4b a-forja-parada', idle.every(x => x.anvil === 0), idle.length ? idle.map(x => `forja #${x.id} (${x.stage}): ${x.anvil} martelo(s)`).join('; ') : 'não há outra forja com ferreiro — a noite (s3b) diz o resto');
     }
@@ -223,10 +235,13 @@ function day() {
         // takes the walk, 0,45 over the tavern's 0,4, and no tavern had three at its tables — the case is the tavern's sound: T-855)
         if (T.pick(v) && T.visitTask(v, G.Vg.H)) { if (v.task && v.task.type === 'tavern') v.task.pri = 2.9; sent.add(v.id); n++; } } } });
     send();
-    const full = () => taverns().find(b => guests(b) >= 3);
+    // (the talk of the room is who talks there now — D-780 —: a tavern with three at its tables and two of them talking)
+    const inside = b => [...S.villagers.values()].filter(v => v.inside === b.id);
+    const talk = b => A.vozesDe(b, inside(b));
+    const full = () => taverns().find(b => guests(b) >= 3 && talk(b).fala >= 2);
     live(70, k => { if (k % 15 === 14) send(); return !!full(); });
     const b = full();
-    if (!b) ok('s5a a-taverna-cheia', false, `nenhuma taverna com três às mesas (abertas: ${taverns().map(x => '#' + x.id + ':' + guests(x)).join(', ') || 'nenhuma'})`);
+    if (!b) ok('s5a a-taverna-cheia', false, `nenhuma taverna com três às mesas e dois conversando (abertas: ${taverns().map(x => '#' + x.id + ':' + guests(x)).join(', ') || 'nenhuma'})`);
     else {
       const op = T.dia(b); const [bx, by] = mid(b); const shutB = A.fechado(b.id) === b.id;
       const out = earAt(bx + 3, by + 0.5), inn = earAt(bx + 3, by + 0.5, { inside: b.id });
@@ -234,26 +249,27 @@ function day() {
       const mo = co.fontes.find(f => f.k === key), mi = ci.fontes.find(f => f.k === key);
       const n = guests(b);
       // (the same room with fewer people: what the line would be — the rule alone, by the scene of another tavern)
-      const others = taverns().filter(x => x !== b).map(x => { const [x0, y0] = mid(x); const c = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 outra'); const m = c.fontes.find(f => f.k === 'b' + x.id + ':taverna'); return { id: x.id, n: guests(x), murmur: m ? m.gain : 0 }; });
-      const emptyOK = others.every(x => (x.n >= 2) === (x.murmur > 0));
-      // (more people, more murmur: this room and the others, each heard from the same two tiles inside it)
-      const here = scene(earAt(bx + 2, by + 0.5, { inside: b.id }), 's5 perto').fontes.find(f => f.k === key);
-      const louder = !!here && others.filter(x => x.n >= 2 && x.n < n).every(x => x.murmur < here.gain) && others.filter(x => x.n > n).every(x => x.murmur > here.gain);
+      const others = taverns().filter(x => x !== b).map(x => { const [x0, y0] = mid(x); const c = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 outra'); const m = c.fontes.find(f => f.k === 'b' + x.id + ':taverna'); return { id: x.id, n: guests(x), fala: talk(x).fala, forca: talk(x).forca, murmur: m ? m.gain : 0 }; });
+      const emptyOK = others.every(x => (x.fala >= 2) === (x.murmur > 0));
+      // (more talk, more murmur — the talkers, louder with the drink, A.vozesDe: this room and the others, each heard from the same two
+      // tiles inside it)
+      const here = scene(earAt(bx + 2, by + 0.5, { inside: b.id }), 's5 perto').fontes.find(f => f.k === key); const fz = here ? here.forca : 0;
+      const louder = !!here && others.filter(x => x.fala >= 2 && x.forca < fz).every(x => x.murmur < here.gain) && others.filter(x => x.forca > fz).every(x => x.murmur > here.gain);
       kept.tavern = { out, b };
-      ok('s5a a-taverna-cheia', !!mi && mi.tipo === 'predio' && mi.s === 'murmur' && mi.de.b === b.id && mi.de.op === op.id && mi.n === n && mi.muf === 0 && (!shutB || (!!mo && mo.muf === 1 && mo.gain < mi.gain)) && louder,
-        `${townOf(b).name}, taverna #${b.id} (${shutB ? 'fechada' : 'aberta'}), hora ${S.time.toFixed(2)}, ${n} às mesas: o burburinho é do prédio e do dia #${op.id}; de dentro ganho ${mi ? mi.gain : '?'} limpo, da rua ${mo ? mo.gain : '?'} abafado`);
-      ok('s5b a-taverna-vazia', emptyOK, others.length ? others.map(x => `taverna #${x.id}: ${x.n} às mesas → burburinho ${x.murmur || 'nenhum'}`).join('; ') : 'não há outra taverna aberta — a noite (s3b) diz o resto');
+      ok('s5a a-taverna-cheia', !!mi && mi.tipo === 'predio' && mi.s === 'murmur' && mi.de.b === b.id && mi.de.op === op.id && mi.n === n && mi.fala === talk(b).fala && mi.muf === 0 && (!shutB || (!!mo && mo.muf === 1 && mo.gain < mi.gain)) && louder,
+        `${townOf(b).name}, taverna #${b.id} (${shutB ? 'fechada' : 'aberta'}), hora ${S.time.toFixed(2)}, ${n} às mesas, ${mi ? mi.fala : '?'} conversando: o burburinho é do prédio e do dia #${op.id}; de dentro ganho ${mi ? mi.gain : '?'} limpo, da rua ${mo ? mo.gain : '?'} abafado`);
+      ok('s5b a-taverna-vazia', emptyOK, others.length ? others.map(x => `taverna #${x.id}: ${x.n} às mesas, ${x.fala} conversando → burburinho ${x.murmur || 'nenhum'}`).join('; ') : 'não há outra taverna aberta — a noite (s3b) diz o resto');
       // the song: only with someone playing
-      const playing = () => { for (const x of taverns()) { const id = x._music; const v = id && S.villagers.get(id); if (v && v.act === 'play' && v.inside === x.id) return { b: x, v }; } return null; };
-      const before = taverns().map(x => { const [x0, y0] = mid(x); const c = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 antes'); return { id: x.id, lute: c.fontes.filter(f => f.s === 'lute').length, music: !!(x._music && S.villagers.get(x._music) && S.villagers.get(x._music).act === 'play') }; });
+      const playing = () => { for (const x of taverns()) { const v = musicoDe(x); if (v) return { b: x, v }; } return null; };
+      const before = taverns().map(x => { const [x0, y0] = mid(x); const c = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 antes'); return { id: x.id, lute: c.fontes.filter(f => f.musica).length, music: !!musicoDe(x) }; });
       live(150, k => { if (k % 15 === 14) send(); return !!playing(); });
       const p = playing();
       if (!p) ok('s5c a-taverna-canta', false, `ninguém tocou em 150 s (às mesas: ${taverns().map(x => '#' + x.id + ':' + guests(x)).join(', ')})`);
       else {
-        const [px, py] = mid(p.b); const c = scene(earAt(px + 2, py + 0.5, { inside: p.b.id }), 's5 canto'); const lu = c.fontes.find(f => f.s === 'lute');
+        const [px, py] = mid(p.b); const c = scene(earAt(px + 2, py + 0.5, { inside: p.b.id }), 's5 canto'); const lu = c.fontes.find(f => f.musica && f.de.v === p.v.id);
         const fac = G.Fac.ofV(p.v); const want = A.musicOf(fac ? fac.civ : null, fac && fac.tech ? fac.tech.known : null);
-        const silent = taverns().filter(x => x !== p.b && !(x._music && S.villagers.get(x._music) && S.villagers.get(x._music).act === 'play')).map(x => { const [x0, y0] = mid(x); const cc = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 calada'); return { id: x.id, lute: cc.fontes.filter(f => f.s === 'lute' && f.de.b === x.id).length }; });
-        ok('s5c a-taverna-canta', !!lu && lu.de.v === p.v.id && lu.g === 'tocar' && lu.de.b === p.b.id && JSON.stringify(lu.notas) === JSON.stringify(want.notas) && before.every(x => x.music || x.lute === 0) && silent.every(x => x.lute === 0),
+        const silent = taverns().filter(x => x !== p.b && !musicoDe(x)).map(x => { const [x0, y0] = mid(x); const cc = scene(earAt(x0 + 2, y0 + 0.5, { inside: x.id }), 's5 calada'); return { id: x.id, lute: cc.fontes.filter(f => f.musica && f.de.b === x.id).length }; });
+        ok('s5c a-taverna-canta', !!lu && lu.de.v === p.v.id && lu.g === 'tocar' && lu.s === (A.instrumentoDe(p.v) || 'canto') && lu.de.b === p.b.id && JSON.stringify(lu.notas) === JSON.stringify(want.notas) && before.every(x => x.music || x.lute === 0) && silent.every(x => x.lute === 0),
           `taverna #${p.b.id} de ${townOf(p.b).name}, hora ${S.time.toFixed(2)}: ${p.v.name} #${p.v.id} toca → fonte «${lu ? lu.g : '?'}» som «${lu ? lu.s : '?'}» de quem toca, na escala do povo dele (${want.civ}, ${want.epoca}: ${want.nome}); antes de alguém tocar: ${before.map(x => `#${x.id} ${x.music ? 'tocando' : x.lute + ' alaúde'}`).join(', ')}; as outras agora: ${silent.map(x => `#${x.id} ${x.lute} alaúde`).join(', ') || '(não há)'}`);
       }
     }
@@ -265,7 +281,7 @@ function day() {
     let good = true;
     if (kept.quay) { const c = scene(kept.quay.ear, 'noite cais'); const n = c.fontes.filter(f => f.fam === 'cais').length; const w = c.fundo ? c.fundo.w.cais : 0, ag = c.fundo ? c.fundo.agora.cais : 0; good = good && n === 0 && w === 0 && ag === 0; out.push(`o cais #${kept.quay.dock.id}: ${n} fonte(s) do cais, mãos ${ag}, fundo ${w}`); }
     if (kept.forge) { const c = scene(kept.forge.out, 'noite forja'); const n = c.fontes.filter(f => f.s === 'anvil').length; good = good && n === 0; out.push(`a forja #${kept.forge.b.id}: ${n} martelo(s)`); }
-    if (kept.tavern) { const c = scene(kept.tavern.out, 'noite taverna'); const n = c.fontes.filter(f => f.s === 'murmur' || f.s === 'lute').length; good = good && n === 0; out.push(`a taverna #${kept.tavern.b.id}: ${n} burburinho/alaúde`); }
+    if (kept.tavern) { const c = scene(kept.tavern.out, 'noite taverna'); const n = c.fontes.filter(f => f.s === 'murmur' || f.musica).length; good = good && n === 0; out.push(`a taverna #${kept.tavern.b.id}: ${n} burburinho/alaúde`); }
     ok('s3b a-noite', good && out.length > 0, `hora ${S.time.toFixed(2)}, os mesmos ouvidos: ${out.join('; ') || 'nenhum caso do dia chegou aqui'}`);
   }
 }
@@ -594,6 +610,98 @@ function s14() {
 }
 
 // =============================================================================================================
+// s15 the tavern from within (P9, D-780 to D-789): a night of the ready metropolis, the ear inside each open tavern
+// =============================================================================================================
+function s15() {
+  const S = G.S, T = G.Taverna, In = G.Interiors, At = G.Atmos;
+  const taverns = () => [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.ip && In.ready(b) && In.tableReady(b)).sort((a, b) => a.id - b.id);
+  const inside = b => [...S.villagers.values()].filter(v => v.inside === b.id && !v.sleeping);
+  // (the ear in the middle of the room, turned to the east: inside the tavern, P9's body at a table)
+  const earIn = b => earAt(b.x + (b.w || 1) / 2, b.y + (b.h || 1) / 2, { inside: b.id });
+  const talkers = b => inside(b).filter(v => A.FALA.has(v.act) || (v.task && v.task.pose === 'sittalk')).length;
+  const own = (c, b) => c.fontes.filter(f => (f.de && f.de.b === b.id) || f.sala === b.id);
+  skipTo(0.7); M.viver(2);
+  // (the night as the world has it — the will of each to go, D-760 —, and the proof's hand sending a few more by the customer's own
+  // door when no room talks yet, as s5 does: the visit held above the day's calls, T-281)
+  const send = () => stepIn(() => { for (const b of taverns()) { if (!T.aberta(b) || inside(b).length >= 6) continue; let n = 0;
+    for (const v of [...S.villagers.values()].filter(p => p.set === b.set && free(p) && !(p.task && p.task.type === 'tavern')).sort((p, q) => p.id - q.id)) { if (n >= 4) break; G.Vg.endTask(v); v.hunger = Math.min(v.hunger, 30); v.energy = Math.max(v.energy, 80); if (T.pick(v) && T.visitTask(v, G.Vg.H)) { if (v.task && v.task.type === 'tavern') v.task.pri = 2.9; n++; } } } });
+  const godOf = (b, dx) => A.earOf({ x: b.x + (b.w || 1) / 2 + dx, y: b.y + (b.h || 1) / 2, rx: 1, ry: 0, r: 40, k: 1, modo: 'deus' });
+  const ofRoom = (c, b) => c.fontes.filter(f => (f.de && f.de.b === b.id) || (f.de && f.de.v !== undefined && (S.villagers.get(f.de.v) || {}).inside === b.id));
+  const gods = [];
+  const bad = []; const pairs = new Map(); let musicas = 0, musico = ''; let doorsSeen = 0, passSeen = 0, firesSeen = 0, stepsSeen = 0, looks = 0, best = null, gole = 0, drunkV = 0;
+  const look = () => {
+    for (const b of taverns()) {
+      const c = scene(earIn(b), 's15'); looks++; const mine = own(c, b); const quem = inside(b);
+      // (the talk: the murmur is there with two or more talking, its count the room's own — and nothing with fewer)
+      const fala = talkers(b); const mu = mine.find(f => f.s === 'murmur');
+      if ((fala >= 2) !== !!mu || (mu && mu.fala !== fala)) bad.push(`#${b.id}: ${fala} conversando e o burburinho ${mu ? 'de ' + mu.fala : 'nenhum'}`);
+      if (mu) { const P = pairs.get(b.id) || []; P.push([mu.forca, mu.gain]); pairs.set(b.id, P); if (!best || mu.fala > best.fala) best = { b, fala: mu.fala, beb: mu.bebado, gain: mu.gain, n: quem.length, povo: mu.povo }; }
+      // (the god's ear, the first time a room talks: from fourteen tiles off nothing of it, from two its talk through the wall)
+      if (mu && !gods.some(x => x.b === b)) gods.push({ b, far: ofRoom(scene(godOf(b, 14), 's15 deus longe'), b).length, near: scene(godOf(b, 2), 's15 deus perto').fontes.find(f => f.s === 'murmur' && f.de.b === b.id) });
+      // (the fire: only lit — G.Atmos.fire —, from the plan's hearth)
+      const fo = mine.filter(f => f.tipo === 'fogo'); const lit = !!At.fire(b);
+      if (lit !== fo.length > 0) bad.push(`#${b.id}: o fogo ${lit ? 'aceso' : 'apagado'} e ${fo.length} som(ns) de fogo`); if (fo.length) firesSeen++;
+      // (the rain on the roof: only with rain over it — the world of the proof is dry here)
+      if (mine.some(f => f.tipo === 'chuva') && !(c.sala && c.sala.chuva > 0.02)) bad.push(`#${b.id}: chuva no telhado sem chuva`);
+      // (the door: only with someone passing the way in; each door source of one who passes there, and no passer unheard)
+      const ps = quem.filter(v => In.passage(v)); const dr = mine.filter(f => f.tipo === 'porta'); passSeen += ps.length ? 1 : 0; doorsSeen += dr.length ? 1 : 0;
+      if (dr.length && !ps.length) bad.push(`#${b.id}: a porta soa sem ninguém passando`);
+      for (const f of dr) { const v = S.villagers.get(f.de.v); if (!v || v.inside !== b.id || !In.passage(v)) bad.push(`#${b.id}: a porta de quem não passa (#${f.de.v})`); }
+      if (ps.length && !dr.length) bad.push(`#${b.id}: ${ps.length} passando e a porta calada`);
+      // (the feet: of who passes, on the plan's floor under them)
+      for (const f of mine.filter(x => x.tipo === 'passos')) { stepsSeen++; const v = S.villagers.get(f.de.v); const want = v ? A.PASSO[A.chaoDe(b, A.ondeDe(v)[2])] : null; if (!v || !In.passage(v) || f.piso !== want) bad.push(`#${b.id}: passos de #${f.de.v} no chão «${f.piso}» (o da planta: ${want})`); }
+      // (the cup in the hand of who drinks, in its own material; the drunk's slurred talk only of who drank)
+      for (const f of mine) { const v = f.de && f.de.v !== undefined ? S.villagers.get(f.de.v) : null; if (!v) continue;
+        if (f.s === 'gole') { gole++; const k = G.Inv.held(v).mao; const m = k ? G.Itens.def(k).mat : null; if (f.mat !== (m === 'barro' || m === 'madeira' ? m : m ? 'metal' : 'madeira')) bad.push(`#${b.id}: o gole de #${v.id} na caneca de «${f.mat}» (a da mão: ${k})`); }
+        if (f.s === 'voz' || f.s === 'vozBebado') { if ((f.s === 'vozBebado') !== (At.drunk(v) >= 0.5)) bad.push(`#${b.id}: a voz de #${v.id} ${f.s} com a bebida ${At.drunk(v)}`); if (f.s === 'vozBebado') drunkV++; }
+        // (the music: of who plays, with the instrument in the hand — or the voice —, on the pulse of the player's people)
+        if (f.musica) { musicas++; const want = A.instrumentoDe(v) || 'canto'; const fac = G.Fac.ofV(v); const R0 = A.RITMO[fac ? fac.civ : ''] || A.RITMO.classico; if (f.g !== 'tocar' || f.s !== want || f.musica.bpm !== R0.bpm || f.musica.de !== v.id) bad.push(`#${b.id}: a música de #${v.id} «${f.s}» (a mão: ${want}), ${f.musica.bpm} batidas`); else musico = `${v.name} #${v.id} toca ${f.s} (${f.musica.civ}, ${f.musica.bpm} batidas, ciclo de ${f.musica.ciclo.length})`; } }
+    }
+  };
+  let sent = 0;
+  // (a day is 200 s of the world: from 0,70 to a little before the closing, 0,88 in a great town — the same night as the empty tavern below)
+  live(40, k => { look(); if (k % 12 === 5 && (!best || best.fala < 3) && sent < 3) { send(); sent++; } return S.time >= 0.86; });
+  // (more talk, more murmur: in the same room and the same ear, the weight of the voices — the talkers, louder with the drink — orders the
+  // loudness)
+  let mono = true, pts = 0; for (const [id, P] of pairs) for (const [a, g] of P) for (const [a2, g2] of P) { pts++; if (a < a2 - 1e-9 && !(g < g2 + 1e-9)) mono = false; }
+  ok('s15a o-burburinho-de-quem-conversa', !bad.filter(x => /conversando|burburinho/.test(x)).length && !!best && best.fala >= 2 && mono,
+    `${looks} olhadas em ${taverns().length} tavernas de 0,70 a ${S.time.toFixed(2)}: ${best ? `a mais cheia, #${best.b.id} (${G.Village.buildName(best.b)}, ${best.povo}), ${best.n} dentro, ${best.fala} conversando, bebida ${best.beb} → burburinho ${best.gain}` : 'NINGUÉM CONVERSOU'}; o volume pelo peso das vozes em ${pts} pares da mesma sala: ${mono ? 'sempre mais com mais' : 'FORA DE ORDEM'}; ${drunkV} voz(es) de quem bebeu; ${bad.filter(x => /conversando|burburinho/.test(x)).slice(0, 3).join(' · ')}`);
+  ok('s15b o-fogo-so-aceso', !bad.filter(x => /fogo/.test(x)).length && firesSeen > 0, `${firesSeen} olhadas com o fogo da planta crepitando, cada uma com o fogo aceso (G.Atmos.fire); ${bad.filter(x => /fogo/.test(x)).slice(0, 3).join(' · ')}`);
+  ok('s15c a-porta-so-com-quem-passa', !bad.filter(x => /porta|passos|passando/.test(x)).length && passSeen > 0 && doorsSeen > 0,
+    `${passSeen} olhadas com alguém passando pela entrada, ${doorsSeen} com a porta soando — cada uma de quem passa —, ${stepsSeen} passos no chão da planta; ${bad.filter(x => /porta|passos|passando/.test(x)).slice(0, 3).join(' · ')}`);
+  ok('s15d as-coisas-da-mesa', !bad.filter(x => /gole|voz de|música/.test(x)).length, `${gole} gole(s), cada um na caneca da mão (o barro ou a madeira do povo); ${bad.filter(x => /gole|voz de|música/.test(x)).slice(0, 3).join(' · ') || 'a voz de quem bebeu só de quem bebeu'}; ${musicas ? musicas + ' olhada(s) com música: ' + musico : 'ninguém tocou nesta noite'}`);
+  // ---- the god's ear (D-780): the open tavern heard only near — from fourteen tiles off nothing of its room, from two tiles its talk
+  // through the wall
+  ok('s15h o-deus-so-de-perto', gods.length > 0 && gods.every(x => x.far === 0 && !!x.near && x.near.muf === 1),
+    gods.length ? gods.map(x => `#${x.b.id}: a 14 casas ${x.far} som(ns) da sala, a 2 casas o burburinho ${x.near ? x.near.gain + (x.near.muf ? ' abafado' : ' LIMPO') : 'CALADO'}`).join('; ') : 'nenhuma taverna conversando na hora do caso');
+  // ---- the rain on the roof: the proof's hand on the weather, put back at once — the roof the 3D lays, from within only
+  const tv = taverns(); const roofs = []; let rainOK = tv.length > 0;
+  const w0 = S.weather.rain; S.weather.rain = 1;
+  try { for (const b of tv) { const ci = scene(earIn(b), 's15 chuva'); const co = scene(earAt(b.x + (b.w || 1) / 2 + 4, b.y + (b.h || 1) / 2), 's15 chuva rua'); const f = ci.fontes.find(x => x.tipo === 'chuva' && x.de.b === b.id);
+    const sh = In.shellOf(b); const kind = sh.shell.roof && sh.shell.roof.kind; const want = kind === 'turfa' ? 'turfa' : kind === 'plano' ? 'terraco' : /palha/.test(kind || '') ? 'palha' : A.TELHA[b.style] || 'telha';
+    if (!f || f.telhado !== want || !(f.gain > 0.2) || co.fontes.some(x => x.tipo === 'chuva')) rainOK = false; roofs.push(`${b.style} ${kind} → ${f ? f.telhado : 'NADA'}${f && f.goteira ? ' (goteira)' : ''}`); } }
+  finally { S.weather.rain = w0; }
+  const dry = tv.every(b => !scene(earIn(b), 's15 seca').fontes.some(x => x.tipo === 'chuva'));
+  ok('s15e a-chuva-no-telhado', rainOK && dry, `com chuva (a mão da prova no tempo, desfeita na hora): ${[...new Set(roofs)].join('; ')}; de fora, nenhum telhado soa por cima de quem ouve; sem chuva, ${dry ? 'nenhum' : 'ALGUM'}`);
+  // ---- the echo: the plan's — a hard room rings longer than a soft one of the same size, a full room less than an empty one
+  const ecos = tv.map(b => ({ b, E: A.ecoDe(b) })).filter(x => x.E);
+  const range = ecos.every(x => x.E.rt >= 0.3 && x.E.rt <= 1.6 && x.E.mix >= 0.15 && x.E.mix <= 0.45 && x.E.pre > 0 && x.E.gente === At.inside(x.b));
+  const hard = ecos.filter(x => x.E.parede === 'pedra' && x.E.piso !== 'terra'), soft = ecos.filter(x => x.E.parede === 'madeira' && x.E.piso === 'terra');
+  const order = !hard.length || !soft.length || hard.every(h => soft.every(s => Math.abs(s.E.vol - h.E.vol) > 60 || h.E.rt > s.E.rt));
+  ok('s15f o-eco-da-sala', ecos.length > 0 && range && order, ecos.slice(0, 6).map(x => `#${x.b.id} ${x.b.style}: ${x.E.m2} m² × ${x.E.h} m, ${x.E.piso}/${x.E.parede}/${x.E.telhado}, ${x.E.gente} dentro → ${x.E.rt} s`).join('; ') + (order ? '' : ' — A SALA DURA SOA MENOS QUE A MOLE'));
+  // ---- the music's pulse and the acts of the night (pure: the lines of the table for the acts of P7, on the pulse of the music)
+  const R = A.compasso(null); const L = n => A.linhaDe({ act: n, task: {}, carry: null });
+  const acts = Object.keys(A.TAVERNA_ATO).map(k => [k, L(k)]); const lib = new Set(A.sons());
+  const linesOK = acts.every(([k, r]) => r && r.linha && (r.linha.por || lib.has(r.linha.s))) && ['palmas', 'danca', 'cantar-junto'].every(k => L(k).linha.compasso || L(k).linha.por);
+  ok('s15g os-atos-da-noite', linesOK && R.periodo > 0 && R.ciclo.length >= 3, `${acts.map(([k, r]) => `${k} → ${r.linha.s || 'silêncio'}`).join(', ')}; o compasso do povo comum: ${R.bpm} batidas, ciclo de ${R.ciclo.length}, ${R.periodo} s do mundo cada`);
+  // ---- the empty tavern: after the closing, the same ears — no talk, no fire, nothing of the room; and the god from afar hears none of it
+  skipTo(0.97); M.viver(3);
+  const after = taverns().map(b => { const c = scene(earIn(b), 's15 vazia'); const m = own(c, b).filter(f => f.tipo !== 'passos' && f.tipo !== 'porta'); return { b, n: m.length, what: m.map(f => f.s).join(',') }; });
+  const quiet = after.every(x => x.n === 0 || !T.aberta(x.b) && x.what.split(',').every(s => s === 'lareira' || s === 'panela') && At.fire(x.b));
+  ok('s15i a-taverna-vazia-cala', quiet, `hora ${S.time.toFixed(2)}: ${after.map(x => `#${x.b.id} ${x.n ? x.what : 'silêncio'}`).join('; ')}`);
+}
+
+// =============================================================================================================
 // s1 the table
 // =============================================================================================================
 function s1() {
@@ -643,6 +751,7 @@ if (on('s8')) s8();
 if (on('s3') || on('s4') || on('s5') || on('s6')) day();
 if (on('s11')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s11(); }
 if (on('s14')) { if (G.S.time > 0.6 || G.S.time < 0.2) skipTo(0.33); M.viver(2); s14(); }
+if (on('s15')) s15();
 if (on('s1') && (on('s3') || on('s4') || on('s5') || on('s6'))) s1c();
 if (on('s10')) ok('s10 toda-fonte-tem-dono', !orphans.length && (!!ONLY || (scenes > 10 && sources > 30)), `${scenes} cenas e ${sources} fontes olhadas ao longo da prova (as do s9 e do s7 entram no fim): ${orphans.length ? 'SEM DONO: ' + orphans.join(' · ') : 'cada uma de uma pessoa acordada num ato, um prédio com a operação viva, um navio que anda ou um bicho vivo'}`);
 { const bad = QA.check().filter(q => q.sev <= 2 || q.sys === 'som').map(q => `S${q.sev} ${q.sys}: ${q.msg}`); ok('verificador', !bad.length, bad.length ? bad.slice(0, 4).join(' · ') : `«${WORLD}» limpo depois do dia da prova`); }

@@ -236,6 +236,10 @@
     // feet catch the light of the fire and of the window — each pattern its own, Build3D's m3spec; the painter's band of light as
     // the Lambert's: the Alta and the Ultra, D-706)
     MAT.innerHi = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 26, specular: 0x3a3630 });
+    // (and the furniture's and the decoration's: the same stuff, never cut by the eye — in its boxes a weave, M3FADE, but for the
+    // pieces the body sits on and uses, Cam3D.keepBoxes: the cut of the eye's line took the table the body sat at, L-1872)
+    MAT.innerF = new THREE.MeshLambertMaterial({ vertexColors: true });
+    MAT.innerFHi = new THREE.MeshPhongMaterial({ vertexColors: true, shininess: 26, specular: 0x3a3630 });
     // the trees, the bushes and the grass: their materials are the forest's (Arvore3D, js/arvore3d.js — 21a)
     G.Arvore3D.materials(THREE, MAT, U);
     // the water's materials: the water, the ice, the parted sea's walls, the sheets of the falls (Agua3D, js/agua3d.js — 21c)
@@ -246,8 +250,9 @@
     G.Build3D && G.Build3D.init && G.Build3D.init(THREE, R3);
     G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.solid); // (the solid material learns the patterns of the walls and roofs)
     G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.inner); // (and the inside's: the cut is the town's only — M3CUT)
-    if (G.Build3D && G.Build3D.dress) { G.Build3D.dress(MAT.innerHi); const ob = MAT.innerHi.onBeforeCompile;
-      MAT.innerHi.onBeforeCompile = (sh, rn) => { ob(sh, rn); sh.fragmentShader = sh.fragmentShader.replace('#include <lights_phong_pars_fragment>', THREE.ShaderChunk.lights_phong_pars_fragment.replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );',
+    G.Build3D && G.Build3D.dress && G.Build3D.dress(MAT.innerF); // (the furniture's: the same, its own defines)
+    if (G.Build3D && G.Build3D.dress) for (const m of [MAT.innerHi, MAT.innerFHi]) { G.Build3D.dress(m); const ob = m.onBeforeCompile;
+      m.onBeforeCompile = (sh, rn) => { ob(sh, rn); sh.fragmentShader = sh.fragmentShader.replace('#include <lights_phong_pars_fragment>', THREE.ShaderChunk.lights_phong_pars_fragment.replace('float dotNL = saturate( dot( geometryNormal, directLight.direction ) );',
         'float nl = dot( geometryNormal, directLight.direction ); float dotNL = smoothstep( -0.06, 0.4, nl ) * 0.8 + saturate( nl ) * 0.2;')); }; }
     G.People3D && G.People3D.init && G.People3D.init(THREE, R3);
     G.FX3D && G.FX3D.init && G.FX3D.init(THREE, R3);
@@ -264,16 +269,17 @@
     renderer.shadowMap.autoUpdate = (q.shadowEvery | 0) <= 1; renderer.shadowMap.needsUpdate = true; // (light() asks for it every n frames)
     G.Ceu3D.quality(q); // (the sun's picture of the shadows, the sky in its cheap way where no grain is drawn: the sky's)
     // (the patterns of walls and roofs and the speckle of the leaves only where the machine carries the ground's grain too)
-    for (const m of [MAT.solid, MAT.flora, MAT.inner, MAT.innerHi]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
-    if (MAT.innerHi) MAT.innerHi.defines.M3SPEC = 1;
-    for (const m of [MAT.inner, MAT.innerHi]) if (m) m.defines.M3EYE = 1; // (the inside gives way in the eye's box — the front P4's quarta parede: Build3D.eyeBox)
+    for (const m of [MAT.solid, MAT.flora, MAT.inner, MAT.innerHi, MAT.innerF, MAT.innerFHi]) if (m) m.defines = q.detail === 0 ? { NOPAT: 1 } : {};
+    for (const m of [MAT.innerHi, MAT.innerFHi]) if (m) m.defines.M3SPEC = 1;
+    for (const m of [MAT.inner, MAT.innerHi]) if (m) m.defines.M3EYE = 1; // (the inside's shell gives way in the eye's box — the front P4's quarta parede: Build3D.eyeBox)
+    for (const m of [MAT.innerF, MAT.innerFHi]) if (m) m.defines.M3FADE = 1; // (its furniture and decoration never: a weave there, L-1872)
     // (the insides' materials in high resolution on the Alta and the Ultra — P8, D-772: loaded in the background by the Ground3D, a
     // material at a time; on the others the card's memory given back)
     const hiQ = !!(G.Ground3D.HI_SIZE && G.Ground3D.HI_SIZE[R3.q]) && q.detail !== 0;
-    for (const m of [MAT.inner, MAT.innerHi]) if (m && hiQ) m.defines.M3HI = 1;
+    for (const m of [MAT.inner, MAT.innerHi, MAT.innerF, MAT.innerFHi]) if (m && hiQ) m.defines.M3HI = 1;
     G.Ground3D.hiWant && G.Ground3D.hiWant(hiQ ? R3.q : null);
     if (MAT.solid) { MAT.solid.defines.M3CUT = 1; MAT.solid.defines.GX_NOVOL = 1; } // (the town's solid gives way where an inside is drawn: Build3D.cuts; and its outer faces are the open air's, never lit as the room behind them — G.Luz3D)
-    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner, MAT.innerHi]) if (m) m.needsUpdate = true;
+    for (const m of [MAT.land, MAT.solid, MAT.flora, MAT.plant, MAT.inner, MAT.innerHi, MAT.innerF, MAT.innerFHi]) if (m) m.needsUpdate = true;
     G.Build3D && G.Build3D.insideClear && G.Build3D.made && G.Build3D.made() && G.Build3D.insideClear(); // (the insides made again in the material of the quality)
     G.Ground3D.quality();
     G.Agua3D.quality(q); // (the water's ways by the quality: its cheap one, the clouds and the scene in its face — 21c)

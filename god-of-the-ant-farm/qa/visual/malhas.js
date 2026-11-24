@@ -51,6 +51,25 @@ const LIB = 'movelmesh.js', LIB_MB = 5, LIB_KB = 70;
   if (M && typeof M.check === 'function') for (const e of M.check()) if (/^movel-/.test(e)) fails.push('Mesh3D.check(): ' + e);
   console.log(`MÓVEIS — ${LIB}: ${names.length} modelos (os dois níveis), ${tris} triângulos, ${mb.toFixed(2)} MB (orçamento: ${LIB_MB} MB, ${LIB_KB} KB cada) · ${V ? V.kinds().length : 0} tipos`);
 }
+// ------------------------------ the things the interiors show (D-743, D-745, D-748) ------------------------------
+// js/decomesh.js, made by arte/blender/deco.py, read by js/dentro3d.js: a category of its own — the decoration, the dishes and the drinks
+// ('deco-…', 'comida-…', 'bebida-…') —, its file in its budget (G.DECO.budget.arquivo), each model in its triangles (a thing, a big
+// thing, a dish or a drink), its middle level ≤ 70 % of it (or ≤ 200), every model decoding to what its file says
+{
+  const before = new Set(Object.keys(ctx.G.MESH3D || {}));
+  try { vm.runInContext(fs.readFileSync(js('decomesh.js'), 'utf8'), ctx, { filename: 'decomesh.js' }); } catch (e) { fails.push(`decomesh.js não carrega: ${e.message}`); }
+  const names = Object.keys(ctx.G.MESH3D || {}).filter(n => !before.has(n)); const DE = ctx.G.DECO; const B = DE ? DE.budget : null; const mb = fs.statSync(js('decomesh.js')).size / 1048576;
+  if (!B) fails.push('decomesh.js sem o G.DECO (o orçamento)');
+  else {
+    if (mb > B.arquivo) fails.push(`decomesh.js: ${mb.toFixed(2)} MB (orçamento ${B.arquivo} MB)`);
+    for (const n of names) { if (/@1$/.test(n)) continue; const d = ctx.G.MESH3D[n], d1 = ctx.G.MESH3D[n + '@1']; const lim = /^(comida|bebida)-/.test(n) ? B.prato : DE.big.includes(d.kind) ? B.grande : B.coisa;
+      if (d.t > lim) fails.push(`${n}: ${d.t} triângulos (orçamento ${lim})`); if (!d1) fails.push(`${n} sem o nível do meio`); else if (d1.t > Math.max(d.t * B.meio, B.meioMin)) fails.push(`${n}@1: ${d1.t} triângulos de ${d.t}`); }
+  }
+  if (M && typeof M.check === 'function') for (const e of M.check()) if (/^(deco|comida|bebida)-/.test(e)) fails.push('Mesh3D.check(): ' + e);
+  if (!html.includes('src="js/decomesh.js"')) fails.push('decomesh.js: nenhum <script> do index.html o carrega');
+  let tris = 0; for (const n of names) tris += ctx.G.MESH3D[n].t || 0;
+  console.log(`DECORAÇÃO — decomesh.js: ${names.length} modelos (os dois níveis; ${names.filter(n => /^comida-/.test(n)).length} de pratos, ${names.filter(n => /^bebida-/.test(n)).length} de bebidas), ${tris} triângulos, ${mb.toFixed(2)} MB (orçamento: ${B ? B.arquivo : '?'} MB)`);
+}
 for (const f of fails) console.log('FALHA: ' + f);
 console.log(fails.length ? `FALHOU: ${fails.length}` : 'PASSOU');
 process.exit(fails.length ? 1 : 0);

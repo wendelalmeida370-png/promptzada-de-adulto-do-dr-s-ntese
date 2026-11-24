@@ -31,7 +31,9 @@
   const D = G.Dentro3D = {};
   const TAU = Math.PI * 2, HALF = Math.PI / 2, EPS = 1e-6;
   const FLOOR_UP = 0.012; // (the floor a hair over the plinth's top — Build3D's: what stands on it stands on that)
-  const MESH = k => (G.MESH3D ? G.MESH3D['deco-' + k] : null);
+  // (a thing's model: the dishes and the drinks by their own names — 'comida-<prato>', 'bebida-<bebida>', D-748 —, the rest 'deco-<coisa>')
+  const NAME = k => (k.startsWith('comida-') || k.startsWith('bebida-') ? k : 'deco-' + k);
+  const MESH = k => (G.MESH3D ? G.MESH3D[NAME(k)] : null);
   D.has = k => !!MESH(k);
   // (a number of the building, the same at every look: which of the true ways)
   const hv = (b, k) => G.hash(Math.imul((b.id | 0) + 101, 7919) + (k | 0) * 131 + 17);
@@ -295,34 +297,94 @@
     hangFood(ctx, food);
     // the marks of charcoal of the customers of years, on the walls by the tables
     marks(ctx);
+    // what a brawl left on the floor; the words at the door
+    spilt(ctx); slate(ctx);
+  }
+  // ---- what lies on the floor after a brawl (W.chao, D-749): the shards where the mug broke, the spill where the drink ran — at the
+  // world's own point, on a floor of its storey (never where a wall or a piece stands), until someone cleans it
+  function spilt(ctx) {
+    const { b, p, W } = ctx; if (!ctx.near || !W.chao.length) return; const C = G.Interiors.CELL;
+    W.chao.forEach((q, i) => {
+      const l = lvOf(p, q.lv); const m = MESH(q.k); if (!l || !m || cellAt(p, q.lv, q.x, q.z) !== C.FLOOR) return;
+      const sc = q.k === 'poca' ? q.n : 1;
+      ctx.put(q.k, q.x, l.y + FLOOR_UP + 0.0005 * (i % 4), q.z, hv(b, 500 + i) * TAU, { lv: q.lv, on: 'chao', solto: 1, key: `chao/${q.k}/${r3(q.x)},${r3(q.z)}`, why: q.why, c: q.bebida ? { liquido: DRINK[q.bebida] || DRINK.cerveja } : null, s: [sc, 1, sc] });
+    });
+  }
+  // ---- the words at the door (W.lousa, D-749): the slate, the board or the painted plaque on the front wall by the door — under the
+  // inn's sign (Build3D.innSignSide), else on the other side of the door where a window is under it —, its top a hand under the sign's
+  // board, at the eyes of one in the street; its words what the kitchen and the shelf have today (the menu's own reading, in within)
+  const SIDEO = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] };
+  function slate(ctx) {
+    const { b, p, W } = ctx; const L = W.lousa; const m = L && MESH(L.k); const B3 = G.Build3D; if (!m || !B3 || !B3.shellOf || !B3.formSide) return;
+    const S0 = B3.shellOf(b); if (!S0 || !S0.shell || !S0.entrance || !S0.shell.r) return;
+    const R = S0.shell.r; const od = SIDEO[B3.formSide(b, S0)]; if (!od) return; const ax = od[1] !== 0;
+    const face = ax ? (od[1] > 0 ? R[3] : R[1]) : (od[0] > 0 ? R[2] : R[0]); const lo = ax ? R[0] : R[1], hi = ax ? R[2] : R[3];
+    const e = S0.entrance; const dA = ax ? e.x : e.z; const dw = (e.w || 1) + 0.5; const sign = B3.innSignSide ? B3.innSignSide(b) : 1;
+    const lv = e.lv | 0; const y0 = 1.72 - m.h, y1 = 1.72;
+    // (the openings of the front wall: its walls on that face, their holes along it)
+    const holes = [];
+    for (const w of p.walls) { if (w.lv !== lv) continue; const A = ax ? w.a[1] : w.a[0], B = ax ? w.b[1] : w.b[0]; if (Math.abs(A - face) > w.t + 0.08 || Math.abs(B - face) > w.t + 0.08) continue;
+      const a0 = ax ? w.a[0] : w.a[1], a1 = ax ? w.b[0] : w.b[1]; const len = Math.abs(a1 - a0); if (len < 0.1) continue; const l = lvOf(p, w.lv); const ly = l ? l.y : 0;
+      for (const h of p.holes) if (h.wall === w.id) { const c = a0 + Math.sign(a1 - a0) * h.at; holes.push([c - h.w / 2 - 0.08, c + h.w / 2 + 0.08, ly + (h.sill || 0), ly + (h.sill || 0) + h.h]); } }
+    const fits = a => a - m.w / 2 > lo + 0.15 && a + m.w / 2 < hi - 0.15 && !holes.some(h => a + m.w / 2 > h[0] && a - m.w / 2 < h[1] && y1 > h[2] && y0 < h[3]);
+    const a = [dA + sign * (dw / 2 + 0.35), dA - sign * (dw / 2 + 0.14 + m.w / 2)].find(fits); if (a === undefined) return;
+    const n = face + (ax ? od[1] : od[0]) * (m.d / 2 + 0.004); const x = ax ? a : n, z = ax ? n : a;
+    ctx.put(L.k, x, y0, z, Math.atan2(od[0], od[1]), { lv, on: 'fora', key: 'porta/' + L.k, why: L.why, lousa: { prato: L.prato, bebidas: L.bebidas } });
   }
 
-  // ---- the tables: what was served each who sits at one, by their place (In.placeOf)
+  // (the dish a part of the food makes — the plate of the day where the world no longer says what the plate held —, and the cup a
+  // drink is served in: the people's — the Greek's and the Roman's skyphos of wine, the beaker of the Nile and of the lake, the gourd
+  // of pulque, the horn of mead where the people has had the hides of its slaughter, the mug —, of clay or of turned wood by its ware)
+  const dishOf = part => { const k = 'comida-' + (part && part !== '?' ? part : 'provisao'); return MESH(k) ? k : 'comida-provisao'; };
+  const CLASSIC = { grego: 1, romano: 1, classico: 1 }, BEAKER = { egipcio: 1, asteca: 1 };
+  const vesselName = (W, k) => (k === 'vinho' ? (CLASSIC[W.civ] ? 'bebida-vinho' : 'bebida-vinho-copo') : k === 'pulque' ? 'bebida-pulque'
+    : k === 'mel' ? (W.couro ? 'bebida-mel' : 'bebida-mel-caneca') : BEAKER[W.civ] ? 'bebida-cerveja-copo' : 'bebida-cerveja');
+  // ---- the tables: what was served each who sits at one, by their place (In.placeOf) — the plate as much of it as is eaten, steaming
+  // while hot; the empty plate and cup of the round done —, what the guests left on them once up, the knucklebones of a game, and
+  // the rings of the years of doses on the boards
   function tables(ctx) {
     const { b, p, W, S } = ctx; const tops = S.filter(s => s.k === 'tampo' && TABLES[s.it.kind] && s.it.kind !== 'arca');
     const byTable = new Map();
+    const onto = (x, z, lv) => { let best = null, bd = 1.1; for (const s of tops) { if (s.lv !== lv) continue; const r = s.it.r; const d = Math.hypot(Math.max(r[0] - x, 0, x - r[2]), Math.max(r[1] - z, 0, z - r[3])); if (d < bd) { bd = d; best = s; } } return best; };
+    const add = (s, e) => { let L = byTable.get(s); if (!L) byTable.set(s, L = []); L.push(e); };
     for (const q of W.mesa) {
       const v = G.S.villagers.get(q.id); const pl = v && G.Interiors.placeOf ? G.Interiors.placeOf(v) : null; if (!pl || !Number.isFinite(pl.x)) continue;
-      let best = null, bd = 1.1; for (const s of tops) { if (s.lv !== pl.lv) continue; const r = s.it.r; const d = Math.hypot(Math.max(r[0] - pl.x, 0, pl.x - r[2]), Math.max(r[1] - pl.z, 0, pl.z - r[3])); if (d < bd) { bd = d; best = s; } }
-      if (!best) continue; let e = byTable.get(best); if (!e) byTable.set(best, e = []); e.push({ q, pl });
+      const s = onto(pl.x, pl.z, pl.lv); if (s) add(s, { q, x: pl.x, z: pl.z, key: q.id });
     }
+    for (const q of W.sujo) { const s = onto(q.x, q.z, q.lv); if (s) add(s, { q, x: q.x, z: q.z, key: `s${r3(q.x)},${r3(q.z)}` }); }
     ctx.tableGuests = byTable;
     for (const [s, guests] of byTable) {
-      const it = s.it; const c = Math.cos(it.ry || 0), sn = Math.sin(it.ry || 0); const taken = [];
-      for (const { q, pl } of guests) {
+      const it = s.it; const c = Math.cos(it.ry || 0), sn = Math.sin(it.ry || 0); const taken = []; let game = null;
+      for (const { q, x, z, key } of guests) {
         // (the guest's point in the table's frame, brought onto its top a hand in from the edge)
-        const dx = pl.x - it.x, dz = pl.z - it.z; let a = dx * c - dz * sn, n = dx * sn + dz * c;
+        const dx = x - it.x, dz = z - it.z; let a = dx * c - dz * sn, n = dx * sn + dz * c;
         const ha = s.w / 2 - 0.11, hn = s.d / 2 - 0.11; const out = Math.max(Math.abs(a) / Math.max(ha, 0.01), Math.abs(n) / Math.max(hn, 0.01));
         if (out > 1) { a /= out; n /= out; } else { if (Math.abs(a) / ha > Math.abs(n) / hn) a = Math.sign(a || 1) * ha; else n = Math.sign(n || 1) * hn; }
         const toward = Math.atan2(-a, -n); // (facing the table's middle)
-        const put = (k, a2, n2, cc, why, key) => {
-          for (const t of taken) if (Math.hypot(t[0] - a2, t[1] - n2) < 0.14) { a2 += 0.12 * Math.sign(a2 - t[0] || 1); }
-          a2 = G.clamp(a2, -ha, ha); n2 = G.clamp(n2, -hn, hn); taken.push([a2, n2]);
-          const P = frame(it)(a2 + s.x, n2 + s.z); ctx.put(k, P[0], s.y, P[1], (it.ry || 0) + toward, { lv: it.lv, on: 'tampo', it: it.id, key: `${it.id}/mesa/${q.id}/${key}`, why, c: cc });
+        const put = (k, a2, n2, o, why, kk) => {
+          const m = MESH(k); const rr = m ? Math.max(m.w, m.d) * 0.5 : 0.08;
+          for (const t of taken) if (Math.hypot(t[0] - a2, t[1] - n2) < t[2] + rr * 0.8) { a2 += (t[2] + rr * 0.8) * Math.sign(a2 - t[0] || 1); }
+          a2 = G.clamp(a2, -ha, ha); n2 = G.clamp(n2, -hn, hn); taken.push([a2, n2, rr * 0.8]);
+          const P = frame(it)(a2 + s.x, n2 + s.z); return ctx.put(k, P[0], s.y, P[1], (it.ry || 0) + toward, Object.assign({ lv: it.lv, on: 'tampo', it: it.id, key: `${it.id}/mesa/${key}/${kk}`, why }, o));
         };
         // (the plate before them, the cup to one side of it)
-        if (q.prato) { const dsh = DISH[q.prato] || DISH['?']; const k = dsh[0] === 'tortilhas' && !MESH('tortilhas') ? 'tigela' : dsh[0]; put(k, a * 0.82, n * 0.82, dsh[1] ? { comida: dsh[1] } : null, q.why, 'prato'); }
-        if (q.cup) { const side = hv(b, q.id) < 0.5 ? -1 : 1; const ta = Math.abs(n) >= Math.abs(a) ? 1 : 0; put(cupOf(W), a + (ta ? side * 0.17 : 0), n + (ta ? 0 : side * 0.17), { liquido: DRINK[q.cup] || DRINK.cerveja }, q.why, 'caneca'); }
+        if (q.prato) put(dishOf(q.prato), a * 0.8, n * 0.8, { st: q.st !== undefined ? q.st : q.ps, quente: q.quente || 0, t0: q.t0 || 0 }, q.why, 'prato');
+        if (q.cup) { const side = hv(b, q.id || 7) < 0.5 ? -1 : 1; const ta = Math.abs(n) >= Math.abs(a) ? 1 : 0; put(vesselName(W, q.cup), a + (ta ? side * 0.19 : 0), n + (ta ? 0 : side * 0.19), { st: q.st !== undefined ? q.st : q.cs }, q.why, 'caneca'); }
+        if (q.jogo && !game) game = q;
+      }
+      // (the knucklebones in the middle of a table where a game is being played)
+      if (game && MESH('ossos')) { const P = frame(it)(s.x, s.z); ctx.put('ossos', P[0], s.y, P[1], (it.ry || 0) + hv(b, 90 + (it.k | 0)) * TAU, { lv: it.lv, on: 'tampo', it: it.id, key: `${it.id}/ossos`, why: `os ossinhos do jogo na mesa: ${game.why}` }); }
+    }
+    // the rings of beer the years of doses left on the boards (W.manchas): on the tables and the counter, a few on each, where the
+    // cups stand — each at its own point of the top and turned its own way (the building's id)
+    if (W.manchas && ctx.near) {
+      const boards = S.filter(s => s.k === 'tampo' && (TABLES[s.it.kind] || s.it.kind === 'balcao') && s.it.kind !== 'arca' && s.it.kind !== 'esteira-comer' && s.it.kind !== 'mesa-leitura' && s.it.kind !== 'mesa-escriba').sort((a2, c2) => a2.it.k - c2.it.k);
+      const kinds = ['mancha-a', 'mancha-b', 'mancha-c', 'mancha-d'];
+      for (let i = 0; i < W.manchas && boards.length; i++) {
+        const s = boards[i % boards.length]; const k = kinds[Math.floor(hv(b, 400 + i) * kinds.length) % kinds.length]; const m = MESH(k); if (!m) continue;
+        const rad = Math.hypot(m.w, m.d) / 2; if (rad * 2 + 0.04 > Math.min(s.w, s.d)) continue; const hw = s.w / 2 - rad - 0.02, hd = s.d / 2 - rad - 0.02;
+        const P = frame(s.it)(s.x + (hv(b, 420 + i) * 2 - 1) * hw, s.z + (hv(b, 440 + i) * 2 - 1) * hd);
+        ctx.put(k, P[0], s.y + 0.0004 * (i % 3), P[1], (s.it.ry || 0) + hv(b, 460 + i) * TAU, { lv: s.lv, on: s.k, it: s.it.id, key: `${s.it.id}/mancha/${i}`, why: W.why.manchas });
       }
     }
   }
@@ -340,7 +402,7 @@
           const P = frame(it)(s.x, s.z); ctx.put(k, P[0], s.y, P[1], (it.ry || 0) + (hv(b, 7) - 0.5), { lv: it.lv, on: 'tampo', it: it.id, key: `${it.id}/fogo/${k}`, why: `${W.cozinha.why} (a panela de ${W.cozinha.mat})`, pmat: W.cozinha.mat });
         }
       }
-      if (wood && W.lenha && ctx.near) near(ctx, it, [{ k: 'lenha', key: 'lenha', why: `a lenha do fogo: ${W.lenha.why}` }]);
+      if (wood && W.lenha && ctx.near) near(ctx, it, [{ k: 'lenha', key: 'lenha', why: `a lenha do fogo: ${W.lenha.why}`, o: { st: 4 - W.lenha.q } }]); // (the pile as much of it as is left: D-749)
     }
   }
   // ---- what stands on the floor beside a piece against a wall: flush with the wall, to one side of it (which first, the id), clear
@@ -357,7 +419,7 @@
         const hw = Math.abs(m.w / 2 * c) + Math.abs(m.d / 2 * s), hd = Math.abs(m.w / 2 * s) + Math.abs(m.d / 2 * c);
         const r = [P[0] - hw, P[1] - hd, P[0] + hw, P[1] + hd];
         if (!floorFree(p, it.lv, r) || ctx.out.some(t => t.on === 'chao' && t.lv === it.lv && ovR(r, t.r || [t.x, t.z, t.x, t.z], 0.02))) continue;
-        const t = ctx.put(q.k, P[0], l.y + FLOOR_UP, P[1], (it.ry || 0) + (q.ry || 0), { lv: it.lv, on: 'chao', it: null, key: `${it.id}/ao-lado/${q.key}`, why: q.why, c: q.c || null, sk: q.sk });
+        const t = ctx.put(q.k, P[0], l.y + FLOOR_UP, P[1], (it.ry || 0) + (q.ry || 0), Object.assign({ lv: it.lv, on: 'chao', it: null, key: `${it.id}/ao-lado/${q.key}`, why: q.why, c: q.c || null, sk: q.sk }, q.o || {}));
         if (t) t.r = r.map(r3); cursor[sd] += step * 0.1 + m.w + 0.04; side = sd; done = true; break;
       }
       if (!done) left.push(q);
@@ -381,7 +443,7 @@
         bd = d; best = { x, z, ry, rr };
       }
       if (!best) { left.push(q); continue; }
-      const t = ctx.put(q.k, best.x, l.y + FLOOR_UP, best.z, best.ry + (q.ry || 0), { lv: it.lv, on: 'chao', key: `${it.id}/parede/${q.key}`, why: q.why, c: q.c || null, sk: q.sk });
+      const t = ctx.put(q.k, best.x, l.y + FLOOR_UP, best.z, best.ry + (q.ry || 0), Object.assign({ lv: it.lv, on: 'chao', key: `${it.id}/parede/${q.key}`, why: q.why, c: q.c || null, sk: q.sk }, q.o || {}));
       if (t) t.r = best.rr.map(r3);
     }
     return left;
@@ -464,7 +526,7 @@
         else if (q.como === 'anforeta' || q.como === 'pote') L.push({ k: W.barro ? q.como : 'jarro-madeira', key: q.k, why: q.why, c: { liquido: DRINK[q.k] || [40, 30, 24] } }); }
       const grain = W.comida.filter(q => ['trigo', 'cevada', 'sorgo', 'arroz', 'milho'].includes(q.k)).reduce((n, q) => n + q.n, 0);
       if (grain >= 1) L.push({ k: 'saco', key: 'saco', why: `o grão da despensa (${grain.toFixed(1)})`, sk: W.weave ? 'pano' : 'couro' });
-      if (W.lenha && fire.fire && !p.items.some(it => it.kind === 'lenha')) L.unshift({ k: 'lenha', key: 'lenha', why: `a lenha do fogo: ${W.lenha.why}` });
+      if (W.lenha && fire.fire && !p.items.some(it => it.kind === 'lenha')) L.unshift({ k: 'lenha', key: 'lenha', why: `a lenha do fogo: ${W.lenha.why}`, o: { st: 4 - W.lenha.q } });
       near(ctx, fire, L);
     }
     hearth(ctx, food, false); hangFood(ctx, food);
@@ -476,6 +538,8 @@
     const { b, p, W, S } = ctx; const L = W.luz; if (!L) return;
     const kind = L.oleo && (!L.cera || hv(b, 11) < 0.6) ? 'lamparina' : L.cera ? 'vela' : null; if (!kind || !MESH(kind)) return;
     const why = `${kind === 'vela' ? 'uma vela de cera' : `uma lamparina de ${L.oleo}`}: ${L.why}`;
+    // (as much of the candle as the night has left — its stage, cera0 whole … cera3 a stub —, the oil left in the lamp: D-749)
+    const burn = kind === 'vela' ? { vs: Math.min(3, Math.floor((1 - L.vela) * 4 + 1e-6)) } : { oil: L.azeite };
     const spots = [];
     if (b.type === 'taverna') {
       if (ctx.tableGuests) for (const [s] of ctx.tableGuests) spots.push(s);
@@ -487,7 +551,7 @@
     // (the free point of each top nearest its middle: the lamp among the cups, never in one)
     // (on a counter, at one end of it — the keeper works the middle —; on a table, among the cups)
     for (const s of spots.slice(0, 8)) { const bar = s.it.kind === 'balcao' || s.it.kind === 'balcao-alvenaria'; const end = hv(b, 13) < 0.5 ? -1 : 1;
-      scatter(ctx, s, [{ k: kind, key: 'luz', why, ry: (hv(b, 12 + s.it.k) - 0.5) * 2.4, at: bar ? [end * (s.w / 2 - 0.1), 0] : null, o: { lit: L.acesa ? 1 : 0, lmat: L.mat } }]); }
+      scatter(ctx, s, [{ k: kind, key: 'luz', why, ry: (hv(b, 12 + s.it.k) - 0.5) * 2.4, at: bar ? [end * (s.w / 2 - 0.1), 0] : null, o: Object.assign({ lit: L.acesa ? 1 : 0, lmat: L.mat }, burn) }]); }
     // (and the lamps on the walls of a tavern's hall — the light of a room people sit in at night —: one for every eighteen square
     // metres of it, four at most, each on its little shelf a hand over the heads of who sits, clear of the windows, the doors and
     // what stands against the wall; the first by the tables, the others as far from each other as the walls allow)
@@ -502,7 +566,7 @@
     const sm = MESH('suporte'); got.forEach((q, i) => {
       const ry = Math.atan2(q.r.nx, q.r.nz); const y = l.y + 1.45; const o = sm.d / 2 + 0.002; ctx.wallTake(q.x, q.z, 0.22, y - 0.03, l.y + top);
       ctx.put('suporte', q.x + q.r.nx * o, y, q.z + q.r.nz * o, ry, { lv, on: 'parede', key: `parede-luz/${i}`, why: `o suporte de uma lamparina do salão (${area.toFixed(0)} m²): ${L.why}` });
-      ctx.put(kind, q.x + q.r.nx * (o + 0.012), y + sm.h, q.z + q.r.nz * (o + 0.012), ry, { lv, on: 'parede', key: `parede-luz/${i}/${kind}`, why, lit: L.acesa ? 1 : 0, lmat: L.mat });
+      ctx.put(kind, q.x + q.r.nx * (o + 0.012), y + sm.h, q.z + q.r.nz * (o + 0.012), ry, Object.assign({ lv, on: 'parede', key: `parede-luz/${i}/${kind}`, why, lit: L.acesa ? 1 : 0, lmat: L.mat }, burn));
     });
   }
   // ---- the cloth: the hanging on the wall behind the musician, the rug on his stage (a people that weaves; a house rich now); the
@@ -555,11 +619,13 @@
   function lightsOf(ctx) {
     const out = [];
     for (const t of ctx.out) {
-      if (!t.lit) continue; const m = MESH(t.k); const a = m && (m.anc || []).find(q => q.k === 'chama'); if (!a) continue;
+      if (!t.lit) continue; const m = MESH(t.k); const ak = t.vs ? 'chama' + t.vs : 'chama'; const a = m && ((m.anc || []).find(q => q.k === ak) || (m.anc || []).find(q => q.k === 'chama')); if (!a) continue;
       const c = Math.cos(t.ry), s = Math.sin(t.ry); const sx = t.s[0], sy = t.s[1], sz = t.s[2];
       const x = t.x + a.x * sx * c + a.z * sz * s, z = t.z - a.x * sx * s + a.z * sz * c, y = t.y + a.y * sy;
       const candle = t.k === 'vela';
-      out.push({ x: r3(x), y: r3(y + 0.06), z: r3(z), cor: candle ? CANDLE : LAMP, forca: candle ? 0.2 : 0.3, raio: candle ? 3.5 : 4.5, tremor: candle ? 0.07 : 0.05, why: t.why, kind: t.k, id: 'd:' + t.key });
+      // (a lamp low on oil burns low: its light by what is left in it — D-749)
+      const oil = candle || !Number.isFinite(t.oil) ? 1 : 0.45 + 0.55 * G.clamp(t.oil * 2.5, 0, 1);
+      out.push({ x: r3(x), y: r3(y + 0.06), z: r3(z), cor: candle ? CANDLE : LAMP, forca: r3((candle ? 0.2 : 0.3) * oil), raio: r3((candle ? 3.5 : 4.5) * (0.7 + 0.3 * oil)), tremor: candle ? 0.07 : oil < 0.8 ? 0.09 : 0.05, why: t.why, kind: t.k, id: 'd:' + t.key });
     }
     return out;
   }
@@ -608,9 +674,22 @@
       case 'ferro': return W.metal ? metal(W.metal) : [[138, 112, 74], 'wicker']; // (the hoops of a jug of staves: withies where there is no metal)
       case 'carvao': return [[30, 28, 26], 0];
       case 'teia': return [[196, 196, 190], 0];
+      // (what is served, the marks of the night — D-748, D-749: the dish's own colours are in its points, the part painted white)
+      case 'resto': case 'osso': case 'giz': case 'nv': return [[255, 255, 255], 0];
+      case 'mancha': return [mul(wood[0], 0.8), 'madeira']; // (a ring the wood drank: darker, never a drawn line)
+      case 'ardosia': return [[56, 60, 62], 'slab'];
+      case 'tinta': { const L = (MV && MV.PAINT && (MV.PAINT[civ] || MV.PAINT.classico)) || ['#7a2a1e']; return [G.hex2rgb(L[0]), 0]; }
+      case 'tinta2': { const L = (MV && MV.PAINT && (MV.PAINT[civ] || MV.PAINT.classico)) || ['#7a2a1e', '#c9a24a']; return [G.hex2rgb(L[1] || '#c9a24a'), 0]; }
     }
-    return [wood[0], 'madeira'];
+    if (STG.test(part)) {
+      const s = STG.exec(part)[1]; if (s === 'cera') return [[234, 220, 182], 0];
+      if (s === 'f') return [FRUIT[civ] || FRUIT.classico, 0];
+      return [[255, 255, 255], 0];
+    }
+    return null; // (a part with no paint of its own is not drawn — never painted as wood by default: qa/dentro.js d8 asks each one)
   }
+  // (for the proofs: whether a part of the vocabulary has its paint — the steam and the words are drawn apart)
+  D.paintable = pt => pt === 'vapor' || pt === 'escrita' || !!paintOf(pt, { k: '', key: '', x: 0, z: 0, c: null }, { civ: 'classico', barro: true, weave: true, rico: 1, metal: 'ferro' }, null);
   // (near: the inside the body is in, or at its door, with the qualities that carry detail — every thing; the others open round it,
   // only the lamps and the cloth)
   function nearOf(b) {
@@ -620,19 +699,106 @@
     return Math.hypot(Math.max(b.x * L - X, 0, X - (b.x + b.w) * L), Math.max(b.y * L - Z, 0, Z - (b.y + b.h) * L)) < 3;
   }
   D.near = nearOf;
-  // the instanced meshes of a plan's things: one a thing's model, part and pattern — [{ name, pt, pat, list: [[matrix 16, colour]] }]
+  // (which parts of a thing show now — D-748: bN a bite, there while fewer than N quarters are eaten; fN the same, the fruit; nN a
+  // level, only at stage N; rN a remains, once N quarters are gone; e0 / e1 a beer's head, fresh and settled, at the full level;
+  // ceraN the candle, as much of it as the night has left; nv the level that goes down — one surface, set at the stage's height and
+  // width by the model's niv (levelAt). The steam and the words are drawn apart, by their own light)
+  const STG = /^([bfnre]|cera)(\d)$/;
+  function shows(pt, t) {
+    if (pt === 'vapor' || pt === 'escrita') return false; if (pt === 'nv') return (t.st | 0) < 4;
+    const m = STG.exec(pt); if (!m) return true; const n = +m[2], s = t.st | 0;
+    switch (m[1]) { case 'b': case 'f': return s < n; case 'n': return s === n; case 'r': return s >= n; case 'e': return s === 0 && (n === 0) === !!t.fresco; default: return n === (t.vs | 0); }
+  }
+  D.shows = shows;
+  // (the level of a broth at a stage: its model's own drop and narrowing about its axis — a matrix in the model's frame, column-major —,
+  // and that matrix after the thing's: e × level)
+  D.levelAt = function (name, st) {
+    const d = G.MESH3D && G.MESH3D[name]; const nv = d && d.niv; const k = nv && nv.k[Math.min(3, st | 0)]; if (!k) return null;
+    const c = nv.c, sc = k[1]; return [sc, 0, 0, 0, 0, 1, 0, 0, 0, 0, sc, 0, c[0] - sc * c[0], k[0], c[1] - sc * c[1], 1];
+  };
+  const mul4 = (a, b) => { const o = new Array(16); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + j] * b[i * 4 + k]; o[i * 4 + j] = s; } return o; };
+  // the instanced meshes of a plan's things: one a thing's model, part and pattern — [{ name, pt, pat, list: [[matrix 16, colour]] }],
+  // and, apart, the steam of the hot plates (.steam: [{ name, e, t0 }]) and the boards at the door with their words (.words)
   function groupsOf(pl, b, at, lod) {
     const W = G.Atmos.within(b); const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null; const R3 = G.Realm; const P = PAT();
-    const groups = new Map(); const X0 = at[0], Y0 = at[1], Z0 = at[2];
+    const groups = new Map(); const X0 = at[0], Y0 = at[1], Z0 = at[2]; const steam = [], words = [];
     for (const t of pl.list) {
-      const name = 'deco-' + t.k + (lod && G.MESH3D['deco-' + t.k + '@1'] ? '@1' : ''); const parts = G.Mesh3D ? G.Mesh3D.parts('deco-' + t.k) : [];
+      const base = NAME(t.k); const name = base + (lod && G.MESH3D[base + '@1'] ? '@1' : ''); const parts = G.Mesh3D ? G.Mesh3D.parts(base) : [];
       const m = R3.mat(X0 + t.x, Y0 + t.y, Z0 + t.z, t.ry, t.s[0], t.s[1], t.s[2]); const e = Array.from(m.elements);
-      for (const pt of parts) { const pp = paintOf(pt, t, W, look); if (!pp) continue; const pat = P[pp[1]] || 0; const key = name + '/' + pt + '/' + pat;
-        let g = groups.get(key); if (!g) groups.set(key, g = { name, pt, pat, list: [] }); g.list.push([e, pp[0]]); }
+      for (const pt of parts) { if (!shows(pt, t)) continue; const pp = paintOf(pt, t, W, look); if (!pp) continue; const pat = P[pp[1]] || 0; const key = name + '/' + pt + '/' + pat;
+        const lv = pt === 'nv' ? D.levelAt(base, t.st) : null;
+        let g = groups.get(key); if (!g) groups.set(key, g = { name, pt, pat, list: [] }); g.list.push([lv ? mul4(e, lv) : e, pp[0]]); }
+      if (t.quente && parts.includes('vapor')) steam.push({ name, e, t0: t.t0 || 0 });
+      if (t.lousa && parts.includes('escrita')) words.push({ name, e, t });
     }
-    return [...groups.values()];
+    const out = [...groups.values()]; out.steam = steam; out.words = words; return out;
   }
   D.groupsOf = groupsOf; // (for the proofs)
+  // ---- the steam (D-748): a hot plate's wisps — lit by nothing, added to what is behind them, as bright as the plate is hot (the
+  // time since it came from the fire, of At.COOL), their noise rising. One material for all, its noise made once (the hash, no chance)
+  let STEAM = null;
+  function steamMat(THREE) {
+    if (STEAM) return STEAM;
+    const N = 64, data = new Uint8Array(N * N * 4); const cell = (i, j, f, s) => G.hash(((i % f) + f) % f + (((j % f) + f) % f) * 97 + s * 7919);
+    const noise = (x, y, f, s) => { const i = Math.floor(x), j = Math.floor(y), u = x - i, v = y - j; const a = u * u * (3 - 2 * u), c = v * v * (3 - 2 * v);
+      return (cell(i, j, f, s) * (1 - a) + cell(i + 1, j, f, s) * a) * (1 - c) + (cell(i, j + 1, f, s) * (1 - a) + cell(i + 1, j + 1, f, s) * a) * c; };
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      // (wisps: the noise's tops only, faded to nothing at the ribbon's two edges — the texture's sides —, the fade up it in the points)
+      const v = noise(i / N * 4, j / N * 4, 4, 1) * 0.6 + noise(i / N * 8, j / N * 8, 8, 2) * 0.4; const x = Math.round(255 * G.clamp((v - 0.42) * 2.4, 0, 1) * Math.pow(Math.sin(Math.PI * (i + 0.5) / N), 1.2));
+      const k = (j * N + i) * 4; data[k] = data[k + 1] = data[k + 2] = x; data[k + 3] = 255;
+    }
+    const tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat); tex.wrapS = THREE.ClampToEdgeWrapping; tex.wrapT = THREE.RepeatWrapping; tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+    STEAM = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    return STEAM;
+  }
+  const STEAM_K = 0.14; // (how bright the steam of a plate just served is: a breath over it, never a glow — the bloom of the 3D adds to it)
+  const heatOf = t0 => { const h = 1 - (G.S.clock - t0) / ((G.Atmos && G.Atmos.COOL) || 6); return h > 0 ? STEAM_K * Math.pow(Math.min(1, h), 0.7) : 0; };
+  // ---- the words at the door (D-749): what the board says, in the tavern's words — the dish of the day by the part of the food it is
+  // made of, what it pours —, from the cause within says (the menu's reading); and their picture: chalk on the slate and the board
+  // (the strokes worn, the old words rubbed out under them), paint on the plaque. Kept a few, by what they say
+  const LABEL = { peixe: 'Peixe do dia', marisco: 'Mariscos', carne: 'Carne na brasa', arroz: 'Arroz', trigo: 'Pão e caldo', cevada: 'Caldo de cevada', milho: 'Tortilhas',
+    sorgo: 'Mingau de sorgo', horta: 'Sopa da horta', ovos: 'Ovos cozidos', leite: 'Coalhada', fruta: 'Frutas', mel: 'Pão com mel', azeite: 'Pão com azeite', provisao: 'Prato do dia', '?': 'Prato do dia' };
+  const POUR = { cerveja: 'Cerveja', vinho: 'Vinho', mel: 'Hidromel', pulque: 'Pulque' };
+  D.words = L => { if (!L) return []; const out = ['Hoje']; out.push(L.prato ? LABEL[L.prato.de] || L.prato.nome : 'Sem comida');
+    const d = (L.bebidas || []).map(k => POUR[k] || k); if (d.length) out.push(d.join(' · ')); if (!L.prato && !d.length) out.splice(1, 1, 'Volte amanhã'); return out; };
+  const wordTex = new Map();
+  function wordsOf(THREE, b, w) {
+    const lines = D.words(w.t.lousa); const key = b.id + '|' + w.t.k + '|' + lines.join('|'); let got = wordTex.get(key); if (got) return got;
+    const doc = typeof document !== 'undefined' ? document : null; if (!doc || !doc.createElement) return null;
+    const geo = G.Movel3D.partGeo(w.name, 'escrita', 0); if (!geo) return null; if (!geo.boundingBox) geo.computeBoundingBox(); const bb = geo.boundingBox;
+    const gw = bb.max.x - bb.min.x, gh = bb.max.y - bb.min.y; const S = 640 / Math.max(gw, gh); const cw = Math.round(gw * S), ch = Math.round(gh * S);
+    const cv = doc.createElement('canvas'); cv.width = cw; cv.height = ch; const g = cv.getContext && cv.getContext('2d'); if (!g) return null;
+    const paint = w.t.k === 'placa'; const hb = k => G.hash(Math.imul((b.id | 0) + 7, 131) + k * 977);
+    const fit = (txt, px, font) => { let s = px; g.font = font(s); while (s > 10 && g.measureText(txt).width > cw * 0.86) { s -= 2; g.font = font(s); } return s; };
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (!paint) {
+      // (the slate rubbed and written again: the ghost of other days' words under the chalk, blurred by the cloth — the house's own
+      // dishes of other days, by its id —, then today's)
+      const ghost = Object.values(LABEL); g.save(); if ('filter' in g) g.filter = 'blur(7px)'; g.fillStyle = 'rgba(226,224,216,0.05)';
+      for (let i = 0; i < 4; i++) { g.font = `italic 600 ${Math.round(ch * (0.09 + 0.05 * hb(i + 40)))}px Nunito, cursive`; g.fillText(ghost[Math.floor(hb(i + 50) * ghost.length) % ghost.length], cw * (0.3 + 0.4 * hb(i + 60)), ch * (0.15 + 0.7 * hb(i + 70))); }
+      g.restore();
+      const ys = lines.length === 3 ? [0.2, 0.5, 0.79] : [0.25, 0.6]; const sz = [0.12, 0.17, 0.1];
+      lines.forEach((txt, i) => { const font = s => `italic ${i === 1 ? 700 : 600} ${s}px Nunito, 'Segoe Print', 'Comic Sans MS', cursive`; fit(txt, Math.round(ch * sz[Math.min(i, 2)]), font);
+        g.save(); g.translate(cw / 2, ch * ys[i]); g.rotate((hb(30 + i) - 0.5) * 0.06); g.fillStyle = 'rgba(240,238,228,0.93)'; g.fillText(txt, 0, 0);
+        if (i === 0) { const tw = g.measureText(txt).width; g.fillRect(-tw / 2, ch * 0.06, tw, Math.max(2, ch * 0.008)); } g.restore(); });
+      // (the chalk's grain: the strokes broken where the slate shows through)
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = 'rgba(0,0,0,0.75)';
+      for (let i = 0; i < 2600; i++) { const x = hb(100 + i) * cw, y = hb(5000 + i) * ch, r = 0.6 + hb(9000 + i) * 1.4; g.fillRect(x, y, r, r); }
+      g.globalCompositeOperation = 'source-over';
+    } else {
+      // (the plaque's letters painted: the people's gold on its colour, a dark edge to each)
+      const ys = lines.length === 3 ? [0.19, 0.5, 0.8] : [0.26, 0.64]; const sz = [0.13, 0.2, 0.12];
+      lines.forEach((txt, i) => { const font = s => `${i === 1 ? 700 : 600} ${s}px Georgia, 'Times New Roman', serif`; fit(txt, Math.round(ch * sz[Math.min(i, 2)]), font);
+        g.lineWidth = Math.max(2, ch * 0.012); g.strokeStyle = 'rgba(30,18,10,0.75)'; g.strokeText(txt, cw / 2, ch * ys[i]); g.fillStyle = i === 1 ? '#f2dca0' : '#e8d6aa'; g.fillText(txt, cw / 2, ch * ys[i]); });
+    }
+    const tex = new THREE.CanvasTexture(cv); if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const mat = new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false });
+    got = { tex, mat }; wordTex.set(key, got);
+    // (a few kept; the oldest given back)
+    while (wordTex.size > 6) { const k0 = wordTex.keys().next().value; const o0 = wordTex.get(k0); wordTex.delete(k0); o0.tex.dispose(); o0.mat.dispose(); }
+    return got;
+  }
+  G.worldHooks.push(() => { for (const o of wordTex.values()) { o.tex.dispose(); o.mat.dispose(); } wordTex.clear(); });
   const DRAWN = new WeakMap(); // (an inside open → what of it is drawn: its group, its meshes, its signature)
   // draw the things of an inside open (o: Build3D's record of it — its building, its plan, its material, its shade) into the group
   // of its furniture; their meshes added to the furniture's, so they go when the furniture goes
@@ -640,25 +806,59 @@
     if (!o || !o.b || !o.p || !grp || !G.MESH3D || !G.Mesh3D || !G.Movel3D || !G.Movel3D.partGeo) return;
     const THREE = (G.Realm && G.Realm.three && G.Realm.three()) || window.THREE; if (!THREE) return;
     const near = nearOf(o.b); const pl = D.plan(o.b, o.p, near); const at = o.out && o.out.at ? o.out.at : [o.b.x * G.Space.TILE, G.Space.plinth(o.b).y0, o.b.y * G.Space.TILE];
-    const dg = new THREE.Group(); dg.matrixAutoUpdate = false; dg.name = 'dentro'; const mine = [];
-    const MT = new THREE.Matrix4(), CL = new THREE.Color();
-    for (const g of groupsOf(pl, o.b, at, near ? 0 : 1)) {
+    const dg = new THREE.Group(); dg.matrixAutoUpdate = false; dg.name = 'dentro'; const mine = [], steam = [], words = [];
+    const MT = new THREE.Matrix4(), CL = new THREE.Color(); const GR = groupsOf(pl, o.b, at, near ? 0 : 1);
+    for (const g of GR) {
       const geo = G.Movel3D.partGeo(g.name, g.pt, g.pat); if (!geo) continue;
       const m = new THREE.InstancedMesh(geo, o.MI, g.list.length); m.name = 'dentro:' + g.name + '/' + g.pt; m.receiveShadow = true; if (o.shade) o.shade(m); m.matrixAutoUpdate = false;
       g.list.forEach(([e, col], k) => { MT.fromArray(e); m.setMatrixAt(k, MT); const L = G.Realm.lin(col); m.setColorAt(k, CL.setRGB(L[0], L[1], L[2])); });
       m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.computeBoundingSphere(); dg.add(m); mine.push(m);
     }
+    // (the steam: one mesh a model, an instance a plate, its brightness each frame — D.step)
+    const byName = new Map(); for (const s of GR.steam) { let L = byName.get(s.name); if (!L) byName.set(s.name, L = []); L.push(s); }
+    for (const [name, L] of byName) { const geo = G.Movel3D.partGeo(name, 'vapor', 0); if (!geo) continue;
+      const m = new THREE.InstancedMesh(geo, steamMat(THREE), L.length); m.name = 'dentro:vapor/' + name; m.matrixAutoUpdate = false; m.renderOrder = 3; m.frustumCulled = false;
+      L.forEach((s, k) => { MT.fromArray(s.e); m.setMatrixAt(k, MT); const h = heatOf(s.t0); m.setColorAt(k, CL.setRGB(h, h, h)); });
+      m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; dg.add(m); mine.push(m); steam.push({ m, t0: L.map(s => s.t0) }); }
+    // (the words on a board: its own picture, a mesh of its own)
+    for (const w of GR.words) { const tw = wordsOf(THREE, o.b, w); const geo = G.Movel3D.partGeo(w.name, 'escrita', 0); if (!tw || !geo) continue;
+      const m = new THREE.Mesh(geo, tw.mat); m.name = 'dentro:escrita/' + w.name; m.matrixAutoUpdate = false; m.matrix.fromArray(w.e); m.renderOrder = 2; dg.add(m); words.push(m); }
     grp.add(dg); if (meshes) for (const m of mine) meshes.push(m);
-    DRAWN.set(o, { grp: dg, parent: grp, meshes: mine, list: meshes || null, sig: pl.sig, near, t: G.S.clock, n: pl.list.length });
+    DRAWN.set(o, { grp: dg, parent: grp, meshes: mine, list: meshes || null, sig: pl.sig, near, t: G.S.clock, n: pl.list.length, steam, words });
   };
-  // once a second of the world: the things of an inside drawn again — only them — when their cause has changed (the signature), or
-  // the body came near or went (the level of what is drawn)
+  // each frame, the steam of the hot plates of an inside open rising and fading as they cool; once a second of the world, the things
+  // drawn again — only them — when their cause has changed (the signature), or the body came near or went (the level of what is drawn)
   D.step = function (o) {
-    const d = o && DRAWN.get(o); if (!d || !o.items || d.parent !== o.items.grp || Math.abs(G.S.clock - d.t) < 1) return; d.t = G.S.clock;
+    const d = o && DRAWN.get(o); if (!d) return;
+    if (d.steam.length && STEAM) {
+      const now = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000; STEAM.map.offset.set(Math.sin(now * 0.6) * 0.05, -((now * 0.11) % 1));
+      const THREE = (G.Realm && G.Realm.three && G.Realm.three()) || window.THREE; const CL = d.CL || (d.CL = new THREE.Color());
+      for (const s of d.steam) { s.t0.forEach((t0, k) => { const h = heatOf(t0); s.m.setColorAt(k, CL.setRGB(h, h, h)); }); if (s.m.instanceColor) s.m.instanceColor.needsUpdate = true; }
+    }
+    if (!o.items || d.parent !== o.items.grp || Math.abs(G.S.clock - d.t) < 1) return; d.t = G.S.clock;
     const near = nearOf(o.b); if (d.sig === D.sig(o.b, o.p) + (near ? '' : '#far') && d.near === near) return;
     d.parent.remove(d.grp); for (const m of d.meshes) { m.dispose(); if (d.list) { const i = d.list.indexOf(m); if (i >= 0) d.list.splice(i, 1); } }
     D.draw(o, d.parent, d.list);
   };
-  // (for the proofs: what is drawn of an inside open — its things and its signature)
-  D.drawn = o => { const d = o && DRAWN.get(o); return d ? { sig: d.sig, n: d.n, near: d.near, meshes: d.meshes.length } : null; };
+  // (for the proofs: what is drawn of an inside open — its things and its signature, its steam and its boards)
+  D.drawn = o => { const d = o && DRAWN.get(o); return d ? { sig: d.sig, n: d.n, near: d.near, meshes: d.meshes.length, steam: d.steam.reduce((n, s) => n + s.t0.length, 0), heat: d.steam.length ? d.steam.map(s => s.t0.map(heatOf)) : [], words: d.words.length } : null; };
+  // what a person holds of a tavern's now, as the 3D draws it in the hands (the front P6: the cup the keeper carries, the cup a guest
+  // drinks from, the plate the body holds) — { name (the model: 'comida-<prato>', 'bebida-<bebida>'), parts (those that show now),
+  // paint(part) → [rgb 0–255, pattern], level(part) → the matrix of the part in the model's frame (the broth's level that goes down:
+  // put after the thing's own), st, fresco, quente, t0, why }; null when it holds nothing of a tavern's. Only reads
+  D.served = function (v) {
+    const s = G.Atmos && G.Atmos.serving ? G.Atmos.serving(v) : null; if (!s) return null; const b = G.S.buildings.get(s.b); if (!b) return null;
+    const W = G.Atmos.within(b); const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
+    const name = s.k === 'food' ? dishOf(s.prato) : vesselName(W, s.k); const t = { k: name, key: 'mao/' + v.id, x: 0, z: 0, st: s.st, fresco: s.fresco, c: null };
+    const parts = (G.Mesh3D ? G.Mesh3D.parts(name) : []).filter(pt => shows(pt, t));
+    return { name, parts, paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, level: pt => (pt === 'nv' ? D.levelAt(name, s.st) : null), st: s.st, fresco: s.fresco, quente: s.quente, t0: s.t0, why: s.why };
+  };
+  // the keeper's cloth over his shoulder, for the drawing of the body (the front P6): { name, parts, paint(part), why } for the keeper of
+  // a tavern whose people weaves, at his counter now (G.Atmos.within's ombro); null otherwise. Only reads
+  D.ombro = function (v) {
+    const b = v && v.job ? G.S.buildings.get(v.job) : null; if (!b || b.type !== 'taverna' || !G.Atmos || !G.Atmos.within) return null;
+    const W = G.Atmos.within(b); if (!W.ombro || W.ombro.id !== v.id) return null; const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
+    const name = NAME('pano-ombro'); const t = { k: 'pano-ombro', key: 'ombro/' + v.id, x: 0, z: 0, c: null };
+    return { name, parts: G.Mesh3D ? G.Mesh3D.parts(name) : [], paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, why: W.ombro.why };
+  };
 })(window.G = window.G || {});

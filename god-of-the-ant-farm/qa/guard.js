@@ -2084,6 +2084,20 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   const blk = a < 0 || b < a ? '' : lic.slice(a, b); if (!blk) fails.push('toda fotografia com a sua licença: o arte/LICENCAS.md sem as marcas do tex_alta (D-771)');
   for (const x of mats) if (x.src) { const line = blk.split('\n').find(l => l.includes(`polyhaven.com/a/${x.src} `) && l.includes(`\`${x.n}\``));
     if (!line || !/\*\*CC0\*\*/.test(line) || !/dl\.polyhaven\.org\/file\/ph-assets\/Textures\/jpg\/2k\//.test(line)) fails.push(`toda fotografia com a sua licença: a textura ${x.src} (o material ${x.n}) sem a sua linha no arte/LICENCAS.md — nome, endereço, autor, arquivos, CC0 (D-771)`); } }
+// 289. "o corte do olho é só da casca" (L-1872): o corte do olho (as caixas do C3.cutBoxes, M3EYE) tira só a casca do prédio do
+// corpo — as paredes, os tetos, o telhado, as folhas das portas: o material de dentro (MAT.inner, MAT.innerHi) —; os móveis e a
+// decoração desenham-se num material próprio (MAT.innerF, MAT.innerFHi, o o.MI do makeItems e do Dentro3D), sem o M3EYE: nas caixas do
+// olho ficam em trama (M3FADE), nunca somem, e a peça em que o corpo senta e a que ele usa nem em trama ficam (C3.keepBoxes). As
+// pessoas são do Body3D. O corte da linha do olho apagava a mesa e os banquinhos em que o corpo estava sentado (o dono, à noite, numa
+// taverna asteca)
+{ const r3 = (src['realm3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/defines\.M3EYE\s*=/.test(c) && !(f === 'realm3d.js' && /for \(const m of \[MAT\.inner, MAT\.innerHi\]\) if \(m\) m\.defines\.M3EYE = 1;/.test(c))) fails.push(`o corte do olho é só da casca (L-1872): ${f}:${k + 1} põe o corte do olho num material que não é o da casca: ${l.trim().slice(0, 100)}`); });
+  if (!/for \(const m of \[MAT\.innerF, MAT\.innerFHi\]\) if \(m\) m\.defines\.M3FADE = 1;/.test(r3)) fails.push('o corte do olho é só da casca (L-1872): o material dos móveis e da decoração sem a trama (M3FADE)');
+  const i = b3.indexOf('function makeOpen('), j = b3.indexOf('function instGroups(', i); const f = i < 0 || j < 0 ? '' : b3.slice(i, j);
+  if (!/const MF = q\.shine && R3\.mats\(\)\.innerFHi \? R3\.mats\(\)\.innerFHi : R3\.mats\(\)\.innerF/.test(f) || !/MI: MF, MS: MI,/.test(f)) fails.push('o corte do olho é só da casca (L-1872): o makeOpen do build3d.js não dá aos móveis e à decoração (o.MI) o material deles');
+  const mi = f.slice(f.indexOf('function makeItems(')); if ((mi.match(/new THREE\.(?:Instanced)?Mesh\(geo, o\.MI\b/g) || []).length < 2 || /new THREE\.(?:Instanced)?Mesh\(geo, (?!o\.MI\b)/.test(mi)) fails.push('o corte do olho é só da casca (L-1872): o makeItems desenha um móvel fora do material dos móveis (o.MI)');
+  if (!/if \(!fKeep && fract\(52\.9829189/.test(b3)) fails.push('o corte do olho é só da casca (L-1872): a trama dos móveis (M3FADE) some com eles, ou não poupa as peças do corpo (uKeep)');
+  if (!/new THREE\.InstancedMesh\(geo, o\.MI,/.test((src['dentro3d.js'] || []).join('\n'))) fails.push('o corte do olho é só da casca (L-1872): a decoração do Dentro3D fora do material dos móveis (o.MI)'); }
 // 290. "o que o prédio mostra só se lê" (D-740, D-651): o G.Atmos.within (o within e o withinOf do atmos.js) só lê o mundo — nenhuma
 // atribuição a um campo do mundo (do prédio, da pessoa, do povo, da operação), nenhum movimento do livro (G.Depot.move / take / put)
 { const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('At.within = function (b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
@@ -2103,35 +2117,53 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
     if (/\b(?:b|v|p|it|pl|q|W|G\.S)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`o dentro3d.js só desenha: dentro3d.js:${k + 1} escreve num campo do mundo ou da planta (D-742)`);
     if (/\bG\.(?:Depot|Origem|Eco)\.|\.inv\b|\.pantry\b|f\.stock\b/.test(c)) fails.push(`o dentro3d.js só desenha: dentro3d.js:${k + 1} lê o que o prédio tem por conta própria, fora do G.Atmos.within (D-742)`); });
   if (!dt.some(l => /G\.Atmos\.within\(b\)/.test(l))) fails.push('o dentro3d.js só desenha: o dentro3d.js não pergunta ao G.Atmos.within (D-742)'); }
-// 293. "a coisa pela porta" (D-743): só o dentro3d.js lê as coisas da decoração pelo nome ('deco-…'); o resto pergunta ao G.Dentro3D
-for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]deco-/.test(c)) fails.push(`a coisa pela porta: ${f}:${k + 1} lê uma coisa da decoração pelo nome (é do G.Dentro3D, D-743)`); }); }
+// 293. "a coisa pela porta" (D-743, D-748): só o dentro3d.js lê as coisas da decoração pelo nome ('deco-…', e os pratos e as bebidas:
+// 'comida-…', 'bebida-…'); o resto pergunta ao G.Dentro3D — o desenho das mãos (P6) pelo G.Dentro3D.served
+for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`](?:deco|comida|bebida)-/.test(c)) fails.push(`a coisa pela porta: ${f}:${k + 1} lê uma coisa da decoração pelo nome (é do G.Dentro3D, D-743)`); }); }
 // 294. "as coisas são do Blender" (D-743, D-745): o js/decomesh.js é escrito pelo arte/blender/deco.py — o cabeçalho o diz, o script
 // existe e cada linha de modelo é como ele a escreve
 { const dm = src['decomesh.js'] || []; const root = path.resolve(dir, '..');
   if (!dm.length) fails.push('as coisas são do Blender: falta o js/decomesh.js (D-743)');
   if (!fs.existsSync(path.join(root, 'arte', 'blender', 'deco.py'))) fails.push('as coisas são do Blender: falta o arte/blender/deco.py que escreve o js/decomesh.js (D-743)');
   if (dm.length && !/made in Blender by arte\/blender\/deco\.py/.test(dm.slice(0, 4).join('\n'))) fails.push('as coisas são do Blender: o js/decomesh.js sem o cabeçalho de quem o gera (D-743)');
-  dm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["deco-[\w-]+(@1)?"\] = \{.*\};$/.test(l)) fails.push(`as coisas são do Blender: decomesh.js:${k + 1} não é a linha de uma coisa como o deco.py a escreve (D-743)`); });
+  dm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["(?:deco|comida|bebida)-[\w-]+(@1)?"\] = \{.*\};$/.test(l)) fails.push(`as coisas são do Blender: decomesh.js:${k + 1} não é a linha de uma coisa como o deco.py a escreve (D-743)`); });
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'); const iM = html.indexOf('src="js/mesh3d.js"'), iD = html.indexOf('src="js/decomesh.js"'), iT = html.indexOf('src="js/dentro3d.js"');
   if (!(iM >= 0 && iM < iD && iD < iT)) fails.push('as coisas são do Blender: o index.html não carrega o decomesh.js entre o mesh3d.js e o dentro3d.js (D-743)'); }
 // 295. "a decoração entra pelo desenho dos móveis" (D-742): o build3d.js põe as coisas pelo G.Dentro3D.draw no grupo dos móveis (com
 // as malhas deles: vão juntas) e pede o redesenho pelo G.Dentro3D.step a cada quadro de um interior aberto — nada mais da decoração ali
+// (e diz de que lado da porta pende a tabuleta, B3.innSignSide: a lousa da porta vai debaixo dela — D-749)
 { const b3 = (src['build3d.js'] || []).join('\n');
   if (!/if \(G\.Dentro3D && G\.Dentro3D\.draw\) G\.Dentro3D\.draw\(o, grp, meshes\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: o makeItems do build3d.js não chama o G.Dentro3D.draw(o, grp, meshes) (D-742)');
-  if (!/stepOpen\(o, rdt, focus\); if \(G\.Dentro3D && G\.Dentro3D\.step\) G\.Dentro3D\.step\(o\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: o insideTick do build3d.js não pede o redesenho ao G.Dentro3D.step(o) (D-742)'); }
+  if (!/stepOpen\(o, rdt, focus\); if \(G\.Dentro3D && G\.Dentro3D\.step\) G\.Dentro3D\.step\(o\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: o insideTick do build3d.js não pede o redesenho ao G.Dentro3D.step(o) (D-742)');
+  if (!/B3\.innSignSide = b => \(hv0\(b, 23\) < 0\.5 \? -1 : 1\);/.test(b3) || !/const side = B3\.innSignSide\(K\.b\);/.test(b3)) fails.push('a decoração entra pelo desenho dos móveis: a tabuleta da taverna não diz o seu lado pelo B3.innSignSide (a lousa da porta, D-749)'); }
 // 296. "coisa nova chega com a sua causa" (D-744): toda coisa do arte/blender/deco.py tem a sua regra de causa no verificador
 // (qa/dentro-inv.js, CAUSA) — uma coisa sem causa conferida não entra
 { const root = path.resolve(dir, '..'); const py = fs.existsSync(path.join(root, 'arte', 'blender', 'deco.py')) ? fs.readFileSync(path.join(root, 'arte', 'blender', 'deco.py'), 'utf8') : '';
   const inv = fs.existsSync(path.join(root, 'qa', 'dentro-inv.js')) ? fs.readFileSync(path.join(root, 'qa', 'dentro-inv.js'), 'utf8') : '';
   const i = inv.indexOf('const CAUSA = {'), j = inv.indexOf('\n  };', i); const causa = i < 0 ? '' : inv.slice(i, j);
   if (!causa) fails.push('coisa nova chega com a sua causa: o qa/dentro-inv.js sem a tabela CAUSA (D-744)');
-  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
+  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C2?\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
 // 297. "o material é o que o povo teve" (D-440, D-744): o within diz o barro, o metal e o pano pelas portas da origem e da roupa
 // (G.Origem.matOK, artsOf) — nunca pela arte sozinha —, e o dentro3d.js pinta o barro, o metal e o pano pelo que o within diz
 { const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
   if (!/O\.matOK\(fid, m, known\)/.test(f) || !/ok\('barro'\)/.test(f) || !/ok\('ferro'\)/.test(f) || !/artsOf\(f\)\.weave/.test(f)) fails.push('o material é o que o povo teve: o within não pergunta o barro, o metal e o pano ao G.Origem.matOK e ao artsOf (D-744)');
   if (/known\.(?:ferro|bronze)|\.tech\.known\.\w+\s*!==/.test(f)) fails.push('o material é o que o povo teve: o within lê a arte de um metal sozinha (D-744)');
   const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); if (/\.tech\b|\.matOK\(|G\.Origem\./.test(dt)) fails.push('o material é o que o povo teve: o dentro3d.js decide o material por conta própria, fora do within (D-744)'); }
+// 298. "o que se comeu, o mundo conta" (D-748): o estado de um prato e de uma caneca na mesa — o quanto se comeu ou bebeu (o estágio),
+// o quente, a espuma — vem do G.Atmos.within (a conta do mundo: o comido da P7, os bocados do corpo, o tempo à mesa) e o vapor esfria
+// pelo relógio do mundo (G.S.clock, At.COOL); o dentro3d.js não conta por conta própria: não lê o dia da taverna (op.data, a mesa)
+// nem o v.carry, e só o vapor se move pelo relógio da tela (o ruído que sobe)
+{ const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, ''));
+  dt.forEach((l, k) => { if (/\.data\.mesa|\.carry\b|\bT\.dia\(|Taverna\.dia\(/.test(l)) fails.push(`o que se comeu, o mundo conta: dentro3d.js:${k + 1} lê a mesa da taverna por conta própria, fora do G.Atmos.within (D-748)`);
+    if (/performance\.now/.test(l) && !/STEAM\.map\.offset/.test(l)) fails.push(`o que se comeu, o mundo conta: dentro3d.js:${k + 1} pergunta ao relógio da tela fora do ruído do vapor (D-748)`); });
+  const all = dt.join('\n'); if (!/const heatOf = t0 => \{ const h = 1 - \(G\.S\.clock - t0\) \/ \(\(G\.Atmos && G\.Atmos\.COOL\) \|\| 6\);/.test(all)) fails.push('o que se comeu, o mundo conta: o vapor do dentro3d.js não esfria pelo relógio do mundo (G.S.clock, At.COOL; D-748)');
+  const at = (src['atmos.js'] || []).join('\n'); if (!/function eatenOf\(v, m, c, T\) \{\n\s+if \(Number\.isFinite\(m\.comido\)\)/.test(at)) fails.push('o que se comeu, o mundo conta: o within não lê primeiro o comido que o mundo guarda (m.comido, D-748)'); }
+// 299. "a lousa diz o que a cozinha tem" (D-749): as palavras da porta vêm do within (W.lousa), que as lê do cardápio — o mesmo
+// estoque, pelo G.Taverna.cartaOf e o porte pelo G.Taverna.look —; o dentro3d.js escreve só o que o within diz (D.words), sem estoque
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!/const L = T\.look\(b\); const items = T\.cartaOf\(b\);/.test(f)) fails.push('a lousa diz o que a cozinha tem: o within não lê a lousa do cardápio (G.Taverna.cartaOf, G.Taverna.look; D-749)');
+  const dt = (src['dentro3d.js'] || []).join('\n');
+  if (!/const lines = D\.words\(w\.t\.lousa\);/.test(dt) || !/lousa: \{ prato: L\.prato, bebidas: L\.bebidas \}/.test(dt) || /cartaOf|\.menu\(/.test(dt)) fails.push('a lousa diz o que a cozinha tem: o dentro3d.js escreve na lousa outra coisa que o W.lousa do within (D-749)'); }
 // === 23, os interiores 2.0 — P7, a vida da taverna no mundo ===
 // 310. "o lugar tomado é do repartidor" (D-762): o lugar que uma pessoa toma e guarda (t.lugar: a peça e o lugar dela) só o
 // interiors.js escreve — In.hold, In.holdAt, In.unhold —; quem senta ou deita pede por essas portas, nunca escreve o lugar à mão
@@ -2248,5 +2280,61 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 { const pp = src['people3d.js'] || []; const p3 = pp.join('\n');
   if (!/function inArms\(v\) \{/.test(p3) || !/if \(v\.aboard \|\| v\.ug \|\| v\.held \|\| inArms\(v\)\) continue;/.test(p3)) fails.push('o bebê no colo vai com quem o carrega: o People3D não pula o bebê no colo pela porta inArms (L-1908)');
   pp.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bv\.carried\b/.test(c) && !/function inArms\(v\)/.test(c) && !/if \(v\.carried\) return true;/.test(c)) fails.push(`o bebê no colo vai com quem o carrega: people3d.js:${k + 1} decide pelo v.carried fora da porta inArms (L-1908): ${l.trim().slice(0, 100)}`); }); }
+// 330. "o som da sala tem dono e causa" (P9, D-780 a D-786): toda fonte que a cena faz (audio-src.js, `push({ k: …`) diz de quem é
+// (`de: {`), e os sons da sala nascem cada um da sua causa — o burburinho de quem conversa agora (A.vozesDe), o fogo só aceso
+// (G.Atmos.fire) e na peça de fogo da planta, a panela do fogo que cozinha (G.Atmos.within), a chuva no telhado só com chuva sobre ele
+// (chuvaEm), a porta e os passos só de quem passa (In.passage)
+{ const as = src['audio-src.js'] || []; const all = as.join('\n');
+  as.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/push\(\{ k: /.test(c) && !/de: \{/.test(c)) fails.push(`som da sala: audio-src.js:${k + 1} uma fonte sem dono (de: { … }, D-780): ${l.trim().slice(0, 110)}`); });
+  const need = (re, what) => { if (!re.test(all)) fails.push(`som da sala: o audio-src.js sem ${what}`); };
+  need(/V = A\.vozesDe\(b, dentro\.get\(b\.id\)\); if \(V\.fala >= 2\)/, 'o burburinho pela gente que conversa agora (A.vozesDe, D-780)');
+  need(/const fire = At && At\.fire \? At\.fire\(eb\) : null;[^\n]*\n\s*if \(fire && P\.items\) for \(const it of P\.items\) \{\n\s*if \(!it\.fire\) continue;/, 'o fogo só aceso e na peça de fogo da planta (G.Atmos.fire, D-782)');
+  need(/if \(lar && w && w\.cozinha\) push\(/, 'a panela só no fogo que cozinha (G.Atmos.within, D-782)');
+  need(/const rain = chuvaEm\(ex, ey\);[^\n]*\n\s*if \(rain > 0\.02 && tel\)/, 'a chuva no telhado só com chuva sobre ele (D-783)');
+  need(/if \(In && In\.passage && In\.passage\(v\)\) passam\.push\(v\);/, 'a porta e os passos só de quem passa (In.passage, D-784)'); }
+// 331. "o tocador da sala só toca a cena" (P9, D-786): os motores da sala no audio.js (do bedWay ao A.update — o burburinho, o fogo, a
+// panela, a chuva no telhado, a música) tocam o que a cena diz: não perguntam ao mundo pela causa (nem gente, nem prédio, nem tempo,
+// nem o G.Atmos, o G.Interiors, a taverna) e sorteiam só do acaso do que se ouve (G.VR)
+{ const au = (src['audio.js'] || []).join('\n'); const i = au.indexOf('  function bedWay() {'), j = au.indexOf('  A.update = function (dt) {');
+  if (i < 0 || j < i) fails.push('o tocador da sala: o audio.js sem os motores da sala (bedWay … A.update, D-786)');
+  else au.slice(i, j).split('\n').forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bS\.(villagers|buildings|weather|clouds|settlements|animals)\b|\bG\.(Atmos|Interiors|Taverna|Nature|Village|Fac)\b|\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random/.test(c)) fails.push(`o tocador da sala: audio.js (motores) pergunta ao mundo pela causa ou sorteia do mundo — a causa é da cena (D-786): ${l.trim().slice(0, 110)}`); }); }
+// 332. "o chão e o telhado do som são os do 3D" (P9, D-783): o chão de cada povo pelo porte do prédio (A.CHAO do audio-src.js) é o FLOOR
+// do build3d.js, com as mesmas regras dos andares (o terraço de lajes, as tábuas do andar de cima, do jirau e do elevado, a terra do
+// porão); e o telhado de cada povo (A.TELHA) é a telha que o build3d.js põe nele (a telha, a tégula e a de barro → telha; a palha →
+// palha; as tabuinhas → tábua)
+{ const as = (src['audio-src.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  const fl = /const FLOOR = \{([\s\S]*?)\n  \};/.exec(b3), ch = /A\.CHAO = \{([\s\S]*?)\n  \};/.exec(as);
+  const rows = (txt, re) => { const o = {}; for (const m of txt.matchAll(re)) o[m[1]] = [m[2], m[3], m[4]].join('/'); return o; };
+  if (!fl || !ch) fails.push('o chão do som: sem o FLOOR do build3d.js ou o A.CHAO do audio-src.js (D-783)');
+  else { const F = rows(fl[1], /(\w+): \{ noble: \['(\w+)', \[[^\]]*\]\], mid: \['(\w+)', \[[^\]]*\]\], low: \['(\w+)'/g), C = rows(ch[1], /(\w+): \{ noble: '(\w+)', mid: '(\w+)', low: '(\w+)' \}/g);
+    for (const k of new Set(Object.keys(F).concat(Object.keys(C)))) if (F[k] !== C[k]) fails.push(`o chão do som: o povo «${k}» pisa ${C[k] || 'nada'} no som e ${F[k] || 'nada'} no 3D (A.CHAO × FLOOR, D-783)`); }
+  if (!/if \(l\.kind === 'terraco'\) return \['lajes'/.test(b3) || !/if \(l && l\.kind === 'terraco'\) return 'lajes';/.test(as) || !/if \(l\.lv > 0 \|\| l\.kind === 'jirau' \|\| l\.kind === 'elevado'\) return \['tabuado'/.test(b3) || !/if \(l && \(l\.lv > 0 \|\| l\.kind === 'jirau' \|\| l\.kind === 'elevado'\)\) return 'tabuado';/.test(as)) fails.push('o chão do som: as regras dos andares (terraço, andar de cima, porão) do audio-src.js não são as do floorMat do build3d.js (D-783)');
+  // (and the buildings that show the noble floor: the same list in both)
+  const keysOf = m => (m ? [...m[1].matchAll(/(\w+): 1/g)].map(x => x[1]).sort().join(',') : '');
+  const nb3 = keysOf(/const NOBLE = \{([^}]*)\}/.exec(b3)), nas = keysOf(/const NOBRE = \{([^}]*)\}/.exec(as));
+  if (!nb3 || nb3 !== nas) fails.push(`o chão do som: os prédios do chão nobre do audio-src.js (${nas || 'nada'}) não são os do build3d.js (${nb3 || 'nada'}; D-783)`);
+  const TIL = { tile: 'telha', tegula: 'telha', mud: 'telha', thatch: 'palha', shingle: 'tabua' }; const tl = /A\.TELHA = \{([^}]*)\}/.exec(as);
+  if (!tl) fails.push('o telhado do som: sem o A.TELHA do audio-src.js (D-783)');
+  else for (const m of b3.matchAll(/(\w+): \{ wall: '\w+', base: '\w+', tile: '(\w+)' \}/g)) { const w = new RegExp(`\\b${m[1]}: '(\\w+)'`).exec(tl[1]); if (!w || w[1] !== TIL[m[2]]) fails.push(`o telhado do som: o povo «${m[1]}» tem «${m[2]}» no 3D e «${w ? w[1] : 'nada'}» no som (A.TELHA, D-783)`); } }
+// 333. "os atos da noite têm som" (P9, D-781): os atos da noite da taverna (a P7: o brinde, os ossinhos, a dança, as palmas, o canto junto,
+// o cochilo, o pano na mesa, as canecas recolhidas, a gorjeta, quem é posto para fora, o fechar) têm a sua linha no A.ATO do audio-src.js
+// (a da frente dos atos, ou a do TAVERNA_ATO, que só preenche o que falta) — e todo som que essas linhas nomeiam está na biblioteca do
+// audio.js
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  const lib = new Set(); for (const m of au.matchAll(/^\s{4}([A-Za-z]\w*): \(t, v(?:, o)?\) =>/gm)) lib.add(m[1]); for (const m of au.matchAll(/\bLIB\.([A-Za-z]\w*) = /g)) lib.add(m[1]);
+  const t0 = as.indexOf('const TAVERNA_ATO = {'), tv = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
+  if (!tv || !/for \(const k in TAVERNA_ATO\) if \(!A\.ATO\[k\]\) A\.ATO\[k\] = TAVERNA_ATO\[k\];/.test(as)) fails.push('os atos da noite: o audio-src.js sem as linhas da taverna (TAVERNA_ATO, D-781)');
+  for (const a of ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar']) {
+    const re = new RegExp(`(?:^|[\\s,{])'?${a}'?: \\{ s: '(\\w+)'`, 'm'); const m = re.exec(tv) || re.exec(as);
+    if (!m) fails.push(`os atos da noite: o ato «${a}» sem a sua linha de som (A.ATO, D-781)`); else if (!lib.has(m[1])) fails.push(`os atos da noite: o ato «${a}» nomeia o som «${m[1]}», que a biblioteca do audio.js não tem (D-781)`); } }
+// 334. "palmas, dança e canto no compasso da música" (P9, D-785): as linhas de quem bate palmas, dança e canta junto pedem o compasso
+// (compasso: 1); a cena dá a elas o compasso do músico da sala (o A.compasso de quem toca: o pulso do povo dele e o começo da sua vez,
+// t.mw — o relógio do mundo, que o 3D também pode seguir); e o tocador as toca no pulso da música que se ouve (o pulse, pelo músico)
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  for (const a of ['danca', 'palmas', "'cantar-junto'"]) if (!new RegExp(`${a}: \\{[^}]*compasso: 1`).test(as)) fails.push(`o compasso: a linha de «${a.replace(/'/g, '')}» sem o compasso da música (D-785)`);
+  if (!/if \(L\.compasso && v\.inside > 0\) \{ const m = musicoEm\(v\.inside\); if \(m\) o\.ritmo = A\.compasso\(m\); \}/.test(as)) fails.push('o compasso: a cena não dá a quem acompanha o compasso do músico da sala (D-785)');
+  if (!/t0: t && Number\.isFinite\(t\.mw\) \? t\.mw : 0/.test(as)) fails.push('o compasso: o pulso da música não conta do começo da vez do músico (t.mw, D-785)');
+  if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

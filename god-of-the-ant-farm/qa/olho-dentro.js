@@ -27,6 +27,9 @@
 //   o12 o «Travar» (D-733): nunca através da parede; dentro de casa, só quem vem contra o corpo
 //   o13 a trama: o olho junto da cabeça (uma parede atrás) põe o corpo em trama; longe, nunca
 //   o14 a tela pelo lugar (D-733): sob um teto e em paz, o «Correr» e o trio da luta descansam; voltam com a briga, a ameaça, a arma
+//   o15 o corpo sentado à mesa (L-1872): em assentos das tavernas, o olho girado em volta em duas inclinações — o corte do olho é
+//       só da casca (a regra 289: os móveis e a decoração num material sem ele, em trama nas caixas do olho); a peça em que o corpo
+//       senta, a mesa dela e o que está sobre a mesa nunca entram na trama (C3.keepBoxes); diz quantas peças ficaram em trama
 //   node qa/olho-dentro.js [mundo]          (padrão: o mundo pronto «metropole»; ONLY=o1,o4 roda só essas partes)
 const path = require('path');
 const M = require(path.join(__dirname, 'nodemundo.js'));
@@ -398,6 +401,36 @@ if (want('o14')) {
   res.emPaz2 = !IU.fightNear(v);
   release(); fresh(v); v.inside = 0; const D = doorOut(b, p); const a = D.at(5); v.x = a[0] / TL; v.y = a[1] / TL; take(v, 0); frames(30, 'rua'); res.foraVista = !btn('vista').when(); res.fora = !C3.under();
   ok('o14 a tela pelo lugar: sob um teto e em paz o «Correr» e o trio da luta descansam e o botão da vista aparece; com uma briga voltam; fora, como antes', res.sobTeto && res.emPaz && res.descansam && res.vistaBotao && res.briga && res.emPaz2 && res.foraVista && res.fora, JSON.stringify(res));
+}
+
+// ================================ o15: o corpo sentado à mesa ================================
+if (want('o15')) {
+  const res = []; let frN = 0, badKeep = 0, firstBad = '', seats = 0, weave = 0, wN = 0; let bad = 0, tot = 0; const first = [];
+  for (const b of built('taverna')) {
+    const p = Sp.planNow(b); if (!p || !p.ok) continue; const lv = p.entryLv || 0; const X0 = b.x * TL, Z0 = b.y * TL, y0 = Sp.plinth(b).y0 + (p.levels.find(q => q.lv === lv) || { y: 0 }).y;
+    // (the seats at a table: a stool or a bench of the storey a stride from a table — every third, six at most a tavern)
+    const tables = p.items.filter(it => (it.lv || 0) === lv && /^mesa/.test(it.kind));
+    const near = (it, x, z) => Math.hypot(Math.max(it.r[0] - x, 0, x - it.r[2]), Math.max(it.r[1] - z, 0, z - it.r[3]));
+    const cand = []; for (const it of p.items) { if ((it.lv || 0) !== lv || /^mesa/.test(it.kind)) continue; (it.spots || []).forEach((sp, q) => { if (!sp.ok || !/sentar|comer/.test(sp.use)) return;
+      const t = tables.filter(m => near(m, sp.x, sp.z) < 0.9).sort((a, c) => near(a, sp.x, sp.z) - near(c, sp.x, sp.z))[0]; if (t) cand.push({ it, q, t }); }); }
+    let k0 = 0; for (const c of cand.filter((_, k) => k % 3 === 0).slice(0, 6)) {
+      // (seated as the verb seats: the world's place taken by the hands, then the body on it — Interact's 'lugar')
+      const pl = In.placeFor(b, c.it.id, c.q); if (!pl || !placeIn(b, pl.at)) continue; G.Possess.apply(w => G.Possess.use(w, b, pl)); // (in the world's step)
+      if (!Av.seatAt(b, pl, true)) continue; frames(20, 'senta'); if (!Av.seated()) continue; seats++; k0++;
+      // (the points of the seat, of its table and of what stands on it: their tops' corners a hand in, their middles, a hand over the table)
+      const pts = []; for (const it of [c.it, c.t]) { const r = it.r, h = it.h || 0.75; for (const [fx, fz] of [[0.1, 0.1], [0.9, 0.1], [0.1, 0.9], [0.9, 0.9], [0.5, 0.5]]) for (const fy of [0.5, 0.98, it === c.t ? 1.25 : 0.98]) pts.push([it.kind, X0 + r[0] + (r[2] - r[0]) * fx, y0 + h * fy, Z0 + r[1] + (r[3] - r[1]) * fz]); }
+      const inBox = (B, P) => B.some(c2 => P[1] > c2[0] && P[2] > c2[1] && P[3] > c2[2] && P[1] < c2[3] && P[2] < c2[4] && P[3] < c2[5]);
+      watch();
+      for (const pitch of [0.26, 0.7]) { C3.pitch = pitch; for (let k = 0; k < 8; k++) { C3.yaw = k * Math.PI / 4 + 0.2; frames(25, 'mesa'); frN++;
+        const keeps = C3.keepBoxes(), cutB = C3.cutBoxes(); const miss = pts.find(P => !inBox(keeps, P)); if (miss) { badKeep++; if (!firstBad) firstBad = `${b.type}#${b.id} ${c.it.kind}→${c.t.kind}: ${miss[0]} fora das peças do corpo`; }
+        // (the other pieces of the storey in the weave now: a point of theirs in the eye's boxes and in none of the body's)
+        for (const it of p.items) { if ((it.lv || 0) !== lv || it === c.it || it === c.t) continue; const r = it.r, h = it.h || 1; const P = ['', X0 + (r[0] + r[2]) / 2, y0 + h * 0.6, Z0 + (r[1] + r[3]) / 2]; wN++; if (inBox(cutB, P) && !inBox(keeps, P)) weave++; } } }
+      const R = unwatch(); bad += R.bad; tot += R.n; if (R.first) first.push(R.first); C3.pitch = 0.26;
+    }
+    if (k0) res.push(`${b.type}/${b.style}#${b.id} ${k0} assentos`);
+  }
+  ok('o15 o corpo sentado à mesa: a peça em que senta, a mesa e o que está sobre ela nunca em trama; o olho limpo', seats >= 6 && !badKeep && bad === 0,
+    `${seats} assentos (${res.join(', ')}), ${frN} olhares · peças do corpo fora da guarda em ${badKeep}${firstBad ? ' — ' + firstBad : ''} · as outras peças em trama ${Math.round(100 * weave / Math.max(1, wN))}% dos olhares (o corte do olho só da casca: regra 289) · verificador ${bad}/${tot}${first.length ? ' — ' + first[0] : ''}`);
 }
 
 const mod = Object.keys(G.modErr || {}); const er = M.erros(); ok('sem erro de módulo nem aviso no console', !mod.length && !er.console.length, mod.length ? mod.join(', ') : er.console.length ? er.console.slice(0, 2).join(' | ') : 'limpo');
