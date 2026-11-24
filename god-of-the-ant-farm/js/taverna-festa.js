@@ -144,6 +144,7 @@
       for (const b of L) {
         if (!b.built) continue;
         if (b.festa && b.festa.dia < S.day) delete b.festa; // (the decorations down the next day)
+        if (b.festa && b.festa.fase === 0) calledOff(b);
         if (Array.isArray(b.festaQ)) { b.festaQ = b.festaQ.filter(q => q && S.day - q.d <= TF.VALE); if (!b.festaQ.length) delete b.festaQ; }
         if (b.festa) continue; const k = T.keeperOf(b); if (!k || A.isBody(k)) continue;
         const why = TC() ? TC().semFesta(b) : ''; if (why) continue;
@@ -215,8 +216,9 @@
   }
   // (the feast opened with the day: the decorations up, the bards called, the dish chosen — once)
   TF.prep = function (op, b) {
+    if (G.inSim && calledOff(b)) return;
     const f = TF.festa(b); if (!f || f.dia !== S_().day || f.fase !== 0 || !G.inSim) return; const k = T.keeperOf(b); if (!k) return;
-    f.enfeites = decorate(b, k); f.bardos = bardsOf(b, k); f.prato = dishOf(b); f.fase = 1; f.aberta = r1(S_().clock);
+    f.enfeites = decorate(b, k); f.bardos = bardsOf(b, k); f.prato = dishOf(b); f.fase = 1; f.aberta = r1(S_().clock); op.data.festa = f.motivo; // (the day's book knows it: the dance of the feast, D-822)
   };
   // (the plate of the feast: its name, what it takes of the shelf and of which part — while there is enough of it; else the plain plate)
   TF.pratoFor = function (b) {
@@ -309,7 +311,10 @@
     const C = L.filter(([v, m]) => (m.st === 5 || m.st === 2) && seated(v, m, op) && !(v.carry && v.carry.n > EPS) && v.age >= 18 && v.age < 58 && v.hp > 50 && drank(v, m, op) && TF.forca(v) >= TF.FORTE && compete(v) >= TF.BRACO_X && !(d.concurso && d.concurso.quem.includes(v.id)))
       .map(([v]) => v).sort((p, q) => TF.forca(q) - TF.forca(p) || p.id - q.id);
     if (C.length < 2) return;
-    const a = C[0], c = C[1]; const h1 = G.hash(Math.imul(a.id | 0, 53) + Math.imul(k, 17) + 5), h2 = G.hash(Math.imul(c.id | 0, 53) + Math.imul(k, 17) + 5);
+    const a = C[0], c = C[1];
+    // (the round they waited for put aside: the two at it, between rounds)
+    for (const v of [a, c]) { d.fila = d.fila.filter(q => q !== v.id); const m = d.mesa[v.id]; if (m) { m.st = 5; delete m.vem; } if (v.task) v.task.st = 5; }
+    const h1 = G.hash(Math.imul(a.id | 0, 53) + Math.imul(k, 17) + 5), h2 = G.hash(Math.imul(c.id | 0, 53) + Math.imul(k, 17) + 5);
     const vence = TF.forca(a) + 0.25 * h1 >= TF.forca(c) + 0.25 * h2 ? a.id : c.id;
     const bet = coin(b) && E.purse(a) >= TF.APOSTA + T.PRICE.drink && E.purse(c) >= TF.APOSTA + T.PRICE.drink && E.coinRef(a) !== E.coinRef(c) ? TF.APOSTA : 0;
     B[g] = { a: a.id, b: c.id, t0: r1(S.clock), ate: r1(S.clock + TF.BRACO_T + 3 * G.hash(Math.imul(a.id | 0, 7) + Math.imul(c.id | 0, 11) + k)), vence, aposta: bet, por: fest ? 'festa' : (a.drinks || 0) >= 2 ? 'bebida' : 'indole' };
@@ -323,8 +328,16 @@
     op.data.bracos = (op.data.bracos || 0) + 1;
   }
   // (the night's own look: the feast prepared, the match started and run, the ring of the dancers)
+  // (the world come in the way of a feast — the mourning, the sickness, the hunger, D-668 —: not yet opened, it waits for when the world lets
+  // it be — the cause celebrated later, while it holds —; under way, it ends there)
+  function calledOff(b) {
+    const f = b.festa; const why = f && f.fase < 9 && TC() ? TC().semFesta(b) : ''; if (!why) return false;
+    if (f.fase === 0) { if (Array.isArray(b.festas)) b.festas = b.festas.filter(k => k !== f.chave); delete b.festa; }
+    else { f.fase = 9; f.fim = r1(S_().clock); f.cancelada = why; }
+    return true;
+  }
   TF.noite = function (op, b) {
-    const S = S_(); const d = op.data; const f = b.festa && b.festa.dia === S.day ? b.festa : null;
+    const S = S_(); const d = op.data; if (calledOff(b)) return; const f = b.festa && b.festa.dia === S.day ? b.festa : null;
     if (f && f.fase === 0) TF.prep(op, b);
     // (the ring: three or more dancing to the feast's music — who they are, for the drawing of the ring)
     if (TF.noiteDe(b)) { const q = Object.keys(d.mesa).filter(id => d.mesa[id].st === 9).map(Number).sort((p, c) => p - c); if (q.length >= TF.RODA) { if (!d.roda || d.roda.quem.join() !== q.join()) d.roda = { quem: q, t: r1(S.clock) }; } else if (d.roda) delete d.roda; }
@@ -345,6 +358,9 @@
       say(S.villagers.get(c.quem[0]), 'concurso_desafio', {});
     }
     if (c.fim) { if (S.clock > c.fim + 4) delete d.concurso; return; }
+    // (who left the tables between two rounds — the drink's fall, the house's drag, the closing —: out at once)
+    for (const id of c.quem) if (!c.fora[id] && !d.mesa[id]) c.fora[id] = 'caiu';
+    if (c.n && c.quem.filter(id => !c.fora[id]).length <= 1) return finish(c, d);
     if (S.clock < c.prox) return;
     c.prox = r1(S.clock + TF.CONC_T); c.n++;
     const k = T.keeperOf(b);
@@ -361,13 +377,15 @@
       if (!r.ok) { c.fora[id] = 'acabou'; continue; }
       T.gole(v, op); c.rodadas[id] = (c.rodadas[id] || 0) + 1; m.st = 5; if (v.task) v.task.st = 5; m.cm = r1(S.clock);
     }
-    const left = c.quem.filter(id => !c.fora[id]);
-    if (left.length <= 1) {
-      let w = left[0] || 0; if (!w) { let best = -1; for (const id of c.quem) { const n = c.rodadas[id] || 0; if (n > best) { best = n; w = id; } else if (n === best) w = 0; } }
-      c.fim = r1(S.clock); c.vence = w; const W = S.villagers.get(w);
-      const o = d.atos || (d.atos = {}); const e = o['concurso-bebida'] || (o['concurso-bebida'] = {}); e.festa = (e.festa || 0) + 1;
-      if (W) { if (G.Fama && G.Fama.feito) G.Fama.feito(W, 'concurso'); say(W, 'concurso_vence', {}); }
-    }
+    if (c.quem.filter(id => !c.fora[id]).length <= 1) finish(c, d);
+  }
+  // (the match over: the last one in wins — all out in the same round, the one of more rounds, a tie none —; his fame, his word)
+  function finish(c, d) {
+    const S = S_(); const left = c.quem.filter(id => !c.fora[id]);
+    let w = left[0] || 0; if (!w) { let best = -1; for (const id of c.quem) { const n = c.rodadas[id] || 0; if (n > best) { best = n; w = id; } else if (n === best) w = 0; } }
+    c.fim = r1(S.clock); c.vence = w; const W = S.villagers.get(w);
+    const o = d.atos || (d.atos = {}); const e = o['concurso-bebida'] || (o['concurso-bebida'] = {}); e.festa = (e.festa || 0) + 1;
+    if (W) { if (G.Fama && G.Fama.feito) G.Fama.feito(W, 'concurso'); say(W, 'concurso_vence', {}); }
   }
   // what one does between the rounds by the feast and the table (mood, act-taverna.js): in the match — the draughts —, at the arm
   // wrestle, or cheering one on round it. The torcida is of who is in the room with them: the match's, everyone; the wrestle's, the table
@@ -383,6 +401,8 @@
     return null;
   };
 
+  // (in the arm wrestle or still in the match: one stays at the table to the end of it, past one's hour)
+  TF.ocupado = function (v, op) { const d = op.data; const c = d.concurso; if (c && !c.fim && c.quem.includes(v.id) && !c.fora[v.id]) return true; const m = d.mesa[v.id]; const w = m && m.g && d.braco ? d.braco[m.g] : null; return !!(w && !w.fim && (w.a === v.id || w.b === v.id)); };
   // (what a cheer is for — the event it is counted once by, and its cause: the table's wrestle, the room's match)
   TF.torcida = function (op, m) {
     const d = op.data; const w = m.g && d.braco ? d.braco[m.g] : null; if (w) return ['b:' + m.g + ':' + w.t0, 'braco'];

@@ -329,9 +329,10 @@
       const dr = G.Vg.door(b); const d0 = G.dist(v.x, v.y, dr[0], dr[1]); if (d0 >= T.REACH || (!body && v.energy < T.SPENT + 2 + T.WALK_E * d0)) continue;
       // (the evening's own hours and the night's lot, of the people of the world; the god's body goes when the player says)
       if (!body) {
-        if ((fb !== b && S.time < T.hourOf(v, b) - EPS) || S.time > T.leaveOf(v, b) - T.MIN) continue;
-        // (caught out in the storm by its door: in out of it, whatever the night's lot — D-816)
-        if (fb !== b && !(TC() && TC().abriga(v, b))) { if (lot < 0) lot = T.lot(v); if (lot >= T.wish(v, b)) continue; }
+        // (caught out in the storm by its door: in out of it, whatever one's hour and the night's lot — D-816)
+        const ab = fb !== b && !!(TC() && TC().abriga(v, b));
+        if ((fb !== b && !ab && S.time < T.hourOf(v, b) - EPS) || S.time > T.leaveOf(v, b) - T.MIN) continue;
+        if (fb !== b && !ab) { if (lot < 0) lot = T.lot(v); if (lot >= T.wish(v, b)) continue; }
       }
       if (T.room(b) < 1) continue;
       const d = d0 + (hw ? hw * G.dist(hm.x, hm.y, b.x, b.y) : 0) - (T.mates(v, b) ? T.MATE_PULL : 0); if (d >= bd) continue;
@@ -344,7 +345,7 @@
   T.urge = function (v, cur) {
     if (cur && cur.type === 'tavern') return T.IN;
     const S = S_();
-    if (cur && (cur.pri || 0) >= T.PRI && !(S.time < T.EVE && plainWork(v, cur))) return 0; // (an errand under way that weighs as much: the cup waits — a plain task of the day before its end is put down)
+    if (cur && (cur.pri || 0) >= T.PRI && !(S.time < T.EVE && plainWork(v, cur)) && !(cur.type === 'shelter' && !v.inside && S.weather.storm > 0)) return 0; // (an errand under way that weighs as much: the cup waits — a plain task of the day before its end is put down; the walk home out of the storm may end at a nearer tavern, D-816)
     if (v.tavDay === S.day || v.age < 16 || v.captive || v.jail || v.aboard || v.ug || v.held || v.air || (v.carry && v.carry.n > EPS)) return 0;
     if (v.energy < T.SPENT || v.hunger > 85 || A.isBody(v) || keeps(v)) return 0;
     if (!E.byType(v.set, 'taverna').length) return 0;
@@ -631,7 +632,7 @@
     }
     // (the closing call: up and out by the door, each a moment after the other — the one dozing woken first —, D-807)
     if (d.fecha && t.st !== 6 && S.clock >= d.fecha + T.SAI * G.hash(Math.imul(v.id | 0, 89) + 7)) { if (m.zz) m.zz = 0; return leave(v, t, op, H); }
-    if ((sleepy(v) && !m.zz) || !inHours(b)) return leave(v, t, op, H);
+    if ((sleepy(v) && !m.zz && !(TF() && TF().ocupado(v, op))) || !inHours(b)) return leave(v, t, op, H); // (the arm wrestle, the match: to their end)
     if (t.st === 6) return playing(v, t, b, op, dt, H);
     if (t.st === 7 || t.st === 8) return selfServe(v, t, b, op, dt, H);
     if (t.st === 9) { // dancing by the stage while the song is on (D-806); the song over, or worn out, back to one's seat — kept for one
@@ -647,7 +648,7 @@
       if (v.carry && v.carry.op === op.id) { t.st = 3; v.actT = 0; m.st = 3; m.cup = r1(S.clock); return; }
       v.act = sit; t.pose = talk ? 'sittalk' : undefined; t.wt = (t.wt || 0) + dt;
       // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-806)
-      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : musicOn(op) && !d.fecha ? listen(v, m, d) : ''; if (a === 'jogo-ossos') v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); }
+      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : musicOn(op) && !d.fecha ? listen(v, m, d) : ''; if (a === 'jogo-ossos') v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); const fa = TF() ? TF().actOf(v, m, op, b) : null; if (fa === 'torcer') v.act = fa; }
       // (nobody at the counter for a while — the keeper away —: one gets up, walks to the counter, serves oneself there and pays
       // as to the keeper, and walks back to one's seat, kept — L-1930; a tavern with no buyer's place at its counter, at the table)
       if (t.wt > T.SELF && !serving(b, op) && !m.vem) {
@@ -815,6 +816,8 @@
   T.task = function (v, b, f, H, inn) {
     const op = T.dia(b); const busy = !!op && op.st === 'on' && inHours(b); const stay = inn || v.inside === b.id ? b.id : undefined;
     if (busy && (op.data.fila.length || corpoNext(op.data))) return H.setTask(v, { type: 'atender', id: b.id, op: op.id, pri: 1.05, st: 0, stay }); // (and the god's body calling at a table: D-767)
+    // (a door broken in: mended first, with nobody waiting — taverna-contexto.js, D-815)
+    { const tc = TC() ? TC().consertoTask(v, b, H) : null; if (tc) return tc; }
     const need = restockPick(b, f, v); if (need) return H.setTask(v, { type: 'abastecer', id: b.id, k: need.k, n: need.n, of: need.of || undefined, pri: 1, st: 0 });
     const brew = TC() && TC().fome(b) && brewOf(f, b) === 'cerveja' ? null : O.task(v, b, f, H); if (brew) return brew; // (no grain to the vat in the hunger, D-817)
     if (busy) return H.setTask(v, { type: 'atender', id: b.id, op: op.id, pri: 1, st: 0, idle: 1, stay });
@@ -1540,7 +1543,8 @@
     // (who drank livens up: a round in one, or the cup in the hand)
     const h = G.hash(Math.imul(v.id | 0, 113) + Math.imul(d.sets | 0, 433) + 61); const lit = (G.Ebrio && G.Ebrio.alegre(v)) || (v.drinks || 0) >= 1 || !!(v.carry && v.carry.k !== 'food' && v.carry.op);
     let a = '';
-    if (ax(v, 'ext') >= T.DANCA_X && v.energy > T.DANCA_E && v.age >= 14 && v.age < 60 && h < 0.4 + (lit ? 0.25 : 0)) a = 'danca';
+    const fe = d.festa ? 1 : 0; // (the feast's night: more dance, the tired too — the ring of it, D-822)
+    if (ax(v, 'ext') >= T.DANCA_X - 0.1 * fe && v.energy > T.DANCA_E - 8 * fe && v.age >= 14 && v.age < 60 && h < 0.4 + (lit ? 0.25 : 0) + 0.2 * fe) a = 'danca';
     else if (lit && h < 0.75) a = 'cantar-junto';
     else if (h < 0.3 + 0.5 * ax(v, 'abe')) a = 'palmas';
     m.ma = a; m.mw = a === 'palmas' ? 'musica' : lit ? 'bebida' : 'indole'; return a;

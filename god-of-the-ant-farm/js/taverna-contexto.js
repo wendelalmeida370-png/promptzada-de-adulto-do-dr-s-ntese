@@ -408,14 +408,8 @@
     const fid = fidOf(b); const set = S_().settlements.get(b.set);
     return D.free('b:' + b.id, 'wood') >= TC.CONSERTO - EPS || (!!set && (G.Casa && G.Casa.spare ? G.Casa.spare(set, 'wood') : D.free('f:' + fid, 'wood')) >= TC.CONSERTO + 2);
   };
-  const oldJob = E.jobTask;
-  E.jobTask = function (v, H) {
-    if (v.role === 'taverneiro' && !A.isBody(v)) {
-      const b = v.job && S_().buildings.get(v.job); const op = b && T.dia(b);
-      if (b && b.type === 'taverna' && b.built && TC.consertoDue(b) && !(op && op.data.fila.length)) return H.setTask(v, { type: 'consertar', id: b.id, pri: 1, st: 0 });
-    }
-    return oldJob(v, H);
-  };
+  // (the keeper's day asks it first, with nobody waiting at the tables: G.Taverna.task)
+  TC.consertoTask = (v, b, H) => (TC.consertoDue(b) && !A.isBody(v) ? H.setTask(v, { type: 'consertar', id: b.id, pri: 1, st: 0 }) : null);
   const oldRun = E.run;
   E.run = function (v, t, dt, H) { if (t.type === 'consertar') { runConserto(v, t, dt, H); return true; } return oldRun(v, t, dt, H); };
   const oldText = E.taskText;
@@ -425,7 +419,10 @@
     if (!b || !b.built || b.type !== 'taverna' || !f || !broken(b)) return H.end(v);
     const n = TC.CONSERTO; const mine = v.carry && v.carry.k === 'wood' && v.carry.n >= n - EPS;
     if (t.st === 0) {
-      if (mine || D.free('b:' + b.id, 'wood') >= n - EPS) { t.st = 2; return; }
+      // (the house's wood taken into the hands at once — bound to its shelf: the fire would burn it meanwhile —; in the house already, the
+      // door mended from inside it, else from its doorstep)
+      if (!mine && D.free('b:' + b.id, 'wood') >= n - EPS && !(v.carry && v.carry.n > EPS)) { const r = D.move('b:' + b.id, 'v:' + v.id, 'wood', n, { code: 'porta-madeira', by: v.id, to: 'b:' + b.id }); if (!r.ok) return H.end(v); }
+      if (v.carry && v.carry.k === 'wood' && v.carry.n >= n - EPS) { if (v.inside === b.id) { t.st = 4; v.actT = 0; } else t.st = 2; return; }
       const s = G.Village.nearestDropoff(v.x, v.y, v.set); if (!s) return H.end(v);
       if (t.wk !== s.id) { t.wk = s.id; if (!G.Vg.gotoB(v, s, 0.2)) return H.end(v); }
       if (!H.move(v, dt)) return; t.st = 1; v.actT = 0; return;
@@ -434,13 +431,14 @@
       v.act = 'lift'; if (v.actT < 0.8) return;
       const cost = E.coinage && E.coinage(f.id) ? Math.round((E.PRICE.wood || 0.3) * n * 0.6 * 100) / 100 : 0; const from = cost ? E.coinRef(v) : null;
       if (from && D.get(from, 'moedas') + EPS < cost) return H.end(v);
-      const r = from ? D.swap(['f:' + f.id, 'v:' + v.id, 'wood', n], [from, 'f:' + f.id, 'moedas', cost], { code: 'porta-madeira', by: v.id }) : D.move('f:' + f.id, 'v:' + v.id, 'wood', n, { code: 'porta-madeira', by: v.id });
+      // (bound to the house: a cut errand takes it to the shelf, and the next one mends with it)
+      const r = from ? D.swap(['f:' + f.id, 'v:' + v.id, 'wood', n], [from, 'f:' + f.id, 'moedas', cost], { code: 'porta-madeira', by: v.id, to: 'b:' + b.id }) : D.move('f:' + f.id, 'v:' + v.id, 'wood', n, { code: 'porta-madeira', by: v.id, to: 'b:' + b.id });
       if (!r.ok) return H.end(v); t.st = 2; return;
     }
     if (t.st === 2) { const dr = G.Vg.door(b); if (!H.goto(v, dr[0], dr[1], false) && !H.goto(v, dr[0], dr[1], true)) return H.end(v); t.st = 3; return; }
-    if (t.st === 3) { if (!H.move(v, dt)) return; t.st = 4; v.actT = 0; return; }
-    // (at the door: the wood of the house's shelf into the hands — the fire's —, the hands at it, the wood used)
-    if (!(v.carry && v.carry.k === 'wood' && v.carry.n >= n - EPS)) { const r = D.move('b:' + b.id, 'v:' + v.id, 'wood', n, { code: 'porta-madeira', by: v.id }); if (!r.ok) return H.end(v); }
+    if (t.st === 3) { if (!H.move(v, dt)) return; const dr = G.Vg.door(b); if (G.dist(v.x, v.y, dr[0], dr[1]) < TC.AT_DOOR * 1.6) { t.st = 4; v.actT = 0; } else if ((t.rt = (t.rt || 0) + 1) > 3) return H.end(v); else t.st = 2; return; }
+    // (at the door, the wood in the hands: the hands at it, the wood used)
+    if (!(v.carry && v.carry.k === 'wood' && v.carry.n >= n - EPS)) return H.end(v);
     G.faceTo(v, b.x + b.w / 2 - v.x, b.y + b.h / 2 - v.y); v.act = 'build'; if (v.actT < TC.CONSERTO_T) return;
     const u = D.use('v:' + v.id, 'wood', n, { code: 'porta-conserto', by: v.id, mine: true }); if (!u.ok) return H.end(v);
     const was = b.porta; delete b.porta; delete b.portaHp;
