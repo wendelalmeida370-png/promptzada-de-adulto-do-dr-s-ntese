@@ -124,7 +124,9 @@
     let C = Anim.CLIPS && Anim.CLIPS[a];
     // (the brawl with nothing in the hand is the fists' — a weapon only where the inventory puts one there)
     if (v.act === 'fight' && C && C.item && !(L && L.inv && L.inv.mao) && has('cb-guarda-punho')) { a = 'cb-guarda-punho'; C = Anim.CLIPS[a]; }
-    if (C && C.item && !(L && L.inv && L.inv[C.item.hand === 'outra' ? 'outra' : 'mao'])) { a = base; C = null; } // (never mimed)
+    // (the table wiped with what the keeper has to wipe it — the cloth of a people that weaves, the straw of its grain: V3.wipeOf —, or not at all)
+    const wipe = a === 'limpar-mesa' && V3.wipeOf(v, L) && !(L && L.inv && L.inv.mao);
+    if (C && C.item && !(L && L.inv && L.inv[C.item.hand === 'outra' ? 'outra' : 'mao']) && !wipe) { a = base; C = null; } // (never mimed)
     if (UP.has(a) || a.startsWith('cb-')) { r.st = a; r.up = true; r.with = foe(v); return r; } // (the fight's gestures — the combat's own, cb-: on one's feet)
     if (a !== base && a !== 'idle' && a !== 'sit' && C && upperOnly(C)) {
       if (seat) { r.over = a; r.overK = C.beats ? V3.beatU(v, C) : C.loop ? ((v.actT || 0) / C.dur) % 1 : Math.min(1, (v.actT || 0) / C.dur); } else r.st = a;
@@ -177,17 +179,25 @@
   };
   V3.DRUNK = 0.55; // (the drink in the look, 0..1, from which the walk staggers with the arms out)
   // ------------------------------ the music's compass (D-796) ------------------------------
-  // the time (0..1) of a clip of `beats` beats of the tune being played where one is: the musician's own clock — a note each
-  // BEAT seconds of his act (the sound's line «tocar», audio-src.js) —, so the claps fall on the notes; with nobody playing there,
-  // the world's clock at the same pace. Only reads
-  V3.BEAT = 0.5;
+  // the time (0..1) of a clip of `beats` beats of the tune being played where one is: on the pulse of the musician's people's music —
+  // its pace and the start of his set (G.Audio.compasso, P9: the pulse the sound claps and stamps to) —, so the claps fall on the
+  // sound's own; with nobody playing there, on the pulse of one's own people's music, from the world's start. Only reads
+  V3.BEAT = 0.5; // (the pulse with no compass to ask: seconds of the world)
   V3.musician = function (v) {
     const T = G.Taverna; if (!T || !T.dia || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); const op = b ? T.dia(b) : null;
     const m = op && op.data && op.data.mus ? G.S.villagers.get(op.data.mus) : null; return m && m.act === 'play' && m.inside === v.inside ? m : null;
   };
   V3.beatU = function (v, C) {
-    const n = C && C.beats > 0 ? C.beats : 4; const m = V3.musician(v); const t = m ? m.actT || 0 : G.S.clock || 0;
-    return (t / (n * V3.BEAT)) % 1;
+    const n = C && C.beats > 0 ? C.beats : 4; const m = V3.musician(v); const k = G.Audio && G.Audio.compasso ? G.Audio.compasso(m || v) : null;
+    const per = k && k.periodo > 0 ? k.periodo : V3.BEAT; const t = (G.S.clock || 0) - (m && k ? k.t0 || 0 : 0);
+    return ((t / (n * per)) % 1 + 1) % 1;
+  };
+  // ------------------------------ the keeper's cloth (D-796) ------------------------------
+  // what the keeper wipes a table with: the cloth over his shoulder where his people weaves (G.Dentro3D.ombro, P5), else a wisp of the
+  // straw the people's grain leaves (its store has grain: G.Origem — nothing from nothing); null with neither. Only reads
+  V3.wipeOf = function (v, L) {
+    if ((L && L.ombro) || (G.Dentro3D && G.Dentro3D.ombro && G.Dentro3D.ombro(v))) return 'pano';
+    const O = G.Origem, f = G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null; return f && O && O.amount && O.CEREAL && O.amount('f:' + f.id, 'food', O.CEREAL) > 0 ? 'palha' : null;
   };
   // ------------------------------ the keeper's plate (D-798) ------------------------------
   // (a meal in the keeper's hands: the round of the house is a plate — the inventory's, G.Inv.roundOf — with the food on it)

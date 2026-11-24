@@ -1962,7 +1962,9 @@
 // som-inv: as regras do verificador para o que se ouve (Bairros Vivos, D-166, D-167) — carregado depois do qa/qa.js (QA.more),
 // como os outros; o qa/junta-inv.js o copia para dentro do qa.js. O som não guarda nada no mundo: o que se confere é a cena
 // (G.Audio.scene, pura — perguntar não muda nada) no meio de cada cidade: toda fonte tem dono vivo, os números são números, e
-// o fundo do bairro não soa sem mãos; e a tabela gesto→som cobre todo gesto de G.Act.ANIM.
+// o fundo do bairro não soa sem mãos; e a tabela gesto→som cobre todo gesto de G.Act.ANIM. E a sala (P9, D-780 a D-786): com o
+// ouvido dentro de cada taverna aberta dessas cidades, o burburinho só de quem conversa agora, o fogo só aceso, a chuva no telhado só
+// com chuva, a porta só com quem passa, cada som contínuo da sala dela, e o eco em números de uma sala.
 (function () {
   if (!window.QA || !QA.more) return;
   QA.more.push(function (add, s) {
@@ -1978,7 +1980,7 @@
       const c = A.scene(A.earOf({ x: st.cx, y: st.cy, yaw: 0, r: 20 })); if (!c) continue;
       for (const f of c.fontes) {
         const de = f.de || {}; let why = '';
-        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo === 'ocio') { const oc = A.ocioSom ? A.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) why = 'de uma coisinha do ócio que não está acontecendo'; } else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; } // (the little thing of the idle that sounds is its owner's doing: the one the scheduler gives now, 22c D-610)
+        if (de.v !== undefined) { const v = s.villagers.get(de.v); if (!v) why = 'de ninguém'; else if (v.sleeping) why = 'de quem dorme'; else if (f.tipo === 'ocio') { const oc = A.ocioSom ? A.ocioSom(v) : null; if (v.act || v.moving || !oc || oc.s !== f.s) why = 'de uma coisinha do ócio que não está acontecendo'; } else if (f.tipo === 'passos' || f.tipo === 'porta') { if (!(G.Interiors && G.Interiors.passage(v)) && !(s.avatar && s.avatar.id === v.id)) why = 'de quem não está passando'; } else if (f.tipo !== 'luta' && !v.act) why = 'de quem não faz nada'; } // (the little thing of the idle that sounds is its owner's doing: the one the scheduler gives now, 22c D-610)
         if (!why && de.op) { const op = G.Act.get(de.op); if (!op || !G.Act.live(op)) why = 'de uma operação que não está viva'; }
         if (!why && de.b && !s.buildings.has(de.b)) why = 'de um prédio que não existe';
         if (!why && de.navio !== undefined && !s.ships.some(x => x.id === de.navio && x.moving)) why = 'de um navio parado ou que não existe';
@@ -1995,6 +1997,25 @@
         if (w > 0 && !(F.maos[k] > 0)) { add('som', 3, `${st.name}: o fundo do bairro soa a «${k}» (peso ${w}) sem mãos nesse trabalho`); break; }
       }
       const m = c.musica; if (!m || !Array.isArray(m.notas) || m.notas.length < 10 || m.notas.some(x => !fin(x) || x <= 0)) add('som', 3, `${st.name}: a música do chão sem escala`);
+    }
+    // ---- the room (P9, D-780 to D-786): an ear inside each open tavern of those towns — the talk only of who talks there now, the fire
+    // only lit, the rain on the roof only with rain over it, the door only with someone passing, each bed of the room of the room, and
+    // its echo in numbers a room can have
+    const In = G.Interiors, At = G.Atmos, T = G.Taverna; if (!In || !In.ready || !At || !T || !A.ecoDe) return;
+    const towns = new Set(sets.map(x => x.id));
+    for (const b of s.buildings.values()) {
+      if (b.type !== 'taverna' || !b.built || !towns.has(b.set) || !b.ip || !In.ready(b) || !In.tableReady(b) || !T.aberta(b)) continue;
+      const c = A.scene(A.earOf({ x: b.x + (b.w || 1) / 2, y: b.y + (b.h || 1) / 2, yaw: 0, inside: b.id })); if (!c || !c.sala) { add('som', 3, `a taverna #${b.id}: o ouvido dentro dela sem a sala`); continue; }
+      const quem = [...s.villagers.values()].filter(v => v.inside === b.id && !v.sleeping); const fala = quem.filter(v => A.falando(v)).length;
+      const mine = c.fontes.filter(f => (f.de && f.de.b === b.id) || f.sala === b.id); const mu = mine.find(f => f.s === 'murmur');
+      let why = '';
+      if ((fala >= 2) !== !!mu || (mu && mu.fala !== fala)) why = `${fala} conversando e o burburinho ${mu ? 'de ' + mu.fala : 'nenhum'}`;
+      else if (!!At.fire(b) !== mine.some(f => f.tipo === 'fogo')) why = `o fogo ${At.fire(b) ? 'aceso e calado' : 'apagado e crepitando'}`;
+      else if (mine.some(f => f.tipo === 'chuva') && !(c.sala.chuva > 0.02)) why = 'chuva no telhado sem chuva';
+      else if (mine.some(f => f.tipo === 'porta') && !quem.some(v => In.passage(v))) why = 'a porta soa sem ninguém passando';
+      else if (mine.some(f => f.q === 'leito' && !(f.de && f.de.b === b.id))) why = 'um som contínuo da sala que não é dela';
+      const E = c.sala.eco; if (!why && E && (!fin(E.rt) || E.rt < 0.3 || E.rt > 1.6 || !fin(E.mix) || E.mix < 0.15 || E.mix > 0.45 || !fin(E.pre) || E.pre <= 0)) why = `o eco da sala fora do que uma sala tem (${E.rt} s, ${E.mix})`;
+      if (why) { add('som', 3, `a taverna #${b.id}: ${why}`); break; }
     }
   });
 })();
@@ -3714,6 +3735,7 @@
       if (o && o.hatM && D && (v.inside > 0 || v.sleeping) && (D.bed || (['chapeu', 'gorro'].includes(o.hatM)) || ((o.hatM === 'elmo' || o.hatM === 'galea') && !D.duty)) && nh++ < 3) add('vida', 3, `#${v.id}: desenhado de «${o.hatM}» ${v.sleeping ? 'dormindo' : 'debaixo de um teto'}`);
       // (D-796: the gesture of a thing — a clip that holds one — drawn only with the thing in that hand, G.Inv.held: never mimed)
       for (const k of [vs.st, vs.ov]) { const C = k && G.Anim3D.CLIPS ? G.Anim3D.CLIPS[k] : null; if (!C || !C.item) continue; const h = C.item.hand === 'outra' ? 'outra' : 'mao';
+        if (k === 'limpar-mesa' && vs.L && (vs.L.wipe || vs.L.ombro)) continue; // (the keeper's cloth or the straw of the grain: G.Vida3D.wipeOf)
         if (!(vs.L && vs.L.inv && vs.L.inv[h]) && nm++ < 3) add('vida', 2, `#${v.id}: desenhado no gesto «${k}» sem a coisa na mão`); }
       const ca = v.age < 2 && v.carrier ? s.villagers.get(v.carrier) : null; // (L-1908: the baby in arms, where its arms are)
       if (v.age < 2 && (v.carried || (ca && v.inside > 0 && ca.inside === v.inside && !ca.sleeping && !v.sleeping)) && nb++ < 3) add('vida', 2, `#${v.id}: bebê no colo de #${v.carrier} desenhado sozinho ${v.inside > 0 ? 'dentro de #' + v.inside : 'na rua'}`);
@@ -3833,7 +3855,13 @@
 //     pende, pende de uma parede ou do soalho de cima; o que fica na parede, encostado nela;
 //   · nada no caminho nem dentro de um móvel (S3): o que fica no chão fora do corredor, das portas, das escadas e de onde se usa uma
 //     peça (o keepClear da planta) e fora de toda peça; o que pende do teto acima das cabeças e das peças;
-//   · nada fora do lote (S2).
+//   · nada fora do lote (S2);
+//   · o que se serve é o que o mundo conta (S3; D-748): o prato da mesa é o que a pessoa come, comido no tanto que o mundo diz (o
+//     estágio), com vapor só enquanto quente — servido há menos de At.COOL do fogo que cozinha, e um prato que vem quente —; a caneca
+//     vazia só da rodada acabada; o chifre só onde o povo teve o couro do abate (S2);
+//   · as marcas da noite (S3; D-749): os ossinhos só com um jogo à mesa, os anéis de cerveja só dos anos de doses, os cacos só de uma
+//     caneca de barro quebrada (S2 onde o povo não tem barro), a poça só do que se derramou, a vela no tanto que a noite deixou, a pilha
+//     de lenha no tanto que há junto do fogo; a lousa da porta com o porte da casa, colada na parede da frente, por fora.
 // O que o prédio tem é perguntado ao mundo (G.Atmos.within, e de novo aqui o livro, a comida, a gente); onde cada coisa está, ao
 // G.Dentro3D.plan; onde ela pode estar, à planta (as paredes, os andares, a grade, o keepClear) — nunca às contas do dentro3d.js. As
 // regras são QA.dentro(lista); o verificador olha os interiores abertos pelo 3D e, sem 3D, as tavernas e meia dúzia de casas com a
@@ -3844,6 +3872,16 @@
   const CLAY = { jarra: 1, 'jarra-alta': 1, anforeta: 1, pote: 1, caneca: 1, taca: 1, copo: 1, lamparinaBarro: 1 };
   const has = (W, list, k) => W[list].some(q => q.k === k);
   const cereal = W => W.comida.some(q => ['trigo', 'cevada', 'sorgo', 'arroz', 'milho'].includes(q.k));
+  // (a thing's model: the dishes and the drinks by their own names, the rest 'deco-<coisa>' — as js/dentro3d.js)
+  const NM = k => (/^(comida|bebida)-/.test(k) ? k : 'deco-' + k);
+  // (what is on the tables of a tavern, the world's: who eats which dish — the plate of the day where the world no longer says —,
+  // whose round of which drink is done; and what the guests left once up)
+  const dishK = part => 'comida-' + (part && part !== '?' ? part : 'provisao');
+  const eats = (W, k) => W.mesa.concat(W.sujo || []).some(q => q.prato && dishK(q.prato) === k);
+  const drank = (W, d) => W.mesa.concat(W.sujo || []).some(q => q.cup === d);
+  const DISHES = ['peixe', 'marisco', 'carne', 'arroz', 'trigo', 'cevada', 'milho', 'sorgo', 'horta', 'ovos', 'leite', 'fruta', 'mel', 'azeite', 'provisao'];
+  const DRINKS = { 'bebida-cerveja': 'cerveja', 'bebida-cerveja-copo': 'cerveja', 'bebida-vinho': 'vinho', 'bebida-vinho-copo': 'vinho', 'bebida-pulque': 'pulque', 'bebida-mel': 'mel', 'bebida-mel-caneca': 'mel' };
+  const HOTD = { 'comida-leite': 0, 'comida-fruta': 0, 'comida-mel': 0, 'comida-azeite': 0 };
   // the cause of each thing, read again from what the building has now (G.Atmos.within): true, or what is missing
   const CAUSA = {
     jarra: W => W.bebida.length || W.bens.some(q => q.como === 'potes') || 'jarra sem bebida no livro',
@@ -3870,6 +3908,26 @@
     suporte: W => !!W.luz || 'suporte de lamparina sem o que queimar',
     'rabisco-a': W => W.rabiscos > 0 || 'riscos de carvão sem doses servidas', 'rabisco-b': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-c': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-d': W => W.rabiscos > 0 || 'riscos sem doses',
     teia: W => !!W.teia || 'teia numa casa nova ou cuidada',
+    // ---- what is served (D-748): the dish of who eats it; the cup of whose round is done
+    'comida-peixe': W => eats(W, 'comida-peixe') || 'prato de peixe sem ninguém comendo peixe', 'comida-marisco': W => eats(W, 'comida-marisco') || 'mariscos sem ninguém comendo',
+    'comida-carne': W => eats(W, 'comida-carne') || 'carne sem ninguém comendo carne', 'comida-arroz': W => eats(W, 'comida-arroz') || 'arroz sem ninguém comendo arroz',
+    'comida-trigo': W => eats(W, 'comida-trigo') || 'pão e caldo sem ninguém comendo', 'comida-cevada': W => eats(W, 'comida-cevada') || 'caldo de cevada sem ninguém comendo',
+    'comida-milho': W => eats(W, 'comida-milho') || 'tortilhas sem ninguém comendo', 'comida-sorgo': W => eats(W, 'comida-sorgo') || 'mingau sem ninguém comendo',
+    'comida-horta': W => eats(W, 'comida-horta') || 'sopa sem ninguém comendo', 'comida-ovos': W => eats(W, 'comida-ovos') || 'ovos sem ninguém comendo',
+    'comida-leite': W => eats(W, 'comida-leite') || 'coalhada sem ninguém comendo', 'comida-fruta': W => eats(W, 'comida-fruta') || 'frutas sem ninguém comendo',
+    'comida-mel': W => eats(W, 'comida-mel') || 'pão com mel sem ninguém comendo', 'comida-azeite': W => eats(W, 'comida-azeite') || 'pão com azeite sem ninguém comendo',
+    'comida-provisao': W => eats(W, 'comida-provisao') || 'o prato do dia sem ninguém comendo',
+    'bebida-cerveja': W => drank(W, 'cerveja') || 'caneca de cerveja sem rodada', 'bebida-cerveja-copo': W => drank(W, 'cerveja') || 'copo de cerveja sem rodada',
+    'bebida-vinho': W => drank(W, 'vinho') || 'taça de vinho sem rodada', 'bebida-vinho-copo': W => drank(W, 'vinho') || 'copo de vinho sem rodada',
+    'bebida-pulque': W => drank(W, 'pulque') || 'cuia de pulque sem rodada', 'bebida-mel': W => (drank(W, 'mel') && W.couro) || 'chifre de hidromel sem rodada ou sem o couro do abate',
+    'bebida-mel-caneca': W => drank(W, 'mel') || 'caneca de hidromel sem rodada',
+    // ---- the marks of the night (D-749)
+    'mancha-a': W => W.manchas > 0 || 'anel de cerveja sem doses servidas', 'mancha-b': W => W.manchas > 0 || 'anel sem doses', 'mancha-c': W => W.manchas > 0 || 'mancha sem doses', 'mancha-d': W => W.manchas > 0 || 'mancha sem doses',
+    ossos: W => W.mesa.some(q => q.jogo) || 'ossinhos sem jogo à mesa',
+    cacos: W => (W.chao.some(q => q.k === 'cacos') && W.barro) || 'cacos sem caneca de barro quebrada', 'caneca-caida': W => W.chao.some(q => q.k === 'caneca-caida') || 'caneca caída sem briga',
+    poca: W => W.chao.some(q => q.k === 'poca') || 'poça sem nada derramado',
+    lousa: W => (!!W.lousa && W.lousa.k === 'lousa') || 'lousa sem o porte da lousa', quadro: W => (!!W.lousa && W.lousa.k === 'quadro') || 'quadro sem o porte do quadro', placa: W => (!!W.lousa && W.lousa.k === 'placa') || 'placa pintada sem casa rica ou grande',
+    'pano-ombro': W => !!W.ombro || 'pano no ombro sem taverneiro de povo que tece',
   };
   QA.dentroCausa = CAUSA; // (for the guard: every thing of the file has its cause here — rule 296)
   // (the walls' faces of a storey, as the plan has them: the distance of a point to the nearest face)
@@ -3891,8 +3949,20 @@
       const vessels = ['jarra', 'jarra-alta', 'anforeta', 'pote', 'cabaca', 'jarro-madeira'].reduce((n, k) => n + (counts[k] || 0), 0);
       if (vessels > units + 1) out.push([3, `${tag}: ${vessels} jarras e ânforas desenhadas para ${units - 1} unidade(s) de bebida e guardados`, b.id]);
       const marks = ['rabisco-a', 'rabisco-b', 'rabisco-c', 'rabisco-d'].reduce((n, k) => n + (counts[k] || 0), 0); if (marks > W.rabiscos) out.push([3, `${tag}: ${marks} riscos de carvão para ${W.rabiscos} (doses servidas: ${b.served || 0})`, b.id]);
+      const rings = ['mancha-a', 'mancha-b', 'mancha-c', 'mancha-d'].reduce((n, k) => n + (counts[k] || 0), 0); if (rings > W.manchas) out.push([3, `${tag}: ${rings} anéis de cerveja para ${W.manchas} (doses servidas: ${b.served || 0})`, b.id]);
+      // (what is served is as much as the world says is eaten, hot only while it is — D-748)
+      const byId = new Map(W.mesa.map(q => [q.id, q]));
       for (const t of pl.list) {
-        const m = G.MESH3D['deco-' + t.k]; const what = `${tag}: ${t.k} (${t.on}, ${t.key})`;
+        const g = /\/mesa\/(\d+)\/(prato|caneca)$/.exec(t.key); const q = g ? byId.get(+g[1]) : null; if (!g || !q) continue;
+        const st = g[2] === 'prato' ? q.ps : q.cs; if ((t.st | 0) !== st) out.push([3, `${tag}: ${t.k} na mesa de #${q.id} no estágio ${t.st | 0}, o mundo diz ${st} (${q.why})`, b.id]);
+        if (t.quente && (HOTD[t.k] === 0 || G.S.clock - (t.t0 || 0) >= At.COOL)) out.push([3, `${tag}: ${t.k} com vapor ${HOTD[t.k] === 0 ? 'num prato que não vem quente' : `servido há ${(G.S.clock - t.t0).toFixed(1)} s (esfria em ${At.COOL})`}`, b.id]);
+      }
+      for (const t of pl.list) {
+        if (t.k === 'vela' && W.luz && (t.vs | 0) !== Math.min(3, Math.floor((1 - W.luz.vela) * 4 + 1e-6))) out.push([3, `${tag}: a vela no tanto ${t.vs | 0}, a noite deixou ${W.luz.vela.toFixed(2)}`, b.id]);
+        if (t.k === 'lenha' && W.lenha && (t.st | 0) !== 4 - W.lenha.q) out.push([3, `${tag}: a pilha de lenha no tanto ${4 - (t.st | 0)}/4, há ${W.lenha.q}/4 (${W.lenha.why})`, b.id]);
+      }
+      for (const t of pl.list) {
+        const m = G.MESH3D[NM(t.k)]; const what = `${tag}: ${t.k} (${t.on}, ${t.key})`;
         if (!m) { out.push([3, `${what} sem modelo`, b.id]); continue; }
         // the cause
         if (!t.why) out.push([3, `${what} sem o porquê`, b.id]);
@@ -3901,7 +3971,7 @@
         if (t.k === 'caldeirao' && !W.metal) out.push([2, `${what} de metal onde o povo não tem metal`, b.id]);
         if (t.lit && !(W.luz && W.luz.acesa)) out.push([3, `${what} acesa sem ninguém acordado no escuro (${W.luz ? W.luz.why : 'nada para queimar'})`, b.id]);
         // in the lot
-        if (!(t.x > 0 && t.x < L && t.z > 0 && t.z < L)) out.push([2, `${what} fora do lote (${t.x}, ${t.z})`, b.id]);
+        const pad = t.on === 'fora' ? 0.1 : 0; if (!(t.x > -pad && t.x < L + pad && t.z > -pad && t.z < L + pad)) out.push([2, `${what} fora do lote (${t.x}, ${t.z})`, b.id]);
         const l = p.levels.find(q => q.lv === t.lv); if (!l) { out.push([3, `${what} num andar que a planta não tem`, b.id]); continue; }
         const sx = t.s[0], sz = t.s[2], c0 = Math.abs(Math.cos(t.ry)), s0 = Math.abs(Math.sin(t.ry));
         const hw = (m.w / 2 * sx) * c0 + (m.d / 2 * sz) * s0, hd = (m.w / 2 * sx) * s0 + (m.d / 2 * sz) * c0; const R = [t.x - hw, t.z - hd, t.x + hw, t.z + hd];
@@ -3913,7 +3983,8 @@
         } else if (t.on === 'chao') {
           if (Math.abs(t.y - (l.y + FLOOR_UP)) > 0.02) out.push([3, `${what} flutuando: a ${(t.y - l.y).toFixed(3)} m do chão`, b.id]);
           const C = In.CELL; const cell = In.cell(b, t.lv, t.x, t.z); if (cell !== C.FLOOR && cell !== C.DOOR) out.push([3, `${what} sobre o que não é chão (${cell})`, b.id]);
-          if (t.k !== 'tapete') {
+          if (t.solto) { if (cell !== C.FLOOR) out.push([3, `${what} caído onde não é chão aberto`, b.id]); } // (what fell lies where it fell: in the way too, until it is cleaned)
+          else if (t.k !== 'tapete') {
             for (const it of p.items) if (it.lv === t.lv && (it.parts || [it.r]).some(q => ovR(R, q, -0.015))) { out.push([3, `${what} dentro de ${it.kind}`, b.id]); break; }
             if (keep(p, t.lv).some(q => ovR(R, q, -0.03))) out.push([3, `${what} no caminho (o corredor, uma porta, uma escada, onde se usa uma peça)`, b.id]);
           } else if (p.stairs.some(st => (st.lv0 === t.lv || st.lv1 === t.lv) && ovR(R, st.r, -0.02))) out.push([3, `${what} sobre uma escada`, b.id]);
@@ -3923,6 +3994,11 @@
           // (and clear of the stairs along the wall and of a piece that stands as high as it, before it)
           if (p.stairs.some(st => (st.lv0 === t.lv || st.lv1 === t.lv) && ovR(R, st.r, -0.02))) out.push([3, `${what} sobre uma escada`, b.id]);
           for (const it of p.items) if (it.lv === t.lv && !it.fire && ovR(R, it.r, -0.02) && t.y < l.y + (it.y || 0) + it.h - 0.02) { out.push([3, `${what} dentro de ${it.kind}`, b.id]); break; }
+        } else if (t.on === 'fora') {
+          // (the board at the door: against the front wall, by its outer face; outside the walls; at the eyes of one in the street)
+          const d = faceDist(p, t.lv, t.x, t.z); if (d > m.d / 2 * sz + 0.1 || d < -0.01) out.push([3, `${what} solto da parede da frente (${d.toFixed(2)} m)`, b.id]);
+          const C = In.CELL; const cell = In.cell(b, t.lv, t.x, t.z); if (cell === C.FLOOR || cell === C.SOLID || cell === C.LOW) out.push([3, `${what} dentro da casa, não na porta`, b.id]);
+          if (t.y - l.y < 0.6 || t.y + m.h - l.y > 2.4) out.push([3, `${what} fora da altura dos olhos (${(t.y - l.y).toFixed(2)} m)`, b.id]);
         } else if (t.on === 'teto' || t.on === 'canto') {
           let ceil = p.shell && Number.isFinite(p.shell.eave) ? p.shell.eave : Infinity; for (const q of p.levels) if (q.y > l.y + 0.5 && (q.areas || [q.area]).some(r => r && t.x > r[0] && t.x < r[2] && t.z > r[1] && t.z < r[3])) ceil = Math.min(ceil, q.y);
           const top = t.y + m.h * t.s[1]; if (Math.abs(top - ceil) > 0.12) out.push([3, `${what} pendurado a ${top.toFixed(2)} m sem teto ali (${ceil === Infinity ? 'nenhum' : ceil.toFixed(2)})`, b.id]);
@@ -3932,8 +4008,8 @@
       }
       // nothing over another: on the walls (a peg and what hangs from it, a lamp's shelf and its lamp, go together) and on the floor
       const pair = t => t.key.replace(/^(cavilha|pende)\//, 'p/').replace(/^(parede-luz\/\d+).*$/, '$1');
-      const wall = pl.list.filter(t => t.on === 'parede'), floor = pl.list.filter(t => t.on === 'chao' && t.k !== 'tapete');
-      for (let i = 0; i < wall.length; i++) for (let j = i + 1; j < wall.length; j++) { const a = wall[i], c = wall[j]; if (pair(a) === pair(c)) continue; const ma = G.MESH3D['deco-' + a.k], mc = G.MESH3D['deco-' + c.k]; if (!ma || !mc) continue;
+      const wall = pl.list.filter(t => t.on === 'parede'), floor = pl.list.filter(t => t.on === 'chao' && t.k !== 'tapete' && !t.solto);
+      for (let i = 0; i < wall.length; i++) for (let j = i + 1; j < wall.length; j++) { const a = wall[i], c = wall[j]; if (pair(a) === pair(c)) continue; const ma = G.MESH3D[NM(a.k)], mc = G.MESH3D[NM(c.k)]; if (!ma || !mc) continue;
         const dx = Math.hypot(a.x - c.x, a.z - c.z), ya = [a.y, a.y + ma.h * a.s[1]], yc = [c.y, c.y + mc.h * c.s[1]];
         if (dx < (ma.w * a.s[0] + mc.w * c.s[0]) / 2 - 0.02 && Math.min(ya[1], yc[1]) - Math.max(ya[0], yc[0]) > 0.02) out.push([4, `${tag}: ${a.k} e ${c.k} um sobre o outro na parede (${a.key}, ${c.key})`, b.id]); }
       for (let i = 0; i < floor.length; i++) for (let j = i + 1; j < floor.length; j++) { const a = floor[i], c = floor[j]; if (a.r && c.r && ovR(a.r, c.r, -0.02)) out.push([3, `${tag}: ${a.k} e ${c.k} um dentro do outro no chão`, b.id]); }

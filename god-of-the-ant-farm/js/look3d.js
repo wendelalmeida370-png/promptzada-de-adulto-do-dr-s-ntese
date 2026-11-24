@@ -63,6 +63,12 @@
     // (the food in the hands — the meal the world served, its part by the origin (G.Origem): the mouthful in the fingers, the dish on the
     // keeper's plate — P6, D-795, D-798; null with no food in them)
     L.food = foodOf(v);
+    // (and what of a tavern's the hands hold, as it is — the vessel with its drink, the dish as much of it as is left: G.Dentro3D.served, P5 —,
+    // only for who has something served in the hands)
+    L.served = v.carry && v.carry.n > 1e-6 && G.Dentro3D && G.Dentro3D.served ? G.Dentro3D.served(v) : null;
+    // (the keeper's cloth over his shoulder — a tavern of a people that weaves: G.Dentro3D.ombro, P5 —, and what he wipes a table with: the
+    // cloth, or the straw its grain leaves — G.Vida3D.wipeOf)
+    L.ombro = v.job && G.Dentro3D && G.Dentro3D.ombro ? G.Dentro3D.ombro(v) : null; L.wipe = v.act === 'limpar-mesa' && G.Vida3D && G.Vida3D.wipeOf ? G.Vida3D.wipeOf(v, L) : null;
     // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
     if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);

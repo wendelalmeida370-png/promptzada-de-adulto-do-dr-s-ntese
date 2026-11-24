@@ -17,6 +17,7 @@
   const A = G.Audio || (G.Audio = {});
   const r3 = x => Math.round(x * 1000) / 1000;
   const NONE = {};
+  const NADA = Object.freeze([]);
 
   // ------------------------------ the gestures' sounds ------------------------------
   // every gesture of G.Act.ANIM has its line: its sound (a name of the library, audio.js) or a silence said on purpose (por).
@@ -66,8 +67,11 @@
     tecer: { s: 'loom', q: 'curso', cada: 0.9, v: 0.4, alc: 0.7, fam: 'oficio' },
     forjar: { s: 'anvil', q: 'curso', cada: 0.85, v: 0.9, alc: 1.5, fam: 'oficio' },
     lavrar: { s: 'tink', q: 'curso', cada: 0.6, v: 0.35, alc: 0.6, fam: 'oficio' },
-    servir: { s: 'cup', q: 'contato', v: 0.4, alc: 0.5, fam: 'noite' },
-    beber: { s: 'cup', q: 'contato', v: 0.3, alc: 0.4 },
+    // (P9: the keeper fills the cup from the jar at the shelf — the drink poured —; who drinks takes a draught and sets the cup down
+    // on the table, in the material of the cup in the hand — the kit's, G.Inv.held: the clay of a people that had the potter's ware,
+    // else turned wood, mat: 1 —; the player of the tavern plays the instrument in the hand — the lyre, the drum —, or sings, D-764)
+    servir: { s: 'verter', q: 'contato', v: 0.45, alc: 0.5, fam: 'noite' },
+    beber: { s: 'gole', q: 'contato', v: 0.4, alc: 0.4, mat: 1 },
     tocar: { s: 'lute', q: 'curso', cada: 0.5, v: 0.7, alc: 1.2, fam: 'noite' },
     despir: still('o pano não faz barulho'),
     treinar: { s: 'drill', q: 'curso', cada: 1.1, v: 0.6, alc: 1.2, fam: 'armas' },
@@ -142,18 +146,32 @@
     insult: { s: 'voz', q: 'curso', cada: 1.2, v: 0.7, alc: 1.2 }, threaten: { s: 'voz', q: 'curso', cada: 1.6, v: 0.6, alc: 1.1 },
     refuse: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, accept: { s: 'voz', q: 'curso', cada: 2.4, v: 0.4, alc: 0.9 },
     agree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, disagree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 },
-    laugh: { s: 'voz', q: 'curso', cada: 2, v: 0.4, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
+    laugh: { s: 'riso', q: 'curso', cada: 2, v: 0.45, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
     console: still('quem consola fala baixo demais para se ouvir longe'),
-    // (P6, D-795 to D-799: the living tavern — the cups that meet, the bones on the board, the claps and the stamp of the dance on the
-    // notes, the song sung along, the keeper's cloth and cups, the coin thrown, the keeper's call at the closing and the brawler led
-    // out shouting; the nap and the stagger are still)
-    brinde: { s: 'cup', q: 'curso', cada: 3.4, v: 0.45, alc: 0.7, fam: 'noite' }, 'jogo-ossos': { s: 'clack', q: 'curso', cada: 4.2, v: 0.3, alc: 0.6, fam: 'noite' },
-    danca: { s: 'clap', q: 'curso', cada: 0.5, v: 0.4, alc: 1.1, fam: 'noite' }, palmas: { s: 'clap', q: 'curso', cada: 0.5, v: 0.35, alc: 1, fam: 'noite' },
-    'cantar-junto': { s: 'chant', q: 'curso', cada: 2, v: 0.35, alc: 0.9, fam: 'noite' }, cochilo: still('quem cochila sobre a mesa respira baixo'),
-    'limpar-mesa': { s: 'sweep', q: 'curso', cada: 1.2, v: 0.15, alc: 0.4 }, 'recolher-canecas': { s: 'cup', q: 'curso', cada: 3, v: 0.3, alc: 0.5 },
-    gorjeta: { s: 'coin', q: 'curso', cada: 2.4, v: 0.4, alc: 0.7 }, expulsar: { s: 'hey', q: 'curso', cada: 1.6, v: 0.55, alc: 1.2 },
-    fechar: { s: 'hey', q: 'curso', cada: 2.6, v: 0.6, alc: 1.3 }, cambalear: still('o cambaleio é dos pés'), 'chamar-pedido': { s: 'voz', q: 'curso', cada: 2.2, v: 0.45, alc: 0.9 },
+    // (P6, D-796: the acts of the tavern's night the sounds of P9 do not have — the stagger is the feet's, the keeper's call to the body a
+    // word; the others are the TAVERNA_ATO below)
+    cambalear: still('o cambaleio é dos pés'), 'chamar-pedido': { s: 'voz', q: 'curso', cada: 2.2, v: 0.45, alc: 0.9 },
   };
+  // the acts of the tavern's night (P7: the toast, the knucklebones, the dance and the claps and the song with the music, the doze at
+  // the table, the cloth on the table, the cups gathered, the coin of the tip, the one thrown out, the closing) — the sounds of P9
+  // (D-781). A line the fronts of the acts write in A.ATO comes first; these are the ones the table lacks (only where none is):
+  //   em: the seconds into the act its blow falls (an act of no gesture has no contact of its own); mat: the material of the cup in
+  //   the hand (the kit); piso: the floor under the feet (the plan's); compasso: on the pulse of the music the room has (A.compasso)
+  const TAVERNA_ATO = {
+    brinde: { s: 'brinde', q: 'contato', em: 0.55, v: 0.6, alc: 0.8, fam: 'noite', mat: 1 },
+    'jogo-ossos': { s: 'ossos', q: 'curso', cada: 3.4, v: 0.5, alc: 0.6, fam: 'noite' },
+    danca: { s: 'pe', q: 'curso', cada: 0.6, v: 0.5, alc: 0.8, fam: 'noite', piso: 1, compasso: 1 },
+    palmas: { s: 'palmas', q: 'curso', cada: 0.6, v: 0.5, alc: 0.9, fam: 'noite', compasso: 1 },
+    'cantar-junto': { s: 'canto', q: 'curso', cada: 0.6, v: 0.45, alc: 0.9, fam: 'noite', compasso: 1 },
+    cochilo: { s: 'ronco', q: 'curso', cada: 3.4, v: 0.25, alc: 0.35 },
+    'limpar-mesa': { s: 'pano', q: 'curso', cada: 1.2, v: 0.35, alc: 0.5, fam: 'noite' },
+    'recolher-canecas': { s: 'canecas', q: 'contato', em: 0.5, v: 0.45, alc: 0.6, fam: 'noite', mat: 1 },
+    gorjeta: { s: 'gorjeta', q: 'contato', em: 0.4, v: 0.5, alc: 0.5, fam: 'noite' },
+    expulsar: { s: 'expulsa', q: 'curso', cada: 1.8, v: 0.65, alc: 1.1 },
+    fechar: { s: 'fechar', q: 'contato', em: 0.5, v: 0.55, alc: 0.8 },
+  };
+  A.TAVERNA_ATO = TAVERNA_ATO;
+  for (const k in TAVERNA_ATO) if (!A.ATO[k]) A.ATO[k] = TAVERNA_ATO[k];
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {
     cao: { s: 'bark', cada: 9, v: 0.6, alc: 1.3 }, galinha: { s: 'cluck', cada: 7, v: 0.4, alc: 0.7, dia: 1 }, pombo: { s: 'coo', cada: 9, v: 0.25, alc: 0.5, dia: 1 },
@@ -294,7 +312,7 @@
   };
 
   // (the music of a person's own people: the lute in a tavern plays its player's scale)
-  const povo = v => { const f = G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null; return A.musicOf(f ? f.civ : null, f && f.tech ? f.tech.known : null); };
+  const povo = v => { const f = v && G.Fac && G.Fac.ofV ? G.Fac.ofV(v) : null; return A.musicOf(f ? f.civ : null, f && f.tech ? f.tech.known : null); };
 
   // ------------------------------ the quarter's bed ------------------------------
   // what a quarter sounds like from within, beyond the sources one can tell apart: for each life of it, its habit (the slow
@@ -334,6 +352,131 @@
     return null;
   };
 
+  // ------------------------------ the room: a building heard from within (P9, D-780 to D-787) ------------------------------
+  // What a room sounds like is what it is made of and how big it is — the plan's (G.Interiors): the floor the feet walk on, the walls,
+  // the roof the rain beats on, the air between them (the echo), the people in it (they drink the echo too). Pure, as all of this file
+  const TILE = 4; // (the lot's metres to a tile of the map: the plans' own, Space.TILE)
+  const shellOf = b => (b && G.Interiors && G.Interiors.shellOf ? G.Interiors.shellOf(b) : null);
+  const estilo = b => b.style || ((G.Fac && G.Fac.ofSet ? G.Fac.ofSet(b.set) : null) || NONE).civ || 'classico';
+  // the floor under the feet: the one the 3D lays (build3d.js FLOOR and floorMat — the same table; the guard ties the two, rule 332):
+  // each people its own floor by the building's standing, boards over a room and in a loft, earth in a cellar, flags on a terrace
+  A.CHAO = {
+    romano: { noble: 'mosaico', mid: 'lajota', low: 'terra' }, grego: { noble: 'mosaico', mid: 'lajes', low: 'terra' },
+    egipcio: { noble: 'lajes', mid: 'terra', low: 'terra' }, asteca: { noble: 'lajes', mid: 'terra', low: 'terra' },
+    classico: { noble: 'lajes', mid: 'lajota', low: 'terra' }, nordico: { noble: 'tabuado', mid: 'terra', low: 'terra' },
+  };
+  const NOBRE = { palacio: 1, paco: 1, grande_palacio: 1, palacio_colossal: 1, temple: 1, biblioteca: 1, banhos: 1, administracao: 1, coletoria: 1 };
+  A.chaoDe = function (b, lv) {
+    const P = shellOf(b); const l = P ? P.levels.find(x => x.lv === (lv || 0)) || P.levels[0] : null;
+    if (l && l.kind === 'terraco') return 'lajes';
+    if (l && (l.lv > 0 || l.kind === 'jirau' || l.kind === 'elevado')) return 'tabuado';
+    if (l && l.kind === 'porao') return 'terra';
+    const F = A.CHAO[estilo(b)] || A.CHAO.classico; return NOBRE[b.type] || (b.type === 'house' && b.w > 1) ? F.noble : b.type === 'taverna' ? F.mid : F.low;
+  };
+  A.PASSO = { terra: 'terra', tabuado: 'tabua', lajota: 'lajota', lajes: 'laje', mosaico: 'laje' }; // (what each floor sounds like under a foot)
+  // the roof over the room, as the 3D lays it (build3d.js: the plan's straw and turf, the flat terrace; a pitched roof of the people's
+  // tiles — the Roman's, the Greek's, the classical's, the Egyptian's of fired mud —, the north's shingles of boards, the Aztec's straw):
+  // what the rain beats on (rule 332 ties the people's to the 3D's)
+  A.TELHA = { classico: 'telha', grego: 'telha', romano: 'telha', egipcio: 'telha', asteca: 'palha', nordico: 'tabua' };
+  A.telhadoDe = function (b) {
+    const P = shellOf(b); const R = P && P.shell ? P.shell.roof : null; if (!R) return null;
+    const k = R.kind; if (k === 'palha' || k === 'palha-conica') return 'palha'; if (k === 'turfa') return 'turfa'; if (k === 'plano') return 'terraco';
+    return A.TELHA[estilo(b)] || 'telha';
+  };
+  // the walls: the boards of the north, the earth (adobe, rammed earth, wattle and daub), the stone and the plaster on it
+  const PAREDE = { tabua: 'madeira', madeira: 'madeira', enxaimel: 'madeira', adobe: 'barro', 'adobe-caiado': 'barro', 'adobe-estuque': 'barro', taipa: 'barro', 'pau-a-pique': 'barro' };
+  A.paredeDe = b => { const P = shellOf(b); return P && P.shell ? PAREDE[P.shell.mat] || 'pedra' : 'pedra'; };
+  // how much of a sound each face drinks (Sabine's coefficients, about the middle of a voice): a soft room is short and dark, a hard
+  // one long and bright. The people drink it too (a full tavern echoes less than an empty one), and the tables, the benches, the jars
+  A.ABS = { chao: { terra: 0.2, tabuado: 0.1, lajota: 0.03, lajes: 0.02, mosaico: 0.02 }, parede: { madeira: 0.1, barro: 0.06, pedra: 0.03 },
+    teto: { palha: 0.45, turfa: 0.15, telha: 0.1, tabua: 0.12, terraco: 0.12 }, gente: 0.45, moveis: 0.15 };
+  // the echo of a room: its floor, its height (to the roof's middle where the hall is open to it, a tavern's; a storey's where one
+  // is over it), its volume, the time a sound takes to die (rt, s), the first reflection (pre, s), how much of the high end it keeps
+  // (tom, Hz) and the share of the echo in what one hears (mix). Null for no room: an open ground, a building with no plan
+  A.ecoDe = function (b) {
+    const P = shellOf(b); if (!P || !P.shell || P.shell.kind === 'aberta' || !P.levels.length) return null;
+    const sh = P.shell; const L0 = P.levels.find(l => l.lv === (P.entryLv || 0)) || P.levels[0];
+    const round = sh.kind === 'round'; const m2 = round ? Math.PI * sh.r * sh.r : sh.sx * sh.sz; const per = round ? 2 * Math.PI * sh.r : 2 * (sh.sx + sh.sz);
+    if (!(m2 > 0.5)) return null;
+    const R = sh.roof; const rise = R && R.kind !== 'plano' ? (R.h || 0) : 0;
+    const over = P.levels.some(l => l.lv > L0.lv && l.kind !== 'galeria' && l.kind !== 'jirau' && l.kind !== 'terraco');
+    const h = Math.max(2.2, over ? L0.h : (sh.eave || L0.y + L0.h) - (L0.y || 0) + rise * 0.5);
+    const piso = A.chaoDe(b, L0.lv), parede = A.paredeDe(b), telhado = over ? 'tabua' : A.telhadoDe(b) || 'tabua';
+    const gente = G.Atmos && G.Atmos.inside ? G.Atmos.inside(b) : 0;
+    const V = m2 * h, Sf = 2 * m2 + per * h;
+    const Aa = A.ABS.chao[piso] * m2 + A.ABS.teto[telhado] * m2 + A.ABS.parede[parede] * per * h + A.ABS.moveis * m2 + A.ABS.gente * gente;
+    const rt = G.clamp(0.161 * V / Math.max(1, Aa), 0.3, 1.6), pre = G.clamp(4 * V / Sf / 343, 0.004, 0.05);
+    const tom = Math.round(G.clamp(9000 - 30000 * Aa / Sf, 2500, 8000) / 250) * 250, mix = r3(G.clamp(0.12 + 0.17 * rt, 0.15, 0.45));
+    const o = { b: b.id, m2: r3(m2), h: r3(h), vol: r3(V), piso, parede, telhado, gente, rt: r3(rt), pre: r3(pre), tom, mix };
+    o.sig = `${Math.round(rt * 20)}:${Math.round(pre * 500)}:${tom}:${Math.round(Math.min(sh.sx || sh.r * 2, 40) * 2)}`; // (the echo's own figure: what the player makes it from)
+    return o;
+  };
+  // where someone the world has inside a building is: the place the plan gives them (In.placeOf) — on the way in from the door, along
+  // the walk the plan times (In.pathIn: the drawing walks it at the same pace); on the way out, at the door —, in the tiles of the
+  // map; outside, or with no plan made yet, where the world has them (the door they went in by, for one inside). → [x, y, lv]
+  A.ondeDe = function (v) {
+    const In = G.Interiors; const b = v && v.inside > 0 && In && In.ready ? G.S.buildings.get(v.inside) : null;
+    if (!b || !b.ip || !In.ready(b) || !In.tableReady(b)) return [v.x, v.y, 0];
+    const pl = In.placeOf(v); if (!pl) return [v.x, v.y, 0];
+    let x = pl.x, z = pl.z, lv = pl.lv || 0; const ps = In.passage(v);
+    if (ps && !ps.out) { const w = In.pathIn(b, pl); if (w && w.pts.length > 1 && w.len > 0) {
+      let at = Math.max(0, w.len - Math.max(0, ps.until - G.S.clock) * G.Vg.walkMS(v));
+      for (let i = 1; i < w.pts.length; i++) { const p0 = w.pts[i - 1], p1 = w.pts[i]; const d = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]); if (at <= d || i === w.pts.length - 1) { const u = d > 1e-6 ? G.clamp(at / d, 0, 1) : 1; x = p0[0] + (p1[0] - p0[0]) * u; z = p0[1] + (p1[1] - p0[1]) * u; lv = u < 0.5 ? p0[2] : p1[2]; break; } at -= d; } } }
+    return [b.x + x / TILE, b.y + z / TILE, lv];
+  };
+  // (and for an ear: inside, the plan's place only near the ear, where one is heard — far off, the door is as good, and asks no plan of
+  // the repartidor: the scene is asked four times a second)
+  A.lugarDe = (v, ear) => (v.inside > 0 && (v.x - ear.x) * (v.x - ear.x) + (v.y - ear.y) * (v.y - ear.y) < ear.r * ear.r * 6.25 ? A.ondeDe(v) : [v.x, v.y, 0]);
+  // a source in the room the ear is in: the same distance and side, but at a room's scale — the voice a metre off is louder than the
+  // one across the hall, and a step to the side is a side (pan) — and no wall between: what a room sounds like near (sala, its id)
+  A.NEAR = 1.6; // (metres: nearer than this, the whole of a sound)
+  A.perto = function (ear, x, y, alc) {
+    const h = A.hear(ear, x, y, ear.dentro, alc); const k = G.clamp(A.NEAR / Math.max(A.NEAR, h.d * TILE), 0.3, 1);
+    const lat = ear.rx === null ? 0 : (x - ear.x) * ear.rx + (y - ear.y) * ear.ry;
+    return { d: h.d, gain: r3(h.gain * k), pan: r3(h.d < 1e-6 ? 0 : G.clamp(lat / Math.max(h.d, 0.35), -1, 1)), muf: 0, sala: ear.dentro };
+  };
+  // the talk of a room: who is awake in it and talking now — at a table with company (the pose of the talk), or in an act of the
+  // tongue —, how drunk they are (G.Atmos.drunk) and the people whose tongue it is (the timbre; no words). Nobody talking: silence
+  A.FALA = new Set(['sittalk', 'talk', 'chat', 'argue', 'laugh', 'tell', 'question', 'greet', 'insult', 'threaten', 'refuse', 'accept', 'agree', 'disagree', 'story', 'brinde', 'jogo-ossos', 'cantar-junto']);
+  A.falando = v => !v.sleeping && (A.FALA.has(v.act) || !!(v.task && v.task.pose === 'sittalk'));
+  // (the tongue is of who talks — the people most of them are of —, never the building's style: an Egyptian-built tavern in a town of
+  // the north talks in the north's voice)
+  A.vozesDe = function (b, quem) {
+    let fala = 0, beb = 0; const At = G.Atmos; const civ = {}; let povo = null, pn = 0;
+    for (const v of quem || NADA) if (v.inside === b.id && A.falando(v)) { fala++; beb += At && At.drunk ? At.drunk(v) : 0; const c = (G.Fac && G.Fac.ofV ? (G.Fac.ofV(v) || NONE).civ : null) || 'classico'; civ[c] = (civ[c] || 0) + 1; if (civ[c] > pn || (civ[c] === pn && c < povo)) { pn = civ[c]; povo = c; } }
+    const bebado = fala ? r3(beb / fala) : 0;
+    return { fala, bebado, forca: r3(fala * (1 + 0.6 * bebado)), povo: povo || estilo(b) };
+  };
+  A.ROOM_R = 6; // (tiles: as far as a room's own sounds carry out of it — the tavern is heard near, from the street and from the god's eye)
+  // the pulse of a people's music (the meter and the pace of its dances: the Greek's seven of the kalamatianós, the north's three, the
+  // Egyptian's maqsum, the Aztec's drum) — the pulse the player plays the tune on and the room claps, dances and sings to. The pulse is
+  // the world's: it counts from the set's start (the musician's own clock, t.mw) in the world's seconds of a pulse (periodo: the pace
+  // of the body, Space.TIME — what the 3D's clap can follow too). Pure
+  A.RITMO = { classico: { bpm: 100, ciclo: [1, 0, 0.5, 0] }, grego: { bpm: 132, ciclo: [1, 0, 0, 0.6, 0, 0.6, 0] }, nordico: { bpm: 88, ciclo: [1, 0, 0] },
+    egipcio: { bpm: 100, ciclo: [1, 0.5, 0, 0.5, 1, 0, 0.5, 0] }, asteca: { bpm: 116, ciclo: [1, 0, 0.6, 0, 1, 0, 0.6, 0.6] }, romano: { bpm: 108, ciclo: [1, 0, 0.5, 0] } };
+  A.compasso = function (v) {
+    const m = povo(v); const R = A.RITMO[m.civ] || A.RITMO.classico; const T = (G.Space && G.Space.TIME) || 0.27; const t = v && v.task;
+    return { de: v ? v.id : 0, civ: m.civ, era: m.era, bpm: R.bpm, ciclo: R.ciclo, periodo: r3(60 / R.bpm * T), t0: t && Number.isFinite(t.mw) ? t.mw : 0, notas: m.notas, timbre: m.timbre };
+  };
+  // the instrument in the hands of who plays (the kit's, G.Inv.held — the lyre, the drum, of what the people had: D-764), or none: one sings
+  A.instrumentoDe = function (v) {
+    const I = G.Inv, It = G.Itens; const k = I && I.held ? I.held(v).mao : null; const d = k && It && It.def ? It.def(k) : null;
+    return d && (d.kind === 'lira' || d.kind === 'tambor') ? d.kind : null;
+  };
+  // the material of the cup in the hand (the kit's: the clay of a people that had the potter's ware, else turned wood; a metal one)
+  const matDe = v => { const I = G.Inv, It = G.Itens; const k = I && I.held ? I.held(v).mao : null; const d = k && It && It.def ? It.def(k) : null; const m = d && d.mat ? d.mat : k ? String(k).split('.')[1] : null; return m === 'barro' || m === 'madeira' ? m : m ? 'metal' : 'madeira'; };
+  // the rain on a building's roof: the sky's, or a cloud's over it (as the ear has it: audio.js)
+  const chuvaEm = (x, y) => { const S = G.S; const N = G.Nature; return r3(Math.max((S.weather && S.weather.rain) || 0, N && N.rainAt ? N.rainAt(x, y) * 0.8 : 0)); };
+  // (how loud each fire of a plan crackles: the long fire of the north's hall, the hearth, a stove's covered fire)
+  A.FOGO = { 'fogo-comprido': 1.2, lar: 1, lareira: 0.9, 'fogo-chao': 0.9, braseiro: 0.6, fogao: 0.7, 'fogao-comal': 0.6, forno: 0.5, 'forno-barro': 0.55, fogareiro: 0.45 };
+  // a door shut: who passes makes it swing — but the door that stands open by its own rule (the tavern in its hours, the workshop by
+  // day with its worker in) swings for nobody: the feet only cross its threshold
+  const ficaAberta = (b, quem) => {
+    const In = G.Interiors; const T = In && In.TYPES ? In.TYPES[b.ip.t] : null; if (!T) return false;
+    if (T.use === 'taverna') return !!(G.Taverna && G.Taverna.aberta && G.Taverna.aberta(b));
+    return !!(T.open && !(G.isNight && G.isNight()) && (quem || NADA).some(v => v.job === b.id && v.inside === b.id));
+  };
+
   // ------------------------------ the scene ------------------------------
   // what would sound now for this ear: the sources (each with what it is of — a person, a building and its operation, a
   // ship, a beast —, its sound, how loud, which side, how muffled), the quarter's bed, the people about, the music's people
@@ -346,11 +489,18 @@
     // generation 26, stood beside the quay a hand off the town's last patch, and the port's bed counted no hands while she
     // worked: L-817)
     const handsQ = v => { const at = U.at(v.x, v.y); if (at) return at; const op = opOf(v.task || NONE); const b = op && op.at ? S.buildings.get(op.at) : null; return b ? U.at(b.x + (b.w || 1) / 2, b.y + (b.h || 1) / 2) : null; };
-    const push = (o, h, L) => { o.d = h.d; o.gain = r3(h.gain * L.v); o.pan = h.pan; o.muf = h.muf; if (o.gain >= A.MIN) all.push(o); return o.gain >= A.MIN; };
+    const push = (o, h, L) => { o.d = h.d; o.gain = r3(h.gain * L.v); o.pan = h.pan; o.muf = h.muf; if (h.sala) o.sala = h.sala; if (o.gain >= A.MIN) all.push(o); return o.gain >= A.MIN; };
+    // (who is awake inside each building, and who is passing a way in: the rooms' own counts, P9)
+    const dentro = new Map(), passam = []; const In = G.Interiors; const At = G.Atmos;
+    // (the musician a tavern has playing now: the pulse its claps, its dance and its song go to)
+    const musicoEm = bid => { const T = G.Taverna; const bb = T && T.dia ? S.buildings.get(bid) : null; const op = bb ? T.dia(bb) : null; const m = op && op.data && op.data.mus ? S.villagers.get(op.data.mus) : null; return m && m.act === 'play' && m.inside === bid ? m : null; };
     // ---- the people: a gesture, an act
     for (const v of S.villagers.values()) {
       if (v.aboard || v.held || v.air || v.sleeping || !!v.ug !== !!ear.ug) continue;
-      const r = v.act ? A.linhaDe(v) : null; const L = r && r.linha && r.linha.s ? r.linha : null;
+      if (v.inside > 0) { let L0 = dentro.get(v.inside); if (!L0) dentro.set(v.inside, L0 = []); L0.push(v); if (In && In.passage && In.passage(v)) passam.push(v); }
+      const r = v.act ? A.linhaDe(v) : null; let L = r && r.linha && r.linha.s ? r.linha : null;
+      // (the drunk at a table talks louder, slurred, and laughs at his own jokes: the drink's — G.Atmos.drunk —, never the air's)
+      if (L && L.s === 'voz' && At && At.drunk && At.drunk(v) >= 0.5) L = Object.assign({}, L, { s: 'vozBebado', v: Math.min(1, L.v * 1.25) });
       const fam = A.famDe(v, r); const mine = !!(fam && q && handsQ(v) === q);
       if (mine) count[fam] = (count[fam] || 0) + 1;
       const dx = v.x - ear.x, dy = v.y - ear.y;
@@ -363,9 +513,19 @@
           tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))) }, A.hear(ear, v.x, v.y, 0, 0.45), oc);
         continue;
       }
-      const h = A.hear(ear, v.x, v.y, shut(v.inside), L.alc);
-      const o = { k: 'v' + v.id, tipo: r.tipo, s: L.s, g: r.g, ato: r.ato, de: { v: v.id, op: (v.task && Number.isInteger(v.task.op) && v.task.op) || 0, b: v.inside || 0 }, x: r3(v.x), y: r3(v.y), q: L.q, cada: L.cada || 0,
-        fase: r3(v.actT || 0), contato: r.g ? G.Act.ANIM[r.g].contact : 0, fam, notas: L.s === 'lute' ? povo(v).notas : null, tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))) };
+      // (where the one is: inside a building, the place the plan gives them — the room's own side and distance, P9)
+      const [px, py, plv] = A.lugarDe(v, ear); const sin = shut(v.inside);
+      // (and from outside a shut building, one inside carries only as far as a room's own sounds do: A.ROOM_R — L-1963)
+      const h = ear.dentro && sin === ear.dentro ? A.perto(ear, px, py, L.alc) : A.hear(ear, px, py, sin, sin ? Math.min(L.alc, A.ROOM_R / ear.r) : L.alc);
+      const o = { k: 'v' + v.id, tipo: r.tipo, s: L.s, g: r.g, ato: r.ato, de: { v: v.id, op: (v.task && Number.isInteger(v.task.op) && v.task.op) || 0, b: v.inside || 0 }, x: r3(px), y: r3(py), q: L.q, cada: L.cada || 0,
+        fase: r3(v.actT || 0), contato: r.g ? G.Act.ANIM[r.g].contact : L.em || 0, fam, notas: L.s === 'lute' ? povo(v).notas : null, tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))),
+        povo: (G.Fac && G.Fac.ofV ? (G.Fac.ofV(v) || NONE).civ : null) || 'classico' };
+      // (P9: the cup's material in the hand; the floor under the feet; the music of who plays — the instrument in the hand, or the voice —
+      // and its pulse; and the room's pulse for who claps, dances or sings along with it)
+      if (L.mat) o.mat = matDe(v);
+      if (L.piso && v.inside > 0) { const bb = S.buildings.get(v.inside); o.piso = bb && bb.ip ? A.PASSO[A.chaoDe(bb, plv)] || 'terra' : 'terra'; }
+      if (r.g === 'tocar') { const ins = A.instrumentoDe(v); o.s = ins || 'canto'; o.musica = A.compasso(v); }
+      if (L.compasso && v.inside > 0) { const m = musicoEm(v.inside); if (m) o.ritmo = A.compasso(m); }
       // (too far to tell apart, but of this quarter's work: one of the bed's own far voices — the nearest three of each life)
       if (!push(o, h, L) && mine) { const F = far[fam] || (far[fam] = []); F.push(o); }
     }
@@ -373,12 +533,65 @@
     const acts = G.Act && G.Act.all ? G.Act.all() : [];
     for (const op of acts) {
       if (!G.Act.live(op) || !op.at || ear.ug) continue; const b = S.buildings.get(op.at); if (!b) continue;
-      const bx = b.x + (b.w || 1) / 2, by = b.y + (b.h || 1) / 2; let L = null, n = 0;
-      if (op.def === 'taverna') { n = Object.keys((op.data && op.data.mesa) || NONE).length; if (n >= 2) L = { s: 'murmur', q: 'curso', cada: Math.max(0.6, 2.4 - n * 0.25), v: Math.min(0.7, 0.2 + n * 0.07), alc: 0.9 }; }
+      const bx = b.x + (b.w || 1) / 2, by = b.y + (b.h || 1) / 2; let L = null, n = 0, V = null;
+      // (the talk of a tavern's room, P9 — D-780: who is awake in it and talking now, louder with the drink, in the timbre of its people;
+      // nobody talking, nothing. n: who is at its tables)
+      if (op.def === 'taverna') { n = Object.keys((op.data && op.data.mesa) || NONE).length; V = A.vozesDe(b, dentro.get(b.id)); if (V.fala >= 2) L = { s: 'murmur', q: 'leito', cada: Math.max(0.6, 2.4 - V.fala * 0.25), v: Math.min(0.75, 0.14 + 0.06 * V.forca), alc: A.ROOM_R / ear.r }; }
       else if (op.def === 'oficio') { const s = G.Oficio && G.Oficio.stage ? G.Oficio.stage(op) : null; if (s && s.kind === 'fogo' && op.data.calor > 0) L = { s: 'fornalha', q: 'curso', cada: 1.1, v: 0.45, alc: 0.8 }; }
       else if (op.def === 'termas') { if (op.data && op.data.calor > 0) L = { s: 'fornalha', q: 'curso', cada: 1.4, v: 0.3, alc: 0.6 }; }
       if (!L) continue;
-      push({ k: 'b' + b.id + ':' + op.def, tipo: 'predio', s: L.s, g: null, ato: null, de: { b: b.id, op: op.id }, x: r3(bx), y: r3(by), q: L.q, cada: L.cada, fase: 0, contato: 0, fam: FAM_DEF[op.def] || null, n }, A.hear(ear, bx, by, shut(b.id), L.alc), L);
+      const o = { k: 'b' + b.id + ':' + op.def, tipo: 'predio', s: L.s, g: null, ato: null, de: { b: b.id, op: op.id }, x: r3(bx), y: r3(by), q: L.q, cada: L.cada, fase: 0, contato: 0, fam: FAM_DEF[op.def] || null, n };
+      if (V) { o.fala = V.fala; o.bebado = V.bebado; o.forca = V.forca; o.povo = V.povo; }
+      const hb = A.hear(ear, bx, by, shut(b.id), L.alc); if (ear.dentro && ear.dentro === shut(b.id)) hb.sala = ear.dentro;
+      push(o, hb, L);
+    }
+    // ---- the room the ear is in (P9, D-782 to D-786): the fire burning in it (G.Atmos.fire: lit, never by itself), the pot on it (the
+    // fire cooking with food in store, G.Atmos.within), the rain on its roof (the rain over it, on the roof the 3D lays); and, near the
+    // ear, the doors someone passes (In.passage: the door swings for them — or stands open by its rule) and the feet of who walks inside
+    let sala = null;
+    if (!ear.ug && In && In.ready) {
+      const eb = ear.dentro ? S.buildings.get(ear.dentro) : null;
+      if (eb && eb.ip && In.ready(eb)) {
+        const P = In.plan(eb); const E = A.ecoDe(eb); const ex = eb.x + (eb.w || 1) / 2, ey = eb.y + (eb.h || 1) / 2;
+        const ent = P.entrance; const porta = ent && ent.door >= 0 && In.doorState ? In.doorState(eb, ent.door) : null;
+        sala = { b: eb.id, tipo: eb.type, nome: G.Village && G.Village.buildName ? G.Village.buildName(eb) : eb.type, eco: E, piso: E ? E.piso : A.chaoDe(eb, 0), telhado: A.telhadoDe(eb),
+          porta: porta ? porta.state : null, fora: porta && porta.state === 'aberta' ? 0.55 : 1, chuva: 0 };
+        const fire = At && At.fire ? At.fire(eb) : null; let lar = null;
+        if (fire && P.items) for (const it of P.items) {
+          if (!it.fire) continue; const x = eb.x + it.x / TILE, y = eb.y + it.z / TILE; const k = A.FOGO[it.kind] || 0.6; if (!lar) lar = { x, y, it };
+          push({ k: 'f' + eb.id + ':' + it.id, tipo: 'fogo', s: 'lareira', g: null, ato: null, de: { b: eb.id }, x: r3(x), y: r3(y), q: 'leito', cada: 0.3, fase: 0, contato: 0, fam: null, forca: k, peca: it.kind, why: fire.why }, A.perto(ear, x, y, 0.6), { v: G.clamp(0.35 + 0.3 * k, 0.3, 0.8) });
+        }
+        const w = At && At.within ? At.within(eb) : null;
+        if (lar && w && w.cozinha) push({ k: 'n' + eb.id + ':panela', tipo: 'panela', s: 'panela', g: null, ato: null, de: { b: eb.id }, x: r3(lar.x), y: r3(lar.y), q: 'leito', cada: 0.3, fase: 0, contato: 0, fam: null, mat: w.cozinha.mat || 'barro', why: w.cozinha.why }, A.perto(ear, lar.x, lar.y, 0.5), { v: 0.4 });
+        const rain = chuvaEm(ex, ey); const tel = sala.telhado;
+        if (rain > 0.02 && tel) {
+          // (an old roof no one cares for lets the rain in: a drip — G.Atmos.wear, the years and the care of the quarter)
+          const wr = At && At.wear ? At.wear(eb) : null; const got = !!(wr && wr.ageLv >= 3 && wr.care === 0 && rain > 0.4);
+          sala.chuva = rain;
+          push({ k: 'c' + eb.id, tipo: 'chuva', s: 'chuvaTelhado', g: null, ato: null, de: { b: eb.id }, x: r3(ex), y: r3(ey), q: 'leito', cada: 0.3, fase: 0, contato: 0, fam: null, telhado: tel, chuva: rain, goteira: got ? 1 : 0, eco: E ? E.h : 3 }, { d: 0, gain: 1, pan: 0, muf: 0, sala: eb.id }, { v: G.clamp(0.25 + 0.6 * rain, 0, 0.85) });
+        }
+      }
+      // the doors someone passes (one source a door: who passes, how many), and the feet of who passes inside, on the plan's floor
+      const doors = new Map();
+      for (const v of passam) {
+        const b = S.buildings.get(v.inside); if (!b || !b.ip || !In.ready(b)) continue; const P = In.plan(b); const ent = P && P.entrance; if (!ent) continue;
+        const dx = b.x + ent.x / TILE, dy = b.y + ent.z / TILE; if (Math.hypot(dx - ear.x, dy - ear.y) > A.ROOM_R) continue;
+        const ps = In.passage(v); const kd = 'p' + b.id + ':' + ent.door; let D = doors.get(kd);
+        if (!D) { const st = In.doorState ? In.doorState(b, ent.door) : null; D = { k: kd, tipo: 'porta', s: 'porta', g: null, ato: null, de: { b: b.id, v: v.id }, x: r3(dx), y: r3(dy), q: 'estado', cada: 0, fase: 0, contato: 0, fam: null, estado: st ? st.state : 'aberta', fica: ficaAberta(b, dentro.get(b.id)) ? 1 : 0, n: 0 };
+          doors.set(kd, D); const hd = A.hear(ear, dx, dy, ear.dentro === b.id ? b.id : 0, A.ROOM_R / ear.r); if (ear.dentro === b.id) hd.sala = b.id; push(D, hd, { v: 0.6 }); }
+        D.n++;
+        // (the feet: on the way in the walk to the place; on the way out, the steps to the door — with the scrape of the bench one gets up
+        // from, or sits down on, where the plan's place is a seat)
+        const [px, py, plv] = A.ondeDe(v); const pl = In.placeOf(v); const T = G.Taverna; const keeper = T && T.keeperOf ? T.keeperOf(b) : null;
+        const banco = ps.out ? (b.type === 'taverna' && keeper !== v ? 1 : 0) : (pl && pl.use === 'sentar' ? 1 : 0);
+        const hp = ear.dentro === b.id ? A.perto(ear, px, py, 0.4) : A.hear(ear, px, py, b.id, 0.4);
+        push({ k: 's' + v.id, tipo: 'passos', s: 'passo', g: null, ato: null, de: { v: v.id, b: b.id }, x: r3(px), y: r3(py), q: 'curso', cada: 0.52, fase: 0, contato: 0, fam: null, piso: A.PASSO[A.chaoDe(b, plv)] || 'terra', pass: ps.out ? 'sai' : 'entra', banco, tom: r3((v.g === 'f' ? 0.85 : 1) * (v.age < 14 ? 0.7 : 1)) }, hp, { v: 0.4 });
+      }
+      // (and the body's own feet, on the floor of the room it walks in — the drawing's motion, G.Avatar.motion: the speed of the feet)
+      if (sala && ear.modo === 'corpo' && S.avatar && G.Avatar && G.Avatar.motion) {
+        const m = G.Avatar.motion(); const me = S.villagers.get(S.avatar.id); const eb = S.buildings.get(sala.b);
+        if (m && me && m.ground && m.speed > 0.35) push({ k: 's' + me.id, tipo: 'passos', s: 'passo', g: null, ato: null, de: { v: me.id, b: sala.b }, x: r3(ear.x), y: r3(ear.y), q: 'curso', cada: r3(G.clamp(0.72 - 0.09 * m.speed, 0.3, 0.62)), fase: 0, contato: 0, fam: null, piso: A.PASSO[A.chaoDe(eb, 0)] || 'terra', pass: null, banco: 0, tom: 1, meu: 1 }, { d: 0, gain: 1, pan: 0, muf: 0, sala: sala.b }, { v: 0.32 });
+      }
     }
     // ---- the ships under way
     if (!ear.ug) for (const s of S.ships) {
@@ -416,6 +629,9 @@
       }
       fundo = { q: q.whole ? 'w' + q.set : 'd' + q.id, set: q.set, nome: q.whole ? (set ? set.name : '') : q.name, perfil: (q.tags || []).slice(), h, agora, w, de, maos: Object.assign({}, count) };
     }
-    return { ear, n: heard.length, fontes: heard.slice(0, A.VOZES), fundo, gente, musica: A.musicAt(ear.x, ear.y), hora: r3(S.time), noite: night, chuva: r3((S.weather && S.weather.rain) || 0) };
+    // (the ear tells apart the loudest A.VOZES; the beds of the room the ear is in — its talk, its fire, its pot, its rain — are always
+    // there under them, P9)
+    let told = 0; const fontes = heard.filter(o => o.q === 'leito' || ++told <= A.VOZES);
+    return { ear, n: heard.length, fontes, fundo, gente, musica: A.musicAt(ear.x, ear.y), hora: r3(S.time), noite: night, chuva: r3((S.weather && S.weather.rain) || 0), sala };
   };
 })(window.G);

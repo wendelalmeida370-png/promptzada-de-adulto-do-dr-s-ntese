@@ -250,7 +250,10 @@ if (on('d7')) {
   out.push(got.join(', '));
   // (2) never a gesture of a thing not in the hands: the bones, the cloth, the cups gathered, the toast's cup
   const none = [['jogo-ossos', seat], ['limpar-mesa', stand], ['recolher-canecas', stand], ['brinde', seat]].map(([act, pl]) => [act, shown(at(cp({ act }), pl, {}))]);
-  out.push('sem a coisa na mão: ' + none.map(([a, k]) => `${a} «${k}»`).join(', ')); for (const [a, k] of none) if (A3.CLIPS[k] && A3.CLIPS[k].item) bad.push(`${a}: o gesto «${k}» com a mão vazia`);
+  // (the table wiped with the keeper's cloth or the straw of the people's grain — G.Vida3D.wipeOf —: with neither, not wiped)
+  const wipeK = V3.wipeOf(cp({ act: 'limpar-mesa' }), P3.look(cp({ act: 'limpar-mesa' })));
+  out.push('sem a coisa na mão: ' + none.map(([a, k]) => `${a} «${k}»`).join(', ') + ` (o pano ou a palha do povo: ${wipeK || 'nenhum'})`); for (const [a, k] of none) if (A3.CLIPS[k] && A3.CLIPS[k].item && !(a === 'limpar-mesa' && wipeK)) bad.push(`${a}: o gesto «${k}» com a mão vazia`);
+  if (wipeK && none.find(x => x[0] === 'limpar-mesa')[1] !== 'limpar-mesa') bad.push('o pano ou a palha do povo sem a mesa limpa');
   // (with a thing in the hand — the proof's hand puts one there, as the inventory would —: the gesture)
   const withIt = [['jogo-ossos', seat, 'jogo-ossos'], ['limpar-mesa', stand, 'limpar-mesa'], ['recolher-canecas', stand, 'recolher-canecas']].map(([act, pl, k]) => [act, shown(at(cp({ act }), pl, { mao: cupK })), k]);
   out.push('com uma coisa na mão: ' + withIt.map(([a, k]) => `${a} «${k}»`).join(', ')); for (const [a, k, w] of withIt) if (k !== w) bad.push(`${a}: «${k}» com a coisa na mão (devia ser ${w})`);
@@ -272,9 +275,10 @@ if (on('d7')) {
   out.push(`o taverneiro com o prato (${Lk.inv.mao || 'nada'} na mão, a comida: ${Lk.food || 'nenhuma'}): à mesa «${shown(sv)}», andando «${wk}»`);
   if (!/^prato\./.test(Lk.inv.mao || '') || shown(sv) !== 'servir-prato' || wk !== 'levar-prato' || !Lk.food) bad.push('o prato do taverneiro');
   // (6) the music's compass: a clip of beats at the musician's clock — the claps on his notes —, and the world's clock with nobody playing
-  const M = { act: 'play', actT: 7.3, inside: 1 }; const mus0 = V3.musician; V3.musician = () => M; const uM = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = () => null; const uW = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = mus0;
-  const wantM = (7.3 / (2 * V3.BEAT)) % 1, wantW = ((G.S.clock || 0) / (2 * V3.BEAT)) % 1;
-  out.push(`o compasso: com o músico ${uM.toFixed(3)} (o relógio dele ${wantM.toFixed(3)}), sem ele ${uW.toFixed(3)} (o do mundo ${wantW.toFixed(3)})`); if (Math.abs(uM - wantM) > 1e-6 || Math.abs(uW - wantW) > 1e-6) bad.push('o compasso da música');
+  // (the pulse is the sound's: G.Audio.compasso — the musician's people's pace and the start of his set, P9)
+  const M = copy(v, { act: 'play', actT: 7.3, inside: 1, task: { type: 'tavern', op, st: 6, mw: (G.S.clock || 0) - 3.1 } }); const mus0 = V3.musician; V3.musician = () => M; const uM = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = () => null; const uW = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = mus0;
+  const kM = G.Audio.compasso(M), kW = G.Audio.compasso(cp({})); const wantM = (((G.S.clock || 0) - kM.t0) / (2 * kM.periodo)) % 1, wantW = ((G.S.clock || 0) / (2 * kW.periodo)) % 1;
+  out.push(`o compasso: com o músico ${uM.toFixed(3)} (o pulso dele, ${kM.civ} ${kM.bpm} bpm, ${wantM.toFixed(3)}), sem ele ${uW.toFixed(3)} (o do mundo ${wantW.toFixed(3)})`); if (Math.abs(uM - wantM) > 1e-6 || Math.abs(uW - wantW) > 1e-6) bad.push('o compasso da música');
   // (7) the face: the chewing works the jaw shut and open (never the vowels of a word), the nap shuts the eyes
   const RO = G.Rosto, X = RO.IDX; let lo = 9, hi = -9, pr = 0; const m0 = {}, pose = A3.POSE0(); pose.chew = 1; pose.talk = 0;
   for (let k = 0; k < 60; k++) { const F = A3.faceMix(m0, { clock: k / 30, id: 7 }, pose, null, { pz: null }, 1 / 30); lo = Math.min(lo, F[X.jaw]); hi = Math.max(hi, F[X.jaw]); pr = Math.max(pr, F[X.press]); }

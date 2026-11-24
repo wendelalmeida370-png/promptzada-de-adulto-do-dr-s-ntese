@@ -3,6 +3,9 @@
 // The sounds of the place are written down as they ring (G.Audio.gravar: which sound, of whom, how loud, which side, how
 // muffled): each tick says the scene the ear has (G.Audio.cena) and what rang; the last lines, every sound of a place by its
 // name, how many had a side or a wall — and how many had no living owner (a failure).
+// TAVERNA=1 (with MUNDO=metropole, P9): the world to the evening by the game's own skip, the ear inside the tavern with the most people
+// in it (G.Audio.ouvido, the proofs' ear: at the middle of its room), the world at the body's pace (Space.TIME): the room heard from
+// within — at the end, every sound that rang there and of whom (a person, the building), the room's echo, its floor and its roof.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
 (async () => {
@@ -18,13 +21,23 @@ const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
   await page.goto(process.env.GAME || 'file://' + require('path').resolve(__dirname, '..', 'index.html')); await page.waitForTimeout(900);
   await page.addScriptTag({ path: __dirname + '/qa.js' });
   await page.mouse.click(600, 400); // (a gesture, as a player gives)
-  const MUNDO = process.env.MUNDO || '';
+  const MUNDO = process.env.MUNDO || ''; const TAVERNA = !!process.env.TAVERNA && !!MUNDO;
   if (MUNDO) { await page.evaluate(() => { window.__w = {}; G.Ready.got = (k, s) => { window.__w[k] = s; }; }); await page.addScriptTag({ path: require('path').resolve(__dirname, '..', 'worlds', MUNDO + '.js') }); }
   await page.evaluate(MUNDO => { if (MUNDO) G.Main.openSave(JSON.parse(window.__w[MUNDO]), ''); else G.Main.newGame({ type: 'continente', size: 96, tribes: 4, temper: 'belicoso', clima: 'variado', relevo: 'montanhoso' }); G.Main.mode = 'game'; G.Audio.init(); G.Audio.mute = false; G.Audio.setSfx(true); G.Audio.setMusic(true); G.Audio.setAmb(true); G.UI.setSpeed(MUNDO ? 2 : 4);
     G.Audio.gravar = true; window.__rung = {}; window.__orf = []; window.__side = 0; window.__wall = 0; window.__far = 0;
     if (MUNDO) { const s = [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0]; const p = G.Render.proj(s.cx, s.cy, G.W.groundH(s.cx, s.cy)); const cam = G.Render.cam; cam.x = p[0]; cam.y = p[1]; cam.zoom = cam.tz = 2.4; cam.follow = 0; }
     window.__plays = 0; const p0 = G.Audio.play, a0 = G.Audio.at; G.Audio.play = function () { window.__plays++; return p0.apply(this, arguments); }; G.Audio.at = function () { window.__plays++; return a0.apply(this, arguments); };
     window.__frames = 0; const raf = window.requestAnimationFrame; (function f() { window.__frames++; raf(f); })(); }, MUNDO);
+  // (P9: the night in a tavern — the game's skip to 0,72, the room with the most people in it, the ear at its middle, the body's pace)
+  if (TAVERNA) await page.evaluate(() => {
+    const S = G.S; G.Skip.on = true; G.FX.off = true; try { let n = 0; while ((S.time < 0.72 || S.time > 0.8) && n++ < 900) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; }
+    const In = G.Interiors; const ins = b => [...S.villagers.values()].filter(v => v.inside === b.id && !v.sleeping).length;
+    const tv = [...S.buildings.values()].filter(b => b.type === 'taverna' && b.built && b.ip && In.plan(b) && G.Taverna.aberta(b)).sort((a, b) => ins(b) - ins(a) || a.id - b.id);
+    const b = tv[0]; window.__tav = b ? b.id : 0; if (!b) return;
+    const ear = () => G.Audio.earOf({ x: b.x + (b.w || 1) / 2, y: b.y + (b.h || 1) / 2, yaw: 0, inside: b.id }); G.Audio.ouvido = ear();
+    G.speed = G.Space.TIME; window.__de = {}; window.__salas = [];
+    const p = G.Render.proj(b.x + 1, b.y + 1, G.W.groundH(b.x + 1, b.y + 1)); const cam = G.Render.cam; cam.x = p[0]; cam.y = p[1]; cam.zoom = cam.tz = 3; cam.follow = 0;
+  });
   const t0 = Date.now(); const log = [];
   const acts = ['lightning', 'meteor', 'rain', 'quake', 'seastorm', 'wolves', 'volcano', 'plague', 'tsunami', 'heal'];
   for (let k = 0; Date.now() - t0 < secs * 1000; k++) {
@@ -33,15 +46,19 @@ const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
       const S = G.S; S.faith = 1e6; const out = {};
       const sets = [...S.settlements.values()]; const s = sets[k % Math.max(1, sets.length)];
       if (s && !window.__w) { const id = acts[k % acts.length]; out.cast = id + ':' + G.Powers.cast(id, s.cx + 3, s.cy + 2); }
+      if (window.__tav !== undefined) { G.speed = G.Space.TIME; const b = S.buildings.get(window.__tav); out.taverna = b ? { id: b.id, nome: G.Village.buildName(b), dentro: [...S.villagers.values()].filter(v => v.inside === b.id && !v.sleeping).length, hora: +S.time.toFixed(3), aberta: G.Taverna.aberta(b) } : null; out.nivel = G.Audio.medir(); const c0 = G.Audio.cena; if (c0 && c0.sala) out.sala = { piso: c0.sala.piso, telhado: c0.sala.telhado, porta: c0.sala.porta, chuva: c0.sala.chuva, eco: c0.sala.eco ? c0.sala.eco.rt + ' s, ' + c0.sala.eco.m2 + ' m² × ' + c0.sala.eco.h + ' m' : '' }; }
       // (what the place rang since the last tick, and of whom: an owner no longer in the world is written down)
       const A = G.Audio; const rung = A.tocou.splice(0); out.lugar = rung.length;
-      for (const e of rung) { window.__rung[e.s] = (window.__rung[e.s] || 0) + 1; if (Math.abs(e.pan) > 0.05) window.__side++; if (e.muf) window.__wall++; if (e.longe) window.__far++; }
+      for (const e of rung) { window.__rung[e.s] = (window.__rung[e.s] || 0) + 1; if (Math.abs(e.pan) > 0.05) window.__side++; if (e.muf) window.__wall++; if (e.longe) window.__far++;
+        if (window.__de) { const de = e.de || {}; const who = de.v !== undefined ? 'v' + de.v : de.b ? 'b' + de.b : de.navio !== undefined ? 'n' + de.navio : de.bicho !== undefined ? 'a' + de.bicho : '?'; const D = window.__de[e.s] || (window.__de[e.s] = {}); D[who] = (D[who] || 0) + 1;
+          if (who === '?' || (de.v !== undefined && !S.villagers.has(de.v)) || (de.b && !S.buildings.has(de.b))) { if (window.__orf.length < 6) window.__orf.push(e.s + ' de ' + JSON.stringify(de)); } } }
       const c = A.cena; if (c) { const tipos = {}; for (const f of c.fontes) tipos[f.tipo] = (tipos[f.tipo] || 0) + 1; out.cena = { modo: c.ear.modo, r: Math.round(c.ear.r), k: +c.ear.k.toFixed(2), fontes: tipos, gente: c.gente, bairro: c.fundo ? c.fundo.nome : '', fundo: c.fundo ? Object.keys(c.fundo.w).filter(f => c.fundo.w[f] > 0).map(f => f + ' ' + c.fundo.w[f]).join(', ') : '', musica: c.musica.civ + '/' + c.musica.epoca };
         for (const f of c.fontes) { const de = f.de || {}; const ok = (de.v !== undefined && S.villagers.has(de.v)) || (de.b && S.buildings.has(de.b)) || (de.navio !== undefined && S.ships.some(x => x.id === de.navio)) || (de.bicho !== undefined && S.animals.has(de.bicho)); if (!ok && window.__orf.length < 6) window.__orf.push(f.k + ' ' + f.s); } }
+      if (window.__tav === undefined) {
       if (k % 4 === 1) { G.Cinema && (G.Cinema.on ? G.Cinema.stop() : G.Cinema.start && G.Cinema.start()); out.cinema = !!(G.Cinema && G.Cinema.on); }
       if (k % 3 === 2 && G.Render.rotate) { G.Render.rotate(1); out.rot = 1; }
       if (k % 5 === 3) { G.UI.setSpeed([1, 2, 4, 8, 16][k % 5]); }
-      if (k === 6 || k === 8) { G.Render.setUnder(!G.Render.under); out.under = G.Render.under; }
+      if (k === 6 || k === 8) { G.Render.setUnder(!G.Render.under); out.under = G.Render.under; } }
       // (the autosave is written compressed — 'gz1:…', when its packing ends —: it is there, or on its way; read as JSON it broke the run at its tenth tick, T-728)
       if (k === 9) { G.Save.save(true); out.saved = !!(localStorage.getItem('gotaf-save-v1') || G.Save.pending); }
       out.ac = window.__ac ? window.__ac.state : 'none'; out.live = window.__src.made - window.__src.ended; out.made = window.__src.made; out.day = S.day; out.frames = window.__frames; out.plays = window.__plays; out.pop = S.villagers.size;
@@ -49,11 +66,28 @@ const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
     }, [k, acts]);
     log.push(r);
   }
-  const lugar = await page.evaluate(() => ({ rung: window.__rung, orf: window.__orf, side: window.__side, wall: window.__wall, far: window.__far }));
+  const lugar = await page.evaluate(() => ({ rung: window.__rung, orf: window.__orf, side: window.__side, wall: window.__wall, far: window.__far, de: window.__de || null, tav: window.__tav }));
   const fin = await page.evaluate(() => ({ viol: QA.check().filter(q => q.sev <= 2).map(q => `[${q.sev}] ${q.msg}`).slice(0, 10), mem: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1e6) : 0 }));
   console.log(log.map(r => JSON.stringify(r)).join('\n'));
   console.log('final', JSON.stringify(fin));
   { const n = Object.values(lugar.rung).reduce((a, b) => a + b, 0); console.log(`sons de lugar: ${n} tocados (${Object.keys(lugar.rung).sort((a, b) => lugar.rung[b] - lugar.rung[a]).map(s => s + ' ' + lugar.rung[s]).join(', ') || 'nenhum'}); com lado ${lugar.side}, abafados ${lugar.wall}, do fundo do bairro ${lugar.far}; fontes sem dono: ${lugar.orf.length ? lugar.orf.join(', ') : 'nenhuma'}`); }
+  // (P9, T-1860: the room's sounds measured, each alone off the line at full volume — beside the old ones of the library, for scale —:
+  // none mute, none clipping, none failing to be made)
+  if (TAVERNA) {
+    const ens = await page.evaluate(async () => { const A = G.Audio; const o = { tom: 1, povo: 'grego', mat: 'barro', piso: 'tabua', nota: 293.66, dur: 0.5 }; const L = ['verter', 'gole', 'brinde', 'riso', 'vozBebado', 'voz', 'ossos', 'pano', 'canecas', 'gorjeta', 'expulsa', 'fechar', 'ronco', 'palmas', 'pe', 'canto', 'lira', 'tambor', 'passo', 'banco', 'porta', 'portaFecha', 'lareira', 'panela', 'chuvaTelhado'];
+      const r = await A.ensaio(L, o); const ref = await A.ensaio(['cup', 'door', 'clap', 'lute', 'coin', 'fire', 'thud', 'hey', 'murmur', 'clang']);
+      for (const p of ['terra', 'lajota', 'laje']) { const q = await A.ensaio(['passo', 'pe', 'banco'], Object.assign({}, o, { piso: p })); for (const k in q) r[k + '/' + p] = q[k]; }
+      for (const m of ['madeira', 'metal']) { const q = await A.ensaio(['brinde', 'gole', 'canecas'], Object.assign({}, o, { mat: m })); for (const k in q) r[k + '/' + m] = q[k]; }
+      const q = await A.ensaio(['tambor', 'lira'], Object.assign({}, o, { forte: 1, baixo: 146.83 })); for (const k in q) r[k + '/forte'] = q[k];
+      return { r, ref }; });
+    const row = (k, x) => `${k} ${x.err ? 'ERRO: ' + x.err : `pico ${x.pico} dB, 50 ms mais altos ${x.alto} dB`}`;
+    console.log('os sons da sala, cada um sozinho (pico e os 50 ms mais altos, em dB do total):'); for (const k in ens.r) console.log('  ' + row(k, ens.r[k]));
+    console.log('a régua (sons de antes da biblioteca):'); for (const k in ens.ref) console.log('  ' + row(k, ens.ref[k]));
+    const bad = Object.keys(ens.r).filter(k => ens.r[k].err || ens.r[k].pico > -0.2 || ens.r[k].alto < -55);
+    console.log(bad.length ? `SONS FORA DO NÍVEL (mudos, estourando ou com erro): ${bad.join(', ')}` : 'nenhum som da sala mudo, estourando ou com erro');
+  }
+  // (P9: what rang in the tavern, and of whom — a person by its id, the building by its own)
+  if (lugar.de) { console.log(`a taverna #${lugar.tav}: o que soou e de quem`); for (const s of Object.keys(lugar.de).sort((a, b) => lugar.rung[b] - lugar.rung[a])) { const D = lugar.de[s]; const who = Object.keys(D); const p = who.filter(w => w[0] === 'v').length, bb = who.filter(w => w[0] === 'b'); console.log(`  ${s}: ${lugar.rung[s]} vez(es) — ${p ? p + ' pessoa(s)' : ''}${p && bb.length ? ', ' : ''}${bb.length ? 'o prédio ' + bb.map(w => '#' + w.slice(1)).join(', ') : ''}${who.some(w => w[0] === 'a' || w[0] === 'n') ? ' e de fora (bichos, navios)' : ''}`); } }
   console.log('erros:', errs.length ? [...new Set(errs)].slice(0, 15).join('\n  ') : 'nenhum');
   await browser.close();
 })();

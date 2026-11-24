@@ -37,6 +37,7 @@
       if (o && o.hatM && D && (v.inside > 0 || v.sleeping) && (D.bed || (['chapeu', 'gorro'].includes(o.hatM)) || ((o.hatM === 'elmo' || o.hatM === 'galea') && !D.duty)) && nh++ < 3) add('vida', 3, `#${v.id}: desenhado de «${o.hatM}» ${v.sleeping ? 'dormindo' : 'debaixo de um teto'}`);
       // (D-796: the gesture of a thing — a clip that holds one — drawn only with the thing in that hand, G.Inv.held: never mimed)
       for (const k of [vs.st, vs.ov]) { const C = k && G.Anim3D.CLIPS ? G.Anim3D.CLIPS[k] : null; if (!C || !C.item) continue; const h = C.item.hand === 'outra' ? 'outra' : 'mao';
+        if (k === 'limpar-mesa' && vs.L && (vs.L.wipe || vs.L.ombro)) continue; // (the keeper's cloth or the straw of the grain: G.Vida3D.wipeOf)
         if (!(vs.L && vs.L.inv && vs.L.inv[h]) && nm++ < 3) add('vida', 2, `#${v.id}: desenhado no gesto «${k}» sem a coisa na mão`); }
       const ca = v.age < 2 && v.carrier ? s.villagers.get(v.carrier) : null; // (L-1908: the baby in arms, where its arms are)
       if (v.age < 2 && (v.carried || (ca && v.inside > 0 && ca.inside === v.inside && !ca.sleeping && !v.sleeping)) && nb++ < 3) add('vida', 2, `#${v.id}: bebê no colo de #${v.carrier} desenhado sozinho ${v.inside > 0 ? 'dentro de #' + v.inside : 'na rua'}`);
