@@ -299,7 +299,7 @@
   function friendDown(v) {
     const S = S_(); const L = G.Lacos; let best = null, bs = -Infinity;
     for (const o of caidos()) {
-      if (o === v || o.set !== v.set || G.dist2(v.x, v.y, o.x, o.y) > 225) continue;
+      if (o === v || o.set !== v.set || !(o.ebrioD > 0) || !o.task || o.task.type !== 'desmaio' || o.inside || G.dist2(v.x, v.y, o.x, o.y) > 225) continue; // (still down: the list is the step's)
       const by = o.task.by && S.villagers.get(o.task.by); if (by && by.task && by.task.type === 'arrastar' && by.task.id === o.id) continue;
       const h = S.buildings.get(o.home); if (!G.Village.livable(h)) continue;
       const s = L ? L.sente(v, o) : null; const f = s ? s.afeto + (s.kin ? 30 : 0) : 0; if (f < E.AMIGO) continue;
@@ -310,7 +310,7 @@
   if (G.Vg && G.Vg.want) G.Vg.want('levar-bebado', {
     pri: 0.9,
     urge(v) { if (!E.forte(v) || v.captive || v.jail || v.aboard || v.inside || G.Vg.handsBusy(v) || !caidos().length) return 0; const o = friendDown(v); return o ? 1.15 : 0; },
-    go(v, H) { const o = friendDown(v); if (!o || !G.W.reaches(v, o.x, o.y)) return null; const t = H.setTask(v, { type: 'arrastar', id: o.id, pri: 0.9, kind: 'arrastar', para: 'casa', st: -1 }); if (t) o.task.by = v.id; return t; },
+    go(v, H) { const o = friendDown(v); if (!o || !G.W.reaches(v, o.x, o.y)) return null; const t = H.setTask(v, { type: 'arrastar', id: o.id, pri: 0.9, kind: 'arrastar', para: 'casa', st: -1 }); if (t && o.task) o.task.by = v.id; return t; },
   });
 
   // ------------------------------ what the drunk do (pure: G.Ebrio.impulso) ------------------------------

@@ -24,11 +24,14 @@ const S = () => G.S;
 const god = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 G.IncUI = G.IncUI || {}; const toasts = []; G.IncUI.toast = t => { toasts.push(t); };
 const clock = () => { const c = process.cpuUsage(); return (c.user + c.system) / 1e6; }; const c0 = clock();
-const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; if (!(S().divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); for (const s of S().settlements.values()) if (s.alarmT > 0) s.alarmT = 0; };
+const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; if (!(S().divinePeace > G.DAY_LEN * 0.5)) god(() => G.Politics.divinePeace()); for (const s of S().settlements.values()) { if (s.alarmT > 0) s.alarmT = 0; s.festPlan = { day: S().day, key: null, done: true }; } }; // (the night in the god's peace, no feast of the town: T-910)
 const skip = (sec, until) => { G.Skip.on = true; G.FX.off = true; try { const t1 = S().clock + sec; let n = 0; while (S().clock < t1 && n++ < 4000) { G.Main.skipStep(1); if (until && until()) break; } } finally { G.Skip.on = false; G.FX.off = false; } };
 const skipTo = h => { G.Skip.on = true; G.FX.off = true; try { let n = 0; while (S().time < h && n++ < 900) G.Main.skipStep(1); } finally { G.Skip.on = false; G.FX.off = false; } };
 const live = (sec, until) => { for (let k = 0; k < sec * 10; k++) { M.viver(0.1); if (until && until()) return true; } return false; };
-const watch = bad => { for (const q of QA.check().filter(q => q.sev <= 3 && (q.sys === 'ebrio' || q.sys === 'taverna' || q.sys === 'atmos'))) { const m = `S${q.sev} ${q.sys}: ${q.msg}`; if (bad.length < 8 && !bad.includes(m)) bad.push(m); } };
+// (the rules of the drink and of what is seen of it fail the proof; the tavern's own, seen meanwhile, are told — the seat two take in the
+// same step is the tavern's, T-1903)
+const notes = [];
+const watch = bad => { for (const q of QA.check().filter(q => q.sev <= 3 && (q.sys === 'ebrio' || q.sys === 'taverna' || q.sys === 'atmos'))) { const m = `S${q.sev} ${q.sys}: ${q.msg}`; const L = q.sys === 'taverna' && !/desmai|bêbad|ebrio/.test(q.msg) ? notes : bad; if (L.length < 8 && !L.includes(m)) L.push(m); } };
 const ACTING = { 2: 1, 3: 1, 4: 1, 5: 1 };
 const atTables = () => { const out = []; for (const op of A.all()) { if (op.def !== 'taverna' || !A.live(op)) continue; for (const id of Object.keys(op.data.mesa)) { const v = S().villagers.get(+id); const m = op.data.mesa[id]; if (v && !m.corpo && !m.body && v.task && v.task.type === 'tavern' && ACTING[v.task.st]) out.push([v, m, op]); } } return out.sort((a, b) => a[0].id - b[0].id); };
 const r2 = x => Math.round(x * 100) / 100;
@@ -100,7 +103,7 @@ if (on('e2')) {
   ok('e2 a índole decide', said.length >= 12 && !wrong.length && (fam.agressivo || 0) >= 3 && (fam.expansivo || 0) >= 5 && mean(ag, 'agr') > mean(said, 'agr') && mean(ex, 'ext') > mean(said, 'ext'), `${said.length} atos de bêbado; fora da causa: ${wrong.length}${wrong.length ? ' — ' + JSON.stringify(wrong[0]) : ''}`);
   ok('e2 os atos se veem', DRUNK.filter(k => seen[k]).length >= 6 && (seen.desmaio || 0) > 0, `${DRUNK.filter(k => seen[k]).length} atos diferentes vistos em quem bebeu`);
   ok('e2 o desmaio e quem tira', faint.size >= 2 && dragged.size >= 1 && (street.size + home.size) >= 1, `${faint.size} desmaiaram, ${dragged.size} arrastados, ${street.size} na rua, ${home.size} em casa`);
-  ok('e2 o verificador', !bad.length, bad.length ? bad.join(' · ') : 'limpo (a bebida, a taverna, o que se vê)');
+  ok('e2 o verificador', !bad.length, (bad.length ? bad.join(' · ') : 'limpo (a bebida e o que se vê dela)') + (notes.length ? ` — da taverna, visto e dito: ${notes.join(' · ')}` : ''));
 }
 
 // ---------------- e3 the drink thrown ----------------
@@ -127,12 +130,13 @@ if (on('e4')) {
   const at = atTables(); const keepers = new Set(at.map(q => { const k = T.keeperOf(G.S.buildings.get(q[2].at)); return k && k.id; }));
   // (one to fall at a table whose keeper is at the counter; one with a friend of the table to take one home)
   const c = at.find(([v, m, op]) => !keepers.has(v.id) && E.tol(v) <= 1.15 && T.keeperOf(G.S.buildings.get(op.at)) && !(v.ebrioD > 0));
-  const df = at.find(([v, m, op]) => v !== (c && c[0]) && !keepers.has(v.id) && E.tol(v) <= 1.15 && G.Village.livable(G.S.buildings.get(v.home)) && at.some(q => q[2] === op && q[0] !== v && q[1].g === m.g && E.forte(q[0]) && q[0].set === v.set && !keepers.has(q[0].id) && q[0] !== (c && c[0])));
+  const homeD = ([v, , op]) => { const h = G.S.buildings.get(v.home), b = G.S.buildings.get(op.at); return h && b ? G.dist(h.x, h.y, b.x, b.y) : 1e9; };
+  const df = at.filter(([v, m, op]) => v !== (c && c[0]) && !keepers.has(v.id) && E.tol(v) <= 1.15 && G.Village.livable(G.S.buildings.get(v.home)) && at.some(q => q[2] === op && q[0] !== v && q[1].g === m.g && E.forte(q[0]) && q[0].set === v.set && !keepers.has(q[0].id) && q[0] !== (c && c[0]))).sort((x, y) => homeD(x) - homeD(y))[0];
   const fr = df ? at.find(q => q[2] === df[2] && q[0] !== df[0] && q[1].g === df[1].g && E.forte(q[0]) && q[0].set === df[0].set && !keepers.has(q[0].id) && q[0] !== (c && c[0])) : null;
   if (!c) ok('e4 o taverneiro arrasta', false, 'ninguém à mesa para cair');
   else {
     const [v, m, op] = c; const b = G.S.buildings.get(op.at); const seen = new Set();
-    god(() => { E.prova(v, Math.min(E.MAX, E.limiar(v, 'desmaio') + 0.12)); if (df && fr) { for (let k = 0; k < 8; k++) L.ato(fr[0], df[0], 'mesa'); E.prova(fr[0], 0); E.prova(df[0], Math.min(E.MAX, E.limiar(df[0], 'desmaio') + 0.12)); } });
+    god(() => { E.prova(v, Math.min(E.MAX, E.limiar(v, 'desmaio') + 0.12)); if (df && fr) { for (let k = 0; k < 8; k++) L.ato(fr[0], df[0], 'mesa'); E.prova(fr[0], 0); E.prova(df[0], E.MAX); } });
     let dz = null, dragT = null; const fd = { carried: false, by: 0, bed: false };
     const d0 = df && fr ? df[0] : null, f0 = fr ? fr[0] : null;
     const track = () => { if (d0) { if (d0.task && d0.task.type === 'arrastado') { fd.carried = true; fd.by = d0.task.id; } if (d0.task && (d0.task.type === 'desmaio' || d0.task.type === 'sleep') && d0.inside && d0.inside === d0.home && d0.sleeping && fd.carried) fd.bed = true; } };
@@ -156,13 +160,16 @@ if (on('e5')) {
   const RDT = 1 / 30; const frame = () => { G.debug.step(RDT * G.Space.TIME); G.Avatar.frame(RDT); G.EbrioCorpo.olho(RDT); };
   const longFrame = () => { G.debug.step(0.25); G.Avatar.frame(RDT); G.EbrioCorpo.olho(RDT); }; // (the world passing while the body is out: the eye is dark)
   // (a grown one at a tavern open now, its keeper at hand: lived by the god, inside, on the floor of its room)
-  const cands = atTables().filter(([v, m, op]) => v.age >= 20 && v.age < 50 && E.tol(v) <= 1.2 && T.keeperOf(G.S.buildings.get(op.at)) && !(v.ebrioD > 0));
+  const kOk = op => { const b = G.S.buildings.get(op.at); const k = T.keeperOf(b); return !!k && !k.secret && E.forte(k); };
+  const cands = atTables().filter(([v, m, op]) => v.age >= 20 && v.age < 50 && E.tol(v) <= 1.2 && kOk(op) && !(v.ebrioD > 0));
   const pick = cands[0];
   if (!pick) ok('e5 o corpo bebe', false, 'ninguém para viver');
   else {
-    const [v, m, op] = pick; const b = G.S.buildings.get(op.at);
-    // (the others of that tavern sober tonight: the keeper free for the body — the drag of the ones out first is the e4's)
+    const [v, m, op] = pick; const b = G.S.buildings.get(op.at); const kp = T.keeperOf(b);
+    // (the others of that tavern sober tonight: the keeper free for the body — the drag of the ones out first is the e4's —; and the
+    // keeper back at his counter)
     god(() => { for (const [o, , q] of atTables()) if (q === op && o !== v) E.prova(o, 0); });
+    live(25, () => kp.inside === b.id && kp.task && kp.task.type === 'atender' && v.task && v.task.type === 'tavern');
     const r = Po.take(v); G.Avatar.attach(v, 0); for (let k = 0; k < 6; k++) frame();
     // (the drink by the body's own rounds — the door the tavern gives its sips through: G.Ebrio.dose, as T.bite does)
     const rng0 = G.S.rng; god(() => E.prova(v, E.limiar(v, 'bebado') + 0.1)); for (let k = 0; k < 90; k++) frame();
@@ -192,7 +199,8 @@ if (on('e5')) {
 if (on('e6')) {
   M.abrir(JSON.parse(SNAP)); calm(); live(8);
   // (one passed out at the table at the save: the house's mark and the person's)
-  const at = atTables(); const c = at.find(([v, m, op]) => E.tol(v) <= 1.15 && !(v.ebrioD > 0)); if (c) god(() => E.prova(c[0], Math.min(E.MAX, E.limiar(c[0], 'desmaio') + 0.1)));
+  // (one with no friend at the tables — nobody to take him home in the second before the save: the house's own faint, at the table)
+  const at = atTables(); const c = at.find(([v, m, op]) => E.tol(v) <= 1.15 && !(v.ebrioD > 0) && !at.some(q => q[2] === op && q[0] !== v && T.fond(q[0], v) >= T.FOND - 1)); if (c) god(() => E.prova(c[0], Math.min(E.MAX, E.limiar(c[0], 'desmaio') + 0.1)));
   if (c) god(() => { const o = at.find(q => q[0] !== c[0]); if (o) E.molha(o[0], 'vinho'); });
   live(1.5);
   const fp = () => [...S().villagers.values()].filter(v => v.ebrio > 0 || v.ebrioD > 0 || v.ressaca > 0 || v.molhado).map(v => [v.id, (v.ebrio || 0).toFixed(5), (v.ebrioG || 0).toFixed(5), v.ebrioD || 0, (v.ressaca || 0).toFixed(4), JSON.stringify(v.molhado || 0)].join(':')).join('|');

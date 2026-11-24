@@ -85,7 +85,7 @@ function cond(v) {
 const crimes = new Map(); // id → { kind, civ, preso }
 // the condition a blow reads (soc-vida.js, act-taverna.js): drunk at the tavern, a grudge held (an offence of weight on the mind), neither
 const MARCA_RUIM = { humilhou: 1, insultou: 1, bateu: 1, roubou: 1, traiu: 1, matou: 1, denunciou: 1 };
-function condA(v) { if (!v) return 'nenhuma'; if (v.drunk > G.S.clock) return 'bebado'; if ((v.marcas || []).some(q => MARCA_RUIM[q[0]] && q[3] >= 20)) return 'rancor'; return 'nenhuma'; }
+function condA(v) { if (!v) return 'nenhuma'; if (G.Ebrio && G.Ebrio.bebado(v)) return 'bebado'; if ((v.marcas || []).some(q => MARCA_RUIM[q[0]] && q[3] >= 20)) return 'rancor'; return 'nenhuma'; }
 function lookCrimes() {
   for (const c of G.S.crimes || []) {
     let r = crimes.get(c.id);

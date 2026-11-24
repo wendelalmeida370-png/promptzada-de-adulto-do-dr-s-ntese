@@ -220,6 +220,9 @@
     horta: ['tigela', [112, 120, 54]], fruta: ['tigela', [176, 58, 44]], mel: ['tigela', [200, 140, 40]], azeite: ['prato', [168, 112, 60]], provisao: ['prato', [150, 110, 70]], '?': ['tigela', [150, 110, 70]] };
   // (what fills a basket: the fruit of each people, the eggs, the shellfish)
   const FRUIT = { grego: [96, 52, 86], romano: [176, 54, 44], classico: [176, 54, 44], egipcio: [120, 70, 40], nordico: [170, 40, 40], asteca: [214, 150, 40] };
+  // (the tablets of a game of cards, by what the people makes them of — their face and their edge: the papyrus, the amate bark, the
+  // wood, the wax in its frame, the clay; T7, D-884)
+  const CARTA = { papiro: [[226, 210, 162], [196, 176, 128]], amate: [[168, 128, 86], [128, 92, 60]], madeira: [[206, 172, 122], [150, 112, 72]], cera: [[86, 68, 46], [150, 112, 72]], barro: [[204, 140, 96], [176, 102, 66]] };
   // (what hangs, by the part of the food it shows: the garden's braid and herbs, the ham, the fish dried, the maize)
   const HANG = { horta: ['alho', 'ervas'], carne: ['presunto'], peixe: ['peixe-seco'], marisco: [], milho: ['milho'] };
 
@@ -295,10 +298,106 @@
     if (leftFood.length && vat) near(ctx, vat, leftFood.filter(q => q.k === 'cesto'));
     // what hangs: the garden's, the meat, the fish dried, the maize — on pegs in the walls by the fire and the bar, else from the joists
     hangFood(ctx, food);
+    // the feast of the day: its decorations on the walls and the tables, its platter (T7, D-880)
+    festa(ctx);
     // the marks of charcoal of the customers of years, on the walls by the tables
     marks(ctx);
-    // what a brawl left on the floor; the words at the door
-    spilt(ctx); slate(ctx);
+    // what a brawl left on the floor; the door barred or broken in; the games at the tables; who fainted; the words at the door
+    spilt(ctx); door(ctx); games(ctx); fainted(ctx); slate(ctx);
+  }
+  // ---- the feast (W.festa, D-880, D-881): each decoration by what it is made of — the garlands, the bunting and the drapes high on
+  // the walls of the hall over the heads, the people's standard on a wall clear down to the floor, the petals and the feast's candles
+  // on the tables —, and the feast's platter of the people on the largest table, its parts what the recipe spent
+  const FESTA_AT = { guirlanda: [1.9, 2.28], fita: [2.02, 2.34], pano: [1.76, 2.28], estandarte: [0.86, 2.2] };
+  function festa(ctx) {
+    const { b, p, W, S } = ctx; const F = W.festa; if (!F) return;
+    const lv = p.entryLv || 0; const l = lvOf(p, lv); if (!l) return;
+    const tops = S.filter(s => s.k === 'tampo' && s.lv === lv && TABLES[s.it.kind] && s.it.kind !== 'arca' && s.it.kind !== 'mesa-leitura' && s.it.kind !== 'mesa-escriba');
+    // (on the walls: each its band of heights, the free stretches of the hall's walls, the nearest to the tables first — and as far from
+    // the others of the feast as the walls allow; never over a thing already on the wall)
+    const tabs = p.items.filter(it => it.lv === lv && TABLES[it.kind]); const placed = [];
+    F.enfeites.forEach((e, i) => {
+      const band = FESTA_AT[e.k]; if (!band) return; const m = MESH(e.modelo); if (!m) return;
+      const y0 = l.y + band[0], y1 = l.y + band[1]; const cand = [];
+      for (const r of runs(p, lv, band[0], band[1], ctx.look)) { if (r.s1 - r.s0 < m.w + 0.1) continue;
+        for (let s = r.s0 + m.w / 2 + 0.05; s <= r.s1 - m.w / 2 - 0.05 + EPS; s += 0.25) { const x = r.x + r.tx * s, z = r.z + r.tz * s; if (ceilAt(p, l, x, z) < y1 + 0.05) continue;
+          cand.push({ r, x, z, d: tabs.length ? Math.min(...tabs.map(t => Math.hypot(t.x - x, t.z - z))) : 0, h: hv(b, Math.round(x * 31 + z * 17) + i) }); } }
+      cand.sort((a, c) => (placed.length ? Math.min(...placed.map(q => Math.hypot(q.x - c.x, q.z - c.z))) - Math.min(...placed.map(q => Math.hypot(q.x - a.x, q.z - a.z))) : 0) || a.d - c.d || a.h - c.h);
+      const at = cand.find(q => ctx.wallFree(q.x, q.z, m.w, y0, y1)); if (!at) return;
+      ctx.wallTake(at.x, at.z, m.w, y0, y1); placed.push(at); const out = m.d / 2 + 0.002;
+      ctx.put(e.modelo, at.x + at.r.nx * out, y0, at.z + at.r.nz * out, Math.atan2(at.r.nx, at.r.nz), { lv, on: 'parede', key: `festa/${e.modelo}/${i}`, why: e.why, festa: 1 });
+    });
+    // (on the tables: the petals in the middle of each, the feast's candles — two to a table, lit in the dark with someone awake)
+    const pet = F.enfeites.find(e => e.k === 'petalas'), vel = F.enfeites.find(e => e.k === 'vela');
+    for (const s of tops.slice(0, 8)) {
+      const L = []; if (pet && MESH('petalas') && s.w > 0.4 && s.d > 0.3) L.push({ k: 'petalas', key: 'petalas', why: pet.why, at: [0, 0], ry: hv(b, 700 + (s.it.k | 0)) * TAU, o: { festa: 1 } });
+      if (vel && MESH('vela')) for (const sd of [-1, 1]) L.push({ k: 'vela', key: 'vela-festa' + sd, why: vel.why, at: [sd * (s.w / 2 - 0.12), sd * (s.d / 2 - 0.1)], o: { festa: 1, lit: F.acesa ? 1 : 0, lmat: W.luz ? W.luz.mat : W.barro ? 'barro' : 'pedra', vs: 0 } });
+      if (L.length) scatter(ctx, s, L);
+    }
+    // (the platter: on the largest table, its middle)
+    const pk = F.prato ? 'comida-festa-' + F.prato.civ : null;
+    if (pk && MESH(pk)) { const big = tops.slice().sort((a, c) => c.w * c.d - a.w * a.d)[0];
+      if (big) scatter(ctx, big, [{ k: pk, key: 'prato-festa', why: F.prato.why, at: [0, 0], ry: hv(b, 720) * 0.6, o: { de: F.prato.de, festa: 1 } }]); }
+  }
+  // ---- the door (W.porta, D-882): locked — the wooden bar across it in its brackets, on its inner face —; broken in — its leaf fallen
+  // flat inside, where the blows threw it, and the splinters at the threshold (the leaf in the doorway is not drawn: Build3D) — till mended
+  function doorAt(p) {
+    const e = p.entrance; if (!e) return null; const h = p.holes.find(q => q.door === e.door); const w = h && p.walls.find(q => q.id === h.wall); if (!w) return null;
+    const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1; const tx = (w.b[0] - w.a[0]) / len, tz = (w.b[1] - w.a[1]) / len; const cx = w.a[0] + tx * h.at, cz = w.a[1] + tz * h.at;
+    const C = G.Interiors.CELL; let nx = -tz, nz = tx; const lv = w.lv | 0;
+    if (cellAt(p, lv, cx + nx * (w.t / 2 + 0.35), cz + nz * (w.t / 2 + 0.35)) !== C.FLOOR) { nx = -nx; nz = -nz; } // (the inside: the room's floor)
+    return { cx, cz, nx, nz, t: w.t, w: h.w, h: h.h, lv };
+  }
+  function door(ctx) {
+    const { b, p, W } = ctx; const P = W.porta; if (!P) return; const d = doorAt(p); const l = d && lvOf(p, d.lv); if (!l) return;
+    const ry = Math.atan2(d.nx, d.nz);
+    if (P.estado === 'trancada') { const m = MESH('tranca'); if (!m) return; const sx = Math.max(1, (d.w + 0.35) / 1.3); const o = d.t / 2 + m.d / 2 + 0.002;
+      ctx.wallTake(d.cx + d.nx * o, d.cz + d.nz * o, m.w * sx, l.y + 0.9, l.y + 0.9 + m.h);
+      ctx.put('tranca', d.cx + d.nx * o, l.y + 0.9, d.cz + d.nz * o, ry, { lv: d.lv, on: 'parede', key: 'porta/tranca', why: P.why, s: [sx, 1, 1] }); return; }
+    if (P.estado === 'arrombada') {
+      const m = MESH('porta-caida'); if (m) { const sx = G.clamp(d.w / 0.95, 0.7, 1.6); const n = d.t / 2 + m.d / 2 + 0.06; const a = (hv(b, 730) - 0.5) * 0.3;
+        ctx.put('porta-caida', d.cx + d.nx * n, l.y + FLOOR_UP, d.cz + d.nz * n, ry + a, { lv: d.lv, on: 'chao', solto: 1, key: 'porta/caida', why: P.why, s: [sx, 1, 1] }); }
+      if (MESH('lascas')) ctx.put('lascas', d.cx + d.nx * (d.t / 2 + 0.24), l.y + FLOOR_UP + 0.001, d.cz + d.nz * (d.t / 2 + 0.24), ry + hv(b, 731) * TAU, { lv: d.lv, on: 'chao', solto: 1, key: 'porta/lascas', why: P.why });
+    }
+  }
+  // ---- the games at the tables (W.jogos, D-884): the dice in the middle of the table, each turned up on the face the world threw
+  // (the throw is the world's: G.JogoDados), their cup by them; the tablets of the game of cards thrown and the hands fanned, the deck
+  const FACE_UP = { 1: null, 6: [1, 0, 0, Math.PI], 2: [0, 0, 1, Math.PI / 2], 5: [0, 0, 1, -Math.PI / 2], 3: [1, 0, 0, -Math.PI / 2], 4: [1, 0, 0, Math.PI / 2] };
+  function faceUp(f, s) {
+    // (a turn about the die's middle, s over its foot: the face f up — column-major, put after the die's own place)
+    const r = FACE_UP[f]; if (!r) return null; const [x, y, z, a] = r; const c = Math.cos(a), sn = Math.sin(a), k = 1 - c;
+    const R = [c + x * x * k, y * x * k + z * sn, z * x * k - y * sn, 0, x * y * k - z * sn, c + y * y * k, z * y * k + x * sn, 0, x * z * k + y * sn, y * z * k - x * sn, c + z * z * k, 0, 0, 0, 0, 1];
+    // (T(0, s, 0) · R · T(0, -s, 0))
+    R[12] = -(R[4] * s); R[13] = s - R[5] * s; R[14] = -(R[6] * s); return R;
+  }
+  function games(ctx) {
+    const { b, W, S } = ctx; if (!W.jogos.length) return;
+    for (const j of W.jogos) {
+      const s = S.find(q => q.k === 'tampo' && q.it.id === j.it); if (!s) continue; const fr = frame(s.it);
+      const put = (k, a, n, ry, o, key) => { const P = fr(s.x + a, s.z + n); return ctx.put(k, P[0], s.y, P[1], (s.it.ry || 0) + ry, Object.assign({ lv: s.lv, on: 'tampo', it: s.it.id, key: `${s.it.id}/jogo/${key}`, why: j.why }, o)); };
+      const both = j.dados && j.cartas;
+      if (j.dados && MESH('dado')) {
+        const dm = MESH('dado'); const ox = both ? -0.12 : 0;
+        j.dados.faces.forEach((f, i) => { const a = ox + ((i % 3) - 1) * 0.034 + (hv(b, 740 + i) - 0.5) * 0.012, n = (Math.floor(i / 3) - 0.5) * 0.034 + (hv(b, 750 + i) - 0.5) * 0.012;
+          put('dado', a, n, hv(b, 760 + i) * TAU, { pre: faceUp(f, dm.h / 2), dmat: j.dados.mat, face: f }, 'dado' + i); });
+        if (j.dados.copo && MESH('copo-dados')) put('copo-dados', ox + 0.11, -0.05, 0, { dmat: j.dados.mat }, 'copo');
+      }
+      if (j.cartas && MESH('cartas')) {
+        const ox = both ? 0.1 : 0; put('cartas', ox, 0, hv(b, 770) * 0.8 - 0.4, { cmat: j.cartas.mat }, 'cartas');
+        if (j.cartas.monte && MESH('monte')) put('monte', ox + Math.min(0.2, s.w / 2 - 0.08), Math.min(0.08, s.d / 2 - 0.07), hv(b, 771) * 0.5, { cmat: j.cartas.mat }, 'monte');
+      }
+    }
+  }
+  // ---- who fainted (W.caidos, D-885): the cup fallen from the hand beside them and the drink run on the floor round it
+  function fainted(ctx) {
+    const { b, p, W } = ctx; if (!W.caidos.length) return; const C = G.Interiors.CELL;
+    W.caidos.forEach((q, i) => {
+      const l = lvOf(p, q.lv); if (!l) return; let at = null;
+      for (let k = 0; k < 8 && !at; k++) { const a = hv(b, 780 + i) * TAU + k * TAU / 8; const x = q.x + Math.cos(a) * 0.45, z = q.z + Math.sin(a) * 0.45; if (x > 0 && z > 0 && x < p.lot.w && z < p.lot.w && cellAt(p, q.lv, x, z) === C.FLOOR) at = [x, z, a]; }
+      if (!at) return;
+      ctx.put('caneca-caida', at[0], l.y + FLOOR_UP, at[1], at[2], { lv: q.lv, on: 'chao', solto: 1, key: `caido/${q.id}/caneca`, why: q.why });
+      if (MESH('poca')) ctx.put('poca', at[0] + Math.cos(at[2]) * 0.12, l.y + FLOOR_UP + 0.0004, at[1] + Math.sin(at[2]) * 0.12, at[2], { lv: q.lv, on: 'chao', solto: 1, key: `caido/${q.id}/poca`, why: q.why, c: { liquido: DRINK[q.bebida] || DRINK.cerveja }, s: [0.42, 1, 0.42] });
+    });
   }
   // ---- what lies on the floor after a brawl (W.chao, D-749): the shards where the mug broke, the spill where the drink ran — at the
   // world's own point, on a floor of its storey (never where a wall or a piece stands), until someone cleans it
@@ -675,12 +774,20 @@
       case 'carvao': return [[30, 28, 26], 0];
       case 'teia': return [[196, 196, 190], 0];
       // (what is served, the marks of the night — D-748, D-749: the dish's own colours are in its points, the part painted white)
-      case 'resto': case 'osso': case 'giz': case 'nv': return [[255, 255, 255], 0];
+      case 'resto': case 'osso': case 'giz': case 'nv': case 'flor': case 'pinta': return [[255, 255, 255], 0];
+      // (the fourth wave's — T7: a die of bone or of wood, the cup of turned wood or of leather, the tablets of the game of cards — their
+      // backs in the people's colour, their faces and edges the stuff they are made of)
+      case 'dado': return t.dmat === 'madeira' ? [mul(wood[0], 1.25), 'madeira'] : [[232, 220, 194], 0];
+      case 'copo': return W.couro ? [[108, 72, 44], 'leather'] : [mul(wood[1], 1.1), 'madeira2'];
+      case 'verso': { const L = (MV && MV.PAINT && (MV.PAINT[civ] || MV.PAINT.classico)) || ['#7a2a1e']; return [G.hex2rgb(L[0]), 0]; }
+      case 'face': return [CARTA[t.cmat] ? CARTA[t.cmat][0] : CARTA.madeira[0], 0];
+      case 'borda': return [CARTA[t.cmat] ? CARTA[t.cmat][1] : CARTA.madeira[1], t.cmat === 'barro' ? 'barro' : t.cmat === 'madeira' || t.cmat === 'cera' ? 'madeira' : 0];
       case 'mancha': return [mul(wood[0], 0.8), 'madeira']; // (a ring the wood drank: darker, never a drawn line)
       case 'ardosia': return [[56, 60, 62], 'slab'];
       case 'tinta': { const L = (MV && MV.PAINT && (MV.PAINT[civ] || MV.PAINT.classico)) || ['#7a2a1e']; return [G.hex2rgb(L[0]), 0]; }
       case 'tinta2': { const L = (MV && MV.PAINT && (MV.PAINT[civ] || MV.PAINT.classico)) || ['#7a2a1e', '#c9a24a']; return [G.hex2rgb(L[1] || '#c9a24a'), 0]; }
     }
+    if (part.startsWith('x-')) return [[255, 255, 255], 0];
     if (STG.test(part)) {
       const s = STG.exec(part)[1]; if (s === 'cera') return [[234, 220, 182], 0];
       if (s === 'f') return [FRUIT[civ] || FRUIT.classico, 0];
@@ -706,6 +813,7 @@
   const STG = /^([bfnre]|cera)(\d)$/;
   function shows(pt, t) {
     if (pt === 'vapor' || pt === 'escrita') return false; if (pt === 'nv') return (t.st | 0) < 4;
+    if (pt.startsWith('x-')) return !t.de || t.de.includes(pt); // (a part of the feast's platter: there where the recipe spent it, T7)
     const m = STG.exec(pt); if (!m) return true; const n = +m[2], s = t.st | 0;
     switch (m[1]) { case 'b': case 'f': return s < n; case 'n': return s === n; case 'r': return s >= n; case 'e': return s === 0 && (n === 0) === !!t.fresco; default: return n === (t.vs | 0); }
   }
@@ -724,7 +832,7 @@
     const groups = new Map(); const X0 = at[0], Y0 = at[1], Z0 = at[2]; const steam = [], words = [];
     for (const t of pl.list) {
       const base = NAME(t.k); const name = base + (lod && G.MESH3D[base + '@1'] ? '@1' : ''); const parts = G.Mesh3D ? G.Mesh3D.parts(base) : [];
-      const m = R3.mat(X0 + t.x, Y0 + t.y, Z0 + t.z, t.ry, t.s[0], t.s[1], t.s[2]); const e = Array.from(m.elements);
+      const m = R3.mat(X0 + t.x, Y0 + t.y, Z0 + t.z, t.ry, t.s[0], t.s[1], t.s[2]); const e0 = Array.from(m.elements); const e = t.pre ? mul4(e0, t.pre) : e0; // (a die on its face: T7)
       for (const pt of parts) { if (!shows(pt, t)) continue; const pp = paintOf(pt, t, W, look); if (!pp) continue; const pat = P[pp[1]] || 0; const key = name + '/' + pt + '/' + pat;
         const lv = pt === 'nv' ? D.levelAt(base, t.st) : null;
         let g = groups.get(key); if (!g) groups.set(key, g = { name, pt, pat, list: [] }); g.list.push([lv ? mul4(e, lv) : e, pp[0]]); }
