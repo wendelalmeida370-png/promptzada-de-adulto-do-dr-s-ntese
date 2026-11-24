@@ -9,6 +9,8 @@
 #   VENV/bin/python arte/blender/moveis.py --prev SAIDA.png peça:povo   → four views of one model (nothing written)
 #   VENV/bin/python arte/blender/moveis.py --folha PASTA [povo ...] [--lod 1]   → the sheet of every people's pieces (nothing written)
 #   VENV/bin/python arte/blender/moveis.py --conta              → the triangles and the size of each model (nothing written)
+#   VENV/bin/python arte/blender/moveis.py --confere            → every model built again beside the file (nothing written): the file is
+#                                                                 what this script makes today (L-2260)
 # The shapes: arte/blender/moveis_forma.py; the pieces of each people: arte/blender/moveis_pecas.py. Nothing is drawn by chance:
 # the same script, the same file, byte for byte.
 import sys, os, re, json, base64, math
@@ -70,7 +72,7 @@ def read_old():
         if m: old[m.group(1)] = l.rstrip('\n')
     return old
 
-def write(lines, alias):
+def text(lines, alias):
     n = len(lines); body = '\n'.join(lines[k] for k in sorted(lines))
     js = ["'use strict';",
           "// movelmesh: the furniture of the interiors (the interiors 2.0, the front P2, D-710) — made in Blender by arte/blender/moveis.py",
@@ -86,8 +88,24 @@ def write(lines, alias):
           body,
           f"  G.MOVEIS = {json.dumps({'v': 1, 'alias': alias, 'parts': PC.PART_ORDER}, separators=(',', ':'))};",
           '})(window.G);', '']
-    with open(OUT, 'w', encoding='utf8') as f: f.write('\n'.join(js))
+    return '\n'.join(js)
+
+def write(lines, alias):
+    with open(OUT, 'w', encoding='utf8') as f: f.write(text(lines, alias))
     return os.path.getsize(OUT)
+
+def confere():
+    """every model built again and set beside the file, nothing written: the file is what this script makes today — no line of an
+    older shape kept from a partial run after the shapes changed (L-2260)"""
+    lines = {}
+    for s in PC.specs():
+        for lod in (0, 1): nm = s['nome'] + ('@1' if lod else ''); lines[nm] = line(nm, encode(build(s, lod), s))
+    old = read_old(); bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k))
+    same = os.path.exists(OUT) and open(OUT, encoding='utf8').read() == text(lines, PC.alias())
+    for k in bad: print(f'  {k}: ' + ('só no arquivo' if k not in lines else 'falta no arquivo' if k not in old else 'outra forma'))
+    print(f'movelmesh.js: {len(lines)} modelos feitos de novo, {len(bad)} diferentes' + ('' if same or bad else ' (o resto do arquivo difere)'))
+    if bad or not same: raise SystemExit('FALHOU: o js/movelmesh.js não é o que o moveis.py faz hoje — rode VENV/bin/python arte/blender/moveis.py')
+    print('PASSOU: o js/movelmesh.js é o que o moveis.py faz hoje')
 
 def wanted(args):
     specs = PC.specs()
@@ -269,4 +287,5 @@ if __name__ == '__main__':
         if '--lod' in a: i = a.index('--lod'); lod = int(a[i + 1]); a = a[:i] + a[i + 2:]
         folha(a[1], a[2:], lod)
     elif a and a[0] == '--conta': count()
+    elif a and a[0] == '--confere': confere()
     else: export(a)

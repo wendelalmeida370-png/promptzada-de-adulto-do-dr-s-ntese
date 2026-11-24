@@ -8,6 +8,8 @@
 #   VENV/bin/python arte/blender/deco.py jarra pao           → only those (the others kept from the file)
 #   VENV/bin/python arte/blender/deco.py --folha SAIDA.png [--lod 1]   → the sheet of them all, by Cycles (nothing written)
 #   VENV/bin/python arte/blender/deco.py --conta             → the triangles and the size of each (nothing written)
+#   VENV/bin/python arte/blender/deco.py --confere           → every thing built again beside the file (nothing written): the file is
+#                                                              what this script makes today (L-2260)
 #   VENV/bin/python arte/blender/deco.py --prev SAIDA.png coisa ...   → those things in their own colours, by Cycles (nothing written)
 # The shapes: arte/blender/deco_coisas.py and, what is served at the tables and the marks of the night, deco_comida.py (on the
 # furniture's moveis_forma.py). The dishes and the drinks are G.MESH3D 'comida-<prato>' and 'bebida-<bebida>' (the part of the food
@@ -187,7 +189,7 @@ def read_old():
         if m: old[m.group(1)] = l.rstrip('\n')
     return old
 
-def write(lines):
+def text(lines):
     body = '\n'.join(lines[k] for k in sorted(lines))
     js = ["'use strict';",
           "// decomesh: the small things the interiors show (the interiors 2.0, the front P5, D-740) — made in Blender by arte/blender/deco.py",
@@ -203,8 +205,34 @@ def write(lines):
           body,
           f"  G.DECO = {json.dumps({'v': 1, 'parts': PARTS, 'budget': BUDGET, 'big': sorted(BIG)}, separators=(',', ':'))};",
           '})(window.G);', '']
-    with open(OUT, 'w', encoding='utf8') as f: f.write('\n'.join(js))
+    return '\n'.join(js)
+
+def write(lines):
+    with open(OUT, 'w', encoding='utf8') as f: f.write(text(lines))
     return os.path.getsize(OUT)
+
+def built():
+    """every thing of the table built again, at both levels: {name: its line}"""
+    lines = {}
+    for s in [spec(r) for r in TABLE]:
+        t0 = None
+        for lod in (0, 1):
+            M = build(s, lod); d = encode(M, s); nm = s['nome'] + ('@1' if lod else '')
+            if lod == 0: t0 = d['t']
+            elif d['t'] > max(t0 * BUDGET['meio'], BUDGET['meioMin']): raise SystemExit(f"{nm}: o nível do meio com {d['t']} de {t0} triângulos")
+            lines[nm] = line(nm, d)
+    return lines
+
+def confere():
+    """every thing built again and set beside the file, nothing written: the file is what this script makes today — no line of an
+    older shape kept from a partial run after the shapes changed (L-2260)"""
+    lines = built(); old = read_old()
+    bad = sorted(k for k in set(lines) | set(old) if lines.get(k) != old.get(k))
+    same = os.path.exists(OUT) and open(OUT, encoding='utf8').read() == text(lines)
+    for k in bad: print(f'  {k}: ' + ('só no arquivo' if k not in lines else 'falta no arquivo' if k not in old else 'outra forma'))
+    print(f'decomesh.js: {len(lines)} entradas feitas de novo, {len(bad)} diferentes' + ('' if same or bad else ' (o resto do arquivo difere)'))
+    if bad or not same: raise SystemExit('FALHOU: o js/decomesh.js não é o que o deco.py faz hoje — rode VENV/bin/python arte/blender/deco.py')
+    print('PASSOU: o js/decomesh.js é o que o deco.py faz hoje')
 
 def export(args):
     specs = [spec(r) for r in TABLE]
@@ -321,4 +349,5 @@ if __name__ == '__main__':
         if '--lod' in a: i = a.index('--lod'); lod = int(a[i + 1]); a = a[:i] + a[i + 2:]
         folha(a[1], lod)
     elif a and a[0] == '--conta': count()
+    elif a and a[0] == '--confere': confere()
     else: export(a)

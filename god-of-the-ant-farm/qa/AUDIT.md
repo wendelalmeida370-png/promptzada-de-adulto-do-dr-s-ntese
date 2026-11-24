@@ -3882,3 +3882,12 @@ padrão que sobe: «a taverna atualmente é nota 10, mas ela em breve vai ser no
 
 **Os números das frentes deste patch** (o `planos/interiores-3.md` §12.4): o bloco do supervisor vai até a D-989; as frentes, a partir
 da D-990, do L-2230, do T-2130 e da regra 480 do guard, em blocos de 10 na ordem em que o contrato abre cada uma.
+
+### I-2 — X (as bibliotecas de modelos em pacotes)
+
+A frente X (o contrato `planos/interiores-3-contrato.md`; a F8 do plano, §6 e §12.1): a biblioteca dos móveis (`js/movelmesh.js`,
+3,84 de 5 MiB) e a da decoração (`js/decomesh.js`, 3,25 de 3,5 MiB) iam inteiras no carregar da página e já não cabiam a primeira onda.
+
+| ID | Tipo | Descrição |
+|---|---|---|
+| L-2260 | bug (achado pela frente X; corrigido) | **O `js/decomesh.js` não era o que o `arte/blender/deco.py` faz.** Dezoito entradas — as tigelas do arroz e da fruta (`comida-arroz`, `comida-fruta`) e as sete bebidas (`bebida-cerveja`, `-cerveja-copo`, `-vinho`, `-vinho-copo`, `-pulque`, `-mel`, `-mel-caneca`), nos dois níveis — eram de uma forma de antes do `deco_comida.py`: a tigela funda com 20 lados (o gerador de hoje faz 24: 420 → 504 triângulos de louça) e o nível da bebida com dois anéis (hoje três: 48 → 80 triângulos por nível). A causa: os números da forma mudaram durante a P5 (`6d3b311`) e o arquivo foi refeito só em parte (`deco.py coisa …` guarda as outras linhas do arquivo), e a T7 refez outras coisas sem elas — desde a P5 o arquivo e o seu gerador discordavam, e «o mesmo script, o mesmo arquivo, byte a byte» (o cabeçalho do `deco.py`) não valia. Reproduzido: refeitas pelo gerador de cada commit, a P5 e a T7 discordam do seu próprio arquivo nas mesmas 18; os 218 modelos dos móveis batem. Correção: o arquivo refeito inteiro pelo `deco.py` (3,25 → 3,28 MiB, no orçamento de 3,5); e as duas provas novas dos geradores, `VENV/bin/python arte/blender/deco.py --confere` e `moveis.py --confere` (segundos: cada modelo feito de novo ao lado do arquivo, nada escrito; uma linha de forma velha acusa). Provado: as duas passam; `qa/visual/malhas.js` e o d1 a d4 e o d8 do `qa/dentro.js` passam |
