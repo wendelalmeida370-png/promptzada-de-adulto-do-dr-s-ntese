@@ -55,6 +55,13 @@ const TETO_ZERO = 0.16, ANTES_ZERO = 0.22;
 // run on the game of before; the ceiling is six tenths of it, a war in the middle of the days counted)
 const VOLTA = { metropole: 156, mega: 75 }, SHOWN = ['lenhador', 'pescador', 'cacador', 'guerreiro', 'arqueiro', 'tecelao', 'agricultor', 'coletor', 'vinhateiro'];
 const FICA = { metropole: '83 de 133, 62 %', mega: '67 de 88, 76 %' };
+// (the floor of «a casa guarda a cara»: the metrópole's lies between the dealing of before — 62 % — and the mean of now, chosen
+// by seven paths of the world's chance — 0 to 6 empty draws of G.R after the ready world opens, a copy of this proof, T-1905:
+//   without the drink in the blood (T3, 93df926)  76 75 80 75 75 79 73 %  — 796 of 1045, 76,2 %
+//   with it (T2, cc5df3c)                         74 75 79 77 71 78 77 %  — 805 of 1060, 75,9 %
+// one path is one world in a coin's toss: the 75 % of before failed three of the fourteen, on no change of the dealing. 68 % is
+// three of the spread of a path (2,6 points) under the mean, three under the lowest seen, and six over the dealing of before)
+const PISO = { metropole: 0.68, mega: 0.75 };
 const KID = { bebe: 1, crianca: 1, anciao: 1, cativo: 1 };
 const grown = v => v.age >= 16 && v.age < 62 && !v.captive;
 const adults = pred => [...G.S.villagers.values()].filter(v => grown(v) && (!pred || pred(v))).sort((a, b) => a.id - b.id);
@@ -137,7 +144,7 @@ function ready(key, name, dias) {
   // woodcutter's wood at the door among them)
   let kept = 0, tot = 0, wk = 0, wt = 0; const moved = new Set(T.ch.map(c => c.id));
   for (const [id, r, h] of shown0) { const v = G.S.villagers.get(id); if (!v || !grown(v) || v.home !== h) continue; tot++; const same = v.role === r && !moved.has(id); if (same) kept++; if (r === 'lenhador') { wt++; if (same) wk++; } }
-  ok(`${name} a casa guarda a cara`, tot > 0 && kept >= tot * 0.75, `dos ${tot} moradores com um ofício que a casa mostra (a lenha, a rede, o escudo…), ${kept} ficaram com ele os ${dias} dias inteiros (${Math.round(100 * kept / Math.max(1, tot))} %; o piso: 75 %; antes: ${FICA[key]}); os lenhadores: ${wk} de ${wt}`);
+  ok(`${name} a casa guarda a cara`, tot > 0 && kept >= tot * PISO[key], `dos ${tot} moradores com um ofício que a casa mostra (a lenha, a rede, o escudo…), ${kept} ficaram com ele os ${dias} dias inteiros (${Math.round(100 * kept / Math.max(1, tot))} %; o piso: ${Math.round(100 * PISO[key])} %; antes: ${FICA[key]}); os lenhadores: ${wk} de ${wt}`);
   // (the ceiling by the residents whose trade the house shows: the «before» was measured with 88 of them in the mega and 133 in
   // the metrópole, and the mega of the generation 21 has 336 — 67 changes a day, 0.20 a resident, against the 0.29 of the
   // generation 20 and the 0.85 of before: «67 por dia … o teto: 45 por dia», T-1088)
