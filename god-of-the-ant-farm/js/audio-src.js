@@ -84,6 +84,7 @@
     ler: still('lê calado'),
     copiar: { s: 'scratch', q: 'curso', cada: 1.3, v: 0.2, alc: 0.3, fam: 'saber' },
     cozinhar: { s: 'cook', q: 'curso', cada: 1.7, v: 0.3, alc: 0.5 },
+    mexerCuba: { s: 'slosh', q: 'curso', cada: 1.4, v: 0.3, alc: 0.5, fam: 'oficio' }, // (the brewer stirs the vat: T3, D-842 — the sound is T8's to make)
     ninar: { s: 'hum', q: 'curso', cada: 3.2, v: 0.25, alc: 0.4 },
     rezar: { s: 'chant', q: 'curso', cada: 2.8, v: 0.35, alc: 0.7, fam: 'fe' },
   };

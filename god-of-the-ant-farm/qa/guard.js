@@ -2287,7 +2287,7 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 // origem de verdade (o que o povo fez, G.Origem.madeBy, ou os meios que tem) —; e os ossinhos e o pano são do que o povo teve (o osso
 // da carcaça, a lã do tear, a palha de todos), e o armazém não os dá do nada
 { const tv = (src['act-taverna.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), iv = (src['inventario.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
-  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/desc: descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-803)');
+  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/desc: (\(G\.TavernaOficios && G\.TavernaOficios\.desc\(b, 'food', t\)\) \|\| )?descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-803; o prato do cozinheiro, pelo livro dele: T3, D-846)');
   if (!/O\.madeBy = \(fid, t, win\) =>/.test(og) || !/if \(t === 'carne'\) mark\(fid, 'osso'\)/.test(og) || !/if \(m === 'osso'\) return !!O\.had\(fid, 'osso'\) \|\| !!O\.had\(fid, 'couro'\);/.test(og) || !/tecido: 'la'/.test(og)) fails.push('o cardápio só com o que existe: a origem sem o que o povo fez, ou sem o osso e a lã tidos (D-803, D-805)');
   if (!/return !!L && L\.length > 0 && art\(m\)/.test(iv)) fails.push('os ossinhos e o pano: o armazém dá uma coisa que não é feita de nada que ele tem (D-805)');
   if (!/ossinhos: \{[^\n]*mats: \['osso'\]/.test(it) || !/pano: \{[^\n]*mats: \['palha', 'la'\]/.test(it) || !/else if \(d\.mat === 'la' && CLOTH\[d\.kind\]\) out = \[\{ k: 'tecido'/.test(it)) fails.push('os ossinhos e o pano: o catálogo sem o osso, a palha e a lã de que são feitos (D-805)'); }
@@ -2427,6 +2427,62 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   const w = (/function wetOut\(o, n\) \{([\s\S]*?)\n {2}\S/.exec(lk) || [])[1] || ''; if (!w || /\bo\.lin\[[^\]]+\]\s*=(?!=)|\bo\.lin\s*=(?!=)/.test(w)) fails.push('a roupa molhada não muda a roupa: o wetOut escreve nas cores da roupa guardada (D-874)');
   const m = v3.indexOf('V3.musician = function (v) {'), e = v3.indexOf('\n  };', m); const mu = m < 0 ? '' : v3.slice(m, e);
   if (!mu || !/festaDe/.test(mu) || !/const key = B\.includes\(o\.id\) \? B\.indexOf\(o\.id\) : 1000 \+ \(o\.id === md \? 0 : 1\);/.test(mu)) fails.push('quem dá o pulso: o G.Vida3D.musician não segue a banda do som (os bardos da festa, o músico do dia — D-874, D-890)'); }
+// 370. "o ofício da taverna é do repartidor" (T3, D-841): o cozinheiro e o cervejeiro de uma taverna são ofícios do repartidor — o
+// js/taverna-oficios.js os põe entre os ofícios (E.JOB_ROLES), pede-os no E.demand só pelo que a casa decidiu (TO.want) e dá o posto só
+// no dia da cidade (o E.place, embrulhado: o v.job desses ofícios só ali); ninguém dá o ofício à mão (a regra 74 cobra o v.role)
+{ const L = src['taverna-oficios.js'] || []; const t = L.join('\n');
+  if (!L.length) fails.push('o ofício da taverna: falta o js/taverna-oficios.js (T3, D-841)');
+  else {
+    if (!/for \(const r of TO\.ROLES\) if \(!E\.JOB_ROLES\.includes\(r\)\) E\.JOB_ROLES\.push\(r\);/.test(t)) fails.push('o ofício da taverna: o cozinheiro e o cervejeiro fora dos ofícios do repartidor (E.JOB_ROLES, D-841)');
+    if (!/E\.demand = function \(set, fac, Ad\) \{\n\s*const out = demand0\(set, fac, Ad\);\n\s*for \(const b of taverns\(set\.id\)\) \{ const w = TO\.want\(b\);/.test(t)) fails.push('o ofício da taverna: o E.demand não pede os ofícios da casa pelo que ela decidiu (TO.want, D-841)');
+    const p0 = L.findIndex(l => /^\s*E\.place = function \(set\) \{/.test(l)); let p1 = -1; for (let k = p0 + 1; p0 >= 0 && k < L.length; k++) if (/^\s{2}\};\s*$/.test(L[k])) { p1 = k; break; }
+    if (p0 < 0 || p1 < 0) fails.push('o ofício da taverna: o taverna-oficios.js sem o seu E.place (o posto do dia da cidade, D-841)');
+    L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.job\s*=(?!=)/.test(c) && !(k > p0 && k < p1)) fails.push(`o ofício da taverna: taverna-oficios.js:${k + 1} dá um posto fora do dia da cidade (E.place, D-841): ${l.trim().slice(0, 110)}`); });
+  }
+  for (const f of files) if (f !== 'taverna-oficios.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.role\s*=\s*'(cozinheiro|cervejeiro)'/.test(c)) fails.push(`o ofício da taverna: ${f}:${k + 1} dá o ofício da casa à mão (D-841): ${l.trim().slice(0, 110)}`); }); }
+// 371. "a casa lembra e guarda pela cadeia" (T3, D-841, D-843, D-844): a memória das noites (b.tvo), a despensa da cozinha (b.despensa,
+// o lugar 'k:'), a tulha do cervejeiro (b.tulha, 'e:'), a bebida da casa na prateleira (b.adega) e os pratos da cozinha (b.prato) só o
+// js/taverna-oficios.js escreve — as despensas pelos adaptadores do livro (G.Depot), nunca à mão em outro arquivo
+{ const W = /\bb\.(tvo|despensa|tulha|adega|prato)\b(\.[\w.]+|\[[^\]]+\])*\s*(=(?!=)|\+=|-=|\+\+|--)|\bdelete\s+b\.(tvo|despensa|tulha|adega|prato)\b/;
+  for (const f of files) if (f !== 'taverna-oficios.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (W.test(c)) fails.push(`a casa lembra pela cadeia: ${f}:${k + 1} escreve um registro da cadeia da taverna — só o taverna-oficios.js (T3): ${l.trim().slice(0, 110)}`); });
+  (src['taverna-oficios.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (LEDGER_FIELDS.test(c)) fails.push(`a casa lembra pela cadeia: taverna-oficios.js:${k + 1} mexe num estoque, numa carga ou em moedas à mão — só pelo G.Depot (regra 12): ${l.trim().slice(0, 110)}`); }); }
+// 372. "a cerveja só do grão que entrou, o hidromel só do mel" (T3, D-842, D-440): no js/taverna-oficios.js a receita da cerveja trabalha
+// a comida só pelo cereal (in: 'food', of: true, e o D.use do grão com of: o cereal de G.Origem), a do hidromel o mel; o que a cuba faz
+// nasce numa linha só — o D.make da fornada, na prateleira, com a operação dela —, e nenhuma comida nasce no arquivo
+{ const t = (src['taverna-oficios.js'] || []).join('\n');
+  if (!/cerveja: \{ k: 'cerveja', in: 'food', of: true,/.test(t) || !/mel: \{ k: 'mel', in: 'mel', of: false,/.test(t)) fails.push('a cerveja só do grão: as receitas da cuba não pedem o cereal (a cerveja) e o mel (o hidromel) — D-842');
+  if (!/D\.use\('e:' \+ b\.id, R\.in, taken, \{[^}]*of: R\.of \? cereal\(\) : undefined/.test(t)) fails.push('a cerveja só do grão: a unidade da cuba não gasta o grão pelas partes de cereal (of: G.Origem.CEREAL, D-842)');
+  const mk = [...t.matchAll(/D\.make\(/g)].length; if (mk !== 1 || !/D\.make\('b:' \+ b\.id, R\.k, good, \{ op: op\.id, code: 'fornada'/.test(t)) fails.push(`a cerveja só do grão: o taverna-oficios.js faz bens fora da fornada da cuba (${mk} D.make; D-842)`); }
+// 373. "o prato é a comida comprada" (T3, D-844, D-440): o prato do cozinheiro sai da despensa da casa para a prateleira por um D.move
+// (código 'cozinha': as partes da comida vão com ela — o peixe é o peixe que se comprou), nunca de um D.make
+{ const t = (src['taverna-oficios.js'] || []).join('\n');
+  if (!/D\.move\('k:' \+ b\.id, 'b:' \+ b\.id, 'food', n, \{ op: op\.id, code: 'cozinha'/.test(t)) fails.push('o prato é a comida comprada: a panela não move a comida da despensa à prateleira (código cozinha, D-844)');
+  if (/make\(\s*[^,]+,\s*'food'/.test(t)) fails.push('o prato é a comida comprada: o taverna-oficios.js faz comida (D-844)'); }
+// 374. "as compras pelo livro e pelo preço, e o carregador pelas portas" (T3, D-845, D-847): a compra do dia é uma troca do livro (D.swap
+// do armazém às mãos e das moedas do taverneiro ao tesouro, 'compra-taverna'; sem moeda, 'taverna-povo'), e o carregador à porta do
+// armazém é escolhido pelas portas das mãos ocupadas (G.Vg.handsBusy, G.Vg.busy), nunca o corpo do deus, e recebe a carga pelo G.Vg.give
+{ const t = (src['taverna-oficios.js'] || []).join('\n');
+  if (!/D\.swap\(\[fr, 'v:' \+ hands\.id, k, n\], \[pay, fr, 'moedas', cost\], \{ code: 'compra-taverna'/.test(t) || !/code: 'taverna-povo'/.test(t)) fails.push('as compras pelo livro: a compra da casa não é a troca do livro (compra-taverna / taverna-povo, D-845)');
+  if (!/A\.isBody\(v\) \|\| v\.sleeping/.test(t) || !/G\.Vg\.handsBusy\(v\) \|\| G\.Vg\.busy\(v, \{ type: 'carga', pri: 1 \}\)/.test(t) || !/G\.Vg\.give\(porter, \{ type: 'carga', to: dest/.test(t)) fails.push('o carregador pelas portas: o carregador não é escolhido pelas mãos ocupadas, ou é o corpo, ou não recebe a carga pelo G.Vg.give (D-847)'); }
+// 375. "a cadeia da taverna sem sorteio" (T3, D-843): quem a casa toma, o que compra, a mão do cervejeiro e os jarros que azedam são das
+// contas do mundo (a memória das noites, os dias de ofício, o G.hash do lote e do jarro), nunca de um acaso
+(src['taverna-oficios.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`a cadeia sem sorteio: taverna-oficios.js:${k + 1} sorteia (D-843): ${l.trim().slice(0, 110)}`); });
+// 376. "o cardápio e o taverneiro leem a cadeia" (T3, D-845, D-846): no js/act-taverna.js o taverneiro pergunta à cadeia o que ainda compra
+// (G.TavernaOficios.keeperBuys), a carta diz a bebida e o prato da casa pela cadeia (G.TavernaOficios.desc), e a cuba pequena do taverneiro
+// para quando a casa tem cervejeiro (o pick dela, embrulhado)
+{ const tv = (src['act-taverna.js'] || []).join('\n'), t = (src['taverna-oficios.js'] || []).join('\n');
+  if (!/for \(const c of \(G\.TavernaOficios \? G\.TavernaOficios\.keeperBuys\(b, cands\) : cands\)\) \{/.test(tv)) fails.push('o taverneiro lê a cadeia: o restockPick do act-taverna.js não pergunta o que a casa ainda compra (keeperBuys, D-845)');
+  if (!/\{ const tc = G\.TavernaOficios && G\.TavernaOficios\.desc\(b, k\); if \(tc\) return tc; \}/.test(tv)) fails.push('a carta lê a cadeia: a bebida da casa não é dita pela cadeia (TO.desc, D-846)');
+  if (!/R\.pick = function \(b, f\) \{ return TO\.staff\(b\)\.cervejeiro && brews\(b\)\.length \? null : pick0\.apply\(this, arguments\); \};/.test(t)) fails.push('uma cuba por casa: a cuba do taverneiro não para com o cervejeiro (D-842)'); }
+// 377. "a porta das provas da cadeia" (T3): G.TavernaOficios.decideNow — a casa decide agora — só as provas chamam; nada do mundo a chama
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bdecideNow\(/.test(c) && !/TO\.decideNow = function/.test(c)) fails.push(`a porta das provas: ${f}:${k + 1} chama o TavernaOficios.decideNow (só as provas): ${l.trim().slice(0, 110)}`); });
+// 378. "os atos da cadeia têm o seu nome, o seu som e a sua pose" (T3; o contrato da onda 4): o cervejeiro mexe a cuba pelo gesto
+// 'mexer-cuba' e o cozinheiro cozinha pelo gesto 'cozinhar' (o mesmo de casa, act-lar.js); a tarefa 'tavoficio' tem a sua pose (o
+// TASK_OF, a regra 214) e o gesto da cuba a sua linha de som (o A.GESTO, a regra 54)
+{ const t = (src['taverna-oficios.js'] || []).join('\n'), v3 = (src['vida3d.js'] || []).join('\n'), as = (src['audio-src.js'] || []).join('\n');
+  if (!/A\.addAnim\('mexerCuba', \{ act: 'mexer-cuba',/.test(t) || !/\{ id: 'cozinhar', kind: 'mao', anim: 'cozinhar', use: 'cozinhar'/.test(t)) fails.push("os atos da cadeia: o cervejeiro sem o gesto 'mexer-cuba' ou o cozinheiro sem o 'cozinhar' (o contrato da onda 4)");
+  if (!/\btavoficio: MOVE\b/.test(v3)) fails.push("os atos da cadeia: a tarefa 'tavoficio' sem a sua pose no TASK_OF do vida3d.js");
+  if (!/^\s{4}mexerCuba: \{ s: '\w+'/m.test(as)) fails.push("os atos da cadeia: o gesto da cuba sem a sua linha de som (A.GESTO)"); }
 // 360. "o álcool no corpo é um só" (T2, D-830): o que alguém bebeu — v.ebrio (o sangue), v.ebrioG (o estômago), v.ebrioP (o pico da
 // noite), v.ebrioD (o relógio do desmaio), v.ressaca, v.molhado (a bebida jogada na roupa) — só o embriaguez.js escreve; ninguém escreve
 // nem lê mais o v.drunk de antes (o embriaguez.js o lê uma vez, num save de antes), e o G.Atmos.drunk é o G.Ebrio.k: uma verdade só

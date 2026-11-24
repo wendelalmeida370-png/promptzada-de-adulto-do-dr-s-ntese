@@ -85,6 +85,18 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 - **O pulque** é o aguamiel do maguey (o agave); o mundo ainda **não tem o maguey**: a receita pede `aguamiel`, e o povo do pulque,
   sem ele, faz **a cerveja do seu milho** (`tavern.js`: `asteca: { k: 'pulque', alt: 'cerveja' }`). O agaval é o plano (§6).
 - **O prato** da taverna é do que se come: `T.dish(b)` — «um prato de peixe», «tortilhas de milho», «um caldo de cevada»…
+- **A cadeia da taverna** (T3, D-840 a D-849; `js/taverna-oficios.js`): a casa procurada tem o **cozinheiro** e o **cervejeiro**,
+  ofícios do repartidor. O cervejeiro compra no armazém do povo o cereal (`of: G.Origem.CEREAL`) e a lenha, pagos das moedas do
+  taverneiro (`compra-taverna`), que um carregador à porta do armazém — ou ele mesmo — leva à **tulha** da casa (o lugar `'e:'`:
+  só cereal, mel e lenha); a cuba gasta o grão pelo livro (`cuba-grao`, as partes do grão no lote: `op.data.de`, que a carta diz,
+  D-802) e a lenha da água quente da mosturação (`cuba-lenha`); a cerveja nasce só da fornada da brassagem (`fornada`: **um jarro
+  por grão gasto**; o jarro azedo não nasce) — **sem cereal no povo, nenhum cervejeiro e nenhuma cerveja**. O hidromel do nórdico é
+  o mel da colmeia (o apicultor) na água do poço (que não se guarda): dois potes por mel. O cozinheiro compra a comida da receita do
+  povo — o principal (o peixe, a carne, a horta…) e o grão do pão ou do caldo — para a **despensa** da casa (`'k:'`), e a panela a
+  **move** à prateleira (`cozinha`), nunca a faz: o prato de peixe é o peixe que se comprou, com a sua origem; a lenha do fogo pelo
+  livro (`cozinha-lenha`). O soldo do dia vai do bolso do taverneiro à casa de quem trabalha (`soldo-taverna`), o frete ao
+  carregador (`frete`). O vinho continua do vinhateiro (o vinhedo pisa as uvas: `estates.js`): a taverna o compra; o pulque, do
+  maguey que o mundo não tem (§6 C)
 - **A dádiva** (22b, D-587): a refeição que um bondoso dá a quem passa fome sai da despensa da casa dele, pelo livro (`G.Depot.use`,
   código `dadiva`), e é comida ali — nada nasce. O empréstimo entre amigos (D-588) é moeda de uma casa a outra (`emprestimo`, e a
   volta, `divida`): a dívida é a lembrança dele (a marca `deve`), não uma moeda a mais.
@@ -106,7 +118,7 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 | `tijolo`, `adobe`, `ceramica` | — | a **olaria**: argila + lenha no forno | as obras (tijolo, adobe), as casas e o mercado (cerâmica) |
 | `joias` | — | o **ourives**: 1 de ouro → 1 | as casas ricas, o mercado, o comércio |
 | `moedas` | — | a **coletoria**: 1 de ouro → 6 (`cunhagem`) | tudo o que se paga |
-| `mel`, `cera` | o apiário, a colmeia do mato | o apicultor | a taverna do nórdico (hidromel), a comida da fome |
+| `mel`, `cera` | o apiário, a colmeia do mato | o apicultor | a taverna do nórdico (o hidromel: servido do armazém, ou fermentado na cuba do cervejeiro, §3), a comida da fome |
 | `seda` | o bicho-da-seda na folha de amoreira | a casa da seda | o comércio, a roupa |
 | `vinho`, `azeite`, `tamaras`, `cacau`, `cafe`, `especiarias`, `incenso` | o vinhedo, o olival, o pomar, a plantação — só onde crescem e de quem os conhece | os ofícios do campo (`estates.js`) | a taverna (vinho), as casas ricas, o comércio |
 | `sal` | a salina; **o sal-gema da caverna** (era comida: L-1360) | o salineiro; quem cava a caverna | a salga |
@@ -114,7 +126,7 @@ Três bens são guardados **por partes**, e as partes de um lugar sempre somam o
 | `queijo` | o leite (40% da ordenha) | a ordenha | a comida da fome |
 | `atum`, `camarao` | o cardume (o peixe que vale mais) | a pesca | a comida da fome, o comércio |
 | `perolas`, `coral` | os recifes | o mergulhador | o luxo |
-| `cerveja`, `pulque` | — | a cuba da taverna (§3) | a taverna |
+| `cerveja`, `pulque` | — | a cuba da taverna (§3): a pequena do taverneiro, e a brassagem do cervejeiro (do cereal da tulha) | a taverna |
 | `guano` | os morcegos da caverna | quem o recolhe | o adubo dos campos |
 
 ## 5. As coisas do catálogo (`G.Itens`) — o que cada uma é feita
