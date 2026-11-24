@@ -3063,5 +3063,12 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!f || !/A\.guardado\(b\)\.find\(q => q\.it === it\.id\)/.test(f) || /\.inv\b|\.pantry\b|\.stock\b|\.coin\b/.test(f)) fails.push('o que uma peça guarda é o do livro: o fillOf do interiors.js não lê o G.Atmos.guardado, ou conta o b.inv, a despensa, as moedas ou o armazém do povo por conta própria (L-2250)');
   const at = (src['atmos.js'] || []).join('\n'); const a = at.indexOf('At.guardado = function (b) {'), z = at.indexOf('\n  };', a); const g = a < 0 ? '' : at.slice(a, z);
   if (!g || !/D\.slots\(/.test(g) || !/D\.share\(b\)/.test(g) || !/In\.depotStores\(b\)/.test(g)) fails.push('o que uma peça guarda é o do livro: o G.Atmos.guardado não lê as peças da planta (In.depotStores), o G.Depot.slots e o G.Depot.share (D-1011)'); }
+// 502. "o pano tem dono" (L-2251): o tapete e a tapeçaria que o within diz (W.pano) só de uma casa (quem mora nela) ou de um prédio cujo
+// uso diz de quem é a riqueza que mostra (a regra dono: a taverna, a casa do taverneiro) — a terra cara de um prédio não é a riqueza de
+// ninguém —; e o verificador pergunta pelo dono no CAUSA do tapete e da tapeçaria
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('\n  }\n', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!/const owned = home \|\| !!firstOf\(b, 'dono'\);/.test(f) || !/const pano = owned && \(/.test(f)) fails.push('o pano tem dono: o within dá o tapete e a tapeçaria sem perguntar se o prédio é de uma casa ou de um uso com dono (L-2251)');
+  let inv = ''; try { inv = fs.readFileSync(path.join(dir, '..', 'qa', 'dentro-inv.js'), 'utf8'); } catch (e) { }
+  if (!/tapete: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv) || !/tapecaria: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv)) fails.push('o pano tem dono: o verificador não pergunta pelo dono no CAUSA do tapete e da tapeçaria (L-2251)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

@@ -28,6 +28,10 @@
 //      as velas da festa) e o prato do povo pelo que a receita gastou; a porta trancada (a tranca por dentro) e a arrombada (a folha
 //      caída, as lascas); a poça e a roupa molhada que secam; os dados nas faces jogadas, o copo, as cartas e o monte; quem desmaiou
 //      (a caneca caída, a bebida em volta); um save no meio
+//  d16 a decoração por uso e por ofício (F7, D-1010, D-1011): a regra e o construtor de um uso, a regra e o desenho de um ofício, as
+//      leituras de verdade (o que cada peça guarda pelo livro, o ofício pelo kit e pela origem), os casos ruins
+//  d18 o pano tem dono (L-2251): com a terra mais cara posta em todo prédio, o tapete e a tapeçaria só de uma casa ou da taverna; a
+//      terra cara de um prédio não é a riqueza de ninguém
 //   node qa/dentro.js            ONLY=d1,d2 …
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -450,6 +454,29 @@ if (want('d16')) {
   check('o kit dos construtores', Object.isFrozen(D.KIT) && ['pack', 'scatter', 'beside', 'near', 'byWall', 'pendura', 'hangFood', 'runs', 'ceilAt', 'floorFree', 'hv', 'casa', 'taverna'].every(k => typeof D.KIT[k] === 'function'), Object.keys(D.KIT).length + ' portas');
   void W0;
   ok('d16 a decoração por uso e por ofício: a regra e o construtor de um uso, a regra e o desenho de um ofício, as leituras de verdade, os casos ruins', good, info.join('; '));
+}
+
+// ------------------------------ the cloth has an owner (the interiors 3, the front L — L-2251) ------------------------------
+if (want('d18')) {
+  // ---- the rug and the hanging only of a household (the house, the seat) or of a building whose use says whose wealth it shows (the
+  // tavern: its keeper's house): every building of the world read with its ground at its dearest — the town's portrait of the day,
+  // planted (G.Urban.peek): the square, the market, the granary, the storehouse of a people that weaves had the rug of their ground —;
+  // the rich house and the tavern keep theirs; the verifier clean on them; the portrait given back, all as it was
+  const U = G.Urban; const peek0 = U.peek; const dear = Object.freeze({ cells: { get: () => ({ value: 90 }) } });
+  const all = [...S().buildings.values()].filter(q => q.built && q.type !== 'ruin' && plan(q)).sort((a, c) => a.id - c.id);
+  const owned = q => G.Village.bedsOf(q) > 0 || At.rulesOf(q).some(r => r.dono);
+  const read = () => { fresh(); const out = { rugs: {}, bad: [], weave: 0, rich: 0, ownedPano: 0, whyBad: [] };
+    for (const q of all) { const W = At.within(q); const L = D.plan(q, plan(q), true).list; const n = L.filter(t => t.k === 'tapete' || t.k === 'tapecaria').length; if (n) out.rugs[q.type] = (out.rugs[q.type] || 0) + n;
+      if (owned(q)) { if (W.pano) out.ownedPano++; continue; } if (W.weave) out.weave++; if (W.rico >= 2) out.rich++;
+      if (W.pano || n) out.bad.push(`${q.type}#${q.id}`); if (!/de ninguém/.test(W.why.riqueza || '')) out.whyBad.push(`${q.type}#${q.id}`); }
+    return out; };
+  const before = read(); U.peek = () => dear; let dearR = null, qa1 = [];
+  try { dearR = read(); const sample = all.filter(q => !owned(q) && At.within(q).weave).slice(0, 12).concat(all.filter(q => owned(q) && At.within(q).pano).slice(0, 8)); qa1 = QA.dentro(sample).filter(q => q[0] <= 3); }
+  finally { U.peek = peek0; fresh(); }
+  const after = read(); const same = JSON.stringify(before.rugs) === JSON.stringify(after.rugs);
+  const good = dearR.weave > 5 && dearR.rich > 5 && !dearR.bad.length && !before.bad.length && !dearR.whyBad.length && dearR.ownedPano > 0 && !qa1.length && same;
+  ok('d18 o pano tem dono: o tapete e a tapeçaria só de uma casa ou da taverna de quem a toca; a terra cara de um prédio não é riqueza de ninguém (L-2251)', good,
+    `a terra mais cara posta em todo prédio: ${dearR.rich} prédios sem dono «ricos» pela terra (${dearR.weave} de povo que tece) → ${dearR.bad.length ? 'com pano: ' + dearR.bad.slice(0, 5).join(', ') : 'nenhum pano neles'}; ${dearR.ownedPano} casas e tavernas com o seu pano; tapetes e tapeçarias por tipo ${JSON.stringify(dearR.rugs)}; o porquê da terra ${dearR.whyBad.length ? 'ERRADO em ' + dearR.whyBad.slice(0, 3).join(', ') : '«de ninguém»'}; o verificador ${qa1.length ? qa1.map(q => q[1]).slice(0, 3).join(' | ') : 'limpo'}; o retrato devolvido: ${same ? 'tudo como era' : 'DIFERENTE'} (${JSON.stringify(after.rugs)})`);
 }
 
 const e = M.erros(); if (!M.limpo()) console.log('  erros:', JSON.stringify(e.mod), e.console.slice(0, 5).join(' | '));

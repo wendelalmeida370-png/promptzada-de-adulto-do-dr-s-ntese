@@ -523,8 +523,12 @@
     why.louca = barro ? 'barro: o povo já teve a cerâmica da olaria' : 'madeira torneada: o povo nunca teve cerâmica';
     if (metal) why.metal = `${metal}: o povo tem a arte e já teve o metal`;
     why.pano = weave ? 'o povo tece (um tear de pé, ou pano no armazém)' : 'o povo não tece: couro e pele, nenhum pano';
-    why.riqueza = rico === 2 ? 'rica agora (as moedas da casa, a bandeira da casa mercante, a sede)' : rico === 1 ? 'remediada agora' : 'pobre agora';
     const home = G.Village.bedsOf(b) > 0; const ref = (home ? 'h:' : 'b:') + b.id;
+    // (whose purse the wealth a building shows is: a household's — the house, the seat —, or the house a use says it is (the tavern's
+    // keeper's); any other is read by the worth of its ground today, which is nobody's purse: L-2251)
+    const owned = home || !!firstOf(b, 'dono');
+    why.riqueza = !owned ? `${rico === 2 ? 'terra cara' : rico === 1 ? 'terra de valor médio' : 'terra barata'} hoje (o retrato da cidade), riqueza de ninguém`
+      : rico === 2 ? 'rica agora (as moedas da casa, a bandeira da casa mercante, a sede)' : rico === 1 ? 'remediada agora' : 'pobre agora';
     const rules = RULES.get(usoOf(b)) || NONE; const cf = firstOf(b, 'conta');
     // ---- the drink of its book: each whole unit a vessel on the shelf (the amphora pours ten cups, the jar four); a broken one, open
     const bebida = []; const I = b.inv || NOINV;
@@ -566,10 +570,12 @@
       luz = Object.freeze({ comb: Object.freeze(comb), oleo: hasO ? oilK[0] || 'azeite' : null, cera: hasC, vela, azeite, mat: barro ? 'barro' : metal === 'bronze' || ok('bronze') ? 'bronze' : 'pedra', acesa: lit ? 1 : 0, awake: At.awake(b),
         why: `${comb.join(' e ')} para queimar (${home && comb.some(k => D && D.get(ref, k) >= 1) ? 'na casa' : 'no armazém do povo'})${LZ ? `; esta noite: a vela com ${Math.round(vela * 100)}%, o azeite com ${Math.round(azeite * 100)}% (a conta da taverna)` : ''}${lit ? `; acesa: ${At.awake(b)} acordado(s) dentro, ${G.isNight() ? 'noite' : 'fim da tarde'}` : '; apagada: ' + (!At.lit(b) ? 'ninguém acordado dentro' : 'ainda é dia')}` });
     }
-    // ---- the cloth on the walls and the floor: a people that weaves, a house rich now; the dye of who can pay for it (At.deep); the
-    // pelt where the house keeps pelts (the rug of the north, woven or not)
+    // ---- the cloth on the walls and the floor: a people that weaves and the wealth of whoever paid for it — a household rich now, a
+    // building whose use says whose wealth it shows (the tavern: its keeper's house) —; the dye of who can pay for it (At.deep); the pelt
+    // where the house keeps pelts (the rug of the north, woven or not). A building nobody's purse keeps has none: the rug on the floor of
+    // the square, of the market, of the granary was the worth of their ground, nobody's (L-2251)
     const pelts = home && D ? D.get(ref, 'peles') + D.get(ref, 'pele_rara') : 0;
-    const pano = (weave && rico >= 1) || pelts >= 1 ? Object.freeze({ tapete: (weave && rico >= 2) || pelts >= 1 ? 1 : 0, pele: !(weave && rico >= 2) && pelts >= 1 ? 1 : 0, tapecaria: weave && rico >= 1 && (b.type === 'taverna' || rico >= 2) ? 1 : 0,
+    const pano = owned && ((weave && rico >= 1) || pelts >= 1) ? Object.freeze({ tapete: (weave && rico >= 2) || pelts >= 1 ? 1 : 0, pele: !(weave && rico >= 2) && pelts >= 1 ? 1 : 0, tapecaria: weave && rico >= 1 && (b.type === 'taverna' || rico >= 2) ? 1 : 0,
       cor: rico >= 2 ? At.deep(b.id, civ) : null, why: `${weave ? 'o povo tece' : ''}${weave && rico ? ' e ' : ''}${rico ? why.riqueza : ''}${pelts >= 1 ? (weave || rico ? '; ' : '') + 'peles na casa' : ''}` }) : null;
     // ---- the cobweb: a building old and uncared for (G.Atmos.wear: the years, the care of its quarter, nobody living in it)
     const w = At.wear(b); const teia = w && w.ageLv >= 3 && w.care === 0 ? Object.freeze({ n: w.ageLv >= 4 ? 2 : 1, why: `${At.years(b)} anos, sem cuidado (G.Atmos.wear)` }) : null;

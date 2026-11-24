@@ -3876,7 +3876,8 @@
 //   · nada sem causa (S3): cada coisa tem o seu porquê, e o porquê é verdade agora — a jarra só com bebida no livro, o pão só com o
 //     grão de um pão na comida, o presunto só com carne, a réstia só com a horta, o saco só com grão, a caneca na mesa só de quem bebeu,
 //     a panela só com o fogo cozinhando, a lamparina só com o que queimar, acesa só com alguém acordado no escuro, o pano só onde o
-//     povo tece, a teia só na casa velha e sem cuidado, os riscos de carvão só dos anos de doses servidas;
+//     povo tece e só de uma casa que o pagou (L-2251), a teia só na casa velha e sem cuidado, os riscos de carvão só dos anos de doses
+//     servidas;
 //   · nada vem do nada (S2): nenhum barro onde o povo nunca teve a cerâmica, nenhum metal que ele não tem;
 //   · nada flutuando (S3): o que pousa, pousa num tampo ou numa prateleira da peça (as âncoras do modelo), no chão do andar; o que
 //     pende, pende de uma parede ou do soalho de cima; o que fica na parede, encostado nela;
@@ -3910,6 +3911,9 @@
   const DRINKS = { 'bebida-cerveja': 'cerveja', 'bebida-cerveja-copo': 'cerveja', 'bebida-vinho': 'vinho', 'bebida-vinho-copo': 'vinho', 'bebida-pulque': 'pulque', 'bebida-mel': 'mel', 'bebida-mel-caneca': 'mel' };
   const HOTD = { 'comida-leite': 0, 'comida-fruta': 0, 'comida-mel': 0, 'comida-azeite': 0 };
   // (the feast of the day, the world's: a decoration of a kind, of a model; its platter)
+  // (whose purse paid for what a building shows of its wealth: a household — the house, the seat —, or a building whose use says it — the
+  // tavern's keeper: G.Atmos.rulesOf, the use's own rules)
+  const dono = b => !!b && (G.Village.bedsOf(b) > 0 || (G.Atmos.rulesOf ? G.Atmos.rulesOf(b).some(r => r.dono) : b.type === 'taverna'));
   const festa = (W, k) => !!W.festa && W.festa.enfeites.some(e => e.k === k);
   const festaM = (W, m) => !!W.festa && W.festa.enfeites.some(e => e.modelo === m);
   const pratoF = (W, m) => !!W.festa && !!W.festa.prato && 'comida-festa-' + W.festa.prato.civ === m;
@@ -3934,7 +3938,8 @@
     panela: W => !!W.cozinha || 'panela sem fogo cozinhando', caldeirao: W => (!!W.cozinha && !!W.metal) || 'caldeirão sem fogo cozinhando ou sem metal',
     lamparina: W => (!!W.luz && !!W.luz.oleo) || 'lamparina sem óleo para queimar', vela: W => (!!W.luz && W.luz.cera) || festa(W, 'vela') || 'vela sem cera (nem a cera da festa)',
     'pano-dobrado': W => W.weave || W.bens.some(q => q.k === 'tecido') || 'pano onde o povo não tece',
-    tapete: W => (!!W.pano && (W.pano.tapete || W.weave)) || 'tapete sem tecelagem nem riqueza', tapecaria: W => (!!W.pano && W.pano.tapecaria) || 'tapeçaria sem tecelagem nem riqueza',
+    // (the rug and the hanging of whoever paid for them: a household, a building whose use says whose wealth it shows — L-2251)
+    tapete: (W, t, b) => (!!W.pano && (W.pano.tapete || W.weave) && dono(b)) || 'tapete sem tecelagem, sem riqueza ou sem casa que o pagou', tapecaria: (W, t, b) => (!!W.pano && W.pano.tapecaria && dono(b)) || 'tapeçaria sem tecelagem, sem riqueza ou sem casa que a pagou',
     cavilha: () => true, // (the peg of what hangs: its own cause, checked with it)
     suporte: W => !!W.luz || 'suporte de lamparina sem o que queimar',
     'rabisco-a': W => W.rabiscos > 0 || 'riscos de carvão sem doses servidas', 'rabisco-b': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-c': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-d': W => W.rabiscos > 0 || 'riscos sem doses',
@@ -4012,7 +4017,7 @@
         if (!m) { out.push([3, `${what} sem modelo`, b.id]); continue; }
         // the cause
         if (!t.why) out.push([3, `${what} sem o porquê`, b.id]);
-        const c = CAUSA[t.k]; const r = c ? c(W, t) : 'coisa sem regra de causa no verificador'; if (r !== true && !(r && typeof r !== 'string')) out.push([3, `${what}: ${r}`, b.id]);
+        const c = CAUSA[t.k]; const r = c ? c(W, t, b) : 'coisa sem regra de causa no verificador'; if (r !== true && !(r && typeof r !== 'string')) out.push([3, `${what}: ${r}`, b.id]);
         if (CLAY[t.k] && !W.barro) out.push([2, `${what} de barro onde o povo nunca teve a cerâmica (nada vem do nada)`, b.id]);
         if (t.k === 'caldeirao' && !W.metal) out.push([2, `${what} de metal onde o povo não tem metal`, b.id]);
         if (t.lit && !(W.luz && W.luz.acesa) && !(t.festa && W.festa && W.festa.acesa)) out.push([3, `${what} acesa sem ninguém acordado no escuro (${W.luz ? W.luz.why : 'nada para queimar'})`, b.id]);
