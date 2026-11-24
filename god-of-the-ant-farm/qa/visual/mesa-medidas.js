@@ -13,7 +13,8 @@
 //     da faixa, a regra inteira dentro do painel, nenhum dos dois sobre o outro nem sobre a força e o tipo, e a letra de 8 px ou mais (no
 //     PC, 10) — e nenhuma frase do mito nela;
 //  m3 a tabuleta grande (a que se segura) de cada uma: a regra e o mito inteiros no painel, nada cortado.
-// Fotos: PASTA/<tela>-mesa.png (uma erguida), -faixa.png (a faixa «Você leva 8 de glória» e as etiquetas), -mao9.png, -grande.png.
+// Fotos: PASTA/<tela>-mesa.png (uma erguida), -faixa.png (a faixa da rodada com o nome mais longo dos povos, «Nezahualcóyotl leva 12 de
+// glória», e as etiquetas; com a mão de 7, a do corpo com o selo «Sete seguidas!» por cima, como a frente F a escreve), -mao9.png, -grande.png.
 // E nenhum erro de página nem aviso no console.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const path = require('path'); const fs = require('fs');
@@ -65,7 +66,7 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
       const Z = {
         rosto: uni(q('.tb-face')), nome: txt(P.querySelector('.tb-nm b')), sub: txt(P.querySelector('.tb-nm small')), 'glória dele': uni(q('.tb-gl-o')), ajuda: uni(q('.tb-top .tb-ajuda')), sair: uni(q('.tb-x')),
         'mão dele': uni(q('.tb-mo .ct-card')), trilha: uni(q('.tb-trilha .tb-tk')), 'mesa dele': uni(q('.tb-so')), 'mesa sua': uni(q('.tb-sm')), 'nome da mesa dele': txt(P.querySelector('.tb-so-n')), 'nome da mesa sua': txt(P.querySelector('.tb-sm-n')),
-        oferenda: uni(q('.tb-of')), pote: uni(q('.tb-pote > *')), faixa: uni(q('.tb-msg .tb-ev')),
+        oferenda: uni(q('.tb-of')), pote: uni(q('.tb-pote > *')), faixa: uni(q('.tb-msg .tb-ev')), seguidas: uni(q('.tb-msg .tb-seguidas')),
         'sua glória': uni(q('.tb-gl-m')), etiquetas: uni(q('.tb-info .tb-tag')), monte: uni(q('.tb-monte')),
         'sua mão': uni(q('.tb-mao .ct-card')), botões: uni(q('.tb-btns .tb-b')), dica: txt(P.querySelector('.tb-hint')),
       };
@@ -83,13 +84,17 @@ const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASS
     // (the hand of n: the deck's own tablets, the longest rules first)
     const hand = n => page.evaluate(n => { const D = G.Cartas.DECKS.asteca.slice().sort((a, b) => (b.txt.length - a.txt.length) || (a.id < b.id ? -1 : 1)); return D.slice(0, n).map(c => c.id); }, n);
     // ======== m1: the zones, with a hand of 5, 7 and 9; the round's banner and two tags
+    // (the round's banner as the F front writes it — D-950 —: the other's name in it, the longest of the peoples' names, when he wins it; the
+    // seal of the streak floating over it when the body wins three or more in a row)
+    const FAIXA = { 5: '<span class="tb-ev big down">Nezahualcóyotl leva 12 de glória</span>', 7: '<span class="tb-ev big up">Você leva 12 de glória</span><span class="tb-seguidas s3">Sete seguidas!</span>', 9: '<span class="tb-ev big up">Você leva 8 de glória</span>' };
     for (const n of [5, 7, 9]) {
       const mao = await hand(n);
-      await show({ mao, maoOutro: Math.min(9, n), bonus: 3 }, n - 1); await page.evaluate(() => { document.querySelector('#tab-panel .tb-msg').innerHTML = '<span class="tb-ev big up">Você leva 8 de glória</span>'; });
-      await page.waitForTimeout(400); const z = await zonas();
+      await show({ mao, maoOutro: Math.min(9, n), bonus: 3 }, n - 1); await page.evaluate(h => { document.querySelector('#tab-panel .tb-msg').innerHTML = h; }, FAIXA[n]);
+      await page.waitForTimeout(700); const z = await zonas(); // (the seal of the streak grown to its size: 0,6 s)
       ok(`m1 ${tela} as zonas da mesa, a mão de ${n}`, !z.over.length && !z.fora.length && !z.cortes.length && !z.peq.length && !z.lado,
         `tabuleta da mão ${z.cwh} px${z.over.length ? '; SOBRE: ' + z.over.join(', ') : ''}${z.fora.length ? '; FORA DA TELA: ' + z.fora.join(', ') : ''}${z.cortes.length ? '; CORTADOS: ' + z.cortes.join(', ') : ''}${z.peq.length ? '; botões pequenos: ' + z.peq.join(', ') : ''}${z.lado ? '; ROLAGEM DE LADO' : ''}${process.env.ZONAS ? '; ' + JSON.stringify(z.Z) : ''}`);
       if (n === 5) await page.screenshot({ path: path.join(OUT, `${tela}-faixa.png`) });
+      if (n === 7) await page.screenshot({ path: path.join(OUT, `${tela}-seguidas.png`) });
       if (n === 9) await page.screenshot({ path: path.join(OUT, `${tela}-mao9.png`) });
     }
     // (the photo of the table as it is in a round: a tablet raised, the message of a power)

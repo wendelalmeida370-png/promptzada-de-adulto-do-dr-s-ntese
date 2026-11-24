@@ -99,7 +99,8 @@
     ctx(P) { const b = corpo(); const s = b && G.JogoDados && G.JogoDados.corpo ? G.JogoDados.corpo(b) : null; if (!s || !s.eu) return null; const me = meu(s);
       return { P, s, me, q: x => P.querySelector(x), minha: s.fase === 'palpite' && s.vez === s.eu, disse: !!me && me.palpite !== null, touch: touch() }; },
     jogo: c => c.s.op, acabou: c => !c.s.jogo && c.s.fase !== 'fim',
-    pausa: c => !!c.q('.jd-regras:not(.hidden)'),
+    // (as regras do «?», e o cartão do fim da frente F — quem levou o pote, a festa, o «Jogar de novo» —: o guia nunca cobre o fim)
+    pausa: c => !!c.q('.jd-regras:not(.hidden)') || !!c.q('.jd-banner .jd-fim'),
     passos: [
       { id: 'ola', titulo: 'O copo', alvo: null, botao: 'Começar', livre: ['.jd-ctl', '.jd-top'], quando: c => c.s.fase !== 'fim',
         texto: () => 'Cada um esconde os seus dados debaixo do copo e diz quanto acha que dão <b>todos os dados da mesa</b>, somados. Vou mostrar como se joga, aqui mesmo, nesta partida.' },
@@ -112,7 +113,7 @@
         texto: c => `Quanto dão <b>todos</b> os dados da mesa? Escolha com − e + (ou num atalho). ${c.me && c.me.faces ? `Os seus somam <b>${c.me.faces.reduce((a, x) => a + x, 0)}</b>; ` : ''}cada dado que você não vê dá, em média, 3,5.` },
       { id: 'sobem', titulo: 'Os copos sobem', alvo: ['.jd-mid'], escuro: 0, botao: 'Próximo', livre: ['.jd-ctl', '.jd-top'], quando: c => c.s.fase === 'revela', segue: c => c.s.fase === 'sacode' || c.s.fase === 'fim',
         texto: () => 'A soma é contada. Quem <b>cravou</b> a soma em cheio faz <b>cada um dos outros</b> perder um dado. Se ninguém cravou, quem ficou <b>mais longe</b> perde um.' },
-      { id: 'fim', titulo: 'Quem leva o pote', alvo: ['*.jd-seat .jd-pips'], botao: 'Entendi', fim: true, urgente: c => c.s.fase === 'fim', livre: ['.jd-ctl', '.jd-top'], quando: c => c.s.fase === 'fim' || c.s.rodada >= 2,
+      { id: 'fim', titulo: 'Quem leva o pote', alvo: ['*.jd-seat .jd-pips'], botao: 'Entendi', fim: true, livre: ['.jd-ctl', '.jd-top'], quando: c => c.s.fase !== 'fim' && c.s.rodada >= 2,
         texto: () => 'Os pontinhos debaixo de cada nome são os dados que restam. Quem fica sem dados está fora; o <b>último que ainda tem dados</b> leva o pote. As regras ficam no «?».' },
     ],
   };
