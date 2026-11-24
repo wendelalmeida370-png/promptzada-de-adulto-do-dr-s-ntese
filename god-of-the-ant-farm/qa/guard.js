@@ -28,7 +28,7 @@ const WALK_OK = [
 ];
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
-const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
+const LOOK = ['embriaguez-corpo.js', 'render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
   'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
@@ -2378,6 +2378,72 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   if (!/if \(L\.compasso && v\.inside > 0\) \{ const m = musicoEm\(v\.inside\); if \(m\) o\.ritmo = A\.compasso\(m\); \}/.test(as)) fails.push('o compasso: a cena não dá a quem acompanha o compasso do músico da sala (D-785)');
   if (!/t0: t && Number\.isFinite\(t\.mw\) \? t\.mw : 0/.test(as)) fails.push('o compasso: o pulso da música não conta do começo da vez do músico (t.mw, D-785)');
   if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
+// 360. "o álcool no corpo é um só" (T2, D-830): o que alguém bebeu — v.ebrio (o sangue), v.ebrioG (o estômago), v.ebrioP (o pico da
+// noite), v.ebrioD (o relógio do desmaio), v.ressaca, v.molhado (a bebida jogada na roupa) — só o embriaguez.js escreve; ninguém escreve
+// nem lê mais o v.drunk de antes (o embriaguez.js o lê uma vez, num save de antes), e o G.Atmos.drunk é o G.Ebrio.k: uma verdade só
+{ const F = /\.(ebrio|ebrioG|ebrioP|ebrioD|ressaca|molhado)\s*(=(?!=|\s*function\b|\s*\(?\s*\w*\s*\)?\s*=>)|\+=|-=|\+\+|--)/;
+  for (const f of files) if (f !== 'embriaguez.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (F.test(c) && !LOOK.includes(f)) fails.push(`o álcool é do embriaguez.js (D-830): ${f}:${k + 1} escreve o que alguém bebeu: ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o|q|w|c|p|top|me|body)\.drunk\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`o álcool é do embriaguez.js (D-830): ${f}:${k + 1} escreve o v.drunk de antes — a dose vai pelo G.Ebrio.dose: ${l.trim().slice(0, 110)}`);
+    if (/\b\w+\.drunk\s*>\s*(S|G\.S|s|S_\(\))\.clock/.test(c)) fails.push(`o álcool é um só (D-830): ${f}:${k + 1} lê o v.drunk de antes — pergunte ao G.Ebrio (alegre, bebado, tonto, desmaiado): ${l.trim().slice(0, 110)}`); });
+  if (!/At\.drunk = function \(v\) \{ return G\.Ebrio && v \? G\.Ebrio\.k\(v\) : 0; \};/.test((src['atmos.js'] || []).join('\n'))) fails.push('o álcool é um só (D-830): o G.Atmos.drunk não é o G.Ebrio.k');
+  if (!/'ebrio', 'ebrioG', 'ebrioP', 'ebrioD', 'ressaca', 'molhado',/.test((src['villagers.js'] || []).join('\n'))) fails.push('o álcool é um só (D-830): os campos da bebida fora do molde da pessoa (SHAPE)'); }
+// 361. "o que só se vê do corpo bêbado" (T2, D-837): o embriaguez-corpo.js — o olho que balança, a vista turva e dobrada, o passo que puxa —
+// é do que só se vê (na lista LOOK: o G.VR, nunca o G.R) e não escreve no mundo; os ganchos dele no cam3d.js, no post3d.js e no avatar.js
+// só leem (G.EbrioCorpo.olho, vista, puxa), não sorteiam do mundo e não giram o olho nem o corpo do jogador de uma vez
+{ const ec = src['embriaguez-corpo.js'] || []; if (!ec.length) fails.push('o corpo bêbado: sem o js/embriaguez-corpo.js (D-837)'); if (!LOOK.includes('embriaguez-corpo.js')) fails.push('o corpo bêbado: o embriaguez-corpo.js fora da lista do que só se vê (LOOK, D-837)');
+  ec.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random/.test(c)) fails.push(`o corpo bêbado: embriaguez-corpo.js:${k + 1} tira do acaso do mundo (D-837): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o)\.\w+\s*=(?!=)|G\.Depot\.|setTask|Possess\.(apply|desmaia|arrasta|acorda)|G\.Ebrio\.(dose|molha|arrasta|prova|aoChao)/.test(c)) fails.push(`o corpo bêbado: embriaguez-corpo.js:${k + 1} mexe no mundo (só se vê, D-837): ${l.trim().slice(0, 110)}`); });
+  const need = (f, re, what) => { if (!re.test((src[f] || []).join('\n'))) fails.push(`o corpo bêbado: o ${f} sem ${what} (D-837)`); };
+  need('cam3d.js', /const dk = G\.EbrioCorpo \? G\.EbrioCorpo\.olho\(rdt\) : null;/, 'o gancho do olho');
+  need('post3d.js', /uniform vec4 uEbrio;/, 'o uniforme da vista');
+  need('avatar.js', /G\.EbrioCorpo \? G\.EbrioCorpo\.puxa\(wx, wz, wl, h\) : null/, 'o gancho do passo');
+  for (const f of ['cam3d.js', 'post3d.js', 'avatar.js']) (src[f] || []).forEach((l, k) => { if (/EbrioCorpo/.test(l) && /\bG\.(R|rr|ri|pick|chance)\(|C3\.(yaw|pitch)\s*=|b\.yaw\s*=/.test(l)) fails.push(`o corpo bêbado: ${f}:${k + 1} o gancho da bebida sorteia do mundo ou gira o olho, o corpo (D-837): ${l.trim().slice(0, 110)}`); }); }
+// 362. "a aparência e o povo nunca decidem a bebedeira" (T2, D-834; regra 194): quanto cada um aguenta e o que faz bêbado saem do hábito,
+// da idade, da doença, da índole e de quem está em volta — o embriaguez.js nunca lê o genoma, a feição, a pele, o cabelo, a roupa, o
+// retrato do 3D nem o povo de ninguém
+(src['embriaguez.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bgenoma\b|G\.(Feicao|Genoma|Look3D|People3D|Art|Civ)\b|\.(skin|hair|kidCloth|civ|robe)\b|civOf|\bG\.CIVS\b/.test(c)) fails.push(`a aparência não decide (D-834): embriaguez.js:${k + 1} lê a aparência ou o povo de alguém: ${l.trim().slice(0, 110)}`); });
+// 363. "a bebedeira sem sorteio" (T2, D-834): no embriaguez.js nenhum acaso — nem o do mundo nem o do que só se vê —, e no bloco da
+// bebedeira do act-taverna.js também não: a índole, o quanto se bebeu, quem está em volta e o G.hash da pessoa e do momento
+{ const RX = /\bG\.(R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/;
+  (src['embriaguez.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (RX.test(c)) fails.push(`a bebedeira sem sorteio (D-834): embriaguez.js:${k + 1} sorteia: ${l.trim().slice(0, 110)}`); });
+  const tv = (src['act-taverna.js'] || []).join('\n'); const i = tv.indexOf('// ------------------------------ a bebedeira (T2'), j = tv.indexOf('// ------------------------------ the task machines', i);
+  if (i < 0 || j < 0) fails.push('a bebedeira sem sorteio: o act-taverna.js sem o bloco da bebedeira (T2, D-834)');
+  else if (RX.test(tv.slice(i, j).split('\n').map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'))) fails.push('a bebedeira sem sorteio (D-834): o bloco da bebedeira do act-taverna.js sorteia'); }
+// 364. "a dose pela bebida" (T2, D-831): toda bebida da taverna (as do G.Tavern.NAME e do G.Taverna.DOSE) tem o seu álcool no G.Ebrio.ALC;
+// a taverna dá a dose pelo G.Ebrio.dose — a rodada, e o gole do corpo um a um (T.bite) — e os poços de vinho também
+{ const eb = (src['embriaguez.js'] || []).join('\n'), tv = (src['act-taverna.js'] || []).join('\n'), cg = (src['citygifts.js'] || []).join('\n'), tn = (src['tavern.js'] || []).join('\n');
+  const alc = /E\.ALC = Object\.freeze\(\{([^}]*)\}\)/.exec(eb); const ks = alc ? [...alc[1].matchAll(/(\w+): /g)].map(m => m[1]) : [];
+  const dose = /T\.DOSE = \{([^}]*)\}/.exec(tv); const nm = /Tv\.NAME = \{(.*)\};/.exec(tn);
+  for (const k of new Set([...(dose ? [...dose[1].matchAll(/(\w+): /g)].map(m => m[1]) : []), ...(nm ? [...nm[1].matchAll(/(\w+): \[/g)].map(m => m[1]) : [])])) if (!ks.includes(k)) fails.push(`a dose pela bebida (D-831): a bebida «${k}» da taverna sem o seu álcool no G.Ebrio.ALC`);
+  if (!/if \(G\.Ebrio && n !== 0\) G\.Ebrio\.dose\(v, k, n\);/.test(tv) || !/else if \(G\.Ebrio\) G\.Ebrio\.dose\(v, k, r\.n\);/.test(tv)) fails.push('a dose pela bebida (D-831): a rodada da taverna ou o gole do corpo sem o G.Ebrio.dose');
+  if (!/G\.Ebrio\.dose\(v, 'vinho'/.test(cg)) fails.push('a dose pela bebida (D-831): o vinho dos poços sem o G.Ebrio.dose'); }
+// 365. "todo ato da bebedeira tem som e pose" (T2, D-839): os atos novos do bêbado (jogar-bebida, molhado, cantoria, desmaio, arrastar,
+// arrastado) têm a sua linha no G.Audio.ATO — a da frente do som (a T8, no TAVERNA_ATO), ou a tábua da bebedeira (EBRIO_ATO: o cuspe), que
+// só preenche o que falta —, e as
+// tarefas novas (desmaio, arrastar, arrastado) estão no TASK_OF do vida3d.js (a regra 214 também cobra)
+{ const au = (src['audio-src.js'] || []).join('\n'); const vr = (src['vida3d.js'] || []).join('\n');
+  if (!/for \(const k in EBRIO_ATO\) if \(!A\.ATO\[k\]\) A\.ATO\[k\] = EBRIO_ATO\[k\];/.test(au)) fails.push('o som da bebedeira: o audio-src.js sem a tábua dos atos do bêbado (EBRIO_ATO, D-839)');
+  for (const a of ['jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado']) { const q = a.includes('-') ? `'${a}'` : a; if (!new RegExp(`(^|[\\s{,])${q.replace(/[-']/g, m => '\\' + m)}:\\s*(\\{|still\\()`, 'm').test(au)) fails.push(`o som da bebedeira: o ato «${a}» sem a sua linha (D-839)`); }
+  for (const t of ['desmaio', 'arrastar', 'arrastado']) if (!new RegExp(`\\b${t}: (MOVE|')`).test(vr)) fails.push(`a pose da bebedeira: a tarefa «${t}» fora do TASK_OF (D-839)`); }
+// 366. "o corpo cai e é levado pelas portas" (T2, D-836): o embriaguez.js põe o corpo do deus no chão, o move e o devolve só pelo
+// possess.js (Possess.desmaia, Possess.arrasta, Possess.acorda); a mão do jogador não o acorda enquanto a bebida o tem (Po.wake), e só o
+// possess.js escreve a marca do desmaio do corpo (a.dz)
+{ const eb = (src['embriaguez.js'] || []).join('\n'), po = (src['possess.js'] || []).join('\n');
+  for (const d of ['Possess.desmaia(v)', 'Possess.arrasta(o', 'Possess.acorda(v']) if (!eb.includes(d)) fails.push(`o corpo cai pelas portas (D-836): o embriaguez.js sem o ${d.replace(/\(.*$/, '')}`);
+  if (!/Po\.wake = function \(v\) \{ if \(!v \|\| !v\.sleeping\) return; if \(G\.Ebrio && G\.Ebrio\.desmaiado\(v\)\) return;/.test(po)) fails.push('o corpo cai pelas portas (D-836): o Possess.wake acorda o corpo desmaiado');
+  for (const f of files) if (f !== 'possess.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bavatar\.dz\s*=(?!=)|\bavatar\(\)\.dz\s*=(?!=)/.test(c)) fails.push(`o corpo cai pelas portas (D-836): ${f}:${k + 1} escreve a marca do desmaio do corpo: ${l.trim().slice(0, 110)}`); }); }
+// 367. "a bebida jogada sai pelo livro; a ressaca pesa no needs" (T2, D-833, D-835): o que o bêbado joga no outro sai da caneca pelo livro
+// ('jogou'), cai no chão da taverna pela porta do act-taverna.js (d.chao: a poça) e molha a roupa pelo G.Ebrio.molha; a ressaca pesa só no
+// needs do villagers.js (a fome e o cansaço pelo G.Ebrio.FOME e CANSA) — o tavern.js não tira mais energia na manhã seguinte
+{ const tv = (src['act-taverna.js'] || []).join('\n'), vg = (src['villagers.js'] || []).join('\n'), tn = (src['tavern.js'] || []).join('\n');
+  if (!/D\.use\('v:' \+ v\.id, k, c\.n, \{ op: op\.id, code: 'jogou'/.test(tv) || !/G\.Ebrio\.molha\(o, k\)/.test(tv)) fails.push('a bebida jogada (D-835): sem o livro (\'jogou\') ou sem o G.Ebrio.molha');
+  if (!/const rk = G\.Ebrio \? G\.Ebrio\.passo\(v, dt\) : 0;/.test(vg) || !/1 \+ G\.Ebrio\.FOME \* rk/.test(vg) || !/1 \+ G\.Ebrio\.CANSA \* rk/.test(vg)) fails.push('a ressaca (D-833): o needs do villagers.js sem o passo da bebida ou sem o peso da ressaca');
+  if (/v\.energy = Math\.max\(8/.test(tn)) fails.push('a ressaca (D-833): o tavern.js ainda tira energia na manhã seguinte — a ressaca é do G.Ebrio'); }
+// 368. "só a prova põe a bebida à mão" (T2): o G.Ebrio.prova (o sangue posto de uma vez) e o G.Taverna.ebrioProva (o ato pedido) são das
+// provas — nenhum arquivo do jogo os chama
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bEbrio\.prova\(|\bebrioProva\(/.test(c) && !/E\.prova = function|T\.ebrioProva = function/.test(c)) fails.push(`só a prova põe a bebida à mão: ${f}:${k + 1} chama a porta das provas: ${l.trim().slice(0, 110)}`); });
 // 420. "a porta de som da tela" (T8, D-896): o som sem lugar das telas (os jogos do corpo) é o G.Audio.ui do audio.js, com a sua
 // tabela — os dados no copo, rolando e parando, as cartas embaralhadas, dadas, jogadas e viradas, a aposta, a vitória e a derrota —; e
 // só as telas o chamam (um arquivo *-ui.js ou do que só se vê): o mundo não toca som de tela, o som do mundo tem lugar e dono

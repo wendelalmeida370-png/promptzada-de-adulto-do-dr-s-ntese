@@ -78,7 +78,8 @@
     if (v.hp < 60) m -= (60 - v.hp) / 150;
     if (v.mourn > 0) m -= 0.55;
     if (v.fear > 30) m -= (v.fear - 30) / 140;
-    if (S && v.drunk > S.clock) m += 0.25;
+    if (S && G.Ebrio && G.Ebrio.alegre(v)) m += 0.25; // (the drink in the blood lifts it; its hangover sours it — G.Ebrio, T2)
+    if (v.ressaca > 0.2) m -= 0.25 * v.ressaca;
     if (v.rua) m -= 0.2;
     if (v.jail) m -= 0.4;
     if (G.Lacos && G.Lacos.ferido) m -= G.Lacos.ferido(v) * 0.4; // (a fresh offence on the mind, phase 2)

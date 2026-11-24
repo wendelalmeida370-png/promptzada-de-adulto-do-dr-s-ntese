@@ -830,7 +830,7 @@
     }
     c.scale(G.Render.sface(v) * sc, sc);
     // the drunk weave
-    if (v.drunk > S.clock && G.Court) c.rotate(G.Court.sway(v));
+    if (G.Court && G.Atmos && G.Atmos.drunk(v) > 0) c.rotate(G.Court.sway(v)); // (the drink in the blood: G.Ebrio, by the look)
     const moving = v.moving;
     const ph = v.walkPh;
     const dancing = act === 'dance';
