@@ -285,7 +285,9 @@
     if (v.age >= 62) p *= T.ELDER; if (babyOf(v)) p *= T.BABY;
     const hm = v.home && S_().buildings.get(v.home); const far = hm ? G.dist(hm.x + hm.w / 2, hm.y + hm.h / 2, b.x + b.w / 2, b.y + b.h / 2) : 0;
     if (far > T.NEAR) p *= Math.max(T.FLOOR, 1 - (far - T.NEAR) / T.SPAN);
-    if (!T.menu(b).some(x => x.k !== 'food') && !(v.hunger > 40)) p *= T.DRY; // (nothing to drink: only the hungry, for the plate)
+    // (nothing to drink: only the hungry, for the plate — where there is one: with neither on the shelf, the hungry set out at their whole
+    // wish, sat, asked, heard «acabou» and went home, L-2142)
+    { const mn = T.menu(b); if (!mn.some(x => x.k !== 'food') && !(v.hunger > 40 && mn.some(x => x.k === 'food'))) p *= T.DRY; }
     return Math.max(0, Math.min(1, p));
   };
   // (the keeper of a tavern is no guest of one: his evening is his counter)
@@ -377,10 +379,12 @@
     d.mesa = {}; d.fila = []; d.mus = 0;
     // (what lies on the tables — the body's order waiting, a plate's rest —: back to the shelf, the rest to the slop; the vessels taken up;
     // and the day's book into the house's memory of its regulars, D-800, D-804)
-    emptyTables(op, b, keeperOf(b)); if (b) remember(b, d);
+    // (a day whose tavern is gone — it burnt, fell, was pulled down — closes with no keeper of it: keeperOf asks the building, and the
+    // close of the day of a tavern that fell threw there, the day left open over a ruin, L-2140)
+    const k = b ? keeperOf(b) : null;
+    emptyTables(op, b, k); if (b) remember(b, d);
     // (the cups the keeper was carrying go back to the shelf)
     for (const v of S.villagers.values()) if (v.carry && v.carry.op === op.id && v.carry.n > EPS && b) D.move('v:' + v.id, 'b:' + b.id, v.carry.k, v.carry.n, { op: op.id, code: 'taverna-volta', by: v.id, part: true });
-    const k = b && keeperOf(b);
     if (k && st === 'ok' && d.servidos >= 3) A.note(k, 'memory', `Um dia na taverna: ${d.servidos} servidos${coin(b) ? `, ${String(r2(d.receita)).replace('.', ',')} de receita e ${String(r2(d.gasto)).replace('.', ',')} de custo` : ''}${d.faltas ? `; faltou o que pediam ${d.faltas} ${d.faltas > 1 ? 'vezes' : 'vez'}` : ''}${d.sets ? `; ${d.sets === 1 ? 'uma música' : d.sets + ' músicas'} no estrado` : ''}.`);
     A.end(op, st, why);
   }

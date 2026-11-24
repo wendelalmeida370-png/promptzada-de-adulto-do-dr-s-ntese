@@ -6,7 +6,8 @@
 //     a porta aberta enquanto a taverna atende — e o verificador limpo
 //  v2 um save e um load no meio da noite: cada freguês volta ao seu banquinho, e o mesmo save carregado duas vezes vive o mesmo futuro
 //  v3 a pessoa que morre sentada: sai da mesa e do livro do dia, ninguém fica no lugar dela por ela, a caneca não some sem linha
-//  v4 o deus tira a bebida do estoque: nada servido do nada; quem tem companhia fica à mesa, quem está só vai para casa
+//  v4 o deus tira a bebida do estoque: nada servido do nada; quem tem companhia fica à mesa, quem está só vai para casa; e a vontade
+//     da noite sem bebida — só o faminto inteira, e só onde há prato (L-2142)
 //  v5 o taverneiro preso: ninguém mais servido pelas mãos dele; quem espera se serve no balcão; o dia fecha sem ele e ninguém fica
 //  v7 a taverna viva (D-806 a D-810), na mesma noite da v1: cada ato novo — o brinde, os ossinhos, a dança, as palmas, o canto, o
 //     cochilo, a mesa limpa, as canecas recolhidas, a gorjeta, a expulsão, o fechamento — contado com a sua causa no livro do dia e
@@ -212,6 +213,17 @@ if (SNAP) {
     const alone = at.filter(id => { const m = o.data.mesa[id]; const v = S().villagers.get(id); return m.dry && !at.some(q => q !== id && ((o.data.mesa[q].g && o.data.mesa[q].g === m.g) || T.fond(v, S().villagers.get(q)))); }).length;
     if (!(handed <= inHands + restock + 1e-6)) console.log('   (v4: na prateleira depois da mão do deus ' + left0 + '; ' + JSON.stringify(seen.slice(led0).filter(e => e && DR.includes(e.k) && op && e.op === op.id)) + ')');
     ok('v4 o deus tira a bebida', fromShelf === 0 && handed <= inHands + restock + 1e-6 && alone === 0 && !bad.length, `${fromShelf} rodadas da prateleira vazia (do nada), ${Math.round(handed * 100) / 100} de bebida passada de mão em mão (havia ${Math.round(inHands * 100) / 100} nas mãos, ${Math.round(restock * 100) / 100} chegou à prateleira pelo livro — comprada, da cuba); ${at0} à mesa antes, ${at.length} depois, ${alone} sem bebida e sem companhia; ${bad.join(' / ') || 'verificador limpo'}`);
+    // (and the night's wish by the shelf: with no drink only the hungry go at their whole wish, for the plate — and only where there is a
+    // plate: the god takes the food too, and the hungry one wants it as much as the fed one, L-2142)
+    const w = [...S().villagers.values()].find(q => q.set === b.set && q.age >= 20 && q.age < 50 && !q.captive && !q.aboard); let wl = 'ninguém da cidade', wok = false;
+    if (w) { const h0 = w.hunger; const wf = h => { w.hunger = h; return T.wish(w, b); };
+      god(() => { for (const k of DR) { const n = D.get(ref, k); if (n > 0) D.use(ref, k, n, { code: 'deus', part: true }); } }); // (what came back since: taken again)
+      const fed = wf(5), hungry = wf(60), food = D.free(ref, 'food');
+      god(() => { const n = D.get(ref, 'food'); if (n > 0) D.use(ref, 'food', n, { code: 'deus', part: true }); });
+      const fed0 = wf(5), hungry0 = wf(60); w.hunger = h0;
+      wok = (food < 1 || hungry > fed + 1e-9) && Math.abs(hungry0 - fed0) < 1e-9;
+      wl = `sem bebida: com ${Math.round(food * 100) / 100} de comida na prateleira o faminto ${Math.round(hungry * 100) / 100} e o saciado ${Math.round(fed * 100) / 100}; sem comida também, o faminto ${Math.round(hungry0 * 100) / 100} e o saciado ${Math.round(fed0 * 100) / 100}`; }
+    ok('v4 a vontade sem nada para servir', wok, `${w ? w.name + ' #' + w.id + ', ' : ''}${wl}`);
   }
   // ---------------- v5 the keeper jailed ----------------
   {

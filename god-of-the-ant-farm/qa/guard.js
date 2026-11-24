@@ -2583,5 +2583,19 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const as = (src['audio-src.js'] || []).join('\n'), au = src['audio.js'] || [];
   if (!/const st = In\.doorState\(best\.b, best\.e\.door\); return \{ b: best\.b\.id, door: best\.e\.door,/.test(as)) fails.push('a porta cede pelo mundo: a cena não lê o estado da porta forçada no In.doorState (D-895)');
   au.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'portaCede'/.test(c) && !/f\.porta === 'arrombada' && st\.porta !== undefined && st\.porta !== 'arrombada'/.test(c)) fails.push(`a porta cede pelo mundo: audio.js:${k + 1} toca a porta que cede fora da mudança do estado dela (D-895): ${l.trim().slice(0, 110)}`); }); }
+// 430. "o lugar de sentar é o do desenho" (R, L-2141): quem desenha a gente nos lugares pergunta se um lugar do repartidor é de sentar
+// pelo estado como o desenho o tem — o seatedAt do vida3d.js, pelo Anim3D.resolve, como o Build3D.openPlace —, nunca pelo nome cru do
+// lugar (o .st do In.places): o 'sittalk' da conversa à mesa (a taverna em companhia, D-761; a casa que conversa) é um assento, e lido
+// cru deixava de fora da conversa justamente quem conversava
+{ const v3 = (src['vida3d.js'] || []).join('\n');
+  if (!/const seatedAt = q => SEATED\.has\(q\.st\) \|\| \(!!q\.st && !!Anim\.resolve && SEATED\.has\(Anim\.resolve\(q\.st\)\)\);/.test(v3) || !/!ok\(o\.task\) \|\| !seatedAt\(q\)\) continue;/.test(v3)) fails.push('o lugar de sentar é o do desenho: a conversa à mesa do vida3d.js não lê o assento pelo estado resolvido (o seatedAt, L-2141)');
+  for (const f of ['vida3d.js', 'people3d.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bSEATED\.has\(\s*\w+\.st\s*\)/.test(c) && !/const seatedAt = q =>/.test(c)) fails.push(`o lugar de sentar é o do desenho: ${f}:${k + 1} lê cru o estado de um lugar (o seatedAt, L-2141): ${l.trim().slice(0, 110)}`); }); }
+// 431. "o dia fecha sem a taverna" (R, L-2140): o fechamento do dia da taverna (close, no act-taverna.js) é chamado também quando o
+// prédio já não existe — caiu, pegou fogo, foi derrubado (A.atGone) —, e nada nele pergunta pelo taverneiro de um prédio que falta:
+// todo keeperOf do close vem guardado pelo prédio (b ? / b &&), ou o fechamento quebrava no meio e o dia seguia aberto sobre a ruína
+{ const L = src['act-taverna.js'] || []; const p0 = L.findIndex(l => /^\s{2}function close\(op, st, why\) \{/.test(l)); let p1 = -1;
+  for (let k = p0 + 1; p0 >= 0 && k < L.length; k++) if (/^\s{2}\}\s*$/.test(L[k])) { p1 = k; break; }
+  if (p0 < 0 || p1 < 0) fails.push('o dia fecha sem a taverna: o act-taverna.js sem o seu close (L-2140)');
+  else for (let k = p0; k < p1; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/keeperOf\(b\)/g)) if (!/\bb\s*(\?|&&)\s*$/.test(c.slice(0, m.index))) fails.push(`o dia fecha sem a taverna: act-taverna.js:${k + 1} pergunta pelo taverneiro de um prédio que pode faltar (b ? keeperOf(b), L-2140): ${L[k].trim().slice(0, 110)}`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

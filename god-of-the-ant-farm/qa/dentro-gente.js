@@ -10,10 +10,10 @@
 //     instrumento é cantada, nunca o alaúde de mentira; a briga de pé; a conversa à mesa por turnos e o taverneiro servindo (o que a
 //     taverna do d1 mostrou); o chapéu de sol que sai debaixo de um teto e na cama, o elmo de quem está no posto que fica;
 //  d4 o que só se vê só se vê: o mesmo mundo vivido com o desenho de dentro e sem ele dá o mesmo save;
-//  d5 a taverna da P7 no desenho (D-757 a D-759, L-1906): o taverneiro com as canecas da rodada nas mãos (nunca uma carga), à mesa
-//     virado para o freguês; o músico (posto no estrado pela mão da prova, como a noite da taverna o põe) tocando o instrumento que tem
-//     na mão, ninguém tocando sem ele; cada caminho de dentro acabando quando o mundo o acaba (In.passage, t.ww, t.mw); ninguém na
-//     soleira com a porta fechada.
+//  d5 a taverna da P7 no desenho (D-757 a D-759, L-1906): o taverneiro com as canecas da rodada nas mãos (nunca uma carga) — ou o prato,
+//     quando a rodada é uma refeição (D-768, D-798; T-2041) —, à mesa virado para o freguês; o músico (posto no estrado pela mão da
+//     prova, como a noite da taverna o põe) tocando o instrumento que tem na mão, ninguém tocando sem ele; cada caminho de dentro
+//     acabando quando o mundo o acaba (In.passage, t.ww, t.mw); ninguém na soleira com a porta fechada.
 //  d6 o corpo do deus que entra e sai de uma taverna e de uma casa, com o bebê no colo e sem ele, e com uma carga nos braços e o
 //     bebê (L-1908): ninguém deixado na entrada enquanto o corpo está dentro (o bebê do corpo ficava lá, em pé, do tamanho de uma
 //     bonequinha), o bebê no colo desenhado por ninguém e ainda no colo lá fora, o corpo nunca desenhado duas vezes — no mundo
@@ -87,6 +87,9 @@ if (on('d1') || on('d2')) {
       `entradas ${jumps.ent} (${jumps.entJ} aos saltos), saídas ${jumps.ex} (${jumps.exJ} aos saltos), trocas de lugar ${jumps.mov} (${jumps.movJ}); ${made} caminhos feitos, ${straight} com uma perna sem caminho da planta; posto pela mão: ${wy ? 'o caminho «' + wy.kind + '», ' + wy.pts.length + ' pontos, ' + wy.len.toFixed(1) + ' m' : 'NENHUM (' + putWhy + ')'}; o verificador: ${said.length ? said.join(' · ') : 'nada'}`);
   }
   if (on('d2')) {
+    // (alone, the street drawn first: the proof's hand puts in the nearest one of the street the view draws — with no frame drawn yet,
+    // nobody, and the four cases said «ninguém», T-2040)
+    if (!on('d1')) watch(b, 60);
     const errs = [], res = []; const tryF = (k, f) => { try { f(); } catch (e) { errs.push(k + ': ' + e.message); } };
     // (the save and the load in the middle of the way in: the view begins again — no way kept —, the person drawn at the place)
     tryF('o save', () => { const v = putIn(b); if (!v) return res.push('save: ninguém'); for (let k = 0; k < 10; k++) frame(true); const mid = !!P3.wayOf(v.id); M.salvarCarregar(); for (let k = 0; k < 40; k++) frame(true); res.push(`o save no meio (${mid ? 'andando' : 'parado'}): depois do load ${P3.wayOf(v.id) ? 'AINDA COM CAMINHO' : 'sem caminho'}`); if (!mid || P3.wayOf(v.id)) errs.push('o save no meio do caminho'); });
@@ -143,7 +146,12 @@ if (on('d5')) {
   // for whoever the view draws passing it
   open(0.70); const b = tavern(); FOCUS = { X: (b.x + b.w / 2) * TL, Z: (b.y + b.h / 2) * TL };
   const plan = In.plan(b), e = plan.entrance, E = [b.x * TL + e.x, b.y * TL + e.z]; const V3 = G.Vida3D;
-  const seen = { keeper: 0, keeperCup: 0, keeperBasket: 0, keeperTurned: 0, keeperAt: 0, music: 0, musicWith: 0, musicMimed: 0, ways: 0, early: 0, late: 0, doorShut: 0, self: 0 }; const W = new Map(), out = [];
+  const seen = { keeper: 0, plates: 0, keeperCup: 0, keeperBasket: 0, keeperTurned: 0, keeperAt: 0, music: 0, musicWith: 0, musicMimed: 0, ways: 0, early: 0, late: 0, doorShut: 0, self: 0 }; const W = new Map(), out = [];
+  // (what the keeper's hands show at a table with each vessel: the cups before him and held out — D-757 —, the plate set down or held — D-798)
+  const CUP_AT = new Set(['levar-canecas', 'fam-pedido']), PLATE_AT = new Set(['servir-prato', 'levar-prato', 'chamar-pedido']);
+  // (and drawn: the catalogue's cup and plate, or the thing served as the 3D has it — the vessel with its drink, 'bebida-…', the dish of
+  // what was cooked, 'comida-…': G.Dentro3D.served, D-748)
+  const DRAWN_CUP = /^(caneca|bebida-)/, DRAWN_PLATE = /^(prato|comida-)/;
   // (and a musician for certain: the proof's hand does what the tavern's night does — one of the tables up to the stage of the plan, a
   // set of the tavern's length, the seat kept —, at the frame 300)
   let mus = null; const stageUp = () => { const op = G.Taverna.dia(b); if (!op) return; const d = op.data; const st = In.table(b) && In.table(b).byUse.get('tocar');
@@ -162,13 +170,16 @@ if (on('d5')) {
       if (v.inside === b.id || Math.hypot(s.X - E[0], s.Z - E[1]) < 1) { const ds = In.doorState(b, e.door); if (Math.hypot(s.X - E[0], s.Z - E[1]) < 0.35 && ds && ds.state !== 'aberta' && s.sp > 0.2) seen.doorShut++; }
       if (v.inside !== b.id) continue;
       const t = v.task;
-      if (t && t.type === 'atender' && G.Inv.roundOf(v)) { seen.keeper++; const cup = s.L.inv && s.L.inv.mao && G.Itens.def(s.L.inv.mao).kind === 'caneca'; if (cup) seen.keeperCup++; if (s.L.held) seen.keeperBasket++;
-        if (t.near && s.ap && !s.way && s.sp < 0.2) { seen.keeperAt++; if (s.ap.st === "levar-canecas" || s.ap.st === "fam-pedido") seen.keeperHolds = (seen.keeperHolds || 0) + 1; if ((P3.tools() || []).some(q => /^caneca/.test(q[0]))) seen.cupDrawn = (seen.cupDrawn || 0) + 1; const o = P3.visOf(t.near); if (o) { let da = Math.atan2(o.Z - s.Z, o.X - s.X) - s.yaw; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI; if (Math.abs(da) < 0.6) seen.keeperTurned++; } } }
+      // (the round's own vessel: the cups of a drink — D-757 —, the plate of a meal — D-768, D-798: a meal is served on a plate, set before
+      // the guest, never in a cup; counted as cups, a room served its supper read «with the cup in the hand 0», T-2041)
+      if (t && t.type === 'atender' && G.Inv.roundOf(v)) { const food = v.carry.k === 'food', K = food ? 'prato' : 'caneca'; seen.keeper++; if (food) seen.plates++;
+        const cup = s.L.inv && s.L.inv.mao && G.Itens.def(s.L.inv.mao).kind === K; if (cup) seen.keeperCup++; if (s.L.held) seen.keeperBasket++;
+        if (t.near && s.ap && !s.way && s.sp < 0.2) { seen.keeperAt++; if ((food ? PLATE_AT : CUP_AT).has(s.ap.st)) seen.keeperHolds = (seen.keeperHolds || 0) + 1; if ((P3.tools() || []).some(q => (food ? DRAWN_PLATE : DRAWN_CUP).test(String(q[0])))) seen.cupDrawn = (seen.cupDrawn || 0) + 1; const o = P3.visOf(t.near); if (o) { let da = Math.atan2(o.Z - s.Z, o.X - s.X) - s.yaw; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI; if (Math.abs(da) < 0.6) seen.keeperTurned++; } } }
       if (v.act === 'play' && s.ap && !s.way) { const ins = V3.instrument(s.L), g = s.ap.over || s.ap.st; seen.music++; if (ins && (g === 'tocar-lira' || g === 'tocar-tambor')) seen.musicWith++; if (!ins && (g === 'tocar-lira' || g === 'tocar-tambor' || g === 'strum')) seen.musicMimed++; }
       if (t && t.type === 'tavern' && t.st === 7 && s.ap && s.ap.st === 'ato-servir') seen.self++;
     }
   }
-  out.push(`a taverna ${b.id} às ${(G.S.time * 24).toFixed(1)} h: o taverneiro com a rodada ${seen.keeper} amostras — com a caneca na mão ${seen.keeperCup}, com uma carga desenhada ${seen.keeperBasket}; à mesa ${seen.keeperAt}, virado para o freguês ${seen.keeperTurned}, com as canecas diante de si ${seen.keeperHolds || 0}, canecas desenhadas ${seen.cupDrawn || 0}`);
+  out.push(`a taverna ${b.id} às ${(G.S.time * 24).toFixed(1)} h: o taverneiro com a rodada ${seen.keeper} amostras (${seen.plates} de um prato) — com a caneca ou o prato da rodada na mão ${seen.keeperCup}, com uma carga desenhada ${seen.keeperBasket}; à mesa ${seen.keeperAt}, virado para o freguês ${seen.keeperTurned}, com a caneca ou o prato diante de si ${seen.keeperHolds || 0}, desenhados ${seen.cupDrawn || 0}`);
   out.push(`o músico${mus ? " (#" + mus.id + ", pela mão da prova)" : " (nenhum)"} ${seen.music} amostras — tocando o instrumento que tem ${seen.musicWith}, tocando sem ele ${seen.musicMimed}`);
   out.push(`${seen.ways} caminhos com o relógio do mundo: ${seen.early} chegaram antes, ${seen.late} depois; na soleira com a porta fechada ${seen.doorShut} quadros; servindo-se no balcão ${seen.self}`);
   const good = seen.keeperBasket === 0 && seen.keeperCup === seen.keeper && seen.keeperTurned >= Math.floor(seen.keeperAt * 0.8) && (seen.keeperHolds || 0) >= Math.floor(seen.keeperAt * 0.8) && (seen.cupDrawn || 0) >= Math.floor(seen.keeperAt * 0.8) && seen.musicMimed === 0 && seen.musicWith >= Math.floor(seen.music * 0.98) && seen.early === 0 && seen.late === 0 && seen.doorShut === 0 && seen.ways > 0 && (!mus || seen.music > 0);

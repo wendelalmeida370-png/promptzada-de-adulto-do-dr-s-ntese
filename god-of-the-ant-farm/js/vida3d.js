@@ -168,11 +168,15 @@
   const TALKS = t => !!t && ((t.type === 'lar' && t.what === 'conversar') || (t.type === 'tavern' && t.st === 2));
   // (and the meal's talk: who eats at a table speaks in the rest between the mouthfuls, by the same turn — D-795)
   const TALKS_MEAL = t => TALKS(t) || (!!t && t.type === 'tavern' && t.st === 3);
+  // (seated at a place: its state as the drawing has it — Build3D.openPlace, by Anim3D.resolve —: the share-out gives the seated talk
+  // its own state, 'sittalk' — the tavern's tables in company, D-761; the household's talk at home —, a seat. Read raw, it was no seat,
+  // and the ones talking at a table were the ones left out of the talk: two at the friends' table, no word, L-2141)
+  const seatedAt = q => SEATED.has(q.st) || (!!q.st && !!Anim.resolve && SEATED.has(Anim.resolve(q.st)));
   function talkAt(v, pl, meal) {
     const In = G.Interiors; const ok = meal ? TALKS_MEAL : TALKS; if (!In || !v.inside || !ok(v.task) || !pl.q) return null;
     const P = In.places(G.S.buildings.get(v.inside)); if (!P || !P.by) return null;
     const ids = [v.id];
-    for (const [id, q] of P.by) { if (id === v.id || q.lv !== pl.q.lv || Math.hypot(q.x - pl.q.x, q.z - pl.q.z) > 1.9) continue; const o = G.S.villagers.get(id); if (!o || o.sleeping || !ok(o.task) || !SEATED.has(q.st)) continue; ids.push(id); }
+    for (const [id, q] of P.by) { if (id === v.id || q.lv !== pl.q.lv || Math.hypot(q.x - pl.q.x, q.z - pl.q.z) > 1.9) continue; const o = G.S.villagers.get(id); if (!o || o.sleeping || !ok(o.task) || !seatedAt(q)) continue; ids.push(id); }
     if (ids.length < 2) return null; ids.sort((a, b) => a - b);
     const k = Math.floor((G.S.clock || 0) / TALK_T); const sp = ids[Math.floor(G.hash(ids[0] * 7919 + ids.length * 31 + k * 977) * ids.length) % ids.length];
     // (the one spoken to: the speaker's neighbour at the table, by the turn too)
