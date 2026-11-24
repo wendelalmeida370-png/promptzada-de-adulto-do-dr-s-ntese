@@ -38,22 +38,22 @@ G.Ready.list({
   "bytes": 3880934
  },
  "mega": {
-  "day": 93,
-  "pop": 1740,
-  "peoples": 5,
+  "day": 118,
+  "pop": 1932,
+  "peoples": 4,
   "towns": 19,
   "N": 160,
   "map": "continente",
   "seed": 3310,
   "city": {
-   "name": "Mênfis",
+   "name": "Hedeby",
    "tier": 5,
-   "pop": 206
+   "pop": 145
   },
   "wars": 0,
   "ww": null,
   "world": "Corante",
-  "bytes": 6679337
+  "bytes": 8467671
  },
  "mundial": {
   "day": 58,
