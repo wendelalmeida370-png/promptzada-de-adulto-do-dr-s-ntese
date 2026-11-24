@@ -1313,9 +1313,10 @@ float m3scale(float p) {
   }
   // the inn's sign beside its door: an iron arm out of the wall at the height of the lintel, the board hanging from it on two
   // chains, painted (a jug, the people's gold on it)
+  B3.innSignSide = b => (hv0(b, 23) < 0.5 ? -1 : 1); // (the side of its door the sign hangs on — the slate at the door goes under it: G.Dentro3D, P5, D-749)
   function innSign(K) {
     const B = K.body; if (!B || !B.door) return; const d = B.door, o = d.o, ax = o[1] !== 0; const P = K.P;
-    const wall = ax ? B.z + o[1] * B.sz / 2 : B.x + o[0] * B.sx / 2; const side = K.hv(23) < 0.5 ? -1 : 1; const a = (ax ? B.x : B.z) + d.a + side * (d.w / 2 + 0.35);
+    const wall = ax ? B.z + o[1] * B.sz / 2 : B.x + o[0] * B.sx / 2; const side = B3.innSignSide(K.b); const a = (ax ? B.x : B.z) + d.a + side * (d.w / 2 + 0.35);
     const at = (aa, y, n) => (ax ? [aa, y, wall + o[1] * n] : [wall + o[0] * n, y, aa]); const y = 2.45;
     K.as('iron', () => { K.bar(at(a, y, 0), at(a, y, 0.82), [0, 0.04, 0], ax ? [0.03, 0, 0] : [0, 0, 0.03], '#2e2b28'); K.bar(at(a, y - 0.35, 0), at(a, y - 0.02, 0.5), [0, 0.03, 0], ax ? [0.02, 0, 0] : [0, 0, 0.02], '#2e2b28');
       for (const n of [0.22, 0.68]) K.log(at(a, y - 0.2, n), at(a, y, n), 0.008, '#3a3632'); });
