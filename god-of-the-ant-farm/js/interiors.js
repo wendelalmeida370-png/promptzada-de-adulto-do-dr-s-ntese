@@ -2579,6 +2579,27 @@
   // goes through —, or null. The tavern's (taverna-contexto.js). Pure, as the rest of the door)
   const DOOR_HOLD = {};
   In.doorHold = function (use, fn) { if (typeof fn === 'function') DOOR_HOLD[use] = fn; else delete DOOR_HOLD[use]; };
+  // (the bar of a held door is on the inside (D-910): whoever is within lifts it, by the use's own door — o = { lift(b, id, v) → { ok, why },
+  // in the world's step, the use's write; says(b, id) → { label, msg }: what lifting it means, in words (pure) }. The tavern's war bar,
+  // taverna-contexto.js — b.tranca is its file's alone, rule 344)
+  const DOOR_LIFT = {};
+  In.doorLift = function (use, o) { if (o && typeof o.lift === 'function') DOOR_LIFT[use] = o; else delete DOOR_LIFT[use]; };
+  const NO_LIFT = Object.freeze({ lift: () => ({ ok: false, why: 'a tranca não sai' }) }); // (a use that holds a bar with no door to lift it)
+  function barOf(b, id) {
+    const p = In.plan(b); const d = p && p.doors[id]; if (!d || !d.outer || !b.ip) return null; const use = (TYPES[b.ip.t] || {}).use;
+    const HD = DOOR_HOLD[use]; if (!HD || HD(b, id) !== 'trancada') return null;
+    return DOOR_LIFT[use] || NO_LIFT;
+  }
+  // (a door barred by what the world holds it at, and what lifting the bar from inside means — { label, msg, can: the use has its door
+  // to lift it }, or null: for the hands and the verifier)
+  In.barOf = function (b, id) { const L = b && barOf(b, id); if (!L) return null; const s = L.says ? L.says(b, id) : null; return { label: (s && s.label) || 'Tirar a tranca e abrir a porta', msg: (s && s.msg) || '', can: L !== NO_LIFT }; };
+  // (who has the key of a building: who lives or works there, and its owner's household — a house let out is its landlord's too)
+  const keyed = (v, b) => !!v && (v.home === b.id || v.job === b.id || (!!b.owner && !!G.S.buildings.get(b.owner) && v.home === b.owner));
+  // (someone within it now with no key of it, not held there — the guest at a table, the god's body, a neighbour come in —: the time's rule
+  // never locks them in, the bar is on the inside (D-910). The world's record of who is inside, v.inside: the body's by its controller, by
+  // the side of the wall it is on. A prisoner is the jail's)
+  function guestIn(b) { for (const v of insideOf(b.id)) if (!keyed(v, b) && !v.jail && !v.captive) return true; return false; }
+  In.guestIn = guestIn;
   In.doorState = function (b, id) {
     const p = In.plan(b); if (!p) return null; const d = p.doors[id]; if (!d) return null;
     const S = G.S; const rec = b.ip;
@@ -2592,10 +2613,13 @@
     if (rec.dr && rec.dr[id] !== undefined && rec.dr[id] !== null) return { state: DS[rec.dr[id]] || 'fechada', by: 'pessoa' };
     const T = TYPES[rec.t] || {}; const night = G.isNight && G.isNight();
     if (!d.outer) return { state: d.kind === 'vao' ? 'aberta' : 'fechada', by: 'regra' };
-    const R = DOOR_RULES[T.use]; if (R) { const s = R(b, id); if (s && DS.includes(s)) return { state: s, by: 'regra' }; }
-    if (T.use === 'casa') { let home = 0, out = 0; for (const v of S.villagers.values()) if (v.home === b.id) { if (v.inside === b.id) home++; else out++; } return { state: night && home && !out ? 'trancada' : 'fechada', by: 'regra' }; }
+    // (the time's rule locks a door only with nobody within who has no key of it — shut, not locked, while a guest is in: the tavern shut
+    // for the night with the god's body still in it locked it in, and from inside its hands had only the knock, L-2160; the house locked
+    // at night with the family home and a guest in it, the temple with one praying, the same, L-2161)
+    const R = DOOR_RULES[T.use]; if (R) { const s = R(b, id); if (s && DS.includes(s)) return { state: s === 'trancada' && guestIn(b) ? 'fechada' : s, by: 'regra' }; }
+    if (T.use === 'casa') { let home = 0, out = 0; for (const v of S.villagers.values()) if (v.home === b.id) { if (v.inside === b.id) home++; else out++; } return { state: night && home && !out && !guestIn(b) ? 'trancada' : 'fechada', by: 'regra' }; }
     if (T.open && !night) { for (const v of S.villagers.values()) if (v.job === b.id && v.inside === b.id) return { state: 'aberta', by: 'regra' }; return { state: 'fechada', by: 'regra' }; }
-    return { state: night && T.lockNight ? 'trancada' : 'fechada', by: 'regra' };
+    return { state: night && T.lockNight && !guestIn(b) ? 'trancada' : 'fechada', by: 'regra' };
   };
   In.state = function (b) {
     const p = In.plan(b); if (!p) return null; const S = G.S; const doors = {};
@@ -2805,13 +2829,18 @@
     rec.u = use; rec.r++; fact(b, 'uso', use); secure(b); return { ok: true };
   };
   // a door opened, shut, locked or unlocked by someone (the body and the people the same): forgotten at the turn of the day
-  In.useDoor = function (b, id, act, v) {
+  // (dentro: the hand is on the inside of the door — the body's hands say so by the side of the wall the body is on; the world's people are by
+  // the world's record, v.inside. The bar is on the inside: whoever is within unlocks and lifts a bar — by the use's door, In.doorLift —, the
+  // body and the people of the world alike; one held there does not. From outside a key opens the lock, never a bar — D-910, L-2160)
+  In.useDoor = function (b, id, act, v, dentro) {
     if (!b || !b.ip || !G.inSim) return { ok: false, why: 'fora do passo do mundo' };
     const p = In.plan(b); const d = p && p.doors[id]; if (!d) return { ok: false, why: 'essa porta não existe' };
     const st = In.doorState(b, id); if (st.state === 'bloqueada') return { ok: false, why: 'a porta está bloqueada' };
     if (st.state === 'arrombada') return { ok: false, why: 'a porta foi arrombada: não fecha até ser consertada' };
-    const own = v && (v.home === b.id || v.job === b.id || (b.owner && G.S.buildings.get(b.owner) && v.home === b.owner));
-    if ((act === 'trancar' || act === 'destrancar') && !own) return { ok: false, why: 'só quem mora ou trabalha aqui tem a chave' };
+    const own = keyed(v, b); const within = !!v && !v.jail && !v.captive && (dentro === true || v.inside === b.id);
+    if (act === 'destrancar' && within) { const L = barOf(b, id); if (L) { const u = L.lift(b, id, v); if (!u || !u.ok) return u || { ok: false, why: 'a tranca não sai' }; } }
+    else if ((act === 'trancar' || act === 'destrancar') && !own) return { ok: false, why: 'só quem mora ou trabalha aqui tem a chave' };
+    else if (act === 'destrancar' && barOf(b, id)) return { ok: false, why: 'a tranca está do lado de dentro' };
     if (act === 'abrir' && st.state === 'trancada') return { ok: false, why: 'está trancada' };
     rec_dr(b)[id] = act === 'abrir' ? 1 : act === 'trancar' ? 2 : 0;
     return { ok: true, state: In.doorState(b, id).state };

@@ -479,6 +479,9 @@
   // (a door of the plan as the world has it — Interiors.doorState: shut, open, locked, blocked by a fire —; turned by the hands
   // as anyone turns it, the world doing it in its step — Interiors.useDoor, the keys only for who lives or works there)
   const own = (v, b) => v.home === b.id || v.job === b.id;
+  // (the body within a building's walls — by the side of the wall its feet are on: the plan's shell; the doorstep is out —, not only by the
+  // world's record, v.inside: the bar of a door is on the inside, and whoever is within lifts it — D-910, L-2160)
+  const within = (v, b) => { const ins = G.Space.indoor(v.x * L(), v.y * L(), G.Possess.level(), b.id); return !!(ins && ins.b === b && ins.shell); };
   // (the door the street goes in by is reached from its doorstep — Interiors' entrance.out, where the world's people stand to go
   // in, up to two metres out —: the body steps up to it before the hands go to it)
   I.add({
@@ -493,7 +496,8 @@
         const e = !(ind && ind.b === b) && p.entrance && p.entrance.out ? p.entrance : null;
         for (const d of p.doors) {
           if (d.kind === 'vao') continue; const w = p.walls[d.wall]; if (!w || w.lv !== lv) continue; const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1;
-          const t = { b, p, d, lv, X: b.x * L() + w.a[0] + (w.b[0] - w.a[0]) * d.at / len, Z: b.y * L() + w.a[1] + (w.b[1] - w.a[1]) * d.at / len };
+          // (dentro: the body within its walls, on this side of the door — D-910)
+          const t = { b, p, d, lv, dentro: !!(ind && ind.b === b), X: b.x * L() + w.a[0] + (w.b[0] - w.a[0]) * d.at / len, Z: b.y * L() + w.a[1] + (w.b[1] - w.a[1]) * d.at / len };
           if (e && e.door === d.id) t.reach = Math.max(1.8, Math.hypot(b.x * L() + e.out[0] - t.X, b.y * L() + e.out[1] - t.Z) + 0.35);
           out.push(t);
         }
@@ -502,7 +506,10 @@
     },
     label(ctx, t) {
       const st = G.Interiors.doorState(t.b, t.d.id); const s2 = st ? st.state : 'fechada';
-      return s2 === 'aberta' ? 'Fechar a porta' : s2 === 'trancada' ? (own(ctx.v, t.b) ? 'Destrancar e abrir a porta' : 'Bater à porta') : s2 === 'bloqueada' ? 'A porta está bloqueada' : s2 === 'arrombada' ? 'A porta foi arrombada' : 'Abrir a porta';
+      // (locked, seen from inside: the bar is on this side — lifted and opened, and what that means said, D-910; from outside: one's own
+      // key, or a knock — a bar is never lifted from the street)
+      if (s2 === 'trancada') { const bar = G.Interiors.barOf(t.b, t.d.id); if (t.dentro) return bar ? bar.label : own(ctx.v, t.b) ? 'Destrancar e abrir a porta' : 'Tirar a tranca e abrir a porta'; return own(ctx.v, t.b) && !bar ? 'Destrancar e abrir a porta' : 'Bater à porta'; }
+      return s2 === 'aberta' ? 'Fechar a porta' : s2 === 'bloqueada' ? 'A porta está bloqueada' : s2 === 'arrombada' ? 'A porta foi arrombada' : 'Abrir a porta';
     },
     can(ctx, t) {
       if (!G.S.buildings.has(t.b.id)) return { ok: false, why: 'Não existe mais.' };
@@ -514,16 +521,18 @@
     run(ctx, t) {
       const b = t.b, d = t.d, v = ctx.v; const f = face(ctx, t.X, t.Z); const st = G.Interiors.doorState(b, d.id).state;
       const { to, go } = walkUp(ctx, v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME; // (a step up to it, from its doorstep)
-      // (someone else's locked door: a knock — the house hears it, and whoever is in answers: knock)
-      if (st === 'trancada' && !own(v, b)) return knock(ctx, t);
+      // (a locked door from outside — someone else's, or barred from inside —: a knock — the house hears it, and whoever is in answers:
+      // knock. From inside the bar is on this side, whoever's house it is: unlocked, lifted and opened — D-910, L-2160)
+      const bar = st === 'trancada' ? G.Interiors.barOf(b, d.id) : null;
+      if (st === 'trancada' && !t.dentro && (!own(v, b) || bar)) return knock(ctx, t);
       const want = st === 'aberta' ? 'fechar' : 'abrir';
       G.Avatar.act({ world: true, anim: 'interact', dur: 0.5 + goW, contact: 0.25 + goW, face: f, to, toT: go,
         op: w => {
           if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' };
-          if (want === 'abrir' && G.Interiors.doorState(b, d.id).state === 'trancada') { const u = G.Interiors.useDoor(b, d.id, 'destrancar', w); if (!u.ok) return u; }
+          if (want === 'abrir' && G.Interiors.doorState(b, d.id).state === 'trancada') { const u = G.Interiors.useDoor(b, d.id, 'destrancar', w, within(w, b)); if (!u.ok) return u; }
           return G.Interiors.useDoor(b, d.id, want, w);
         },
-        then: () => G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, want === 'abrir' ? 'door' : 'doorShut'), fail: deny });
+        then: () => { G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, want === 'abrir' ? 'door' : 'doorShut'); if (bar && bar.msg && t.dentro) say(bar.msg, 4.2); }, fail: deny });
       return { ok: true };
     },
     // (20e: F — one's own door locked or unlocked with one's key; someone else's shut door knocked at before going in)
@@ -532,7 +541,7 @@
       if (own(ctx.v, t.b)) return [{ id: 'chave', k: 'outra', label: st === 'trancada' ? 'Destrancar a porta' : 'Trancar a porta', run: (c2, t2) => keyDoor(c2, t2, st === 'trancada' ? 'destrancar' : 'trancar') }];
       // (the door of one's own people's store: its things, by the screen of what is kept; one knocks only at a home's)
       const fid = G.Fac.idOfV(ctx.v); if (t.b.built && isStore(t.b) && G.Village.facOfSet(t.b.set) === fid) return [{ id: 'armazem', k: 'outra', label: `Abrir o ${t.b.type === 'celeiro' ? 'celeiro' : 'armazém'}`, run: () => ({ ok: true, panel: { kind: 'guardados', ref: 'f:' + fid, b: t.b.id } }) }];
-      return st === 'fechada' && (G.BDEF[t.b.type] || {}).housing ? [{ id: 'bater', k: 'outra', label: 'Bater à porta', run: knock }] : [];
+      return st === 'fechada' && !t.dentro && (G.BDEF[t.b.type] || {}).housing ? [{ id: 'bater', k: 'outra', label: 'Bater à porta', run: knock }] : []; // (one knocks from the street, never from inside)
     },
   });
   // (one's key in one's own door, in the world's step — Interiors.useDoor: only who lives or works there has it; an open door
@@ -540,7 +549,7 @@
   function keyDoor(ctx, t, act) {
     const b = t.b, d = t.d; const { to, go } = walkUp(ctx, ctx.v, t.X, t.Z, 0.7); const goW = go * G.Space.TIME;
     G.Avatar.act({ world: true, anim: 'interact', dur: 0.6 + goW, contact: 0.35 + goW, face: face(ctx, t.X, t.Z), to, toT: go,
-      op: w => { if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' }; const u = G.Interiors.useDoor(b, d.id, act, w); if (u.ok) G.Possess.deed('porta'); return u.ok ? { ok: true, act } : { ok: false, why: G.cap(u.why || 'Não dá.') + '.' }; },
+      op: w => { if (!G.S.buildings.has(b.id)) return { ok: false, why: 'Não existe mais.' }; const u = G.Interiors.useDoor(b, d.id, act, w, within(w, b)); if (u.ok) G.Possess.deed('porta'); return u.ok ? { ok: true, act } : { ok: false, why: G.cap(u.why || 'Não dá.') + '.' }; },
       then: r => { G.Audio && G.Audio.at && G.Audio.at(b.x + b.w / 2, b.y + b.h / 2, 'doorShut'); say(r.act === 'trancar' ? 'Você tranca a porta.' : 'Você destranca a porta.'); }, fail: deny });
     return { ok: true };
   }

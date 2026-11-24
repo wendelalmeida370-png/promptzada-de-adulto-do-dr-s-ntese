@@ -2745,6 +2745,26 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   for (let k = p0 + 1; p0 >= 0 && k < L.length; k++) if (/^\s{2}\}\s*$/.test(L[k])) { p1 = k; break; }
   if (p0 < 0 || p1 < 0) fails.push('o dia fecha sem a taverna: o act-taverna.js sem o seu close (L-2140)');
   else for (let k = p0; k < p1; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); for (const m of c.matchAll(/keeperOf\(b\)/g)) if (!/\bb\s*(\?|&&)\s*$/.test(c.slice(0, m.index))) fails.push(`o dia fecha sem a taverna: act-taverna.js:${k + 1} pergunta pelo taverneiro de um prédio que pode faltar (b ? keeperOf(b), L-2140): ${L[k].trim().slice(0, 110)}`); } }
+// 440. "a tranca é do lado de dentro" (P, D-910, D-911, L-2160, L-2161): a regra da hora (o lockNight, a casa de noite, a regra de um uso
+// — In.doorRule) não tranca uma porta com alguém sem a chave lá dentro (o guestIn do doorState: toda linha do doorState que dá «trancada»
+// pela regra pergunta por ele, salvo a tranca do mundo, a da regra 344); quem está dentro destranca e tira a tranca — o In.useDoor com o
+// lado de dentro, pela porta do uso (In.doorLift: a da guerra é do taverna-contexto.js) —; e as mãos do corpo batem só de fora, e de dentro
+// dizem ao mundo o lado da parede em que o corpo está (o within do interact.js). O dono ficou trancado na taverna fechada: de dentro, só
+// «Bater à porta»
+{ const L = src['interiors.js'] || []; const p0 = L.findIndex(l => /^\s{2}In\.doorState = function \(b, id\) \{/.test(l)); let p1 = -1;
+  for (let k = p0 + 1; p0 >= 0 && k < L.length; k++) if (/^\s{2}\};\s*$/.test(L[k])) { p1 = k; break; }
+  if (p0 < 0 || p1 < 0) fails.push('a tranca é do lado de dentro: o interiors.js sem o seu doorState (D-910)');
+  else for (let k = p0; k < p1; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (/'trancada'/.test(c) && /by: 'regra'/.test(c) && !/held === 'trancada'/.test(c) && !/guestIn\(b\)/.test(c)) fails.push(`a tranca é do lado de dentro: interiors.js:${k + 1} tranca pela regra sem perguntar se há alguém sem a chave lá dentro (guestIn, D-910): ${L[k].trim().slice(0, 110)}`); }
+  const it = L.join('\n'), ia = (src['interact.js'] || []).join('\n'), tc = (src['taverna-contexto.js'] || []).join('\n');
+  if (!/if \(act === 'destrancar' && within\) \{ const L = barOf\(b, id\); if \(L\) \{ const u = L\.lift\(b, id, v\);/.test(it) || !/In\.doorLift = function \(use, o\)/.test(it)) fails.push('a tranca é do lado de dentro: o In.useDoor não deixa quem está dentro destrancar e tirar a tranca pela porta do uso (In.doorLift, D-910)');
+  if (!/if \(st === 'trancada' && !t\.dentro && \(!own\(v, b\) \|\| bar\)\) return knock\(ctx, t\);/.test(ia) || !/useDoor\(b, d\.id, 'destrancar', w, within\(w, b\)\)/.test(ia) || !/return st === 'fechada' && !t\.dentro && /.test(ia)) fails.push('a tranca é do lado de dentro: o verbo da porta (interact.js) bate de dentro, ou não diz ao mundo o lado da parede em que o corpo está (D-910, L-2160)');
+  if (!/G\.Interiors\.doorLift\('taverna', \{ lift: unbar, says: barSays \}\)/.test(tc)) fails.push('a tranca é do lado de dentro: a tranca da guerra sem a sua porta por dentro (taverna-contexto.js, In.doorLift — D-911)'); }
+// 441. "a resposta vem primeiro" (P, L-2162): quem responde ao que um bêbado lhe fez à mesa — a bebida na cara (m.ebR, do ebLife) — ou está
+// numa briga não é levado ao estrado nem à dança agora, nem na noite de festa: o bardo da festa (TF.lider), o músico da noite, a roda e o
+// coro (TF.coro) esperam a resposta. O bardo que levou a bebida na cara subiu ao estrado e não reagiu (o e3 da embriaguez)
+{ const at = (src['act-taverna.js'] || []).join('\n'), tf = (src['taverna-festa.js'] || []).join('\n');
+  if (!/const held = answering\(d\.mesa\[v\.id\]\) \|\| brawls\.has\(v\.id\);/.test(at) || !/if \(lead === v && !held\)/.test(at) || !/\|\| answering\(m\) \|\| brawls\.has\(o\.id\)\) continue;/.test(at) || !/TF\(\)\.ocupado\(v, op\)\) && !answering\(m\)\)/.test(at)) fails.push('a resposta vem primeiro: o estrado, o músico ou a dança da festa levam quem responde à bebida na cara (act-taverna.js life, L-2162)');
+  if (!/\(T\.answering && T\.answering\(m\)\) \|\| \(T\.brawling && T\.brawling\(v\)\)\) continue;/.test(tf)) fails.push('a resposta vem primeiro: o coro da festa (TF.coro) leva o bardo que responde à bebida na cara (L-2162)'); }
 // ---------------- Onda 4 — J: os jogos da casa (js/jogos-casa.js; D-930 a D-939) ----------------
 // 455. "o jogo na mesa é do jogos-casa.js" (D-932): o lugar 'n:' do livro (o jogo fora do seu lugar, numa mesa) e o registro dos jogos na
 // mesa (S.jogosMesa) só o js/jogos-casa.js cria e escreve — a letra do lugar é uma só (L-2064: outro arquivo que registre a 'n' apaga a mesa)

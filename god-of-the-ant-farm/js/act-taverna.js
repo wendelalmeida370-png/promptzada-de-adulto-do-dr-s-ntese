@@ -435,9 +435,11 @@
     // (the world round it shuts it: the war at the door — who is at the tables hides there, the keeper bars or shelters —, the fire close
     // by — everyone out —; D-668, D-813)
     if (TC() && TC().shut(b)) return TC().fecha(op, b);
-    // (the closing call, a little before the hour: the keeper calls, the tables get up and go out by the door — the sleepers woken —, D-807)
-    { const h = T.horas(b); if (!d.fecha && d.day === S.day && S.time >= h.fecha - T.FECHA) { d.fecha = r1(S.clock); if (Object.keys(d.mesa).some(id => !d.mesa[id].corpo)) { say(keeperOf(b), 'fechando', {}); tally(d, 'fechar', 'hora'); } } }
-    if (d.day !== S.day || !inHours(b)) { if (Object.keys(d.mesa).length && !d.fecha) say(keeperOf(b), 'fechando', {}); return close(op, 'ok', 'fechou'); }
+    // (the closing call, a little before the hour: the keeper calls, the tables get up and go out by the door — the sleepers woken —, D-807;
+    // the god's body in the house, seated or standing, is told as the tables are — the world never moves it: the door stays unlocked
+    // while it is in, In.doorState. The body alone at the closing heard nothing, and was locked in for the night, L-2160)
+    { const h = T.horas(b); if (!d.fecha && d.day === S.day && S.time >= h.fecha - T.FECHA) { d.fecha = r1(S.clock); if (Object.keys(d.mesa).some(id => !d.mesa[id].corpo) || bodyHere(b)) { say(keeperOf(b), 'fechando', {}); tally(d, 'fechar', 'hora'); } } }
+    if (d.day !== S.day || !inHours(b)) { if ((Object.keys(d.mesa).length || bodyHere(b)) && !d.fecha) say(keeperOf(b), 'fechando', {}); return close(op, 'ok', 'fechou'); }
     // (no keeper of it any more — the trade given to someone else, the keeper gone — for half a minute: the tavern closes,
     // and opens again when it has one)
     const kp = keeperOf(b);
@@ -665,7 +667,7 @@
       // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-806; on the
       // feast's night who would dance to the song gets up for it from the wait as well: the round not yet taken leaves the queue and is
       // asked again after the song — the ring of D-822, L-1988)
-      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const jd = G.JogoDados ? G.JogoDados.ato(v) : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : jd || (musicOn(op) && !d.fecha ? listen(v, m, d) : ''); if (a === 'jogo-ossos' || a === jd) v.act = a; else if (a === 'danca' && d.festa && !m.vem && !d.fecha && !(TF() && TF().ocupado(v, op))) { d.fila = d.fila.filter(q => q !== v.id); toDance(v, t, b, op, m); v.act = shown(d, m, 'danca'); return; } else if (a && a !== 'danca') v.act = shown(d, m, a); const fa = !jd && TF() ? TF().actOf(v, m, op, b) : null; if (fa === 'torcer') { v.act = fa; const ev = TF().torcida(op, m); if (ev && m.tor !== ev[0]) { m.tor = ev[0]; tally(d, 'torcer', ev[1]); } } }
+      if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const jd = G.JogoDados ? G.JogoDados.ato(v) : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : jd || (musicOn(op) && !d.fecha ? listen(v, m, d) : ''); if (a === 'jogo-ossos' || a === jd) v.act = a; else if (a === 'danca' && d.festa && !m.vem && !d.fecha && !(TF() && TF().ocupado(v, op)) && !answering(m)) { d.fila = d.fila.filter(q => q !== v.id); toDance(v, t, b, op, m); v.act = shown(d, m, 'danca'); return; } else if (a && a !== 'danca') v.act = shown(d, m, a); const fa = !jd && TF() ? TF().actOf(v, m, op, b) : null; if (fa === 'torcer') { v.act = fa; const ev = TF().torcida(op, m); if (ev && m.tor !== ev[0]) { m.tor = ev[0]; tally(d, 'torcer', ev[1]); } } }
       if (G.Cartas && G.Cartas.ato && !brawls.has(v.id)) { const cj = G.Cartas.ato(v); if (cj) v.act = cj; } // (the tablets' game at the table: T5)
       // (nobody at the counter for a while — the keeper away —: one gets up, walks to the counter, serves oneself there and pays
       // as to the keeper, and walks back to one's seat, kept — L-1930; a tavern with no buyer's place at its counter, at the table)
@@ -706,6 +708,7 @@
     if (t.st === 5) { // at the table between rounds: the talk; now and then, another round — or home, with nobody to talk to
       v.act = sit; t.pose = talk ? 'sittalk' : undefined;
       life(v, t, b, op, dt); if (t.st !== 5) return; // (up to the stage: the next round is not asked for now — L-1985)
+      if (answering(m)) return; // (the answer to what was done to one first: no doze, no song, no round meanwhile — L-2162)
       // (what one does between the rounds, by its cause — the doze, the bones, the song, the coin to the musician: D-806)
       if (t.st === 5 && d.mus !== v.id && !brawls.has(v.id) && !(d.expulsa && d.expulsa.b === v.id) && !(v.carry && v.carry.n > EPS)) { const a = mood(v, t, b, op, m); if (a) { v.act = a; if (a === 'cochilo') t.pose = undefined; if (t.st === 9) return; } }
       if (m.zz) return; // (dozing: no round more, no going home at one's hour — till the closing, or one wakes)
@@ -736,12 +739,14 @@
     // (put out by the keeper: the two of the act — D-809)
     if (d.expulsa && d.expulsa.b === v.id) { v.act = 'expulsar'; const k = S.villagers.get(d.expulsa.a); if (k) G.faceTo(v, k.x - v.x, k.y - v.y); return; }
     // (the mourning: no music — D-816; the feast: its bards before anyone, from the opening, playing together — D-822)
-    const quiet = !!(TC() && TC().calado(b)); const lead = !quiet && TF() ? TF().lider(op, b) : null;
-    if (lead && !d.mus && S.clock >= (d.musT || 0) && (t.st === 5 || t.st === 2 || t.st === 3)) { if (lead === v) { TF().toStage(op, v); startSet(v, t, b, op); TF().coro(op, b, v); } }
+    // (and who is answering what was done to him at the table — the drink in the face — or is in a brawl is not taken up to play now: the
+    // answer comes first, even on a feast's night. The bard who led the feast went up to the stage with the drink on his face, L-2162)
+    const quiet = !!(TC() && TC().calado(b)); const lead = !quiet && TF() ? TF().lider(op, b) : null; const held = answering(d.mesa[v.id]) || brawls.has(v.id);
+    if (lead && !d.mus && S.clock >= (d.musT || 0) && (t.st === 5 || t.st === 2 || t.st === 3)) { if (lead === v && !held) { TF().toStage(op, v); startSet(v, t, b, op); TF().coro(op, b, v); } }
     else if (!quiet && night && !d.mus && S.clock >= (d.musT || 0) && t.st === 5) {
       // (once a look of the musician's own seat: the room of two or more, and the best of who would play there now)
       let n = 0, best = null, bs = T.MUSE;
-      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (m.body) continue; n++; const o = S.villagers.get(+id); if (!o || m.st !== 5 || !o.task || o.task.type !== 'tavern' || S.time < T.musHour(o)) continue; if (G.Cartas && G.Cartas.prende && G.Cartas.prende(o)) continue; const s = muse(o); if (s > bs) { bs = s; best = o; } } // (who plays the tablets stays at the game: T5)
+      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (m.body) continue; n++; const o = S.villagers.get(+id); if (!o || m.st !== 5 || !o.task || o.task.type !== 'tavern' || S.time < T.musHour(o) || answering(m) || brawls.has(o.id)) continue; if (G.Cartas && G.Cartas.prende && G.Cartas.prende(o)) continue; const s = muse(o); if (s > bs) { bs = s; best = o; } } // (who plays the tablets stays at the game: T5)
       if (n >= 2 && best === v) startSet(v, t, b, op); // (two at the tables: someone to play to — the living tavern, D-806)
       else if (n >= 2 && !best) d.musT = r1(S.clock + T.TALK);
     }
@@ -1102,6 +1107,8 @@
   T.COUNTER = 0.4; // (tiles from the buyer's place at the counter — a metre and a half —: at it)
   const CV = T.CV = { chama: 'esperando quem atenda', carta: 'o cardápio aberto', pedido: 'o pedido a caminho', mesa: 'o pedido esperando na mesa', servido: 'servido', entre: 'entre um pedido e outro' };
   const bodyOf = () => { const a = S_().avatar; return a ? S_().villagers.get(a.id) || null : null; };
+  // (the god's body in the tavern — the world's record, v.inside — and not of its house: a guest the closing is called to, L-2160)
+  const bodyHere = b => { const v = bodyOf(); return !!v && v.inside === b.id && v.job !== b.id && v.home !== b.id; };
   // (the body's own place at a seat of this tavern: the plan's place its hands hold — Possess.useOf)
   const bodyUse = b => { const P = G.Possess; const u = P && P.useOf ? P.useOf() : null; return u && u.b === b.id && SEAT_USES.includes(u.use) ? u : null; };
   const holding = (v, op) => !!(v && op && v.carry && v.carry.op === op.id && v.carry.n > EPS);
@@ -1266,7 +1273,9 @@
     // (the keeper who had its order still on it — else called again: another, or the counter)
     if (m.srv > 0) { const k = S.villagers.get(m.srv); const t = k && k.task; if (!k || !A.able(k) || !t || t.type !== 'atender' || t.op !== op.id || t.corpo !== v.id) { m.srv = 0; delete m.vem; if (m.cv === 'carta') m.cv = 'chama'; m.cs = r1(S.clock); } }
     // (the menu waited out at the table: «quando quiser, é só chamar»)
-    if (m.cv === 'carta' && m.srv > 0 && S.clock - (m.ct || 0) > T.CARTA) { say(S.villagers.get(m.srv), 'carta_depois', {}); m.cv = 'entre'; m.srv = 0; m.st = 5; }
+    // (after the closing call, no promise of the counter: «o salão fecha» and then «fico no balcão, é só chamar» to the body still at the
+    // table, L-2160)
+    if (m.cv === 'carta' && m.srv > 0 && S.clock - (m.ct || 0) > T.CARTA) { if (!d.fecha) say(S.villagers.get(m.srv), 'carta_depois', {}); m.cv = 'entre'; m.srv = 0; m.st = 5; }
     // (the menu of the counter walked away from: shut)
     if (m.cv === 'carta' && m.srv === -1 && !atCounter(v, b)) { if (!has && !m.seat) { delete d.mesa[v.id]; return; } m.cv = has ? 'servido' : 'entre'; m.srv = 0; }
     // (calling, or an order nobody is fetching: the keeper to the counter — and nobody to come a while, the counter's way said)
@@ -1995,6 +2004,11 @@
     const c = v.carry;
     return { slot, quem, cup: !!(c && c.op === op.id && c.k !== 'food' && c.n > EPS), musica: musicOn(op), dito: !!m.ss, cj: m.cj || 0, par };
   }
+  // (who is answering what a drunk one did to him at the table — the drink in the face, the insult, the hug —: the answer (m.ebR) not given
+  // yet — under way, or its end due, the hit back of the quick to anger with it; only ebLife gives it. It comes before the rest of the
+  // table's life: the stage, the dance, the doze, the next round wait for it — L-2162)
+  const answering = m => !!(m && m.ebR);
+  T.answering = answering;
   // the drunk one's act at the tables, each step of one's table life: the other's answer, the act under way, or a look at what to do
   function ebLife(v, t, b, op, dt) {
     const S = S_(); const d = op.data; const m = d.mesa[v.id]; if (!m || m.body || m.corpo || !G.Ebrio) return false; void dt;

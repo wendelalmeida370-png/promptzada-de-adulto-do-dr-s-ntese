@@ -168,6 +168,22 @@
         if (big > 0 && corners.some(c => g(c) >= big) && g(d) < big) add('int', 2, `${b.type}#${b.id}: a porta (sem planta) dá para um chão de ${Math.max(0, g(d))} casas, e um canto dá para o de ${big}`);
       }
     }
+    // ---- the bar is on the inside (D-910): no outer door with a leaf locked by the rule of the hour while someone without its key is within
+    // — the guest at a table, the god's body, a neighbour come in —, and the god's body within a building never behind a bar with no door to
+    // lift it from inside (the tavern shut for the night with the body in it, its hands with only the knock: L-2160; the house, L-2161)
+    if (In.guestIn && In.barOf && In.doorState) {
+      const seen = new Set();
+      for (const v of s.villagers.values()) {
+        if (!(v.inside > 0) || seen.has(v.inside)) continue; seen.add(v.inside); const b = s.buildings.get(v.inside); if (!b || !b.ip || !In.TYPES[b.ip.t] || !In.guestIn(b)) continue;
+        const p = In.plan(b); if (!p) continue;
+        for (const d of p.doors) {
+          if (!d.outer || d.kind === 'vao') continue; const st = In.doorState(b, d.id); if (!st || st.state !== 'trancada' || st.by !== 'regra' || In.barOf(b, d.id)) continue;
+          add('int', 1, `${b.type}#${b.id}: a porta ${d.id} trancada pela regra da hora com alguém sem a chave lá dentro (D-910)`);
+        }
+      }
+      const a = s.avatar; const w = a && s.villagers.get(a.id); const B = w && w.inside > 0 ? s.buildings.get(w.inside) : null; const P = B && B.ip ? In.plan(B) : null;
+      if (P) for (const d of P.doors) { if (!d.outer || d.kind === 'vao') continue; const bar = In.barOf(B, d.id); if (bar && !bar.can) add('int', 1, `${B.type}#${B.id}: o corpo do deus lá dentro, atrás de uma tranca sem porta por dentro (D-910)`); }
+    }
   });
   // (the records go into the save with their buildings: the canonical state carries them, so a round trip that loses one is seen)
   QA.canonMore.push(['interiores', () => {

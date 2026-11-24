@@ -206,7 +206,8 @@
       const bid = S.occ[i]; if (bid) { const b = S.buildings.get(bid); if (b) { G.Village.damageBuilding(b, 40, 'lightning'); if (b.hp > 0 && G.R() < 0.7) G.Nature.ignite(i, 0.8); } }
       if (divine) S.fireGod = true;
     } else G.FX && G.FX.splash(x, y, 1.4);
-    (S.panic = S.panic || []).push({ x, y, r: 4.5, t: 2.5, why: 'panic' });
+    // (the storm's bolt — not the god's — frightens only who is out in the open: fora, L-1990)
+    (S.panic = S.panic || []).push({ x, y, r: 4.5, t: 2.5, why: 'panic', fora: divine ? 0 : 1 });
     return killed;
   };
   P.lightning = function (x, y) {
