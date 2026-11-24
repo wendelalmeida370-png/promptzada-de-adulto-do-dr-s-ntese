@@ -191,5 +191,6 @@ ordem em que o dono pede os PDFs é a do que ele acha divertido de ler; a de faz
   pacote, que usam perícias) e as condições ([`pericias.md`](pericias.md)).
 - **A escalada como base** (19/11/2026): antes dos ofícios das alturas, um sistema de escalada no corpo, do jeito da
   Antiguidade; a montanha é uma expedição como uma navegação ([`escalada.md`](escalada.md), [`montanha.md`](montanha.md)).
+- **As Tabuletas viram coleção, liga e ofício** (24/11/2026, a ideia do dono): uma base (a tabuleta como coisa do mundo, com raridades, douradas e únicas — o rei que vira tabuleta, as relíquias achadas pelo boato), uma perícia, o tabulista (o 86.º ofício), o pintor de tabuletas, as variações e os torneios do bairro ao mundo; no Patch 39b ([`tabuletas.md`](tabuletas.md)).
 - **A aba de Relacionamentos** no estilo do The Sims, com o laço de fundo, o momento e o porquê (entra no Patch 23).
 - **O alvo é o PC;** o celular continua funcionando, sem pôr teto em nada.
