@@ -284,8 +284,9 @@
   At.deep = (id, civ) => (At.DEEP[civ] || At.DEEP.classico)[Math.floor(hh(id, 42) * 3)];
   At.bright = id => At.BRIGHT[Math.floor(hh(id, 43) * At.BRIGHT.length)];
   At.odd = id => hh(id, 41) < 0.08;
-  // how drunk one is, 0 to 1: the tavern's rounds and the wine of the wells leave v.drunk, the instant it wears off
-  At.drunk = function (v) { const S = G.S; if (!S || !v || !(v.drunk > S.clock)) return 0; return G.clamp(0.45 + (v.drunk - S.clock) / 120, 0.45, 1); };
+  // how drunk one is, 0 to 1: the drink in the blood against what one bears — G.Ebrio, one truth (embriaguez.js: the tavern's rounds,
+  // the wine of the wells; none below merry, the stagger with the arms out from the staggering mark, the whole of it out: T2, D-830)
+  At.drunk = function (v) { return G.Ebrio && v ? G.Ebrio.k(v) : 0; };
 
   // ------------------------------ what a building shows inside (the interiors 2.0, the front P5: D-740 to D-749) ------------------------------
   // The rule above all (the owner, 23/11/2026; D-651): what is seen inside a building is there because the world has it — the

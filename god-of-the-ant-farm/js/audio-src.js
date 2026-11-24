@@ -172,6 +172,20 @@
   };
   A.TAVERNA_ATO = TAVERNA_ATO;
   for (const k in TAVERNA_ATO) if (!A.ATO[k]) A.ATO[k] = TAVERNA_ATO[k];
+  // the acts of the drunk (T2, D-839 — the world's front puts the line, P9 the sound of its own): the drink thrown and the wet one's start,
+  // the song sung alone and loud, the snore of one passed out, the heave of who drags a body and the silence of the dragged, the spit —
+  // of the library the room has; these only fill what the tables above lack
+  const EBRIO_ATO = {
+    'jogar-bebida': { s: 'splash', q: 'contato', em: 0.55, v: 0.5, alc: 0.8, fam: 'noite' },
+    molhado: { s: 'hey', q: 'curso', cada: 2, v: 0.5, alc: 1 },
+    cantoria: { s: 'canto', q: 'curso', cada: 0.7, v: 0.6, alc: 1.3, fam: 'noite' },
+    desmaio: { s: 'ronco', q: 'curso', cada: 3.6, v: 0.3, alc: 0.4 },
+    arrastar: { s: 'heave', q: 'curso', cada: 2.2, v: 0.4, alc: 0.8 },
+    arrastado: still('quem é arrastado vai calado'),
+    spit: still('o cuspe não se ouve de longe'),
+  };
+  A.EBRIO_ATO = EBRIO_ATO;
+  for (const k in EBRIO_ATO) if (!A.ATO[k]) A.ATO[k] = EBRIO_ATO[k];
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {
     cao: { s: 'bark', cada: 9, v: 0.6, alc: 1.3 }, galinha: { s: 'cluck', cada: 7, v: 0.4, alc: 0.7, dia: 1 }, pombo: { s: 'coo', cada: 9, v: 0.25, alc: 0.5, dia: 1 },

@@ -218,9 +218,10 @@
     const [cx, cy] = G.Village.center(b);
     v.act = 'fill'; G.faceTo(v, cx - v.x, cy - v.y);
     if (v.actT < 2.2) return;
-    // two cups at the well: drunk for a good while, and the morning will know it
+    // two cups of the wells' wine: in the body as the tavern's wine is (G.Ebrio: two rounds — the drunk dance, the drunker fall), and the
+    // morning will know it
     v.drinks = (v.drinks || 0) + 2; v.drinkDay = S.day;
-    v.drunk = Math.max(v.drunk || 0, S.clock + 50 + v.drinks * 18);
+    if (G.Ebrio) G.Ebrio.dose(v, 'vinho', 2 * ((G.Taverna && G.Taverna.DOSE && G.Taverna.DOSE.vinho) || 0.1));
     w.cups[v.id] = (w.cups[v.id] || 0) + 2; w.drank++;
     G.Vg.emote(v, 'happy', 2); t.st = 3; v.actT = 0; t.dur = G.rr(5, 11);
   }
