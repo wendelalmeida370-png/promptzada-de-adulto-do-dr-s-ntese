@@ -2930,6 +2930,14 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
     else if (/\b(o|v|b|x|me|p)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(pl[1])) fails.push(`a sala aplaude pelo que se lê: a plateia do ${f} escreve no mundo (D-954)`);
     L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(som|snd)\('aplauso'/.test(c) && ((c.match(/\b(som|snd)\('aplauso'/g) || []).length !== 1 || !/const pl = plateia\([^)]*\); if \(pl > 0\) \{ (som|snd)\('aplauso', \{ n: pl\b/.test(c))) fails.push(`a sala aplaude pelo que se lê: ${f}:${k + 1} pede o aplauso sem a plateia contada (D-954): ${l.trim().slice(0, 110)}`); }); } }
 // === Onda 4 — N: a noite que dura para quem a vive ===
+// 475. "todo módulo do mundo vive" (L-2224): a lista dos módulos do passo do mundo (MODS, main.js) tem cada módulo numa entrada viva —
+// nenhuma depois de um comentário na mesma linha —, e os do mundo estão nela. O jogo de dados da T4 entrou na lista com o seu comentário no
+// fim da linha, antes do comércio e das migrações, e os dois ficaram fora do passo do mundo, calados, por um dia
+{ const L = src['main.js'] || []; const a = L.findIndex(l => /^\s*const MODS = \[/.test(l)); let z = a; while (a >= 0 && z < L.length && !/^\s*\];/.test(L[z])) z++;
+  if (a < 0 || z >= L.length) fails.push('todo módulo do mundo vive: o main.js sem a lista MODS (L-2224)');
+  else { for (let k = a; k <= z; k++) { const i = L[k].indexOf('//'); if (i >= 0 && /\['\w+', /.test(L[k].slice(i))) fails.push(`todo módulo do mundo vive: main.js:${k + 1} — um módulo da lista MODS depois de um comentário, fora do passo do mundo (L-2224): ${L[k].slice(i, i + 100)}`); }
+    const live = L.slice(a, z + 1).map(l => l.split('//')[0]).join('\n');
+    for (const nm of ['Nature', 'Village', 'Villagers', 'Animals', 'Court', 'Tavern', 'JogoDados', 'Trade', 'Migrate', 'Polity', 'Scene', 'Possess']) if (!new RegExp(`\\['${nm}', `).test(live)) fails.push(`todo módulo do mundo vive: o módulo ${nm} fora da lista MODS do main.js (L-2224)`); } }
 // 476. "a demora do dia é um registro, e as causas só leem" (D-960): o sol se demora pelas causas registradas com G.linger — a cena
 // (world.js), o corpo na taverna aberta e o corpo numa partida à mesa (act-taverna.js, do corpo: o quarto argumento true) —, a mais lenta
 // vale. (a) só o world.js e o act-taverna.js registram causas; (b) as do act-taverna.js são do corpo; (c) as perguntas delas (salaCorpo,
