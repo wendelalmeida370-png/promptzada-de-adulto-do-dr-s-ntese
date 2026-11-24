@@ -34,6 +34,13 @@
   const snd = (k, o) => { if (G.Audio && G.Audio.ui) G.Audio.ui(k, o); };
   const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
   const ease = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  // (the tables' feast, G.JogoFX — D-940 —; a proof that does not load it: nothing feasts, nothing breaks)
+  const NOFX = { em() { }, burst() { }, anel() { }, chuva() { }, moedas: () => Promise.resolve(), conta: (el, de, para, ms, fmt) => { if (el) el.textContent = (fmt || (x => String(Math.round(x))))(para); return Promise.resolve(); }, flutua() { }, pulso() { }, tremor() { }, clarao() { }, raios() { }, cores: () => ['#ffd76a'], limpa() { }, menos: () => false };
+  const JFX = () => G.JogoFX || NOFX;
+  // (the end on the table — the last view of the body's game as it ended, kept on the screen after the world let the table go, until the hands
+  // say: again, or out —; the «again» asked before the table is free, waiting for it; the last view of the body's game; the feast's own turn)
+  let fimMostrado = null, quer = false, lastS = null, festaTok = 0;
   let panel = null, cv = null, ctx = null, open = false, closer = false, sig = '', pick = 0, pickFor = '', busy = false, note = '', help = false;
   let saidShown = '';
   let scene = null, faces = new Map(), lastKey = '', said = {}, seatEls = new Map(), upT = 0;
@@ -209,7 +216,19 @@
 
   // ------------------------------ the scene: what the view keeps between frames (never the world) ------------------------------
   // the body's dice rolling (physics in the canvas's pixels), the cups' moments, the balloons' births, the coins' flights
-  function newScene(s) { return { op: s.op, r: -1, fase: '', t0: 0, dice: [], bids: {}, revT: 0, lastLift: -1, counted: 0, coinsFly: null, banner: null, shake: 0, rolled: false, ended: false }; }
+  function newScene(s) { return { op: s.op, r: -1, fase: '', t0: 0, dice: [], bids: {}, revT: 0, lastLift: -1, counted: 0, coinsFly: null, banner: null, shake: 0, rolled: false, ended: false,
+    nCont: 0, crava: false, voou: {}, batT: 0, cnt: { at: {}, fim: 0 } }; } // (the dice counted, the «Cravou!» done, the lost dice flown, the last heartbeat, when each die is counted)
+  // (when each die of the table is counted as the cups come up, in seconds since they began to rise: cup by cup in the order of the bids,
+  // die by die — the body's too, at its turn —; and when the count ends: D-957)
+  function contagem(s, L) {
+    const order = s.ordem && s.ordem.length ? s.ordem : L.map(p => p.id); const at = {}; let fim = 0;
+    order.forEach((id, k) => { const p = L.find(q => q.id === id); if (!p || !p.faces || !p.faces.length) return; at[id] = p.faces.map((f, j) => 0.45 + k * 0.45 + j * 0.12); fim = Math.max(fim, at[id][at[id].length - 1]); });
+    return { at, fim };
+  }
+  // (the lost die's flight: after the count, one after the other, 0.85 s each)
+  const VOO = 0.85; const vooAt = (sc, s, id) => { const i = s.res ? s.res.queimou.indexOf(id) : -1; return i < 0 ? null : sc.cnt.fim + 0.35 + i * 0.18; };
+  // (the last die: the body on its last one (1), or every other on theirs — the body could take the pot this round — (1), or both (2))
+  function tensao(s, me) { if (!me || me.fora || !(me.n > 0) || !s.jogo) return 0; const outros = s.jogadores.filter(p => !p.eu && !p.fora && p.n > 0); const eu1 = me.n === 1, eles1 = outros.length > 0 && outros.every(p => p.n === 1); return eu1 && eles1 ? 2 : eu1 || eles1 ? 1 : 0; }
   // the throw of the body's dice: out of its cup toward the middle, each its own speed and spin (the view's chance), to land on the
   // faces the world threw
   function throwDice(sc, F, geo, mat) {
@@ -259,6 +278,7 @@
     void panel.offsetWidth; render(s, 0); return true;
   };
   function hide(quiet) {
+    JFX().limpa(); festaTok++; quer = false; fimMostrado = null; lastS = null; // (the screen shut: no particle, coin or count left running — D-955)
     open = false; if (panel) panel.classList.add('hidden'); { const r = G.IncUI && G.IncUI.root && G.IncUI.root(); if (r) r.classList.remove('jd-on'); }
     if (G.Modes && G.Modes.panelIs && G.Modes.panelIs('dados')) G.Modes.setPanel(null); void quiet;
   }
@@ -284,9 +304,9 @@
   // ------------------------------ the frame: the world read, the scene moved, the table drawn ------------------------------
   function render(s, dt) {
     const v = P().body(); if (!panel || !v) return; s = s || JD().corpo(v); if (!s) { hide(true); return; }
-    if (!scene || scene.op !== s.op) scene = newScene(s);
+    if (!scene || scene.op !== s.op) { scene = newScene(s); fimMostrado = null; }
     const sc = scene; const now = s.now; const F = (s.fase === 'revela' || s.fase === 'fim') ? 1 : 0; void F;
-    const L = seated(s); const me = L.find(p => p.eu) || null;
+    const L = seated(s); const me = L.find(p => p.eu) || null; sc.cnt = contagem(s, L);
     const { w, h, dpr } = fit(); const geo = geoOf(w, h, L.length); const set = s.set || { mat: 'osso' }; const mat = set.mat;
     // (the table resized — the hands' strip taller in another phase, the window turned —: the body's dice go with the board, not the pixels)
     const gk = `${geo.mx}:${geo.my}:${geo.tw}:${geo.th}`;
@@ -301,6 +321,9 @@
     if (sc.dice.length) stepDice(sc, dt, geo);
     // (the bids said since the last frame: a balloon born, a tick of the board)
     for (const p of L) if (p.palpite !== null && !sc.bids[p.id]) { sc.bids[p.id] = { t: performance.now() }; }
+    // (the last die: the heart beats while the cups have not come up and the sum is not out — D-957)
+    { const ten = tensao(s, me); const T = performance.now() / 1000; const counting = s.fase === 'revela' && (T - sc.revT / 1000) < sc.cnt.fim + 0.2;
+      if (ten && (s.fase === 'segura' || counting) && T - sc.batT > (ten === 2 ? 0.72 : 0.9)) { sc.batT = T; snd('tensao', { n: ten }); } }
     draw(s, sc, geo, L, me, mat, dpr, now);
     seats(s, sc, geo, L, w, h);
     mid(s, sc, geo, L);
@@ -310,8 +333,10 @@
   function onPhase(s, sc, geo, me, mat, was) {
     if (s.fase === 'sacode') { sc.r = s.rodada; sc.dice = []; sc.bids = {}; sc.rolled = false; sc.settled = false; sc.revT = 0; sc.lastLift = -1; sc.counted = 0; sc.shake = performance.now(); snd('dados-copo', { mat: s.copo === 'couro' ? 'couro' : mat, n: s.jogadores.reduce((a, p) => a + p.n, 0) });
       if (s.rodada === 1 && s.moeda && s.aposta) snd('aposta', { n: s.jogadores.length }); }
-    if (s.fase === 'revela') { sc.revT = performance.now(); sc.lastLift = -1; sc.counted = 0; }
-    if (s.fase === 'fim' && !sc.ended) { sc.ended = true; const won = s.venc && s.venc === s.eu; snd(won ? 'vitoria' : s.eu && s.venc > 0 ? 'derrota' : 'aposta', { n: 3 }); sc.coinsFly = { t: performance.now(), to: s.venc }; }
+    if (s.fase === 'segura') snd('suspense'); // (the held breath before the cups come up)
+    if (s.fase === 'revela') { sc.revT = performance.now(); sc.lastLift = -1; sc.counted = 0; sc.nCont = 0; sc.crava = false; sc.voou = {}; }
+    // (the end: the pot flies to the winner's seat on the table — to the body's, the coins come out of the table into its purse: the end's card)
+    if (s.fase === 'fim' && !sc.ended) { sc.ended = true; if (!(s.venc && s.venc === s.eu)) sc.coinsFly = { t: performance.now(), to: s.venc }; }
     void was; void geo; void me;
   }
   function draw(s, sc, geo, L, me, mat, dpr, now) {
@@ -342,18 +367,29 @@
       if (out && !p.eu) { cup(c, cp[0], cp[1], geo.cupR * 0.85, s.copo, 1, null); return; }
       if (revK >= liftAt && li > sc.lastLift && !p.eu && p.faces) { sc.lastLift = li; snd('dados-parar', { mat, n: p.faces.length, vol: 0.6 }); }
       // (the dice: the body's rolling or resting in its tray; the others' in a row before their cups, shown as their cups come up)
-      if (p.eu) { cup(c, cp[0], cp[1], geo.cupR * 0.86, s.copo, k ? 0.85 : 0, jig); if (p.faces && sc.dice.length) for (const d of sc.dice) die(c, d.x, d.y, geo.myDie, d.a, d.rest ? d.f : d.show, mat, d.z); }
-      else { if (p.faces && k > 0.2) { const n = p.faces.length; p.faces.forEach((f, j) => { const ox = (j - (n - 1) / 2) * geo.die * 1.25; const px = row[0] + ox * Math.abs(geo.seats[i].uy), py = row[1] + ox * Math.abs(geo.seats[i].ux); const pop = 1 - ease((k - 0.2) / 0.5); die(c, px, py, geo.die, (j * 0.7 + i) % 1.2 - 0.6, f, mat, pop * 14, clamp((k - 0.2) * 3, 0, 1)); }); }
+      // (a die counted glows a moment; the one lost this round leaves its place when it flies — D-957)
+      const at = sc.cnt.at[p.id] || []; const vai = vooAt(sc, s, p.id); const foi = vai !== null && revK >= vai;
+      if (p.eu) { cup(c, cp[0], cp[1], geo.cupR * 0.86, s.copo, k ? 0.85 : 0, jig); if (p.faces && sc.dice.length) sc.dice.forEach((d, j) => { if (foi && j === sc.dice.length - 1) return; brilha(c, d.x, d.y, geo.myDie, revK - (at[j] === undefined ? 99 : at[j])); die(c, d.x, d.y, geo.myDie, d.a, d.rest ? d.f : d.show, mat, d.z); }); }
+      else { if (p.faces && k > 0.2) { const n = p.faces.length; p.faces.forEach((f, j) => { if (foi && j === n - 1) return; const ox = (j - (n - 1) / 2) * geo.die * 1.25; const px = row[0] + ox * Math.abs(geo.seats[i].uy), py = row[1] + ox * Math.abs(geo.seats[i].ux); const pop = 1 - ease((k - 0.2) / 0.5); brilha(c, px, py, geo.die, revK - (at[j] === undefined ? 99 : at[j])); die(c, px, py, geo.die, (j * 0.7 + i) % 1.2 - 0.6, f, mat, pop * 14, clamp((k - 0.2) * 3, 0, 1)); }); }
         cup(c, cp[0] - (k > 0 ? geo.seats[i].ux * geo.cupR * 1.9 * ease(k) : 0), cp[1] - (k > 0 ? geo.seats[i].uy * geo.cupR * 1.9 * ease(k) : 0), geo.cupR, s.copo, k, jig); }
     });
-    // (the burnt die of the round slides off: a mark at the seat)
-    if (s.res && revK > 0.6 + order.length * 0.45) for (const id of s.res.queimou) { const i = L.findIndex(p => p.id === id); if (i < 0) continue; const st = geo.seats[i]; const t = clamp((revK - 0.6 - order.length * 0.45) / 0.8, 0, 1);
-      die(c, st.x - st.ux * geo.m * 0.02 * t, st.y - st.uy * geo.m * 0.02 * t + t * 10, geo.die * 0.9, t * 3, 0, mat, 0, 1 - t); }
+    // (the die lost this round flies off the table from its side — up, turning, out past the rim, and gone —, the body's with a jolt and its
+    // «−1 dado»; each with its whoosh: D-957)
+    if (s.res && s.fase === 'revela') for (const id of s.res.queimou) { const i = L.findIndex(p => p.id === id); if (i < 0) continue; const t0 = vooAt(sc, s, id); const t = (revK - t0) / VOO; if (t < 0 || t > 1) continue;
+      const p = L[i]; const st = geo.seats[i]; let x0, y0; if (p.eu && sc.dice.length) { const d = sc.dice[sc.dice.length - 1]; x0 = d.x; y0 = d.y; } else { const n = (p.faces || []).length || 1; const ox = ((n - 1) - (n - 1) / 2) * geo.die * 1.25; x0 = geo.rows[i][0] + ox * Math.abs(st.uy); y0 = geo.rows[i][1] + ox * Math.abs(st.ux); }
+      if (!sc.voou[id]) { sc.voou[id] = 1; snd('dado-voa', { mat }); { const r = cv.getBoundingClientRect(); JFX().burst(r.left + x0, r.top + y0, { tipo: 'poeira', n: 6, larg: 8, cores: ['#d8c8a8', '#bfae8c'] }); } if (p.eu) { const el = seatEls.get(id); JFX().flutua(el || cv, '−1 dado', { cls: 'jfx-perde' }); JFX().tremor(panel.querySelector('.jd-mesa'), 0.35); } }
+      const e = ease(t); const out = geo.m * (p.eu ? 0.55 : 0.4); const side = (i % 2 ? 1 : -1) * geo.m * 0.08;
+      die(c, x0 - st.ux * out * e + st.uy * side * Math.sin(Math.PI * t), y0 - st.uy * out * e - st.ux * side * Math.sin(Math.PI * t), (p.eu ? geo.myDie : geo.die) * (1 - 0.25 * t), t * 9, p.faces ? p.faces[p.faces.length - 1] : 0, mat, 46 * Math.sin(Math.PI * Math.min(1, t * 1.1)), 1 - clamp((t - 0.6) / 0.4, 0, 1)); }
     // (the vignette and the lamp)
     const vg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)'); c.fillStyle = vg; c.fillRect(0, 0, W, H);
-    if (s.fase === 'segura') { const p = 0.5 + 0.5 * Math.sin(T / 160); c.fillStyle = `rgba(0,0,0,${0.12 + 0.1 * p})`; c.fillRect(0, 0, W, H); }
+    // (the breath before the cups: the room darker; with the last die at stake, the edges beat red with the heart — or gold, the pot within reach)
+    const ten = tensao(s, me);
+    if (s.fase === 'segura' || (ten && s.fase === 'revela' && revK < sc.cnt.fim + 0.2)) { const p = 0.5 + 0.5 * Math.sin(T / 160); if (s.fase === 'segura') { c.fillStyle = `rgba(0,0,0,${0.12 + 0.1 * p})`; c.fillRect(0, 0, W, H); }
+      if (ten) { const b = Math.exp(-((T / 1000) - sc.batT) * 5); const tg = c.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.72); const cor = me && me.n === 1 ? '170,24,12' : '210,160,40'; tg.addColorStop(0, `rgba(${cor},0)`); tg.addColorStop(1, `rgba(${cor},${(0.3 + 0.42 * b).toFixed(3)})`); c.fillStyle = tg; c.fillRect(0, 0, W, H); } }
     void now; void me;
   }
+  // (a die being counted: a warm glow under it for a moment — dt the seconds since it was counted)
+  function brilha(c, x, y, s, dt) { if (!(dt >= 0 && dt < 0.45)) return; const a = (1 - dt / 0.45) * 0.85; c.save(); const g = c.createRadialGradient(x, y, s * 0.2, x, y, s * 1.15); g.addColorStop(0, `rgba(255,226,140,${a.toFixed(3)})`); g.addColorStop(1, 'rgba(255,200,90,0)'); c.fillStyle = g; c.beginPath(); c.arc(x, y, s * 1.15, 0, 7); c.fill(); c.restore(); }
   // (the body's dice already resting — a screen opened in the middle of a round: where they lie, without a throw)
   function placeDice(sc, F, geo, mat) { const T = geo.tray; sc.dice = F.map((f, i) => ({ x: (T[0] + T[2]) / 2 + (i - (F.length - 1) / 2) * geo.myDie * 1.5, y: (T[1] + T[3]) / 2 + (i % 2 ? -1 : 1) * geo.myDie * 0.25, z: 0, vx: 0, vy: 0, vz: 0, a: (i % 3 - 1) * 0.2, w: 0, f, show: f, rest: true, mat })); sc.rolled = true; sc.settled = true; }
 
@@ -368,6 +404,7 @@
       el.classList.toggle('vez', s.vez === p.id); el.classList.toggle('fora', !!p.fora); el.classList.toggle('eu', p.eu);
       el.classList.toggle('cravou', !!(s.res && s.res.cravou === p.id)); el.classList.toggle('queimou', !!(s.res && s.res.queimou.includes(p.id)));
       el.classList.toggle('venc', !!(s.venc && s.venc === p.id && s.fase === 'fim'));
+      el.classList.toggle('ultimo', !!(s.jogo && p.n === 1 && !p.fora && (s.fase === 'segura' || s.fase === 'revela' || s.fase === 'palpite'))); // (the last die: its pip beats)
       const nm = el.querySelector('.jd-nm'); const t = p.eu ? 'Você' : p.nome; if (nm.textContent !== t) nm.textContent = cap(t);
       const pips = el.querySelector('.jd-pips'); const ph = p.fora ? (p.fora === 'pego' ? 'pego!' : p.fora === 'queimou' ? 'fora' : p.fora === 'saiu' || p.fora === 'demorou' ? 'saiu' : 'dormiu') : '●'.repeat(p.n);
       if (pips.textContent !== ph) pips.textContent = ph;
@@ -399,9 +436,11 @@
     const el = panel.querySelector('.jd-mid'); const ban = panel.querySelector('.jd-banner'); let bh = ''; const parts = [];
     const order = s.ordem && s.ordem.length ? s.ordem : L.map(p => p.id);
     if (s.fase === 'revela' || s.fase === 'fim') {
-      const T = (performance.now() - sc.revT) / 1000; let sum = 0; let all = true;
-      for (let k = 0; k < order.length; k++) { const p = L.find(q => q.id === order[k]); if (!p || !p.faces) continue; if (p.eu || T >= 0.25 + k * 0.45 + 0.2 || s.fase === 'fim') sum += p.faces.reduce((a, b) => a + b, 0); else all = false; }
+      // (the sum counted die by die as the cups come up — each its knock and a note up the scale, the number jumping: D-957)
+      const T = (performance.now() - sc.revT) / 1000; let sum = 0; let all = true; let nc = 0;
+      for (const id of order) { const p = L.find(q => q.id === id); const at = sc.cnt.at[id]; if (!p || !p.faces || !at) continue; p.faces.forEach((f, j) => { if (T >= at[j] || s.fase === 'fim') { sum += f; nc++; } else all = false; }); }
       const done = all && s.res; if (s.fase === 'revela' && sum !== sc.counted) sc.counted = sum;
+      if (s.fase === 'revela' && nc > sc.nCont) { sc.nCont = nc; snd('dado-conta', { i: nc - 1, mat: (s.set || { mat: 'osso' }).mat }); const b = el.querySelector(':scope > [data-k="soma"] b'); if (b) JFX().pulso(b, 'jfx-sobe', 300); }
       parts.push({ k: 'soma', cls: 'jd-soma' + (done ? ' fim' : ''), num: s.res && done ? s.res.total : sum });
       // (the word of the round goes under the table, with the hands: the middle keeps the sum, the seats round it stay in sight)
       const said = done && s.res ? resWords(s, L) : ''; if (said !== sc.said) { sc.said = said; sig = ''; }
@@ -420,11 +459,84 @@
       if (p.k === 'soma') { const b = ch.querySelector('b'); if (b.textContent !== String(p.num)) b.textContent = p.num; } else if (ch.textContent !== p.txt) ch.textContent = p.txt;
       if (el.children[i] !== ch) el.insertBefore(ch, el.children[i] || null);
     });
-    if (s.fase === 'fim') {
-      const won = s.venc && s.venc === s.eu; const lost = s.eu && s.venc !== s.eu; const v = L.find(p => p.id === s.venc);
-      bh = won ? `<div class="jd-ban win"><b>Você levou o pote!</b>${s.ganho ? `<small>+ ${esc(s.price(s.ganho))}</small>` : ''}</div>` : v ? `<div class="jd-ban ${lost ? 'lose' : ''}"><b>${esc(cap(v.nome))} levou o pote</b>${lost && s.moeda && s.aposta ? `<small>− ${esc(s.price(s.aposta))}</small>` : ''}</div>` : '<div class="jd-ban"><b>O jogo acabou</b><small>o pote voltou a quem apostou</small></div>';
-    }
-    if (ban.dataset.h !== bh) { ban.dataset.h = bh; ban.innerHTML = bh; ban.classList.toggle('on', !!bh); }
+    // («Cravou!»: stamped on the table — the ring, the sparks, the table jumping, the brass; the body's own, the feast in its people's colours)
+    if (parts.some(p => p.k === 'crava') && !sc.crava) { sc.crava = true; const ch = el.querySelector(':scope > [data-k="crava"]'); const fx = JFX(); const meu = s.res.cravou === s.eu && !!s.eu;
+      const cores = meu ? fx.cores(s.tema) : ['#ffd76a', '#fff1b8', '#f5b638']; fx.anel(ch, { cor: '#ffe7a6', r: 90 }); fx.em(ch, { tipo: 'faisca', n: meu ? 40 : 24, cores, forca: 1.1 }); fx.tremor(panel.querySelector('.jd-mesa'), meu ? 0.9 : 0.55);
+      fx.clarao('radial-gradient(circle at 50% 45%, rgba(255,232,160,.5), rgba(255,200,90,0) 60%)', 520); snd('cravou', { mat: (s.set || { mat: 'osso' }).mat, n: L.length - 1, povo: s.tema });
+      if (meu) { snd('rodada-ganha', { n: 3 }); fx.em(ch, { tipo: 'confete', n: 40, cores }); } }
+    if (s.fase === 'fim' && (!fimMostrado || fimMostrado.op !== s.op)) mostraFim(s, L);
+    else if (s.fase !== 'fim' && ban.dataset.h) { ban.dataset.h = ''; ban.innerHTML = ''; ban.classList.remove('on', 'fim'); }
+    void bh;
+  }
+
+  // ------------------------------ the end of the cup: the title says what happened (D-951) ------------------------------
+  // (the world's end — the d.fim of G.JogoDados: «cravou», «sobrou», «vazio»; and the body's game gone from the table in the middle, «parou» —,
+  // with who took the pot, who the body is and what became of each: only everyone out of dice in the same round is «Empate»; the names as
+  // the body knows them, G.Possess.knows. The rule 472 asks a line here for every end the world gives)
+  const FIM_COPO = {
+    cravou: { win: () => ['Vitória!', 'Você cravou a soma: os outros ficaram sem dados.'], lose: e => ['Derrota', `${e} cravou a soma e levou o pote.`] },
+    sobrou: { win: () => ['Vitória!', 'Você ficou com o último dado.'], lose: e => ['Derrota', `${e} ficou com o último dado e levou o pote.`], tie: () => ['Empate', 'Todos perderam o último dado na mesma rodada: cada um leva o que pôs.'] },
+    vazio: { int: () => ['Partida interrompida', 'Ninguém ficou à mesa: cada um leva o que pôs.'] },
+    parou: { int: (e, fechou) => ['Partida interrompida', `${fechou ? 'A taverna fechou' : 'A partida parou antes do fim'}: cada um leva o que pôs.`] },
+  };
+  const FORA_DE = { saiu: 'largou a mesa', dormiu: 'dormiu na mesa', pego: 'foi pego virando um dado' };
+  // the end of a view (the world's end, or 'parou') → { tipo: win | lose | tie | int | ver, tit, sub }
+  function fimDe(s, L, por) {
+    por = por || s.fim || 'parou'; const nm = id => { const p = L.find(q => q.id === id); return p ? cap(p.nome) : 'Alguém'; };
+    const me = L.find(p => p.eu); const outros = L.filter(p => !p.eu); const row = FIM_COPO[por] || {};
+    const b = G.S && s.b ? G.S.buildings.get(s.b) : null; const fechou = !b || !!(G.Taverna && G.Taverna.aberta && !G.Taverna.aberta(b));
+    if (por === 'parou' || por === 'vazio' || !(s.venc > 0) && por !== 'sobrou') { const [tit, sub] = (row.int || FIM_COPO.parou.int)('', fechou); return { tipo: s.eu ? 'int' : 'ver', tit, sub }; }
+    if (s.venc === -1) { const [tit, sub] = (row.tie || FIM_COPO.sobrou.tie)(); return { tipo: s.eu ? 'tie' : 'ver', tit, sub }; }
+    if (s.venc === s.eu && s.eu) {
+      // (the others gone from the table — up, asleep, caught —: the win says who left; quem larga a mesa perde)
+      const foram = outros.filter(p => FORA_DE[p.fora]); if (por === 'sobrou' && outros.length && foram.length === outros.length) {
+        const pego = foram.find(p => p.fora === 'pego'); const um = foram.length === 1 || pego; const q = pego || foram[0];
+        return { tipo: 'win', tit: um ? `Vitória — ${nm(q.id)} ${FORA_DE[q.fora]}` : 'Vitória — os outros largaram a mesa', sub: pego ? 'Quem é pego perde: o pote é seu.' : 'Quem larga a mesa perde: o pote é seu.' }; }
+      const [tit, sub] = (row.win || FIM_COPO.sobrou.win)(); return { tipo: 'win', tit, sub }; }
+    if (s.eu) { const f = me && me.fora; const [t0, sub] = (row.lose || FIM_COPO.sobrou.lose)(nm(s.venc));
+      return { tipo: 'lose', tit: f === 'pego' ? 'Pego na trapaça!' : f === 'saiu' ? 'Derrota — você largou a mesa' : f === 'demorou' ? 'Derrota — você demorou demais' : t0, sub }; }
+    return { tipo: 'ver', tit: `${nm(s.venc)} levou o pote`, sub: '' };
+  }
+  UI.fimDe = (s, por) => fimDe(s, seated(s), por); // (the proofs: the title of each end)
+  // (who is in the room to clap: the awake inside — the pure read of G.Atmos.awake —, but the players; D-954)
+  function plateia(s) {
+    const b = G.S && s.b ? G.S.buildings.get(s.b) : null; if (!b || !G.Atmos || !G.Atmos.awake) return 0; let n = G.Atmos.awake(b);
+    for (const p of s.jogadores) { const o = G.S.villagers.get(p.id); if (o && o.inside === b.id && !o.sleeping) n--; } return Math.max(0, n);
+  }
+  // the end's card over the table: the title and what happened, the purse, the room's applause, and again — the revenge first, after a loss
+  function mostraFim(s, L, por) {
+    const ban = panel.querySelector('.jd-banner'); const F = fimDe(s, L, por); const [t1, t2] = F.tit.split(' — '); fimMostrado = Object.assign({}, s, { fim: por || s.fim });
+    const v = P().body(); const pu = v ? purse(v, s) : { n: Infinity }; const ganho = F.tipo === 'win' && s.moeda ? s.ganho || 0 : 0; const fx = JFX();
+    const again = F.tipo === 'ver' ? '' : F.tipo === 'lose' ? '<button class="jd-go jfx-brilha" data-a="denovo">Revanche!</button><button class="jd-no" data-a="close">Sair</button>' : '<button class="jd-no" data-a="close">Sair</button><button class="jd-go jfx-brilha" data-a="denovo">Jogar de novo</button>';
+    const bolsa = ganho > 0 && Number.isFinite(pu.n) ? `<p class="jd-fim-bolsa">Na bolsa: <b>${esc(s.price(fx.menos() ? pu.n : Math.max(0, pu.n - ganho)))}</b></p>` : ganho > 0 ? `<p class="jd-fim-bolsa">+ <b>${esc(s.price(ganho))}</b></p>` : F.tipo === 'lose' && s.moeda && s.aposta ? `<p class="jd-fim-bolsa perde">− ${esc(s.price(s.aposta))}</p>` : '';
+    const h = `<div class="jd-sol" aria-hidden="true"></div><div class="jd-fim ${F.tipo}"><h4 class="jd-fim-tit"><span class="jd-fim-t1">${esc(t1)}</span>${t2 ? `<span class="jd-fim-t2"><span class="jfx-leitor"> — </span>${esc(t2)}</span>` : ''}</h4>${F.sub ? `<p class="jd-fim-sub">${esc(F.sub)}</p>` : ''}${bolsa}<p class="jd-fim-ap" aria-live="polite"></p>
+      <div class="jd-fim-btns">${again || '<button class="jd-no" data-a="close">Fechar</button>'}</div></div>`;
+    ban.dataset.h = 'fim:' + s.op; ban.innerHTML = h; ban.classList.add('on', 'fim'); sig = ''; quer = false;
+    if (F.tipo === 'win') festa(s, ban.querySelector('.jd-fim'), pu, ganho);
+    else if (F.tipo === 'lose') { snd('derrota-suave'); fx.pulso(ban.querySelector('.jd-fim'), 'jd-baque', 520); }
+    else if (F.tipo === 'tie') snd('rodada-empate'); else if (F.tipo === 'int') snd('dados-copo', { mat: (s.set || { mat: 'osso' }).mat, n: 2, vol: 0.5 }); else snd('aposta', { n: 3 });
+  }
+  // (the win is a feast: the sun behind the card, the flash, the confetti in the people's colours and gold, the fanfare; the pot's coins out of
+  // the table into the purse, each its ring, the purse counting up; the room's applause, if there is anyone in it — D-952 to D-954)
+  async function festa(s, card, pu, ganho) {
+    const t = ++festaTok; const fx = JFX(); const cores = fx.cores(s.tema); const t1 = card.querySelector('.jd-fim-t1');
+    fx.raios(panel.querySelector('.jd-sol'), true); fx.clarao('radial-gradient(circle at 50% 45%, rgba(255,228,150,.6), rgba(255,200,90,0) 64%)', 760);
+    fx.chuva({ cores, n: 140, dur: 1.8 }); fx.em(t1, { tipo: 'faisca', n: 34, cores, sobe: true, forca: 1.05 }); fx.em(t1, { tipo: 'brilho', n: 9, cores }); snd('vitoria-fanfarra');
+    await wait(450); if (t !== festaTok) return;
+    const para = card.querySelector('.jd-fim-bolsa b');
+    if (ganho > 0 && para && Number.isFinite(pu.n)) { const n = Math.max(3, Math.min(12, Math.round(ganho / 0.1))); const r = cv.getBoundingClientRect(); const g = scene && scene.geo;
+      const de = { x: r.left + (g ? g.mx + g.tw / 2 : r.width / 2), y: r.top + (g ? g.my + g.th / 2 : r.height / 2) };
+      fx.conta(para, Math.max(0, pu.n - ganho), pu.n, n * 90 + 620, x => s.price(Math.round(x * 10) / 10));
+      await fx.moedas(de, para, n, { passo: 90, cada: i => snd('moeda-bolsa', { i, ultima: i === n - 1 }) }); if (t !== festaTok) return; }
+    const pl = plateia(s); if (pl > 0) { snd('aplauso', { n: pl, povo: s.tema }); const a = card.querySelector('.jd-fim-ap'); if (a) { a.textContent = pl > 1 ? 'A taverna aplaude!' : 'Alguém na sala aplaude!'; a.classList.add('on'); } }
+  }
+  // (again — the revenge: the table called once more at the same stake; with the game still at its end, the asking waits for the table free)
+  function denovo() {
+    const btn = panel.querySelector('.jd-fim [data-a="denovo"]');
+    const x = vb(); if (x && x.k === 'chamar') { quer = false; if (!x.ok) { if (btn && btn.dataset.rotulo) { btn.textContent = btn.dataset.rotulo; btn.disabled = false; } toast(x.why || 'Agora não dá.', 2.4); return; } // (sem com quem jogar: o botão volta, e o porquê é do mundo)
+      const ap0 = fimMostrado && fimMostrado.aposta ? fimMostrado.aposta : UI.lastStake; const st = x.apostas ? (x.apostas.includes(ap0) ? ap0 : x.apostas.includes(UI.lastStake) ? UI.lastStake : x.apostas[0]) : 0;
+      ask(w => JD().chamar(w, st), r => { toast(r.msg, 2); scene = null; fimMostrado = null; const b = panel.querySelector('.jd-banner'); b.dataset.h = ''; b.innerHTML = ''; b.classList.remove('on', 'fim'); }); return; }
+    quer = true; if (btn) { if (!btn.dataset.rotulo) btn.dataset.rotulo = btn.textContent; btn.textContent = 'Chamando a mesa…'; btn.disabled = true; }
   }
 
   // ------------------------------ the controls (what the hands can do now) ------------------------------
@@ -478,7 +590,7 @@
       const sk = scene && scene.said ? `${s.op}:${s.rodada}:${scene.said}` : ''; const fresh = !!sk && sk !== saidShown; if (sk) saidShown = sk; // (the round's words pop in once — written again with the hands, they stay)
       h = `${scene && scene.said ? `<div class="jd-said${fresh ? ' pop' : ''}">${scene.said}</div>` : '<div class="jd-wait">Levantam-se os copos…</div>'}${regua(s, null)}`;
     } else if (s.fase === 'fim') {
-      const x = vb(); h = `${regua(s, null)}<div class="jd-btns"><button class="jd-no" data-a="close">Sair</button>${x && x.k === 'chamar' && x.ok ? `<button class="jd-go" data-a="denovo">${k(0, G.Input3D.label('interagir'))}Jogar de novo</button>` : ''}</div>`;
+      h = regua(s, null); // (the end's buttons are on the end's card, over the table)
     } else if (!s.jogo && s.eu) h = `<div class="jd-wait">Você está fora desta. Olhe o fim.</div>${regua(s, null)}`;
     if (!s.eu && s.fase !== 'convite' && s.fase !== 'fim') h = `<div class="jd-wait">Você olha o jogo da sua mesa.</div>${regua(s, null)}`;
     if (s.jogo && s.fase !== 'fim' && s.fase !== 'convite') h += `<div class="jd-btns sm"><button class="jd-no" data-a="sair">Largar o jogo${s.moeda && s.aposta ? ' (a aposta fica)' : ''}</button></div>`;
@@ -509,8 +621,9 @@
   // ------------------------------ the hands ------------------------------
   function ask(fn, ok) { busy = true; sig = ''; G.IncUI.when(G.Possess.apply(fn), r => { busy = false; note = ''; sig = ''; if (ok) ok(r); }, r => { busy = false; note = (r && r.why) || 'Agora não deu.'; sig = ''; deny(r); }); }
   function act(a, n) {
-    const v = P().body(); const s = v && JD().corpo(v); if (!s) return;
     if (a === 'close') { hide(); return; }
+    if (a === 'denovo') { denovo(); return; }
+    const v = P().body(); const s = v && JD().corpo(v); if (!s) return;
     if (a === 'ajuda') { help = !help; sig = ''; return; }
     if (a === 'aposta') { UI.lastStake = n; ask(w => JD().aposta(w, s.op, n), () => snd('aposta', { n: 1, vol: 0.5 })); return; }
     if (a === 'comecar') { ask(w => JD().comecar(w, s.op), r => { toast(r.msg, 1.8); snd('aposta', { n: s.jogadores.length }); }); return; }
@@ -520,14 +633,14 @@
     if (a === 'pick') { if (pick === n) { act('dizer'); return; } pick = n; sig = ''; return; }
     if (a === 'dizer') { const k = pick; ask(w => JD().palpite(w, s.op, k)); return; }
     if (a === 'trapaca') { const on = !s.armado; ask(w => JD().trapacear(w, s.op, on), r => toast(r.on ? 'A mão está pronta: na hora dos copos, um dado vira — se ninguém vir.' : 'Você desiste da mão rápida.', 2.4)); return; }
-    if (a === 'denovo') { const x = vb(); const st = x && x.apostas ? (x.apostas.includes(UI.lastStake) ? UI.lastStake : x.apostas[0]) : 0; ask(w => JD().chamar(w, st), r => { toast(r.msg, 2); scene = null; }); return; }
   }
   // (the bid up or down to the next number nobody said)
   function stepPick(d, s) { const L = s.livres; if (!L.length) return; let i = L.indexOf(pick); if (i < 0) i = L.findIndex(n => n > pick) - (d > 0 ? 1 : 0); i = clamp(i + d, 0, L.length - 1); pick = L[i]; sig = ''; snd('dados-parar', { mat: 'madeira', vol: 0.15 }); }
   function onClick(e) { const b = e.target.closest('[data-a]'); if (!b || b.disabled) return; act(b.dataset.a, b.dataset.n !== undefined ? +b.dataset.n : undefined); }
   // (the primary of the moment: say the bid, begin, join, again)
-  function primary() { const v = P().body(); const s = v && JD().corpo(v); if (!s) return false;
-    if (s.fase === 'palpite' && s.vez === s.eu) act('dizer'); else if (s.fase === 'convite' && s.euHost) act('comecar'); else if (s.fase === 'convite' && !s.eu) act('entrar'); else if (s.fase === 'fim') { const x = vb(); if (x && x.k === 'chamar' && x.ok) act('denovo'); else hide(); } else return false; return true; }
+  function primary() { const card = panel && panel.querySelector('.jd-fim'); if (card) { if (card.querySelector('[data-a="denovo"]')) denovo(); else hide(); return true; }
+    const v = P().body(); const s = v && JD().corpo(v); if (!s) return false;
+    if (s.fase === 'palpite' && s.vez === s.eu) act('dizer'); else if (s.fase === 'convite' && s.euHost) act('comecar'); else if (s.fase === 'convite' && !s.eu) act('entrar'); else return false; return true; }
   // the keys and the controller: ← → (and ↑ ↓) the bid or the stake, the number keys the quick picks, the hands' key the primary, the
   // second verb's key the quick hand; Enter too (a key of the screen's own)
   { const ck0 = G.IncUI && G.IncUI.cardKey; if (G.IncUI) G.IncUI.cardKey = function (i) {
@@ -553,7 +666,13 @@
     const v = P().body(); if (!v || !JD()) return;
     if (open && !G.Modes.panelIs('dados')) { open = false; if (panel) panel.classList.add('hidden'); G.IncUI.root().classList.remove('jd-on'); }
     const s = JD().corpo(v);
-    if (open) { if (!s) { hide(true); return; } render(s, Math.min(0.05, rdt || 0)); return; }
+    if (open) {
+      if (quer) { const x = vb(); if (x && x.k === 'chamar') denovo(); }
+      // (the end shown stays while the world lets the table go, and over another game of the table the body is not in — D-953)
+      if (fimMostrado && (!s || (s.op !== fimMostrado.op && !s.eu))) return;
+      // (the body's game gone from the table in the middle — the house shut, the dice taken away —: the end says so, never just a blank — L-2211)
+      if (!s) { if (lastS && lastS.eu && lastS.jogo && lastS.fase !== 'fim' && lastS.fase !== 'convite') { mostraFim(lastS, seated(lastS), 'parou'); return; } hide(true); return; }
+      lastS = s; render(s, Math.min(0.05, rdt || 0)); return; }
     upT -= rdt || 0; if (upT > 0) return; upT = 0.2;
     if (!s) return;
     // (the body in a game, and it is its turn, or the game it called: open — once a turn; a game called at its table: a word)

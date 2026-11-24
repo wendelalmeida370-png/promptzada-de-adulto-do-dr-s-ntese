@@ -2874,6 +2874,61 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 // «jogo-volta»), o aluguel («aluguel-jogo»), a venda do taverneiro («venda-jogo») e o baralho da casa feito do material do povo
 { let om = ''; try { om = fs.readFileSync(path.join(dir, '..', 'ORIGEM.md'), 'utf8'); } catch (e) { om = ''; }
   for (const w of ['jogo-mesa', 'jogo-volta', 'aluguel-jogo', 'venda-jogo', 'Os jogos da casa']) if (!om.includes(w)) fails.push(`o mapa das causas: o ORIGEM.md sem «${w}» (os jogos da casa, D-930)`); }
+// ---------------- Onda 4 — F: ganhar dá gosto (js/jogo-fx.js, a festa das Tabuletas e do copo; D-950 a D-959) ----------------
+// 470. "a festa só se vê" (D-940, D-950, D-955): o js/jogo-fx.js não lê nem escreve o mundo — nem o G.S, nem o livro, nem uma operação, nem
+// as mãos do corpo — e não tira do acaso do mundo (só o G.vrr, o do que se vê); as partículas no ar têm teto (a mais velha cede o lugar), e o
+// do celular é menor (o dedo, a tela estreita)
+{ const fx = src['jogo-fx.js'] || [];
+  if (!fx.length) fails.push('a festa só se vê: falta o js/jogo-fx.js (D-940)');
+  fx.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.S\b|\bG\.(Depot|Act|Possess|Village|Fac|Taverna|Cartas|JogoDados)\b|\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random/.test(c)) fails.push(`a festa só se vê: jogo-fx.js:${k + 1} lê o mundo ou tira do acaso dele (D-950): ${l.trim().slice(0, 110)}`); });
+  const t = fx.join('\n');
+  if (fx.length && (!/if \(P\.length >= MAX\) P\.shift\(\);/.test(t) || !/pointer: coarse/.test(t) || !/n = Math\.min\(n, Math\.ceil\(MAX \* 0\.\d+\)\)/.test(t))) fails.push('a festa só se vê: as partículas sem o teto, ou sem o teto menor do celular (D-955)'); }
+// 471. "o som da festa é da tabela, e medido" (D-956, regra 420): todo som que as telas dos jogos pedem pelo nome (o som( das Tabuletas, o snd(
+// do copo, o G.Audio.ui) é um da tabela UI do audio.js — um nome errado calaria em silêncio —, e todo som da tabela tem o seu nível medido no
+// UI_GAIN (pelo G.Audio.pico: nenhum estoura)
+{ const au = (src['audio.js'] || []).join('\n'); const t0 = au.indexOf('  const UI = {'), ui = t0 < 0 ? '' : au.slice(t0, au.indexOf('\n  };', t0));
+  const nomes = new Set([...ui.matchAll(/^\s{4}'?([\w-]+)'?: \(t, v(?:, o)?\) =>/gm)].map(m => m[1]));
+  const g0 = au.indexOf('  const UI_GAIN = {'), gain = g0 < 0 ? '' : au.slice(g0, au.indexOf('};', g0));
+  for (const n of nomes) if (!new RegExp(`(?:[{,]\\s*|\\n\\s*)'?${n.replace(/-/g, '\\-')}'?: [\\d.]+`).test(gain)) fails.push(`o som da festa é medido: o som de tela «${n}» sem o seu nível no UI_GAIN do audio.js (D-956)`);
+  for (const f of ['cartas-ui.js', 'jogo-dados-ui.js', 'jogo-fx.js']) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    for (const m of c.matchAll(/\b(?:som|snd|Audio\.ui)\(([^,)]*)/g)) for (const q of m[1].matchAll(/'([\w-]+)'/g)) if (!nomes.has(q[1])) fails.push(`o som da festa é da tabela: ${f}:${k + 1} pede o som de tela «${q[1]}», que a tabela UI do audio.js não tem (D-956): ${l.trim().slice(0, 110)}`); }); }
+// 472. "o título do fim diz o que aconteceu" (D-951, L-2210): todo fim que o mundo dá tem o seu título na tela — cada «por» das Tabuletas (os
+// do cartas.js e do cartas-mesa.js, e os porquês do valida) uma linha no FIM do cartas-ui.js; cada fim do copo (o finish do jogo-dados.js) e a
+// partida que some da mesa no meio («parou») uma linha no FIM_COPO do jogo-dados-ui.js —; e «Empate» só onde houve empate de verdade: a glória
+// igual no fim das rodadas (a linha «gloria») e todos sem dados na mesma rodada (a «sobrou»): nenhum outro fim tem o «tie», e uma partida
+// interrompida nunca é «Empate» (o dono viu «Empate — 10 × 8» quando o outro largou a mesa)
+{ const cj = (src['cartas.js'] || []).join('\n'), cm = (src['cartas-mesa.js'] || []).join('\n'), cu = (src['cartas-ui.js'] || []).join('\n');
+  const pors = new Set(); for (const t of [cj, cm]) for (const m of t.matchAll(/\bpor: '([\w-]+)'/g)) pors.add(m[1]);
+  const va = /function valida\(j\) \{([\s\S]*?)\n  \}/.exec(cm); if (va) for (const m of va[1].matchAll(/return '([\w-]+)'/g)) if (m[1] !== 'desiste-corpo') pors.add(m[1]);
+  const fim = /const FIM = \{([\s\S]*?)\n  \};/.exec(cu); const rows = new Map(); if (fim) for (const m of fim[1].matchAll(/^\s{4}'?([\w-]+)'?: \{(.*)\},?$/gm)) rows.set(m[1], m[2]);
+  if (!fim || !pors.size) fails.push('o título do fim: o cartas-ui.js sem a tábua FIM, ou nenhum fim lido das Tabuletas (D-951)');
+  for (const p of pors) if (!rows.has(p)) fails.push(`o título do fim: o fim «${p}» das Tabuletas sem a sua linha na tábua FIM do cartas-ui.js (D-951)`);
+  for (const [k, b] of rows) { if (k !== 'gloria' && /\btie:|Empate/.test(b)) fails.push(`o título do fim: o fim «${k}» das Tabuletas pode dizer «Empate» — só a glória igual no fim é empate (L-2210)`); }
+  if (rows.has('gloria') && !/\btie: \(\) => \['Empate'/.test(rows.get('gloria'))) fails.push('o título do fim: a glória igual no fim das Tabuletas sem o seu «Empate» (D-951)');
+  if (!/const FIM0 = \{ win: [^\n]*int: [^\n]*\};/.test(cu) || /const FIM0 = \{[^\n]*\btie:/.test(cu)) fails.push('o título do fim: o título de um fim sem linha (FIM0) sem o da partida interrompida, ou com «Empate» (L-2210)');
+  const jd = (src['jogo-dados.js'] || []).join('\n'), du = (src['jogo-dados-ui.js'] || []).join('\n'); const fins = new Set(['parou']);
+  for (const m of jd.matchAll(/\bfinish\(op, ([^)]*)\)/g)) for (const q of m[1].matchAll(/'([\w-]+)'/g)) fins.add(q[1]);
+  const fc = /const FIM_COPO = \{([\s\S]*?)\n  \};/.exec(du); const cr = new Map(); if (fc) for (const m of fc[1].matchAll(/^\s{4}'?([\w-]+)'?: \{(.*)\},?$/gm)) cr.set(m[1], m[2]);
+  if (!fc) fails.push('o título do fim: o jogo-dados-ui.js sem a tábua FIM_COPO (D-951)');
+  for (const f of fins) if (!cr.has(f)) fails.push(`o título do fim: o fim «${f}» do copo sem a sua linha na tábua FIM_COPO do jogo-dados-ui.js (D-951)`);
+  for (const [k, b] of cr) if (k !== 'sobrou' && /\btie:|Empate/.test(b)) fails.push(`o título do fim: o fim «${k}» do copo pode dizer «Empate» — só todos sem dados na mesma rodada é empate (L-2210)`);
+  for (const k of ['vazio', 'parou']) if (cr.has(k) && !/\bint: /.test(cr.get(k))) fails.push(`o título do fim: o fim «${k}» do copo sem o título da partida interrompida (L-2211)`); }
+// 473. "a festa dorme com a tela fechada" (D-955): fechar a tela das Tabuletas ou do copo limpa a festa (o G.JogoFX.limpa no hide de cada uma, e
+// no quadro que acha a tela fechada pelo modo); e a limpeza para o que ainda corria — uma geração nova, o quadro cancelado, as promessas
+// soltas —, e as moedas e as contagens perguntam pela geração antes de tilintar ou de escrever
+{ for (const f of ['cartas-ui.js', 'jogo-dados-ui.js']) { const L = src[f] || []; const p0 = L.findIndex(l => /^\s{2}function hide\(quiet\) \{/.test(l)); let ok0 = false;
+    for (let k = p0; p0 >= 0 && k < L.length && !/^\s{2}\}\s*$/.test(L[k]); k++) if (/\bJFX\(\)\.limpa\(\)/.test(L[k])) ok0 = true;
+    if (!ok0) fails.push(`a festa dorme com a tela fechada: o hide do ${f} não limpa a festa (G.JogoFX.limpa, D-955)`); }
+  if (!/if \(!G\.Modes\.panelIs\('cartas'\)\) \{ open = false; tok\+\+; [^\n]*JFX\(\)\.limpa\(\); return; \}/.test((src['cartas-ui.js'] || []).join('\n'))) fails.push('a festa dorme com a tela fechada: a mesa das Tabuletas fechada pelo modo não limpa a festa (D-955)');
+  const t = (src['jogo-fx.js'] || []).join('\n');
+  if (!/FX\.limpa = function \(\) \{\n\s*ger\+\+; P\.length = 0; if \(raf && typeof cancelAnimationFrame === 'function'\) cancelAnimationFrame\(raf\); raf = 0;/.test(t) || !/for \(const f of \[\.\.\.pend\]\) f\(\);/.test(t) || (t.match(/g0 !== ger/g) || []).length < 2) fails.push('a festa dorme com a tela fechada: o FX.limpa não para o que corria (a geração, o quadro, as promessas), ou as moedas e as contagens não perguntam pela geração (D-955)'); }
+// 474. "a sala aplaude pelo que se lê" (D-954): o aplauso só sai depois de contar quem está acordado na sala pela leitura pura do G.Atmos.awake
+// (a plateia de cada tela), e a conta só lê — nada nela escreve numa pessoa nem num prédio
+{ for (const f of ['cartas-ui.js', 'jogo-dados-ui.js']) { const L = src[f] || []; const t = L.join('\n');
+    const pl = /function plateia\([^)]*\) \{([\s\S]*?)\n  \}/.exec(t);
+    if (!pl || !/G\.Atmos\.awake\(/.test(pl[1])) fails.push(`a sala aplaude pelo que se lê: o ${f} sem a plateia pelo G.Atmos.awake (D-954)`);
+    else if (/\b(o|v|b|x|me|p)\.[A-Za-z_]\w*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(pl[1])) fails.push(`a sala aplaude pelo que se lê: a plateia do ${f} escreve no mundo (D-954)`);
+    L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(som|snd)\('aplauso'/.test(c) && ((c.match(/\b(som|snd)\('aplauso'/g) || []).length !== 1 || !/const pl = plateia\([^)]*\); if \(pl > 0\) \{ (som|snd)\('aplauso', \{ n: pl\b/.test(c))) fails.push(`a sala aplaude pelo que se lê: ${f}:${k + 1} pede o aplauso sem a plateia contada (D-954): ${l.trim().slice(0, 110)}`); }); } }
 // === Onda 4 — N: a noite que dura para quem a vive ===
 // 476. "a demora do dia é um registro, e as causas só leem" (D-960): o sol se demora pelas causas registradas com G.linger — a cena
 // (world.js), o corpo na taverna aberta e o corpo numa partida à mesa (act-taverna.js, do corpo: o quarto argumento true) —, a mais lenta
