@@ -189,7 +189,13 @@
   };
 
   // ------------------------------ mostrar um passo: o véu, as luzes, o balão e o dedo ------------------------------
-  const rectOf = (x, P) => { if (!x) return null; if (x.getBoundingClientRect) { if (x.offsetParent === null && getComputedStyle(x).position !== 'fixed') return null; const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null; } return Number.isFinite(x.l) ? x : null; };
+  // (onde a coisa fica quando para: no pulo de um instante — a glória que cresce, a tabuleta que assenta, o tremor do suspense, a erguida que
+  // sobe: a festa da frente F —, o lugar dela antes do pulo; o balão e a luz não correm atrás de um pulo. Um efeito que não acaba — o
+  // brilho de uma rara — é medido como está)
+  const quieto = new WeakMap();
+  const pula = x => !!(x.getAnimations && x.getAnimations().some(a => a.playState === 'running' && !(a.effect && a.effect.getComputedTiming && a.effect.getComputedTiming().iterations === Infinity)));
+  const rectOf = (x, P) => { if (!x) return null; if (x.getBoundingClientRect) { if (x.offsetParent === null && getComputedStyle(x).position !== 'fixed') return null; const p = pula(x); if (p && quieto.has(x)) return quieto.get(x);
+    const r = x.getBoundingClientRect(); const q = r.width > 0 && r.height > 0 ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null; if (q && !p) quieto.set(x, q); return q; } return Number.isFinite(x.l) ? x : null; };
   const uniao = L => { L = L.filter(Boolean); return L.length ? { l: Math.min(...L.map(r => r.l)), t: Math.min(...L.map(r => r.t)), r: Math.max(...L.map(r => r.r)), b: Math.max(...L.map(r => r.b)) } : null; };
   // (cada alvo, uma luz: o seletor junta tudo o que acha — as tabuletas da mão são uma luz só —, e com «*» na frente cada coisa achada é
   // uma luz — os dados de cada um, cada um na sua cadeira; a função dá um elemento ou um retângulo) → [{ k: o alvo, r }]
@@ -242,9 +248,11 @@
     if (a) { const ax = (a.l + a.r) / 2;
       C.push({ x: cx(ax), y: cy(a.b + GAP), lado: 'baixo' }); C.push({ x: cx(ax), y: cy(a.t - GAP - bh), lado: 'cima' });
       C.push({ x: cl(a.r + GAP), y: cy(ay - bh / 2), lado: 'dir' }); C.push({ x: cl(a.l - GAP - bw), y: cy(ay - bh / 2), lado: 'esq' }); }
-    for (let y = Y0; y <= Y1 - bh; y += 12) C.push({ x: cx((X0 + X1) / 2), y, lado: '' });
+    // (as faixas livres: do meio para os lados — no PC a mesa do copo tem os controles numa coluna à direita —, o mais perto do meio antes)
+    const XS = [cx((X0 + X1) / 2)]; for (let x = X0; x <= X1 - bw; x += 24) XS.push(x);
+    for (let y = Y0; y <= Y1 - bh; y += 12) for (const x of XS) C.push({ x, y, lado: '' });
     if (!C.length) C.push({ x: cx((X0 + X1) / 2), y: cy(ay - bh / 2), lado: '' });
-    let pos = null, bs = Infinity; C.forEach((q, k) => { const r = { l: q.x, t: q.y, r: q.x + bw, b: q.y + bh }; const s2 = evita.reduce((s3, e) => s3 + inter(r, e), 0) * 10 + (q.lado ? 0 : (a ? 400 : 0) + Math.abs(q.y + bh / 2 - ay) * 0.5) + k * 0.01; if (s2 < bs) { bs = s2; pos = q; } });
+    let pos = null, bs = Infinity; C.forEach((q, k) => { const r = { l: q.x, t: q.y, r: q.x + bw, b: q.y + bh }; const s2 = evita.reduce((s3, e) => s3 + inter(r, e), 0) * 10 + (q.lado ? 0 : (a ? 400 : 0) + Math.abs(q.y + bh / 2 - ay) * 0.5 + Math.abs(q.x + bw / 2 - (X0 + X1) / 2) * 0.25) + k * 0.01; if (s2 < bs) { bs = s2; pos = q; } });
     B.style.left = pos.x.toFixed(1) + 'px'; B.style.top = pos.y.toFixed(1) + 'px';
     // (a seta: da borda do balão para o alvo)
     const seta = B.querySelector('.ens-seta'); seta.className = 'ens-seta' + (pos.lado ? ' ' + pos.lado : ' nao');
@@ -294,10 +302,13 @@
     const TK = alvosK(p, c); const T = TK.map(x => x.r); const n0 = p.alvo ? p.alvo.length - new Set(TK.map(x => x.k)).size : 0; if (n0) out.push(`${p.id}: ${n0} alvo(s) sem nada visível`);
     const vw = innerWidth, vh = innerHeight; const dentro = r => r.l >= -0.5 && r.t >= -0.5 && r.r <= vw + 0.5 && r.b <= vh + 0.5;
     for (const r of T) if (!dentro(r)) out.push(`${p.id}: um alvo fora da tela`);
-    const B = layer.querySelector('.ens-balao').getBoundingClientRect(); const br = { l: B.left, t: B.top, r: B.right, b: B.bottom };
+    // (o balão onde o guia o pôs: o deslize de 0,22 s até lá e o pulo da entrada são só do desenho)
+    const BE = layer.querySelector('.ens-balao'); const LR = layer.getBoundingClientRect(); const bl = LR.left + (parseFloat(BE.style.left) || 0), bt = LR.top + (parseFloat(BE.style.top) || 0);
+    const br = { l: bl, t: bt, r: bl + BE.offsetWidth, b: bt + BE.offsetHeight };
     if (!dentro(br)) out.push(`${p.id}: o balão fora da tela`);
-    for (const r of T) if (inter(br, r) > 4) out.push(`${p.id}: o balão cobre o alvo`);
-    for (const r of livres(p, c)) if (inter(br, r) > 4) out.push(`${p.id}: o balão cobre o que fica livre`);
+    const cx = r => [r.l, r.t, r.r, r.b].map(Math.round).join(','); // (onde: o balão e o que ele cobre, para quem lê a prova)
+    for (const r of T) if (inter(br, r) > 4) out.push(`${p.id}: o balão cobre o alvo (${cx(br)} × ${cx(r)})`);
+    for (const r of livres(p, c)) if (inter(br, r) > 4) out.push(`${p.id}: o balão cobre o que fica livre (${cx(br)} × ${cx(r)})`);
     for (const e of layer.querySelectorAll('.ens-balao h4, .ens-txt, .ens-acao, .ens-balao button')) if (e.offsetParent && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)) out.push(`${p.id}: texto cortado em ${e.className || e.tagName}`);
     const D = layer.querySelector('.ens-dedo'); if (p.dedo && D.classList.contains('hidden')) out.push(`${p.id}: o dedo sem o que tocar`);
     return out;

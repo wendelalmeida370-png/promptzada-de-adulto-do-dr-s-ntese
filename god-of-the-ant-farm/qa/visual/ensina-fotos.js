@@ -30,8 +30,9 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
   const errs = []; page.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n').slice(0, 3).join(' | ')));
   page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver Message|GroupMarkerNotSet|software WebGL|WebGL: INVALID|CONTEXT_LOST/.test(t)) errs.push('console: ' + t.slice(0, 300)); });
   // (the first game of each: nothing remembered in the browser — the profile is new —; the page opened again keeps what it remembers,
-  // as the owner's)
-  await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
+  // as the owner's. The game's own loop stopped — the proof gives the world its seconds —, the page's other frames on: the F front's
+  // effects wait for theirs, the glory counting up, and the round's animation with them — T-2103)
+  await page.addInitScript(() => { const r0 = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = cb => (cb && (cb.name === 'loop' || cb.name === 'frame') ? 0 : r0(cb)); });
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | ensina-fotos ${name} | ${info}`); if (!cond) fails.push(name.split(' ')[0]); };
   const shot = async name => { try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 480000 }); console.log('foto: ' + path.join(OUT, name + '.png')); } catch (e) { console.log('(foto ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); } };
@@ -226,8 +227,9 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
     const ov = P && !P.classList.contains('hidden') ? P.querySelector('.tb-over:not(.hidden) .tb-end') : null;
     return { vivo: vivo ? vivo.id : 0, tela: tela ? tela.jogo : 0, folha: ov ? ((ov.querySelector('h3') || ov).textContent || '').replace(/\s+/g, ' ').trim().slice(0, 40) : '', mao: P ? P.querySelectorAll('.tb-mao .ct-card').length : 0 }; });
   let j2 = 0;
+  const nT0 = await E(() => (window.__T.toasts || []).length);
   if (jogoT && await denovo()) {
-    const n1 = await naTela(); e4 = { n1, n2: null }; j2 = n1.vivo;
+    const n1 = await naTela(); e4 = { n1, n2: null, disse: await E(n => (window.__T.toasts || []).slice(n).join(' | '), nT0) }; j2 = n1.vivo;
     await E(() => window.__T.f(2)); await wait(300); await shot(`e4-jogar-de-novo${PC ? '-pc' : ''}`);
     // (L-2204: the screen showed the game just ended — its end sheet again — while the new one ran behind it; the player taps «Jogar de
     // novo» again once the end is gone from the table, C.FIM_T seconds of the world later, and the new one opens)
@@ -237,12 +239,21 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
       e4.n2 = await naTela(); j2 = e4.n2.vivo && e4.n2.tela === e4.n2.vivo ? e4.n2.vivo : 0;
     }
   }
-  if (e4) ok('e4 «Jogar de novo» mostra a partida nova na hora', !!e4.n1.vivo && e4.n1.tela === e4.n1.vivo && !e4.n1.folha && e4.n1.mao > 0,
+  // (the other may say no to another game — the world's «no», by his índole —: then there is no new game to show, and this round of the
+  // proof says so instead of judging)
+  if (e4 && !e4.n1.vivo) console.log(`(e4 não se aplica: nenhuma partida nova — ${e4.disse || 'sem resposta'})`);
+  else if (e4) ok('e4 «Jogar de novo» mostra a partida nova na hora', !!e4.n1.vivo && e4.n1.tela === e4.n1.vivo && !e4.n1.folha && e4.n1.mao > 0,
     !e4.n1.vivo ? 'nenhuma partida nova começou' : e4.n1.tela === e4.n1.vivo && !e4.n1.folha ? `a partida #${e4.n1.vivo} na tela, ${e4.n1.mao} tabuletas na mão`
       : `a partida nova (#${e4.n1.vivo}) começou — a aposta feita —, e a tela mostrou ${e4.n1.tela !== e4.n1.vivo ? `a de antes (#${e4.n1.tela})` : 'a folha'}${e4.n1.folha ? `, com «${e4.n1.folha}»` : ''} (L-2204: o G.Cartas.de do cartas-mesa.js dá a primeira partida pela ordem, a que acabou, por C.FIM_T s); o segundo «Jogar de novo», depois disso: ${e4.n2 ? (e4.n2.tela === e4.n2.vivo && !e4.n2.folha ? `a partida nova na tela, ${e4.n2.mao} tabuletas na mão` : `AINDA NÃO (a tela na #${e4.n2.tela}${e4.n2.folha ? `, «${e4.n2.folha}»` : ''})`) : 'não houve'}`);
   const c1 = j2 ? { ok: true } : await E(() => { const T = window.__T; if (G.CartasUI.isOpen()) G.CartasUI.close(); T.run(() => G.Cartas.podeCorpo(G.Possess.body()).ok, 12); T.ui(4); return G.Cartas.podeCorpo(G.Possess.body()); }); await semMenu();
+  if (!j2 && !c1.ok) { const r = await mudaMesa(); console.log(`(a segunda partida: as Tabuletas não dão aqui — ${c1.why || 'sem porquê'} —; outra mesa: ${r})`); await semMenu(); Object.assign(c1, await E(() => G.Cartas.podeCorpo(G.Possess.body()))); }
+  // (the night over — nobody left at a table of the body's people —: the game opened again, another evening; the browser remembers the
+  // guide, as the owner's: the second game is the second one after the page comes back too)
+  if (!j2 && !c1.ok) { console.log(`(a segunda partida: ${c1.why || 'ninguém à mesa'} — o jogo aberto de novo, outra noite)`); await abre();
+    Object.assign(c1, await E(() => { const T = window.__T; T.run(() => G.Cartas.podeCorpo(G.Possess.body()).ok, 15); T.ui(4); return G.Cartas.podeCorpo(G.Possess.body()); })); await semMenu(); }
   if (c1.ok && (j2 || !c1.jogo)) {
     if (!j2) j2 = await desafio();
+    for (let m = 0; m < 2 && !j2; m++) { const r = await mudaMesa(); console.log(`(a segunda partida: ninguém aceitou — ${recusas.slice(-3).join(' | ') || 'sem resposta'} —; outra mesa: ${r})`); await semMenu(); j2 = await desafio(); }
     if (j2) {
       // (the other asking to double as the round opens: said yes to — the sheet over the table is the game's, not the guide's)
       if (await page.$('#tab-panel .tb-over:not(.hidden) [data-a="aceita"]')) { await tap('#tab-panel .tb-over [data-a="aceita"]'); await E(() => window.__T.ui(6)); }
@@ -272,6 +283,12 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
   const t0c = await abre();
 
   // ================================ e2: the cup, guided — the game going by the world's step
+  // («Largar o jogo», and the end's card the F front leaves until the hands say — «Sair», as the player does: D-953)
+  async function largaCopo() {
+    await tap('#dados-panel [data-a="sair"]'); await E(() => window.__T.ui(6)); await wait(300);
+    for (let k = 0; k < 6 && !(await page.$('#dados-panel .jd-fim [data-a="close"]')); k++) { await wait(200); await E(() => window.__T.ui(3)); }
+    if (await page.$('#dados-panel .jd-fim [data-a="close"]')) { await tap('#dados-panel .jd-fim [data-a="close"]'); await E(() => window.__T.ui(4)); }
+  }
   async function copo(parte, guiar) {
     const d0 = await E(() => { const T = window.__T; const v = G.Possess.body(); T.run(() => { const x = G.JogoDados.verbo(v); return (x.k === 'chamar' || x.k === 'entrar') && x.ok; }, 20); T.ui(4); return G.JogoDados.verbo(v); }); await semMenu();
     if (!((d0.k === 'chamar' || d0.k === 'entrar') && d0.ok)) { const r = await mudaMesa(); console.log(`(o copo não dá aqui — ${d0.why || d0.k} —; outra mesa: ${r})`);
@@ -295,9 +312,9 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
       if (st.host && st.sim && !comecou) { comecou = true; await tap('#dados-panel [data-a="comecar"]'); await E(() => window.__T.ui(6)); continue; }
       const g = guiar ? await guia() : null;
       if (st.minha && !(g && g.a && g.a.visivel && g.a.passo === 'vez')) { if (await page.$('#dados-panel .jd-chip[data-a="pick"]')) await tap('#dados-panel .jd-chip[data-a="pick"]'); await E(() => window.__T.ui(2)); await tap('#dados-panel [data-a="dizer"]'); await E(() => window.__T.ui(6)); bids++; }
-      if (!guiar && out.fases.includes('palpite') && k > 3) break; // (the second game: started, enough to see the guide does not come back)
+      if (!guiar && out.fases.includes('palpite')) break; // (the second game: started — the guide does not come back —; the «?» at once, while the others are still at the table)
       // (the guide done — its last step said «Entendi» —: the game is left, the night is short for four games: T-2102)
-      if (guiar && vistos.copo.some(q => q.id === 'fim') && !(await E(() => { const a = G.JogosEnsina.ativo(); return !!a && a.id === 'copo'; }))) { out.fim = 'largou'; await tap('#dados-panel [data-a="sair"]'); await E(() => window.__T.ui(6)); break; }
+      if (guiar && vistos.copo.some(q => q.id === 'fim') && !(await E(() => { const a = G.JogosEnsina.ativo(); return !!a && a.id === 'copo'; }))) { out.fim = 'largou'; await largaCopo(); break; }
     }
     out.bids = bids; return out;
   }
@@ -319,7 +336,7 @@ const VW = PC ? 1280 : 411, VH = PC ? 760 : 724;
     await E(() => window.__T.f(2)); await wait(300); await shot(`e3-copo-guia-de-volta${PC ? '-pc' : ''}`);
     await tap('.ens:not(.hidden) [data-ens="pula"]'); await E(() => window.__T.ui(3));
     ok('e3 a segunda partida do copo: o guia não volta; o «?» o traz', !g0.a && !!volta.a && volta.a.id === 'copo' && volta.a.visivel && !volta.chk.length, `sem o guia: ${!g0.a ? 'sim' : 'NÃO — VOLTOU'}; «Ver o guia» no «?»: ${volta.a ? `o passo «${volta.a.passo}»${volta.chk.length ? ' — ' + volta.chk.join('; ') : ''}` : 'NÃO VOLTOU'}`);
-    await tap('#dados-panel [data-a="sair"]'); await E(() => window.__T.ui(6));
+    await largaCopo();
   } else ok('e3 a segunda partida do copo', false, `não deu: «${r3.none}»`);
   await E(() => { if (G.JogoDadosUI.isOpen()) G.JogoDadosUI.close(); window.__T.ui(4); });
 
