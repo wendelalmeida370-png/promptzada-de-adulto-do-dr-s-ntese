@@ -82,14 +82,14 @@
     [0.82, { shRp: -8, shRr: 22, elR: 120, shRy: 14, grip: 0.9, shLp: -6, shLr: -18, elL: 118, shLy: -14, gripL: 0.6, lean: 16, neck: 16 }],
     [0.92, T(mix(SHAKE, { lean: 14, neck: 14 }))],
     [1, T(mix(SHAKE, { lean: 14, neck: 14 }))],
-  ], { acts: ['jogo-ossos'], item: { hand: 'mao' }, events: { contact: 0.28 } });
+  ], { acts: ['jogo-ossos'], item: { hand: 'mao' }, noMirror: true, events: { contact: 0.28 } }); // (the thing is drawn in the right hand: a mirror would throw with the empty left — L-2080)
 
   // ------------------------------ the music's compass: the dance, the claps, the song ------------------------------
   // (a loop of `beats` beats of the player's tune — the reader gives its time by the musician's own clock: the claps on the notes)
   // the dance on one's feet, by the stage: a step to each side on the beat, the knees giving, the hips and the shoulders after the
   // foot, the arms up in turn and the hands clapping on the off-beat — the feet free, the body danced in its place
-  const STEPR = { shift: 0.05, sway: 0.1, pelR: 0.05, hipR: -4, knR: 14, anR: 6, hipL: -16, knL: 30, anL: 12, twist: 10, bob: -0.025 };
-  const STEPL = { shift: -0.05, sway: -0.1, pelR: -0.05, hipL: -4, knL: 14, anL: 6, hipR: -16, knR: 30, anR: 12, twist: -10, bob: -0.025 };
+  const STEPR = { shift: 0.05, sway: 0.1, pelR: 0.05, hipR: -4, knR: 14, anR: 6, hipL: -16, knL: 30, anL: 12, twist: 6, bob: -0.025 };
+  const STEPL = { shift: -0.05, sway: -0.1, pelR: -0.05, hipL: -4, knL: 14, anL: 6, hipR: -16, knR: 30, anR: 12, twist: -6, bob: -0.025 }; // (the shoulders turned a little over the step: more, and a hip comes out under the edge of a rigid cuirass — vestir, L-2083)
   const RISE = { shift: 0, sway: 0, pelR: 0, hipL: -6, knL: 8, anL: 4, hipR: -6, knR: 8, anR: 4, twist: 0, bob: 0.02 };
   const ARMSR = { shRp: -150, shRr: -18, elR: 34, shRy: 10, grip: 0.3, shLp: -58, shLr: 36, elL: 44, shLy: -6, gripL: 0.3 };
   const ARMSL = { shLp: -150, shLr: 18, elL: 34, shLy: -10, gripL: 0.3, shRp: -58, shRr: -36, elR: 44, shRy: 6, grip: 0.3 };
@@ -99,9 +99,9 @@
     [0.125, mix(RISE, CLAPHI, { neck: -8 })],
     [0.25, mix(STEPL, ARMSL, { neck: -4, lookY: -8 })],
     [0.375, mix(RISE, CLAPHI, { neck: -8 })],
-    [0.5, mix(STEPR, ARMSR, { neck: -2, lookY: 10, twist: 14 })],
+    [0.5, mix(STEPR, ARMSR, { neck: -2, lookY: 10, twist: 8 })],
     [0.625, mix(RISE, CLAPHI, { neck: -6 })],
-    [0.75, mix(STEPL, ARMSL, { neck: -2, lookY: -10, twist: -14 })],
+    [0.75, mix(STEPL, ARMSL, { neck: -2, lookY: -10, twist: -8 })],
     [0.875, mix(RISE, CLAPHI, { neck: -6 })],
     [1, mix(STEPR, ARMSR, { neck: -4, lookY: 8 })],
   ], { acts: ['danca'], base: 'idle', feet: 'free', beats: 4, in: 0.45, out: 0.45, events: { contact: 0.125 } });
@@ -144,7 +144,7 @@
     mix(WIPEL, { shRp: -60, shRr: 2, elR: 6, shRy: 18, grip: 0.8, lean: 31, neck: 20 }),
     mix(WIPEL, { shRp: -54, shRr: -24, elR: 8, shRy: 26, grip: 0.8, lean: 30, neck: 20 }),
     mix(WIPEL, { shRp: -30, shRr: -10, elR: 43, shRy: 14, grip: 0.8, lean: 32, neck: 18 })),
-    { acts: ['limpar-mesa'], item: { hand: 'mao' } });
+    { acts: ['limpar-mesa'], item: { hand: 'mao' }, noMirror: true }); // (the cloth in the right hand: L-2080)
   // the cups gathered: one taken from the board, brought to the stack in the crook of the left arm, the next — the stack of the
   // inventory's cups (L.cups: G.Inv.roundOf), never one more than the world has
   const CROOK = { shLp: -6, shLr: 0, elL: 92, shLy: -30, gripL: 0.9, wristL: -24 }; // (the forearm a hand off the belly: clear of a toga)

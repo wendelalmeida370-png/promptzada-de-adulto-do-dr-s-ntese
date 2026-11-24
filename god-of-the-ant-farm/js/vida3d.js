@@ -69,6 +69,9 @@
   // errand as a pose (TASK_OF), the load in the hands, else standing. L (the look, when the frame has it): what the hands hold
   Anim.stateOf = function (v, sp, L) {
     if (v.task && v.task.type === 'swim') return 'swim';
+    // (the body on the floor — the faint, which the world keeps as a sleep (v.sleeping), the one dragged out: T2's, D-871 — lies sprawled as
+    // it fell, whatever the world moves it at; the faint in one's bed at home is a sleep — the bed's place, atPlace)
+    if (V3.LYING.has(v.act)) { const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c; }
     if (v.sleeping) return 'sleep';
     if (sp > 0.25) { if (v.act === 'sneak') return 'sneak'; if ((v.carry && v.carry.n > 0) || Anim.CARRY_ACTS.has(v.act)) return 'carryWalk'; return sp > 3.1 || v.act === 'run' || V3.runs(v) ? 'run' : 'walk'; }
     if (v.downT && v.downT > G.S.clock) return 'sleep';
@@ -77,6 +80,9 @@
     const sr = V3.sceneRole(v); if (sr) return sr;
     // (the brawler led out — an act of two, «expulsar»: the one led out shows the other part, D-797)
     if (v.act === 'expulsar' && v.task && v.task.papel === 'b' && Anim.CLIPS && Anim.CLIPS['expulsar-b']) return 'expulsar-b';
+    // (the door forced with the weapon in the hand — or with the shoulder; the speech with the cup raised — or the open hand: D-870)
+    if (v.act === 'arrombar' && !V3.handHas(L, v, 'arma') && Anim.CLIPS && Anim.CLIPS['arrombar-ombro']) return 'arrombar-ombro';
+    if (v.act === 'discurso' && !V3.handHas(L, v, 'caneca') && Anim.CLIPS && Anim.CLIPS['discurso-mao']) return 'discurso-mao';
     const c = Anim.CLIP_OF && Anim.CLIP_OF[v.act]; if (c && Anim.CLIPS && Anim.CLIPS[c]) return c;
     const a = Anim.ACT[v.act]; if (a && a !== 'run') return a;
     // (an act of the society's vocabulary with no gesture of its own: its family's pose — social-clips.js, D-603)
@@ -109,7 +115,13 @@
     if (v.sleeping || !has(pl.st)) return r;
     const base = pl.st, seat = SEATED.has(base);
     let a = Anim.stateOf(v, 0, L);
+    // (the body on the floor by its place — the faint at the table, the one dragged from it —: lying beside the seat, never seated: D-871)
+    if (V3.LYING.has(v.act) && a !== base && has(a)) { r.st = a; r.up = seat; return r; }
     // (the song of a full room: the instrument in the hands — seated or standing —, or, with none in them, the song sung)
+    // (the pot of a stove stirred standing — the house's fire at a hearth is the posture crouched at it —; the game, the cheat's hand and the
+    // drink thrown only with their thing in a hand — the dice, the deck, the cup: V3.NEEDS —, else the place's own: D-870, D-872)
+    if ((v.act === 'cook' || v.act === 'cozinhar') && !seat && base !== 'cook' && has('cozinhar-pe')) a = 'cozinhar-pe';
+    if (V3.NEEDS[a] && !V3.handHas(L, v, V3.NEEDS[a])) a = base;
     if (v.act === 'play') { const k = V3.instrument(L); a = k === 'tambor' && has('tocar-tambor') ? 'tocar-tambor' : k && has('tocar-lira') ? 'tocar-lira' : 'ato-atuar'; }
     // (the brawl of the tavern — the world's 'shove' between two of the brawl, D-759 —: the fists, and now and then the shove itself, by the
     // world's clock and the id — the same brawl from any eye)
@@ -140,6 +152,12 @@
     if (seat) { const t = talkAt(v, pl); if (t) { r.with = t.speaker === v.id ? t.to : t.speaker; r.over = t.speaker === v.id ? 'soc-conversa-sentado' : 'soc-ouvir'; if (!has(r.over)) r.over = null; } }
     // (no word: the cup of the round at rest in the fist on the board — the inventory's cup, never mimed)
     if (seat && !r.over && L && L.inv && L.inv.mao && G.Itens && G.Itens.def(L.inv.mao) && G.Itens.def(L.inv.mao).kind === 'caneca' && has('mesa-caneca')) { r.over = 'mesa-caneca'; r.overK = ((G.S.clock || 0) / 6 + G.hash(v.id * 17)) % 1; }
+    // (the life of the room for who sits and looks — D-873: the applause at the end of the music, the drunk's head heavy in the hand, the
+    // chin in the hand and the lean back by each one's own agenda; standing, the keeper drying a cup with his cloth, the drunk reaching for
+    // the board)
+    const idle = !v.act || v.act === 'sit' || v.act === 'sittalk' || v.act === 'wait' || v.act === 'idle';
+    if (seat && !r.over && idle) { const k = V3.roomIdle(v, L); if (k && has(k)) { r.over = k; r.overK = V3.roomK(v, k); } }
+    else if (!seat && idle && r.st === base) { const k = L && L.polish && has('enxugar-caneca') ? 'enxugar-caneca' : L && L.drunk >= V3.DRUNK && has('bebado-apoio') ? 'bebado-apoio' : null; if (k) r.st = k; }
     return r;
   };
   // (whom one brawls with: another of the same building in the brawl, the nearest place — the world's pair is the tavern's own)
@@ -175,20 +193,59 @@
     if (!Anim.LOCO || !Anim.LOCO[st]) return null;
     // (the brawler led out by the arm: each one's part of it, by the part the world gave — the keeper's 'a', the one led out 'b', D-797)
     if (v.act === 'expulsar') { const k = v.task && v.task.papel === 'b' ? 'expulsar-b' : 'expulsar-a'; return Anim.CLIPS && Anim.CLIPS[k] ? k : null; }
+    // (who drags the one on the floor out walks backward bent over them: D-871)
+    if (v.act === 'arrastar' && Anim.CLIPS && Anim.CLIPS.arrastar) return 'arrastar';
     // (who drank too much walks with the arms out for the balance — the drink of the world, G.Atmos.drunk by the look, L.drunk: D-799)
     if ((v.act === 'cambalear' || (L && L.drunk >= V3.DRUNK)) && Anim.CLIPS && Anim.CLIPS.cambalear) return 'cambalear';
     if (!v.act) return null;
     const o = OVER_OF[v.act]; return o && Anim.CLIPS && Anim.CLIPS[o] ? o : null;
   };
   V3.DRUNK = 0.55; // (the drink in the look, 0..1, from which the walk staggers with the arms out)
+  V3.LYING = new Set(['desmaio', 'arrastado']); // (the acts of a body on the floor: lying whatever it is moved at, D-871)
+  // (the gestures of a thing of a kind — its kind in a hand, the inventory's, or not made: D-872. The dice of T4, the deck of T5, the cup)
+  V3.NEEDS = { 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: ['dados', 'baralho'], 'jogar-bebida': 'caneca', 'concurso-bebida': 'caneca' };
+  // (a thing of this kind in a hand — the inventory's, G.Inv.held (the look's when the frame has it); 'arma': what a fighter holds to strike)
+  V3.handHas = function (L, v, kind) { if (Array.isArray(kind)) return kind.some(k => V3.handHas(L, v, k)); const h = L && L.inv ? L.inv : G.Inv && G.Inv.held && v ? G.Inv.held(v) : null; const I = G.Itens; if (!h || !I) return false;
+    for (const k of [h.mao, h.outra]) { if (!k) continue; const d = I.def(k); if (!d) continue; if (kind === 'arma' ? d.tipo === 'arma' || d.kind === 'machado' || d.kind === 'martelo' || d.kind === 'clava' : d.kind === kind) return true; } return false; };
+  // ------------------------------ the life of the room (D-873) ------------------------------
+  // what one seated with nothing to do shows over the seat now: the applause the end of the music brings — the set ended where one sits,
+  // a few seconds of the world after (the tavern's own clock of it, d.musT: G.Taverna) —, the drunk's head heavy in the hand, else each
+  // one's own agenda by the world's clock and the id — the chin in the hand, the lean back, or nothing —, never a roll. Only reads
+  V3.APPLAUSE = 2.6; // (the world's seconds the room claps after the music ends)
+  V3.applause = function (v) {
+    const T = G.Taverna; if (!T || !T.dia || !(v.inside > 0) || !(T.REST > 0)) return false; const b = G.S.buildings.get(v.inside); const op = b ? T.dia(b) : null; const d = op && op.data;
+    if (!d || d.mus || !(d.musT > 0)) return false; const end = d.musT - T.REST, t = G.S.clock || 0; return t >= end && t < end + V3.APPLAUSE;
+  };
+  V3.roomIdle = function (v, L) {
+    if (V3.applause(v)) return 'aplauso';
+    if (L && L.drunk >= V3.DRUNK) return 'bebado-mesa';
+    const t = G.S.clock || 0, k = Math.floor((t + G.hash(v.id * 29) * 40) / 14); const h = G.hash(v.id * 131 + k * 7919);
+    return h < 0.3 ? 'mesa-queixo' : h < 0.5 ? 'mesa-recostar' : null;
+  };
+  V3.roomK = (v, k) => (k === 'aplauso' ? (((G.S.clock || 0) / 0.8) + G.hash(v.id * 5)) % 1 : ((G.S.clock || 0) / ((Anim.CLIPS[k] || { dur: 6 }).dur) + G.hash(v.id * 17)) % 1);
+  // (who comes in by the door of the building now — the walk in from it, In.passage —: for the heads that turn to it; one a building, kept a
+  // moment of the world)
+  const INC = new Map(); let incT = -1;
+  V3.entering = function (b) {
+    const t = G.S.clock || 0; if (t !== incT) { INC.clear(); incT = t; const In = G.Interiors; if (In && In.passage) for (const o of G.S.villagers.values()) if (o.inside > 0) { const p = In.passage(o); if (p && !p.out && !INC.has(o.inside)) INC.set(o.inside, o.id); } }
+    return INC.get(b) || 0;
+  };
   // ------------------------------ the music's compass (D-796) ------------------------------
   // the time (0..1) of a clip of `beats` beats of the tune being played where one is: on the pulse of the musician's people's music —
   // its pace and the start of his set (G.Audio.compasso, P9: the pulse the sound claps and stamps to) —, so the claps fall on the
   // sound's own; with nobody playing there, on the pulse of one's own people's music, from the world's start. Only reads
   V3.BEAT = 0.5; // (the pulse with no compass to ask: seconds of the world)
+  // (who leads the music where one is: of who plays inside the building now, the feast's bards first in their order, then the musician of
+  // the day, then by id — the band's order of the sound (P9/T8, D-890), whose leader's pulse the band, the claps, the dance and the ring
+  // go to; one a building, found once a moment of the world)
+  const BAND = new Map(); let bandT = -1;
   V3.musician = function (v) {
-    const T = G.Taverna; if (!T || !T.dia || !(v.inside > 0)) return null; const b = G.S.buildings.get(v.inside); const op = b ? T.dia(b) : null;
-    const m = op && op.data && op.data.mus ? G.S.villagers.get(op.data.mus) : null; return m && m.act === 'play' && m.inside === v.inside ? m : null;
+    if (!v || !(v.inside > 0)) return null; const S = G.S, t = S.clock || 0;
+    if (t !== bandT) { BAND.clear(); bandT = t; const T = G.Taverna, Au = G.Audio;
+      for (const o of S.villagers.values()) { if (o.act !== 'play' || !(o.inside > 0) || o.sleeping || o.aboard) continue; const b = S.buildings.get(o.inside); if (!b) continue;
+        const f = Au && Au.festaDe ? Au.festaDe(b) : null, B = (f && f.bardos) || [], op = T && T.dia ? T.dia(b) : null, md = op && op.data ? op.data.mus : 0;
+        const key = B.includes(o.id) ? B.indexOf(o.id) : 1000 + (o.id === md ? 0 : 1); const w = BAND.get(o.inside); if (!w || key < w[0] || (key === w[0] && o.id < w[1].id)) BAND.set(o.inside, [key, o]); } }
+    const w = BAND.get(v.inside); return w ? w[1] : null;
   };
   V3.beatU = function (v, C) {
     const n = C && C.beats > 0 ? C.beats : 4; const m = V3.musician(v); const k = G.Audio && G.Audio.compasso ? G.Audio.compasso(m || v) : null;
@@ -414,6 +471,11 @@
     // (22c fase 2, D-600: someone known or of renown passing — the reader's choice, s.lookId, a glance of a few seconds —; else
     // the eyes and the head wander a little, each one on their own beat: G.hash of the id and of the moment, never a roll)
     const q = s.lookId && at ? at(s.lookId) : null; if (q) { const w = V3.lookFor(s.yaw, s.X, s.Z, q, st); if (w) return w; }
+    // (inside a building: who comes in by the door, and the musician playing — the heads of the room turn to them, each one on their own
+    // beat by the id and the world's clock: D-873)
+    if (v.inside > 0 && at && (st === 'sit' || st === 'idle' || st === 'talk' || st === 'eat')) { const t = G.S.clock || 0;
+      const e = V3.entering(v.inside); if (e && e !== v.id && G.hash(v.id * 53 + e) < 0.7) { const w = at(e); if (w) { const r = V3.lookFar(s.yaw, s.X, s.Z, w); if (r) return r; } }
+      const m = V3.musician(v); if (m && m.id !== v.id && G.hash(v.id * 71 + Math.floor((t + (v.id % 5)) / 6) * 13) < 0.5) { const w = at(m.id); if (w) { const r = V3.lookFar(s.yaw, s.X, s.Z, w); if (r) return r; } } }
     if (!(st === 'idle' || st === 'talk' || st === 'sit' || st === 'carry' || st === 'rest')) return 0;
     const t = G.S ? G.S.clock : 0, k = Math.floor((t + (v.id % 7) * 0.9) / 2.7); const h = G.hash(v.id * 61 + k * 977);
     return h < 0.45 ? 0 : (h - 0.72) * 1.1;

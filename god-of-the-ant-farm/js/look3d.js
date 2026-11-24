@@ -68,7 +68,11 @@
     L.served = v.carry && v.carry.n > 1e-6 && G.Dentro3D && G.Dentro3D.served ? G.Dentro3D.served(v) : null;
     // (the keeper's cloth over his shoulder — a tavern of a people that weaves: G.Dentro3D.ombro, P5 —, and what he wipes a table with: the
     // cloth, or the straw its grain leaves — G.Vida3D.wipeOf)
-    L.ombro = v.job && G.Dentro3D && G.Dentro3D.ombro ? G.Dentro3D.ombro(v) : null; L.wipe = v.act === 'limpar-mesa' && G.Vida3D && G.Vida3D.wipeOf ? G.Vida3D.wipeOf(v, L) : null;
+    L.ombro = v.job && G.Dentro3D && G.Dentro3D.ombro ? G.Dentro3D.ombro(v) : null; L.dmood = L.drunk > 0 ? P3.drunkMood(v) : 0;
+    // (the keeper at his counter with nothing in hand dries a cup of the house's ware with his cloth: the cup of what his people has — Inv.made
+    // —, in the left hand, D-873)
+    L.polish = !!L.ombro && !!v.task && v.task.type === 'atender' && !(v.carry && v.carry.n > 1e-6) && (!v.act || v.act === 'wait' || v.act === 'idle') && !L.inv.outra;
+    if (L.polish) { const cup = G.Inv && G.Inv.made ? G.Inv.made('caneca', v) : null; if (cup) { const k = L._polOf; if (!k || k.src !== L.inv || k.cup !== cup) L._polOf = { src: L.inv, cup, inv: Object.assign({}, L.inv, { outra: cup }) }; L.inv = L._polOf.inv; } else L.polish = false; } L.wipe = v.act === 'limpar-mesa' && G.Vida3D && G.Vida3D.wipeOf ? G.Vida3D.wipeOf(v, L) : null;
     // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
     if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
@@ -78,6 +82,10 @@
     L.drunk = P3.drunkOf(v);
     if (skin) {
       L.out = outfitOf(v, L, fac); L.headK = L.fe ? L.fe.prop.cabeca : L.out.headK;
+      // (the clothes darker where a drink was thrown on them — G.Atmos.molhado, T7's (D-883), drying in the world's seconds —: the top
+      // of the body soaked the most, the legs a little; a copy of the outfit a tenth of the drying, never the outfit itself — D-874)
+      const wet = G.Atmos && G.Atmos.molhado ? G.Atmos.molhado(v) : null; L.wet = wet ? wet.n : 0;
+      if (L.wet > 0) { const n = Math.ceil(L.wet * 10) / 10, k = L._wetOf; if (!k || k.src !== L.out || k.n !== n) L._wetOf = { src: L.out, n, out: wetOut(L.out, n) }; L.out = L._wetOf.out; }
       // (the legs, the arms and the trunk of a child against a grown one — G.Feicao's, D-639: the rig poses the bones by them)
       L.legK = L.fe ? L.fe.prop.perna : 1; L.armK = L.fe ? L.fe.prop.braco : 1; L.trunkK = L.fe ? L.fe.prop.tronco : 1; L.armOut = L.out.skirt === 'saiaL' || L.out.cloakM || L.out.topM ? 0.07 : 0;
     }
@@ -90,7 +98,12 @@
     // (the inventory keeps the answer in the look's memo while what it reads is the same: it alone reads the bag and the places — rule 128, L-1114)
     return G.Inv.heldFor ? G.Inv.heldFor(v, L._inv || (L._inv = {})) : G.Inv.held(v);
   }
+  // (how drunk, 0..1: the drink in the blood against what one bears — G.Atmos.drunk, which is T2's G.Ebrio.k, one truth (D-830): none below
+  // merry, the stagger growing with it, the arms out from the staggering mark (V3.DRUNK), the whole of it out — D-872)
   P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
+  // (the drink's mood by who one is — the temperament, G.Indole: the kind and the outgoing loosen into a silly smile, the unkind and the
+  // anxious turn sour —: −1..1, D-872)
+  P3.drunkMood = v => { const I = G.Indole; if (!I || !I.ax) return 0; return G.clamp(((I.ax(v, 'ama') - 50) + 0.5 * (I.ax(v, 'ext') - 50) - 0.6 * (I.ax(v, 'neu') - 50)) / 45, -1, 1); };
   // (a cuirass worn: the height of its lower edge in the body as modelled — what the skin's shader takes from the hips to the
   // chest, D-351; 0 for none. The edge of a cuirass's solid part: its waist flaps, which hang free, kept out of it)
   const CUIR = new Map();
@@ -388,6 +401,13 @@
     return o;
   }
   P3.outfit = v => outfitOf(v, P3.look(v), G.Fac.ofV ? G.Fac.ofV(v) : null);
+  // (an outfit soaked: its colours — linear, as the card wants them — darker as wet cloth is, the garments of the top of the body by
+  // P3.WET, the trousers and the boots by a third of it; n from 0 dry to 1 just soaked: D-874)
+  P3.WET = 0.42;
+  function wetOut(o, n) { const lin = Object.assign({}, o.lin), d = 1 - P3.WET * n, e = 1 - P3.WET * n / 3;
+    for (const q of ['cloth', 'over', 'cloak', 'trim', 'hat', 'belt']) if (lin[q]) lin[q] = lin[q].map(c => c * d);
+    for (const q of ['pants', 'boots']) if (lin[q]) lin[q] = lin[q].map(c => c * e);
+    return Object.assign({}, o, { lin, wet: n }); }
   // (the one colour a simple figure far off is dressed in: what the fine body wears over all)
   P3.farCol = L => { const o = L.out; return o ? (o.cloakM ? o.cloak : o.overK === 1 || o.overK === 3 ? o.over : o.cloth) : L.cloth; };
   // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,
