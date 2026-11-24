@@ -18,6 +18,11 @@
 //     bebê (L-1908): ninguém deixado na entrada enquanto o corpo está dentro (o bebê do corpo ficava lá, em pé, do tamanho de uma
 //     bonequinha), o bebê no colo desenhado por ninguém e ainda no colo lá fora, o corpo nunca desenhado duas vezes — no mundo
 //     pronto da taverna egípcia em que o dono o viu (mega);
+//  d7 a taverna viva no desenho (D-795 a D-799): cada ato da noite com a sua pose — o brinde, os ossinhos, a dança de pé, as palmas e
+//     o canto no compasso do músico, o cochilo de olhos fechados, o pano, as canecas recolhidas, a gorjeta, o fechar, o cambalear —,
+//     ninguém fazendo o gesto da coisa que não tem (os ossinhos, o pano, as canecas, a caneca do brinde), os dois corpos do expulsar
+//     (as partes e as mãos de um no outro), o prato da refeição inteira com o bocado nos dedos só de quem tem a comida, o mastigar no
+//     rosto, o gole sentado que pousa a caneca, o prato do taverneiro (levado, servido);
 //   node qa/dentro-gente.js [mundo]     ONLY=d1,d3 para algumas partes (≈ 3 min inteira; ONLY=d6 ≈ 1,5 min, sempre no mega)
 const path = require('path');
 const T = require(path.join(__dirname, 'visual', 'tres-node.js'));
@@ -53,10 +58,17 @@ function watch(b, n) {
 }
 // (the proof's hand: the nearest one of the street the view draws, set at the tavern's door with the evening's errand to it — the world
 // walks them in, the tavern's own way: G.Taverna's customer)
-function putIn(b) { const S = G.S; const d = In.door(b); const op = G.Taverna && G.Taverna.dia ? G.Taverna.dia(b) : null; if (!op) return null;
-  const v = [...S.villagers.values()].filter(o => P3.visOf(o.id) && !o.inside && o.age >= 16 && !o.held && !o.aboard && !o.sleeping && !o.captive && !o.jail && !P3.wayOf(o.id) && Math.hypot(o.x - d[0], o.y - d[1]) < 12).sort((a, c) => Math.hypot(a.x - d[0], a.y - d[1]) - Math.hypot(c.x - d[0], c.y - d[1]) || a.id - c.id)[0];
-  if (!v) return null; god(() => { G.Vg.endTask(v); v.x = d[0]; v.y = d[1]; v.path = null; v.moving = false; v.hunger = 5; v.energy = 90; G.Vg.setTask(v, { type: 'tavern', id: b.id, op: op.id, pri: 0.5, st: 0 }); });
-  for (let k = 0; k < 90 && v.inside !== b.id; k++) frame(true); frame(true); return v.inside === b.id ? v : null; }
+let putWhy = ''; // (why the proof's hand put nobody in: said by the d1)
+function putIn(b) { const S = G.S; const d = In.door(b); const op = G.Taverna && G.Taverna.dia ? G.Taverna.dia(b) : null; if (!op) { putWhy = 'a taverna fechada'; return null; }
+  // (the nearest few of the street, in turn: one the world calls away at once — to the family, T-1803 — gives way to the next)
+  const L = [...S.villagers.values()].filter(o => P3.visOf(o.id) && !o.inside && o.age >= 16 && !o.held && !o.aboard && !o.sleeping && !o.captive && !o.jail && !P3.wayOf(o.id) && Math.hypot(o.x - d[0], o.y - d[1]) < 12).sort((a, c) => Math.hypot(a.x - d[0], a.y - d[1]) - Math.hypot(c.x - d[0], c.y - d[1]) || a.id - c.id).slice(0, 5);
+  if (!L.length) { putWhy = 'ninguém da rua perto da porta'; return null; } const why = [];
+  // (a full room turns the one sent away at the door — the tavern's own count, T.room, L-1926 —: the proof's hand sends one seated guest home first, T-1803)
+  if (G.Taverna.room && G.Taverna.room(b) < 1) { const o = [...S.villagers.values()].filter(q => q.inside === b.id && q.task && q.task.type === 'tavern' && q.task.st >= 2 && !P3.wayOf(q.id)).sort((a, c) => a.id - c.id)[0]; if (o) god(() => G.Vg.endTask(o)); for (let k = 0; k < 60; k++) frame(true); }
+  for (const v of L) { god(() => { G.Vg.endTask(v); v.x = d[0]; v.y = d[1]; v.path = null; v.moving = false; v.hunger = 5; v.energy = 90; G.Vg.setTask(v, { type: 'tavern', id: b.id, op: op.id, pri: 0.5, st: 0 }); });
+    for (let k = 0; k < 400 && v.inside !== b.id && v.task && v.task.type === 'tavern'; k++) frame(true); frame(true);
+    if (v.inside === b.id) { putWhy = ''; return v; } why.push(`#${v.id} ${v.task ? v.task.type + ' ' + (v.task.st || 0) : 'sem tarefa'}`); }
+  putWhy = 'ninguém entrou: ' + why.join(', '); return null; }
 
 if (on('d1') || on('d2')) {
   open(0.665); const b = tavern(); FOCUS = { X: (b.x + b.w / 2) * TL, Z: (b.y + b.h / 2) * TL };
@@ -66,7 +78,7 @@ if (on('d1') || on('d2')) {
     const v = putIn(b); const wy = v ? P3.wayOf(v.id) : null; watch(b, 150);
     const straight = P3.ways.straight - w0.straight, made = P3.ways.made - w0.made;
     ok('d1 entra e sai andando pela porta, ninguém dentro de um móvel, ninguém de chapéu de rua dentro', jumps.entJ === 0 && jumps.exJ === 0 && jumps.movJ === 0 && !said.length && made > 0 && !!wy && wy.kind === 'in',
-      `entradas ${jumps.ent} (${jumps.entJ} aos saltos), saídas ${jumps.ex} (${jumps.exJ} aos saltos), trocas de lugar ${jumps.mov} (${jumps.movJ}); ${made} caminhos feitos, ${straight} com uma perna sem caminho da planta; posto pela mão: ${wy ? 'o caminho «' + wy.kind + '», ' + wy.pts.length + ' pontos, ' + wy.len.toFixed(1) + ' m' : 'NENHUM'}; o verificador: ${said.length ? said.join(' · ') : 'nada'}`);
+      `entradas ${jumps.ent} (${jumps.entJ} aos saltos), saídas ${jumps.ex} (${jumps.exJ} aos saltos), trocas de lugar ${jumps.mov} (${jumps.movJ}); ${made} caminhos feitos, ${straight} com uma perna sem caminho da planta; posto pela mão: ${wy ? 'o caminho «' + wy.kind + '», ' + wy.pts.length + ' pontos, ' + wy.len.toFixed(1) + ' m' : 'NENHUM (' + putWhy + ')'}; o verificador: ${said.length ? said.join(' · ') : 'nada'}`);
   }
   if (on('d2')) {
     const errs = [], res = []; const tryF = (k, f) => { try { f(); } catch (e) { errs.push(k + ': ' + e.message); } };
@@ -95,7 +107,7 @@ if (on('d3')) {
   const drink = cp({ carry: { op, k: 'cerveja', n: 0.25 } }), load = cp({ carry: { op: 'outra', k: 'food', n: 2 } });
   const a = V3.atPlace(drink, pl, P3.look(drink), {}), c = V3.atPlace(load, pl, P3.look(load), {});
   const cup = G.Inv.held(drink).mao; out.push(`a rodada: «${a.st}» + «${a.over}» com ${cup || 'NADA'} na mão; uma carga que não é a rodada: «${c.st}» + «${c.over || '-'}»`);
-  if (a.over !== 'ato-beber' || !cup || !G.Itens.has(cup, 'beber')) bad.push('o gole sem a caneca, ou sem o gole'); if (c.over === 'ato-beber') bad.push('o gole com as mãos vazias');
+  if (!/^mesa-gole/.test(a.over || '') || !cup || !G.Itens.has(cup, 'beber')) bad.push('o gole sem a caneca, ou sem o gole'); if (/^mesa-gole|^ato-beber/.test(c.over || '')) bad.push('o gole com as mãos vazias'); // (seated, the table's sip: D-795)
   // (the song: with the instrument the kit gives — the lyre, the Aztec drum: P7, D-764 — played with it; with the hands empty, sung —
   // never an instrument mimed; the brawl stands one up)
   const sing = cp({ act: 'play', carry: null }); const Ls = P3.look(sing), ins = V3.instrument(Ls); const so = V3.atPlace(sing, pl, Ls, {});
@@ -216,6 +228,65 @@ if (on('d6')) {
   if (!hf) bad.push('nenhuma casa para o corpo sem bebê'); else run('a casa sem bebê', hf, free(hf.set, hf.id), null, false, 1.2);
   if (G.Possess.body()) G.Possess.release('deus'); G.Avatar.detach();
   ok('d6 o corpo entra e sai com o bebê no colo e sem ele: ninguém deixado na entrada, o bebê com o corpo, o corpo uma vez só', !bad.length, out.join(' · ') + (bad.length ? ' — FALHAS: ' + bad.join('; ') : ''));
+}
+if (on('d7')) {
+  // the living tavern as the view draws it (D-795 to D-799): the reader's choice for each act of the night at a place — on copies of one
+  // grown person of the world, as the d3 —, the hands' things (G.Inv.held: never a gesture of a thing not in the hands), the pair of the
+  // brawler put out, the music's compass by the musician's clock, the face that chews and the nap's shut eyes, and the frame's own
+  // mouthful in the fingers (the rig, People3D.body)
+  if (!G.S || !G.S.villagers) open(0.665);
+  const V3 = G.Vida3D, A3 = G.Anim3D, out = [], bad = [];
+  const v = [...G.S.villagers.values()].filter(o => o.age >= 18 && o.age < 60 && !o.captive && !o.jail && !o.aboard && !(o.equip && o.equip.kit) && !(o.lost && (o.lost.armL || o.lost.armR))).sort((a, c) => a.id - c.id)[0];
+  const seat = { st: 'sit', q: null }, stand = { st: 'idle', q: null }, op = 'prova-op';
+  const cp = x => copy(v, Object.assign({ inside: 0, sleeping: false, act: '', actT: 1.3, carry: null, task: { type: 'tavern', op, st: 5 } }, x));
+  const at = (o, pl, inv) => { const L = P3.look(o); if (inv !== undefined) L.inv = Object.assign({}, P3.NO_INV, inv); return V3.atPlace(o, pl, L, {}); };
+  const shown = r => r.over || r.st;
+  // (1) each act of the night at its place: seated over the seat, the dance standing up, the keeper's standing
+  const cupK = G.Inv.held(cp({ carry: { op, k: 'cerveja', n: 0.25 }, task: { type: 'tavern', op, st: 3 } })).mao;
+  const want = [['brinde', seat, 'taverna-brinde', { mao: cupK }], ['palmas', seat, 'palmas'], ['cantar-junto', seat, 'cantar-junto'], ['cochilo', seat, 'cochilo'], ['gorjeta', seat, 'gorjeta'],
+    ['danca', seat, 'danca'], ['danca', stand, 'danca'], ['fechar', stand, 'fechar'], ['cambalear', stand, 'cambalear']];
+  const armOut = (P3.look(cp({})).armOut || 0) > 0; // (the nap of who wears something over the arms is on one arm: cochilo-b)
+  const got = []; for (const [act, pl, k0, inv] of want) { const k = act === 'cochilo' && armOut ? 'cochilo-b' : k0; const r = at(cp({ act }), pl, inv || {}); got.push(`${act}${pl === seat ? ' sentado' : ' de pé'} «${shown(r)}»${r.up ? ' (de pé)' : ''}`); if (shown(r) !== k) bad.push(`${act}: «${shown(r)}» (devia ser ${k})`); if (act === 'danca' && pl === seat && !r.up) bad.push('a dança sentada'); }
+  out.push(got.join(', '));
+  // (2) never a gesture of a thing not in the hands: the bones, the cloth, the cups gathered, the toast's cup
+  const none = [['jogo-ossos', seat], ['limpar-mesa', stand], ['recolher-canecas', stand], ['brinde', seat]].map(([act, pl]) => [act, shown(at(cp({ act }), pl, {}))]);
+  out.push('sem a coisa na mão: ' + none.map(([a, k]) => `${a} «${k}»`).join(', ')); for (const [a, k] of none) if (A3.CLIPS[k] && A3.CLIPS[k].item) bad.push(`${a}: o gesto «${k}» com a mão vazia`);
+  // (with a thing in the hand — the proof's hand puts one there, as the inventory would —: the gesture)
+  const withIt = [['jogo-ossos', seat, 'jogo-ossos'], ['limpar-mesa', stand, 'limpar-mesa'], ['recolher-canecas', stand, 'recolher-canecas']].map(([act, pl, k]) => [act, shown(at(cp({ act }), pl, { mao: cupK })), k]);
+  out.push('com uma coisa na mão: ' + withIt.map(([a, k]) => `${a} «${k}»`).join(', ')); for (const [a, k, w] of withIt) if (k !== w) bad.push(`${a}: «${k}» com a coisa na mão (devia ser ${w})`);
+  // (3) the two bodies of «expulsar»: each one's part standing and walking, and the keeper's hands on the other (Anim.DUO)
+  const ka = cp({ act: 'expulsar', task: { type: 'atender', papel: 'a' } }), kb = cp({ act: 'expulsar', task: { type: 'tavern', op, st: 5, papel: 'b' } });
+  const ea = A3.stateOf(ka, 0, P3.look(ka)), eb = A3.stateOf(kb, 0, P3.look(kb)), wa = V3.overOf(ka, 'walk', P3.look(ka)), wb = V3.overOf(kb, 'walk', P3.look(kb)); const da = A3.duoFor('expulsar', 'a'), db = A3.duoFor('expulsar', 'b');
+  out.push(`expulsar: parados «${ea}» e «${eb}», andando «${wa}» e «${wb}»; as mãos do taverneiro no outro: ${da && da.hands ? da.hands.filter(Boolean).length : 0}`);
+  if (ea !== 'expulsar-a' || eb !== 'expulsar-b' || wa !== 'expulsar-a' || wb !== 'expulsar-b' || !da || !da.hands || !db || db.clip !== 'expulsar-b') bad.push('os dois corpos do expulsar');
+  // (the drink in the walk: who drank too much — the look's L.drunk — walks with the arms out; who did not, not)
+  const dr = cp({ act: '' }); const Ld = P3.look(dr); const w0 = V3.overOf(dr, 'walk', Object.assign({}, Ld, { drunk: 0 })), w1 = V3.overOf(dr, 'walk', Object.assign({}, Ld, { drunk: 0.8 }));
+  out.push(`o andar: sóbrio «${w0 || '-'}», bêbado «${w1}»`); if (w0 === 'cambalear' || w1 !== 'cambalear') bad.push('o cambalear sem a bebida, ou a bebida sem ele');
+  // (4) the table: the guests' whole plate — with the food in the hands —, the sip that sets the cup down, the cup at rest
+  const meal = at(cp({ act: 'dine', carry: { op, k: 'food', n: 1 }, task: { type: 'tavern', op, st: 3 } }), seat); const sip = at(cp({ act: 'drink', carry: { op, k: 'cerveja', n: 0.25 }, task: { type: 'tavern', op, st: 3 } }), seat);
+  const rest = at(cp({ act: 'sit', carry: { op, k: 'cerveja', n: 0.25 }, task: { type: 'tavern', op, st: 5 } }), seat);
+  out.push(`à mesa: o prato «${meal.over}», o gole «${sip.over}», a caneca entre os goles «${rest.over}»`);
+  if (!/^mesa-refeicao/.test(meal.over || '') || !/^mesa-gole/.test(sip.over || '') || rest.over !== 'mesa-caneca') bad.push('a mesa: o prato, o gole ou a caneca');
+  // (5) the keeper's plate: carried level on the way, set before the seated one — the plate of the inventory with the meal on it
+  const kp = cp({ act: 'give', carry: { op, k: 'food', n: 1 }, task: { type: 'atender', op, st: 3, n1: 1 } }); const Lk = P3.look(kp); const sv = V3.atPlace(kp, stand, Lk, {}), wk = V3.overOf(kp, 'walk', Lk);
+  out.push(`o taverneiro com o prato (${Lk.inv.mao || 'nada'} na mão, a comida: ${Lk.food || 'nenhuma'}): à mesa «${shown(sv)}», andando «${wk}»`);
+  if (!/^prato\./.test(Lk.inv.mao || '') || shown(sv) !== 'servir-prato' || wk !== 'levar-prato' || !Lk.food) bad.push('o prato do taverneiro');
+  // (6) the music's compass: a clip of beats at the musician's clock — the claps on his notes —, and the world's clock with nobody playing
+  const M = { act: 'play', actT: 7.3, inside: 1 }; const mus0 = V3.musician; V3.musician = () => M; const uM = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = () => null; const uW = V3.beatU(cp({}), A3.CLIPS.palmas); V3.musician = mus0;
+  const wantM = (7.3 / (2 * V3.BEAT)) % 1, wantW = ((G.S.clock || 0) / (2 * V3.BEAT)) % 1;
+  out.push(`o compasso: com o músico ${uM.toFixed(3)} (o relógio dele ${wantM.toFixed(3)}), sem ele ${uW.toFixed(3)} (o do mundo ${wantW.toFixed(3)})`); if (Math.abs(uM - wantM) > 1e-6 || Math.abs(uW - wantW) > 1e-6) bad.push('o compasso da música');
+  // (7) the face: the chewing works the jaw shut and open (never the vowels of a word), the nap shuts the eyes
+  const RO = G.Rosto, X = RO.IDX; let lo = 9, hi = -9, pr = 0; const m0 = {}, pose = A3.POSE0(); pose.chew = 1; pose.talk = 0;
+  for (let k = 0; k < 60; k++) { const F = A3.faceMix(m0, { clock: k / 30, id: 7 }, pose, null, { pz: null }, 1 / 30); lo = Math.min(lo, F[X.jaw]); hi = Math.max(hi, F[X.jaw]); pr = Math.max(pr, F[X.press]); }
+  const Fn = A3.faceMix({}, { clock: 1, id: 7 }, A3.POSE0(), null, { pz: null, over: A3.CLIPS.cochilo, ow: 1 }, 1 / 30);
+  out.push(`o rosto: mastigando a boca de ${lo.toFixed(2)} a ${hi.toFixed(2)}, os lábios apertados até ${pr.toFixed(2)}; cochilando, os olhos ${Fn[X.blink].toFixed(2)}`);
+  if (!(hi - lo > 0.1 && hi < 0.4 && pr > 0.2) || !(Fn[X.blink] > 0.9)) bad.push('o mastigar ou o cochilo no rosto');
+  // (8) the mouthful in the fingers, drawn by the rig only for who has the food in the hands — the meal's own part, by its origin
+  FOCUS = FOCUS || { X: v.x * TL, Z: v.y * TL }; frame(true); // (the drawing made once: its meshes)
+  const put = Lf => { const pp = Object.assign(A3.POSE0(), { morsel: 1 }); P3.toolsBegin(); P3.body(0, 0, 0, 0, 0, pp, Lf, null); const t = P3.tools(); return t.find(x => /^bocado\|/.test(x[0])) || null; };
+  const L0 = Object.assign(P3.look(cp({})), { food: 'peixe', lod: 0 }); const a = put(L0), b = put(Object.assign({}, L0, { food: null }));
+  out.push(`o bocado nos dedos: com a comida ${a ? a[0] : 'NENHUM'}, sem ela ${b ? b[0] : 'nenhum'}`); if (!a || a[0] !== 'bocado|peixe' || b) bad.push('o bocado de mentira, ou sem ele');
+  ok('d7 a taverna viva: cada ato com a sua pose, ninguém fazendo o gesto da coisa que não tem, os dois corpos do expulsar, a mesa, o prato do taverneiro, o compasso, o rosto', !bad.length, out.join(' · ') + (bad.length ? ' — FALHAS: ' + bad.join('; ') : ''));
 }
 if (on('d4')) {
   // (the same world lived 600 frames with the inside drawn round the tavern and without the 3D at all: the same save)

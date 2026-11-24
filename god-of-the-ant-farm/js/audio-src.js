@@ -144,6 +144,15 @@
     agree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, disagree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 },
     laugh: { s: 'voz', q: 'curso', cada: 2, v: 0.4, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
     console: still('quem consola fala baixo demais para se ouvir longe'),
+    // (P6, D-795 to D-799: the living tavern — the cups that meet, the bones on the board, the claps and the stamp of the dance on the
+    // notes, the song sung along, the keeper's cloth and cups, the coin thrown, the keeper's call at the closing and the brawler led
+    // out shouting; the nap and the stagger are still)
+    brinde: { s: 'cup', q: 'curso', cada: 3.4, v: 0.45, alc: 0.7, fam: 'noite' }, 'jogo-ossos': { s: 'clack', q: 'curso', cada: 4.2, v: 0.3, alc: 0.6, fam: 'noite' },
+    danca: { s: 'clap', q: 'curso', cada: 0.5, v: 0.4, alc: 1.1, fam: 'noite' }, palmas: { s: 'clap', q: 'curso', cada: 0.5, v: 0.35, alc: 1, fam: 'noite' },
+    'cantar-junto': { s: 'chant', q: 'curso', cada: 2, v: 0.35, alc: 0.9, fam: 'noite' }, cochilo: still('quem cochila sobre a mesa respira baixo'),
+    'limpar-mesa': { s: 'sweep', q: 'curso', cada: 1.2, v: 0.15, alc: 0.4 }, 'recolher-canecas': { s: 'cup', q: 'curso', cada: 3, v: 0.3, alc: 0.5 },
+    gorjeta: { s: 'coin', q: 'curso', cada: 2.4, v: 0.4, alc: 0.7 }, expulsar: { s: 'hey', q: 'curso', cada: 1.6, v: 0.55, alc: 1.2 },
+    fechar: { s: 'hey', q: 'curso', cada: 2.6, v: 0.6, alc: 1.3 }, cambalear: still('o cambaleio é dos pés'), 'chamar-pedido': { s: 'voz', q: 'curso', cada: 2.2, v: 0.45, alc: 0.9 },
   };
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {

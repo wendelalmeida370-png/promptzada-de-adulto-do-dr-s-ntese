@@ -29,6 +29,7 @@
   // the blink, the look, and the speech: simple visemes — the «a» on the jaw, the «o u» on the pucker, the «m b p» on the press, the
   // «e i» on the stretch — cycling by the world's clock while the mouth talks
   const RO = G.Rosto, X = RO ? RO.IDX : {}, NCH = RO ? RO.CH.length : 0;
+  const TAU = Math.PI * 2;
   const T = RO ? new Float32Array(NCH) : null;
   const V_A = [1, 0, 0, 0], V_O = [0.45, 0.9, 0, 0], V_M = [0.05, 0, 1, 0], V_E = [0.55, 0, 0, 0.9], VIS = [V_A, V_O, V_A, V_M, V_E, V_A, V_O, V_E];
   // m: the view's own memory of someone (its eased face kept in m.fz); I: the frame's numbers (id, clock, drunk, humor); pose: their
@@ -63,8 +64,14 @@
     const tk = pose.talk || 0;
     if (tk > 0.02) { const q = t * 6.5 + (id % 11) * 0.37, i0 = Math.floor(q), f = q - i0; const A = VIS[(G.hash(id * 7 + i0) * VIS.length) | 0], B = VIS[(G.hash(id * 7 + i0 + 1) * VIS.length) | 0]; const w = f * f * (3 - 2 * f);
       F[X.jaw] = Math.max(F[X.jaw], tk * (A[0] + (B[0] - A[0]) * w)); F[X.pucker] += tk * (A[1] + (B[1] - A[1]) * w); F[X.press] += tk * (A[2] + (B[2] - A[2]) * w); F[X.stretch] += tk * (A[3] + (B[3] - A[3]) * w); }
-    // the blink, the look
+    // the chewing (pose.chew: the meal's clip's own channel): the jaw a little open and shut at the chew's pace, the lips pressed
+    // between, the mouthful worked from side to side — mouth closed, never the vowels of a word
+    const cw = pose.chew || 0;
+    if (cw > 0.02) { const q = TAU * (t * 1.55 + (id % 13) * 0.071), o = 0.5 + 0.5 * Math.sin(q), op = o * o;
+      F[X.jaw] = Math.max(F[X.jaw], cw * (0.04 + 0.2 * op)); F[X.press] += cw * 0.45 * (1 - op); F[X.pucker] += cw * 0.12 * op; F[X.smileSide] += cw * 0.16 * Math.sin(q * 0.5); }
+    // the blink, the look — and the eyes a gesture keeps shut (the nap with the head on the arms: its clip's own word, eyes)
     const b = pose.blink === undefined ? 1 : pose.blink; F[X.blink] = Math.max(F[X.blink], (1 - b) / 0.88);
+    const sh = a && ((a.over && a.ow > 0.5 && a.over.eyes) || (a.clip && a.clip.eyes)); if (sh === 'shut') F[X.blink] = Math.max(F[X.blink], 0.97);
     F[X.gazeX] = pose.gazeX || 0; F[X.gazeY] = pose.gazeY || 0;
     return RO.clamp(F);
   };
@@ -77,7 +84,7 @@
       return f; }
     const f = L.face || {}; const b = pose.blink === undefined ? 1 : pose.blink; const md = L.mood || MOOD.calm;
     f.closed = G.clamp((1 - b) / 0.88, 0, 1); f.gx = G.clamp(pose.gazeX || 0, -0.45, 0.45); f.gy = G.clamp(pose.gazeY || 0, -0.3, 0.3);
-    f.mouth = Math.max(pose.talk || 0, md.jaw || 0);
+    f.mouth = Math.max(pose.talk || 0, md.jaw || 0, (pose.chew || 0) * 0.08);
     f.smile = md.smile || 0; f.up = md.up || 0; f.angry = md.angry || 0; f.sad = md.sad || 0; f.wide = md.wide || 0; f.squint = md.squint || 0; f.blush = md.blush || 0;
     return f;
   };

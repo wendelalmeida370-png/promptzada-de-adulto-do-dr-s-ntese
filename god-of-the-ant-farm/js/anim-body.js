@@ -39,7 +39,7 @@
   const FREE = Anim.FREE = new Set(['sit', 'eat', 'rock', 'pray', 'rest', 'eatg', 'rockg', 'sleep', 'sick', 'swim', 'tread', 'drown', 'jump', 'fall', 'climb', 'knocked', 'rise', 'crumple', 'dance', 'bound', 'cook']);
   // the channels a change of state eases (the stride's own clocks — the stance, the swing, the foot's pitch on the ground — are
   // the stride's: never eased)
-  const CH = ['bob', 'crouch', 'lean', 'twist', 'neck', 'shLp', 'shLr', 'shRp', 'shRr', 'elL', 'elR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'pelY', 'pelR', 'pelP', 'shift', 'sway', 'lie', 'grip', 'gripL', 'wrist', 'wristL', 'holdW', 'adL', 'adR', 'hyL', 'hyR', 'tyL', 'tyR', 'offW', 'shLy', 'shRy', 'talk', 'breath', 'tilt', 'headR'];
+  const CH = ['bob', 'crouch', 'lean', 'twist', 'neck', 'shLp', 'shLr', 'shRp', 'shRr', 'elL', 'elR', 'hipL', 'hipR', 'knL', 'knR', 'anL', 'anR', 'pelY', 'pelR', 'pelP', 'shift', 'sway', 'lie', 'grip', 'gripL', 'wrist', 'wristL', 'holdW', 'adL', 'adR', 'hyL', 'hyR', 'tyL', 'tyR', 'offW', 'shLy', 'shRy', 'talk', 'chew', 'morsel', 'morselL', 'breath', 'tilt', 'headR'];
   const NC = CH.length; Anim.CH = CH;
   const REST = Anim.POSE0();
   const RAW = ['stL', 'stR', 'swL', 'swR', 'pgL', 'pgR', 'pitL', 'pitR', 'rel', 'tool', 'prone'];

@@ -60,6 +60,9 @@
     const lo = v.lost; if (lo && (lo.armL || lo.armR)) { const k = L._lostOf; if (!k || k.src !== L.inv) L._lostOf = { src: L.inv, inv: Object.assign({}, L.inv, { mao: lo.armR ? null : L.inv.mao, outra: lo.armL ? null : L.inv.outra }) }; L.inv = L._lostOf.inv; }
     // (the cups of the tavern's round in the hands — the keeper's to the table, one a dose: G.Inv.roundOf, D-757)
     L.cups = G.Inv && G.Inv.roundOf ? G.Inv.roundOf(v) : 0;
+    // (the food in the hands — the meal the world served, its part by the origin (G.Origem): the mouthful in the fingers, the dish on the
+    // keeper's plate — P6, D-795, D-798; null with no food in them)
+    L.food = foodOf(v);
     // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
     if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
@@ -383,6 +386,8 @@
   P3.farCol = L => { const o = L.out; return o ? (o.cloakM ? o.cloak : o.overK === 1 || o.overK === 3 ? o.over : o.cloth) : L.cloth; };
   // (who carries a torch: the god's own rule — at night, walking, one in three grown people, those whose errand asks for one,
   // and those the scenes hand one to; and the body, at night, always: the player has to see)
+  // (the part the food in someone's hands is mostly of — G.Origem.most, a read —, or null)
+  const foodOf = v => { const c = v.carry; if (!c || c.k !== 'food' || !(c.n > 1e-6) || !G.Origem || !G.Origem.most) return null; return G.Origem.most('v:' + v.id, 'food') || '?'; };
   function torchOf(v) {
     if (v.inside || v.sleeping) return false; if (v.holdTorch) return true;
     if (G.Render.nightness() <= 0.5) return false;

@@ -2207,5 +2207,23 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 { const pp = src['people3d.js'] || []; const p3 = pp.join('\n');
   if (!/function inArms\(v\) \{/.test(p3) || !/if \(v\.aboard \|\| v\.ug \|\| v\.held \|\| inArms\(v\)\) continue;/.test(p3)) fails.push('o bebê no colo vai com quem o carrega: o People3D não pula o bebê no colo pela porta inArms (L-1908)');
   pp.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bv\.carried\b/.test(c) && !/function inArms\(v\)/.test(c) && !/if \(v\.carried\) return true;/.test(c)) fails.push(`o bebê no colo vai com quem o carrega: people3d.js:${k + 1} decide pelo v.carried fora da porta inArms (L-1908): ${l.trim().slice(0, 100)}`); }); }
+// 305. "o gesto da taverna só com a coisa, no compasso da música" (D-795, D-796): os gestos da noite que seguram uma coisa (o brinde, os
+// ossinhos, o pano, as canecas recolhidas, o prato do taverneiro) dizem a coisa na mão (item) — sem ela o leitor não os faz —; o bocado
+// nos dedos só se desenha com a comida que o mundo pôs nas mãos (L.food); a dança e as palmas vão pelo relógio do músico (beats:
+// G.Vida3D.beatU), nunca pelo próprio
+{ const tc = (src['taverna-clips.js'] || []).join('\n'), mc = (src['mesa-clips.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  const clipDef = (t, id) => { const i = t.indexOf(`c('${id}',`); if (i < 0) return null; const j = t.indexOf("\n  c('", i + 4); return t.slice(i, j < 0 ? t.length : j); };
+  for (const id of ['taverna-brinde', 'jogo-ossos', 'limpar-mesa', 'recolher-canecas', 'levar-prato', 'servir-prato', 'chamar-pedido']) { const d = clipDef(tc, id); if (!d) fails.push(`o gesto da taverna só com a coisa: o clipe «${id}» não está no js/taverna-clips.js (D-796)`); else if (!/item: \{ hand: 'mao' \}/.test(d)) fails.push(`o gesto da taverna só com a coisa: o clipe «${id}» sem a coisa na mão (item: { hand: 'mao' }; D-796)`); }
+  for (const id of ['mesa-beber', 'mesa-gole', 'mesa-gole-limpar', 'mesa-caneca']) { const d = clipDef(mc, id); if (!d || !/item: \{ hand: 'mao' \}/.test(d)) fails.push(`o gesto da taverna só com a coisa: o gole «${id}» sem a caneca na mão (D-795)`); }
+  if (!/if \(L\.food && \(pose\.morsel > 0\.5 \|\| pose\.morselL > 0\.5\)\)/.test(p3)) fails.push('o bocado nos dedos só com a comida nas mãos (L.food: D-795)');
+  if (!/if \(C && C\.beats > 0 && G\.Vida3D\.beatU\) return G\.Vida3D\.beatU\(v, C\);/.test(p3)) fails.push('a dança no compasso: o relógio de um clipe de batidas é o do músico (G.Vida3D.beatU, D-796)'); }
+// 306. "todo ato da taverna viva tem gesto e som" (D-796): cada ato da noite que o mundo dá (a P7) tem o seu clipe (acts) ou as duas
+// partes (Anim.DUO) e a sua linha no G.Audio.ATO — um som da biblioteca ou o silêncio dito
+{ const ACTS = ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar', 'cambalear'];
+  const clips = ['taverna-clips.js', 'mesa-clips.js', 'social-clips.js', 'duo-clips.js'].map(f => (src[f] || []).join('\n')).join('\n'); const au = (src['audio-src.js'] || []).join('\n');
+  const a0 = au.indexOf('A.ATO = {'), a1 = au.indexOf('\n  };', a0); const ato = a0 < 0 ? '' : au.slice(a0, a1);
+  for (const a of ACTS) { const q = a.includes('-') ? `'${a}'` : a;
+    if (!new RegExp(`acts: \\[[^\\]]*'${a}'`).test(clips)) fails.push(`todo ato da taverna viva tem gesto: o ato «${a}» sem o seu clipe (acts) — D-796`);
+    if (!new RegExp(`(^|[\\s{,])${q.replace(/[-']/g, m => '\\' + m)}:\\s*(\\{|still\\()`).test(ato)) fails.push(`todo ato da taverna viva tem som: o ato «${a}» sem a sua linha no G.Audio.ATO (D-796)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
