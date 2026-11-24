@@ -142,6 +142,10 @@
   // 0..1 (the needs weigh the hunger and the tiredness by it — and nothing else changes the energy for it: D-833)
   E.passo = function (v, dt) {
     if (!(v.ebrio > 0 || v.ebrioG > 0 || v.ressaca > 0 || v.ebrioD > 0) || !(dt > 0)) return 0;
+    // (the drink goes by the night's clock: with the god's body lingering the sun — the night of a tavern that lasts for who lives it —
+    // the stomach, the liver and the hangover go at its pace, G.paceCorpo, and the night of the people of the world is the same, only
+    // longer to live; 1 without the body. The body's own drink is its player's, in the seconds of the world: D-961)
+    if (!isBody(v)) dt *= G.paceCorpo;
     const S = S_(); const cheio = E.cheio(v); const fora = v.sleeping || v.ebrioD > 0;
     if (v.ebrioG > 0) {
       const tau = G.lerp(E.ABS, E.ABS_CHEIO, cheio); const a = v.ebrioG * (1 - Math.exp(-dt / tau));

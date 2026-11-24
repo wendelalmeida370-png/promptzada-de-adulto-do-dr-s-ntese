@@ -872,6 +872,9 @@
     const S = G.S; const cur = v.task;
     if (v.ug) return;
     if (cur && cur.pri >= 3) return;
+    // (at a game with the god's body: held at the table to its end — a save opened in the middle gives the errand back at its own
+    // weight, and the tavern raises it at the next look: G.Taverna.segura, D-962)
+    if (cur && cur.type === 'tavern' && G.Taverna && G.Taverna.segura && G.Taverna.segura(v)) return;
     if (cur && cur.type === 'tell' && S.time < 0.8) return;
     if (v.captive) return G.War.captiveDecide(v, H);
     if (v.age < 16) return childDecide(v);

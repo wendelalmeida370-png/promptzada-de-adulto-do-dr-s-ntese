@@ -13,6 +13,9 @@
 //   s  o sol que se demora: uma cena a correr (a porta G.Scene.lingers, pela mão da prova): o relógio, a fome, o cansaço e
 //      o sono andam a 0,35; a idade em segundos; a porta pedida uma vez por passo, não por pessoa;
 //   b  o corpo do deus: a mesma regra — de pé cansa como qualquer um, sentado num lugar de descanso da planta cansa REST;
+//   c  as causas do corpo (D-960, D-961): c1 o registro (a cena, a taverna aberta, a partida à mesa); c2 o corpo sentado numa taverna
+//      aberta: o relógio a T.PACE_SALA, a fome e o cansaço com ele, a idade em segundos; c3 a mais lenta vale, e a parte do corpo é o
+//      que ele põe além da cena; c4 o corpo a dormir não demora o sol; c5 sem o corpo, o passo do mundo;
 //   v  o dia vivido (DIAS=3 contados, depois do primeiro; na paz do deus, ninguém mandado; SHIFT=k: outra história):
 //      v1 às 0,66 e às 0,70, quem dorme ou vai dormir pela energia (os pisos tirados de quatro histórias de antes e de
 //      quatro de depois); v2 o dia de trabalho não encolheu (com tempo bom, a parte dos acordados no trabalho); v3 ninguém cansa mais depressa do que o dia (a
@@ -21,7 +24,7 @@
 //      taverna de noite, as janelas, a energia na hora de deitar), dito na linha;
 //   n  um save a meio da noite, carregado duas vezes: o mesmo futuro; nada novo no save; o passo do dia volta a 1;
 //   h  o verificador (qa/dia-inv.js) pega as mentiras — e nada sem elas.
-//   [ONLY=a,s,b,v,n,h] [DIAS=n] [SHIFT=k] node qa/dia.js [metropole|mega]
+//   [ONLY=a,s,b,c,v,n,h] [DIAS=n] [SHIFT=k] node qa/dia.js [metropole|mega]
 'use strict';
 const M = require('./nodemundo.js');
 const G = M.load({ qa: true, extra: ['js/space.js', 'js/possess.js', 'qa/dia-inv.js'] });
@@ -44,9 +47,11 @@ const mine = () => QA.check().filter(q => q.sys === 'dia');
 const clean = () => { const nv = novas(), mn = mine().map(q => q.msg), lim = M.limpo(); return [!nv.length && !mn.length && lim, nv.concat(mn).slice(0, 3).join(' | ') || (lim ? 'limpo' : JSON.stringify(M.erros()).slice(0, 200))]; };
 const dayNow = () => G.S.day + G.S.time; // (the day's clock: the centésimos of the day gone by are its difference × 100)
 const K = () => Vg.REST; const WORK = 100 / 80; // (the tiredness of a centésimo of the day at work or on the way)
-// (grown ones of the most peopled town, free and well, by id — the hand of the proof takes them from here)
+// (grown ones of the most peopled town, free and well, by id — the hand of the proof takes them from here; none of a voyage's crew: the
+// call to the quay, 3,25, passes the proof's hold, and the ready metropolis of the fourth wave had Meresankh, the first of the pool, in one:
+// T-2120)
 const pool = () => { const S = G.S; const set = [...S.settlements.values()].sort((a, c) => V.pop(c.id) - V.pop(a.id) || a.id - c.id)[0];
-  return [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 20 && v.age < 55 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(v.sick > 0) && v.hp > 60 && !(S.avatar && S.avatar.id === v.id)).sort((a, c) => a.id - c.id); };
+  return [...S.villagers.values()].filter(v => v.set === set.id && v.age >= 20 && v.age < 55 && !v.captive && !v.jail && !v.aboard && !v.ug && !v.held && !v.air && !(v.sick > 0) && v.hp > 60 && !(S.avatar && S.avatar.id === v.id) && !(G.Expe && G.Expe.ofV(v))).sort((a, c) => a.id - c.id); };
 // (held by the hand: an errand of 3 that nothing of the day's choices takes; fed, so that no hunger ends it)
 // (the load in the hands put down by the game's own doors, in the ledger, before the hand of the proof takes the person: an
 // operation's load where they stand, for another hand — G.Act.letGo —, anything else on the ground; the hands emptied by hand,
@@ -191,6 +196,58 @@ function partBody() {
   { const [c, info] = clean(); ok('b o verificador e os erros depois da mão da prova', c, info); }
 }
 
+// ================================================================ c: the causes of the god's body (D-960, D-961)
+function partC() {
+  M.pronto(WORLD); const S = G.S; rebase(); S.time = 0.4; calm(); M.viver(1); const T = G.Taverna;
+  // ---- c1: the registry — the scene (the world's), the tavern open and the game at the table (the body's)
+  const Lg = G.lingers(); const want = [['cena', G.LINGER, false], ['taverna', T.PACE_SALA, true], ['mesa', T.PACE_MESA, true]];
+  ok('c1 o registro das causas da demora: a cena (do mundo), o corpo na taverna aberta e o corpo numa partida à mesa (do corpo)', want.every(([id, k, c]) => Lg.some(x => x.id === id && x.k === k && x.corpo === c)) && T.PACE_MESA < T.PACE_SALA && T.PACE_SALA < G.LINGER,
+    Lg.map(x => `${x.id} ${x.k}${x.corpo ? ' (do corpo)' : ''}`).join(', '));
+  // (to the evening: the taverns open; a tavern with a plan and a seat free, and someone of its people the god may live — not its keeper nor
+  // of its house: a guest)
+  let g = 0; while (!(S.time > 0.74 && S.time < 0.76) && g++ < 6000) { calm(); M.viver(1); }
+  let pick = null;
+  for (const b of [...S.buildings.values()].filter(q => q.type === 'taverna' && q.built && T.aberta(q)).sort((a, c) => a.id - c.id)) {
+    const p = G.Space.planNow(b); if (!p) continue; const fid = V.facOfSet(b.set);
+    const v = [...S.villagers.values()].filter(o => o.age >= 18 && o.age < 60 && !o.sleeping && !o.inside && o.job !== b.id && o.home !== b.id && G.Fac.idOfV(o) === fid && Po.can(o).ok && !(G.Expe && G.Expe.ofV(o))).sort((a, c) => a.id - c.id)[0]; if (!v) continue;
+    let seat = null; for (const it of p.items) { for (const [q, sp] of it.spots.entries()) { if (!sp.ok || sp.use !== 'sentar') continue; const f = In.freeFor(b, it.id, q); if (f && f.at) { seat = { it, f }; break; } } if (seat) break; }
+    if (seat) { pick = { b, v, seat }; break; }
+  }
+  if (!pick) { ok('c o corpo na taverna', false, 'nenhuma taverna aberta com um lugar livre e alguém do povo dela para o deus viver'); return; }
+  const { b, v, seat } = pick; const TL = G.Space.TILE; const L = pool().filter(o => o !== v); const x = L[0];
+  god(() => { Vg.endTask(v); v.sleeping = false; const d = Vg.door(b); v.x = d[0]; v.y = d[1]; v.inside = 0; }); const took = god(() => Po.take(v)); M.viver(0.1);
+  if (!took || took.ok === false || !Po.is(v)) { ok('c o corpo na taverna', false, `o corpo não foi tomado: ${(took && took.why) || ''}`); return; }
+  const sitDown = () => god(() => { v.inside = b.id; v.x = b.x + seat.f.at[0] / TL; v.y = b.y + seat.f.at[1] / TL; v.path = null; v.moving = false; Po.setLevel(seat.it.lv); Po.use(v, b, seat.f); });
+  sitDown(); hold(x, { type: 'idle', wait: 1e4 }); M.viver(0.2);
+  // ---- c2: the body at a tavern open: the clock of the day at T.PACE_SALA, and the hunger and the tiredness with it; the age in seconds;
+  // the body's share of the pace the same — no scene
+  const run = (sec, prep) => { if (prep) prep(); v.energy = 80; v.hunger = 10; x.energy = 80; x.hunger = 20; M.viver(0.1);
+    const t0 = dayNow(), a0 = x.age, e0 = [v.energy, x.energy], h0 = x.hunger; const P = new Map(), PC = new Map();
+    for (let k = 0; k < sec * 10; k++) { calm(); v.hunger = 10; M.viver(0.1); P.set(G.pace, (P.get(G.pace) || 0) + 1); PC.set(G.paceCorpo, (PC.get(G.paceCorpo) || 0) + 1); }
+    return { dc: (dayNow() - t0) * 100, age: x.age - a0, dv: e0[0] - v.energy, dx: e0[1] - x.energy, hx: x.hunger - h0, P: [...P.keys()], PC: [...PC.keys()], rest: Vg.resting(v) }; };
+  const near = (p, q, tol) => Math.abs(p - q) <= (tol || 0.06);
+  const lg0 = G.Scene.lingers; let scene = false; G.Scene.lingers = function () { return scene || lg0.apply(this, arguments); };
+  try {
+    const a = run(20);
+    const glut = o => (o.traits.includes('Glutão') ? 1.2 : 1);
+    ok('c2 o corpo na taverna aberta: o relógio do dia a T.PACE_SALA, a fome e o cansaço com ele, a idade em segundos; a parte do corpo do passo é a mesma',
+      a.P.length === 1 && a.P[0] === T.PACE_SALA && a.PC.length === 1 && a.PC[0] === T.PACE_SALA && near(a.dc, 20 / G.DAY_K * T.PACE_SALA, 0.01) && near(a.dx, a.dc * WORK) && near(a.hx, a.dc * 0.95 * glut(x)) && near(a.age, 20 / G.DAY_LEN, 0.002) && (!a.rest || near(a.dv, a.dc * WORK * K())),
+      `${v.name}, vivido pelo deus, sentado na ${G.Village.buildName(b)} #${b.id}: em 20 s do mundo o dia andou ${a.dc.toFixed(2)} centésimos (o passo ${a.P.join('/')}, a parte do corpo ${a.PC.join('/')}); ${x.name}, de pé: energia −${a.dx.toFixed(2)} (a conta ${(a.dc * WORK).toFixed(2)}), fome +${a.hx.toFixed(2)}, idade +${a.age.toFixed(3)} ano (a conta ${(20 / G.DAY_LEN).toFixed(3)}); o corpo ${a.rest ? 'em descanso' : 'de pé'}, −${a.dv.toFixed(2)}`);
+    // ---- c3: a scene too: the slowest goes — the body's —, and the body's share is what the body adds to the scene's
+    const c3 = run(5, () => { scene = true; });
+    ok('c3 a mais lenta vale: com uma cena a correr e o corpo na taverna, o passo é o do corpo, e a parte do corpo é o que ele põe além da cena',
+      c3.P.length === 1 && c3.P[0] === T.PACE_SALA && c3.PC.length === 1 && Math.abs(c3.PC[0] - T.PACE_SALA / G.LINGER) < 1e-12, `o passo ${c3.P.join('/')}, a parte do corpo ${c3.PC.map(p => p.toFixed(4)).join('/')} (a conta ${(T.PACE_SALA / G.LINGER).toFixed(4)})`);
+    scene = false;
+    // ---- c4: the night is for who lives it: the body asleep, or out of drink, lingers nothing; and up again, it does
+    const z = run(2, () => { v.sleeping = true; }); v.sleeping = false; const w = run(2);
+    ok('c4 o corpo a dormir na taverna não demora o sol; acordado de novo, demora', z.P.every(p => p === 1) && z.PC.every(p => p === 1) && w.P.length === 1 && w.P[0] === T.PACE_SALA, `a dormir: o passo ${z.P.join('/')}; acordado: ${w.P.join('/')}`);
+    // ---- c5: out of the tavern, or the body let go: the pace of the world at the next step
+    god(() => { Po.release('teste'); }); M.viver(0.2); const r = run(1);
+    ok('c5 sem o corpo, o passo do mundo no passo seguinte', r.P.every(p => p === 1) && r.PC.every(p => p === 1), `o passo ${r.P.join('/')}, a parte do corpo ${r.PC.join('/')}`);
+  } finally { G.Scene.lingers = lg0; if (Po.body()) god(() => Po.release('teste')); god(() => Vg.endTask(x)); }
+  { const [c, info] = clean(); ok('c o verificador e os erros depois da mão da prova', c, info); }
+}
+
 // ================================================================ v, n: the lived days, and a save in the middle of the night
 function partV() {
   M.pronto(WORLD); const S = G.S; for (let i = 0; i < SHIFT; i++) G.R(); rebase();
@@ -270,6 +327,7 @@ function partH() {
 if (on('a')) partA();
 if (on('s')) partS();
 if (on('b')) partBody();
+if (on('c')) partC();
 if (on('v') || on('n')) partV();
 if (on('h')) partH();
 { const e = M.erros(); ok('erros', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod).slice(0, 300) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'nenhum erro de módulo, nenhum aviso no console'); }

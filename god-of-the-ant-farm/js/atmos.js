@@ -324,7 +324,7 @@
     if (Number.isFinite(m.comido)) return G.clamp(m.comido, 0, 1);
     const k = c ? c.k : m.k; if (!k) return 0;
     if (m.corpo && c) { const dose = k === 'food' ? 1 : (T.DOSE && T.DOSE[k]) || c.n; return G.clamp(1 - c.n / Math.max(dose, EPS), 0, 1); }
-    const dur = k === 'food' ? T.MEAL || 8 : T.cupOf ? T.cupOf(v) : (T.CUP || 14) + (T.CUPX || 8) * G.hash(Math.imul(v.id | 0, 61) + 41);
+    const dur = k === 'food' ? (T.mealOf ? T.mealOf(v) : T.MEAL || 8) : T.cupOf ? T.cupOf(v) : (T.CUP || 14) + (T.CUPX || 8) * G.hash(Math.imul(v.id | 0, 61) + 41); // (the meal's own: the night that lasts, D-961)
     return G.clamp((G.S.clock - (m.cup || G.S.clock)) / dur, 0, 1);
   }
   // (a fire that cooks in the building now: the plate served from it comes hot)

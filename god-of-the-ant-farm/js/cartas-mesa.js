@@ -58,8 +58,13 @@
   const jogoDe = id => { const s = S_() && S_().cartas; if (!s) return null; return s.j[id] || null; };
   const torPorId = id => { const s = S_() && S_().cartas; if (!s) return null; for (const k of Object.keys(s.tor)) if (s.tor[k].id === id) return s.tor[k]; return null; };
   C.jogo = id => jogoDe(id);
-  // (onde está cada um: a partida viva de uma pessoa)
-  C.de = function (v) { if (!v) return null; for (const j of jogos()) if (j.quem.includes(v.id) && (j.fase === 'jogo' || (S_().clock - (j.fimT || 0) < C.FIM_T))) return j; return null; };
+  // (onde está cada um: a partida viva de uma pessoa — senão a que acabou há pouco, a mais recente, enquanto a mesa mostra o fim. A acabada
+  // vinha antes da viva, pelo id menor, e a revanche mostrava o fim da velha por 22 s de verdade: L-2204)
+  C.de = function (v) {
+    if (!v) return null; const w = C.vivoDe(v); if (w) return w; let best = null;
+    for (const j of jogos()) if (j.fase === 'fim' && j.quem.includes(v.id) && S_().clock - (j.fimT || 0) < C.FIM_T && (!best || j.fimT > best.fimT || (j.fimT === best.fimT && j.id > best.id))) best = j;
+    return best;
+  };
   C.vivoDe = function (v) { if (!v) return null; for (const j of jogos()) if (j.fase === 'jogo' && j.quem.includes(v.id)) return j; return null; };
 
   // ------------------------------ o pote: um lugar do livro ('u:', a urna do jogo ou do torneio) ------------------------------
@@ -281,15 +286,26 @@
     const d = op.data;
     for (const i of [0, 1]) { const v = S.villagers.get(j.quem[i]); if (!v) return 'abandono';
       if (j.corpo === i) { if (!A.isBody(v) || v.inside !== b.id) return 'desiste-corpo'; continue; }
+      // (a partida do corpo: quem desmaia da bebida larga a mesa — a força do mundo que o tira dela, D-962 —, olhado antes de onde ele está: o
+      // amigo que o leva para casa o tira da mesa no mesmo segundo)
+      if (j.corpo >= 0 && v.ebrioD > 0) return 'abandono';
       const m = d.mesa[v.id]; if (!m || m.st < 2 || m.st === 6 || m.st === 9 || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id) return 'abandono'; }
     return null;
+  }
+  // (quem largou a partida do corpo — o valida disse 'abandono' — e por quê: o lado de quem já não existe ('morreu', na ordem do valida),
+  // senão o do outro, desmaiado da bebida ('desmaio') ou fora da mesa ('saiu'); só lê)
+  function saiuDe(j) {
+    const S = S_(); for (const i of [0, 1]) if (!S.villagers.get(j.quem[i])) return { lado: i, causa: 'morreu' };
+    const i = 1 - j.corpo; const v = S.villagers.get(j.quem[i]); return { lado: i, causa: v && v.ebrioD > 0 ? 'desmaio' : 'saiu' };
   }
   C.passo = function () {
     const S = S_(); if (!S) return;
     for (const j of jogos()) {
       if (j.fase === 'fim') { if (S.clock - j.fimT >= C.FIM_T && !(j.cofre > EPS)) delete st().j[j.id]; else if (j.cofre > EPS) paga(j); continue; }
       const why = valida(j);
-      if (why) { if (why === 'desiste-corpo') C.desiste(j.s, j.corpo); else j.s.fim = { w: -1, por: why }; fecha(j); continue; }
+      // (na partida do corpo, quem larga a mesa no meio perde: o pote é de quem fica — o lado que ficou, w; quem saiu e por quê, saiu e causa
+      // (D-964). Entre dois do mundo, cada um leva o que pôs, como sempre: quem tem de ir chama a partida de lado)
+      if (why) { if (why === 'desiste-corpo') C.desiste(j.s, j.corpo); else if (why === 'abandono' && j.corpo >= 0) { const x = saiuDe(j); j.s.fim = { w: 1 - x.lado, por: 'abandono', saiu: j.quem[x.lado], causa: x.causa }; } else j.s.fim = { w: -1, por: why }; fecha(j); continue; }
       if (j.corpo < 0 && S.clock >= j.prox) rodada(j);
     }
     for (const op of A.all()) { if (op.def !== 'taverna' || !A.live(op)) continue; const b = S.buildings.get(op.at); if (b) mesas(op, b); }
@@ -354,6 +370,8 @@
     const s = sentado(v); if (!s) return { ok: false, why: 'Sente-se a uma mesa da taverna.' };
     const b = S_().buildings.get(s.b);
     const j = C.vivoDe(v); if (j) return { ok: true, jogo: j.id, b: s.b };
+    // (chamado o fechamento, nenhuma partida começa: a que está na mesa é a última — D-963)
+    { const op = A.get(s.op); if (op && op.data && op.data.fecha) return { ok: false, why: 'A taverna está fechando: não começa outra partida.' }; }
     const L = quemJoga(v, s, oId); if (!L.length) return { ok: false, why: oId ? 'Já está noutro jogo, ou não está à sua mesa.' : 'Ninguém à sua mesa para jogar.' };
     const fs = L.map(o => decksFor(b, v, o)); const i = fs.findIndex(Boolean);
     if (i < 0) { const meu = JC() && JC().proprio(v, 'baralho', b); return { ok: false, espera: 1, why: (JC() && JC().semJogo(v, b, 'baralho', meu ? 1 : 2)) || 'Não há baralho aqui.' }; }
@@ -442,6 +460,9 @@
   };
   // (quem está no meio de uma partida não pede outra rodada nem vai embora por falta de conversa: a mesa o segura)
   C.prende = v => { const s = S_() && S_().cartas; if (!s || !v) return false; for (const k of Object.keys(s.j)) { const j = s.j[k]; if (j.fase === 'jogo' && j.quem.includes(v.id)) return true; } return false; };
+  // (e quem joga com o corpo do deus fica até o fim da partida: nada da noite o tira da mesa, só o que não pode esperar — o fogo, a guerra à
+  // porta, o pânico, o taverneiro que põe o brigão para fora, o desmaio da bebida: G.Taverna.segura, D-962. Só lê)
+  C.prendeCorpo = v => { const S = S_(); const s = S && S.cartas; if (!s || !v || !S.avatar) return false; for (const k in s.j) { const j = s.j[k]; if (j.fase === 'jogo' && j.corpo >= 0 && j.quem[1 - j.corpo] === v.id) return true; } return false; };
   // o que está numa mesa, para quem desenha (o 3D, o som, a vista do deus), no molde que a T7 lê (D-884): mesa — quantas tabuletas há
   // na mesa (as postas nesta rodada, viradas; sem nenhuma posta, as duas da rodada de antes, abertas) —, maos — quantos têm tabuletas na
   // mão (em leque) —, monte — quantas sobram nos dois montes —, mat — o material das tabuletas (o baralho da casa, ou o do corpo); e o
@@ -464,7 +485,9 @@
   C.doCorpo = function (v) {
     const j = v && C.de(v); if (!j || j.corpo < 0 || j.quem[j.corpo] !== v.id) return null; const q = j.s; const me = j.corpo, ai = 1 - me; const S = S_(); const b = S.buildings.get(j.b);
     return { jogo: j.id, me, ai, o: j.quem[ai], fase: j.fase, r: q.r, of: C.OF.slice(), pote: j.cofre || 0, aposta: j.aposta, x: q.x, mao: q.p[me].mao.slice(), monte: [q.p[me].monte.length, q.p[ai].monte.length], maoOutro: q.p[ai].mao.length,
-      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: q.vis === me && q.lance[ai] ? q.lance[ai] : null, posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
+      // (a tabuleta do outro à vista: a do lado que mostra primeiro, já posta — a Visão manda o outro mostrar: a regra, C.vista; o «aberta»
+      // perguntava pelo lado do corpo e nunca mostrava nada, L-2202)
+      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: C.vista(q, me), posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
       podeDobrar: C.podeDobrar(q, me) && j.aposta > 0, hist: q.hist.slice(-8), fim: q.fim ? Object.assign({}, q.fim, { meu: q.fim.w === me ? 1 : q.fim.w === ai ? -1 : 0 }) : null, civ: [q.civ[me], q.civ[ai]], bonus: q.p[me].bonus, mal: q.p[me].mal, desc: [q.p[me].desc.length, q.p[ai].desc.length],
       preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: (j.bar && j.bar[me]) || null, trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length,
       // (de onde vem cada baralho da mesa, o seu e o do outro — «o seu baralho», «baralho da casa, emprestado» —, e o aluguel pago: D-933)

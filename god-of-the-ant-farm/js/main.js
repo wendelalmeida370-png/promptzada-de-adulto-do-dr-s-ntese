@@ -179,8 +179,10 @@
     const S = G.S;
     S.clock += dt;
     // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same;
-    // the pace of this step, for the clock and for what keeps its rhythm — G.dayPace, world.js: L-915)
+    // the pace of this step, for the clock and for what keeps its rhythm — G.dayPace, world.js: L-915; and the share of it that is
+    // the god's body's own — the night of a tavern that lasts for who lives it, D-960, D-961)
     G.pace = G.dayPace();
+    G.paceCorpo = G.dayPace.corpo();
     S.time += dt / G.DAY_LEN * G.pace;
     if (S.time >= 1) {
       S.time -= 1; S.day++;
@@ -215,7 +217,9 @@
     ['Nature', dt => G.Nature.update(dt)], ['Village', dt => G.Village.update(dt)], ['Urban', dt => G.Urban && G.Urban.update(dt)], ['Social', dt => G.Social && G.Social.update(dt)], ['Villagers', dt => G.Vg.updateAll(dt)],
     ['Life', dt => G.Life && G.Life.update(dt)], ['Carnage', dt => G.Carnage && G.Carnage.update(dt)], ['Animals', dt => G.Animals.updateAll(dt)],
     ['Flora', dt => G.Flora && G.Flora.update(dt)], ['Riches', dt => G.Riches && G.Riches.update(dt)], ['Estates', dt => G.Estates && G.Estates.update(dt)],
-    ['Court', dt => G.Court && G.Court.update(dt)], ['Tavern', dt => G.Tavern && G.Tavern.update(dt)], ['JogoDados', dt => G.JogoDados && G.JogoDados.update(dt)], // (the dice games' steps: T4) ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
+    ['Court', dt => G.Court && G.Court.update(dt)], ['Tavern', dt => G.Tavern && G.Tavern.update(dt)], ['JogoDados', dt => G.JogoDados && G.JogoDados.update(dt)], // (the dice games' steps: T4)
+    // (a module after a comment on its line is out of the world's step: the trade and the migrations were, for a day, L-2224)
+    ['Trade', dt => G.Trade && G.Trade.update(dt)], ['Migrate', dt => G.Migrate && G.Migrate.update(dt)],
     ['Nests', dt => G.Nests && G.Nests.update(dt)], ['Polity', dt => G.Polity && G.Polity.update(dt)], ['Justice', dt => G.Justice && G.Justice.update(dt)], ['Crime', dt => G.Crime && G.Crime.update(dt)],
     ['Riots', dt => G.Riots && G.Riots.update(dt)], ['Secrets', dt => G.Secrets && G.Secrets.update(dt)], ['Scene', dt => G.Scene && G.Scene.update(dt)],
     ['Caves', dt => G.Caves && G.Caves.update(dt)], ['Pets', dt => G.Pets && G.Pets.update(dt)], ['Powers', dt => G.Powers.update(dt)],

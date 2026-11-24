@@ -302,6 +302,13 @@
   // the game one plays in (alive), or null
   function gameOf(v) { return v ? index().by.get(v.id) || null : null; }
   JD.gameOf = gameOf;
+  // (the god's body still in the game — with dice, the game not over —: a game of the body's; and one of the body's at all, whoever left it)
+  const bodyId = () => { const S = S_(); return S && S.avatar ? S.avatar.id : 0; };
+  const bodyIn = d => { const me = bodyId(); return !!me && d.quem.includes(me) && !d.fora[me] && d.fase !== 'fim'; };
+  const ofBody = d => { const me = bodyId(); return !!me && d.quem.includes(me); };
+  // who plays with the god's body now: held at the table to the game's end — nothing of the evening takes one from it, only what cannot
+  // wait (the fire, the war at the door, the panic, the keeper putting a brawler out, the faint): G.Taverna.segura, D-962. Only read
+  JD.prendeCorpo = function (v) { if (!v || !bodyId() || isBody(v)) return false; const op = gameOf(v); return !!op && bodyIn(op.data); };
   // the game at a table — the table's group (the interiors') or one of its pieces —, or null
   function atTable(b, g) { const id = b && (b.id || b); const key = String(g); for (const op of games()) if (op.at === id && op.data.g === key) return op; return null; }
 
@@ -441,19 +448,23 @@
   function tick(op) {
     const S = S_(); const d = op.data; const b = tavOf(op); const top = b && dayOf(b);
     if (!b) return close(op, 'a taverna caiu');
-    if (!top || top.id !== d.top || !T().aberta(b) || top.data.fecha) return close(op, 'a taverna fechou');
+    // (the closing called: the games end — but the god's body's, the last one the keeper waits for, D-963)
+    if (!top || top.id !== d.top || !T().aberta(b) || (top.data.fecha && !bodyIn(d))) return close(op, 'a taverna fechou');
     // (the set gone from the table — the god's hand took it —: no dice, no game; D-937)
     if (d.set && d.set.n && !(D.get(d.set.ref, d.set.k) >= 1 - EPS)) return close(op, 'o jogo sumiu da mesa');
     // (who left the table, died, fell asleep over it: out of the game — the stake stays in the pot)
     for (const id of d.quem) { if (d.fora[id]) continue; const v = S.villagers.get(id); const w = v ? here(op, v) : 'saiu';
       if (w === 'saiu' || w === 'dormiu') { dirty(); if (d.fase === 'convite') { d.quem.splice(d.quem.indexOf(id), 1); delete d.n[id]; continue; } d.fora[id] = w; d.n[id] = 0; tally(d, w); } }
     // (whose the set is, gone from the table — up and away, dead —: he takes his dice with him, and the game is let go, the stakes back to
-    // who put them — the dead one's to his house, with his things: D-935)
-    if (d.set && d.set.dono && (d.fora[d.set.dono] === 'saiu' || !d.quem.includes(d.set.dono))) return close(op, 'o dono levou os dados');
+    // who put them — the dead one's to his house, with his things: D-935. In a game of the body's who leaves loses, D-964: the pot to who
+    // is still in it with dice — perde)
+    if (d.set && d.set.dono && (d.fora[d.set.dono] === 'saiu' || !d.quem.includes(d.set.dono))) { if (ofBody(d) && d.fase !== 'convite' && d.fase !== 'fim') perde(op, d.set.dono); return close(op, 'o dono levou os dados'); }
     // (the cheat caught: the most quarrelsome of who saw it goes for him — a brawl at the table, the tavern's own)
     if (d.briga && S.clock >= d.briga.t) { const a = S.villagers.get(d.briga.a), c = S.villagers.get(d.briga.b); delete d.briga; if (a && c && T().briga && T().briga(a, c)) tally(d, 'briga'); }
     const L = R.ativos(d);
     if (d.fase === 'convite') { if (d.quem.length < 1 || (d.quem.length < 2 && S.clock >= d.ate)) return close(op, 'ninguém para jogar'); if (S.clock >= d.ate) return hostTimeout(op); return; }
+    // (the others gone from the table — up and away, asleep over it, dead —: the last one with dice takes the pot — who left lost his dice,
+    // and the end and each one's fora say so, D-964)
     if (d.fase !== 'fim' && d.fase !== 'revela' && L.length < 2) { d.venc = L.length === 1 ? L[0] : -1; return finish(op, L.length === 1 ? 'sobrou' : 'vazio'); }
     if (S.clock + EPS < d.ate) return;
     if (d.fase === 'sacode') { phase(op, 'palpite', 0); d.ate = r1(S.clock + waitOf(op)); return; }
@@ -521,6 +532,22 @@
     const L = G.Lacos; if (L) for (let i = 0; i < d.quem.length; i++) for (let j = i + 1; j < d.quem.length; j++) { const a = S.villagers.get(d.quem[i]), c = S.villagers.get(d.quem[j]); if (a && c) L.ato(a, c, 'jogo'); }
     phase(op, 'fim', JD.FIM);
   }
+  // (in a game of the body's, the owner of the set gone from the table with it — up and away, or the body itself —: who leaves loses what he
+  // put, D-964, and the game ends with the dice: the pot to who is still in it with dice — of two or more, the one with the most, the first of
+  // the round's bids in a tie —, as to the last one with dice ('sobrou'); none: back to who put it, at the close)
+  function perde(op, gone) {
+    const S = S_(); const d = op.data; const ord = R.ordem(d); const L = R.ativos(d).filter(id => id !== gone && S.villagers.has(id));
+    if (!L.length) return; L.sort((a, c) => (d.n[c] | 0) - (d.n[a] | 0) || ord.indexOf(a) - ord.indexOf(c) || a - c);
+    d.venc = L[0]; finish(op, 'sobrou');
+  }
+  // (why the god's body's last game of dice stopped — for its screen, a moment after: the game gone from the table without a winner — the
+  // tavern shut, the dice taken away, nobody to play — and who left it; only read) → { op, por: the close's why, fim, fora, t } | null
+  JD.PAROU_T = 6;
+  JD.parou = function (v) {
+    const S = S_(); if (!v || !S) return null; let best = null;
+    for (const op of A.all()) { if (op.def !== 'jogo-dados' || live(op) || !op.end || !op.data || !(op.data.quem || []).includes(v.id)) continue; if (S.clock - op.end.t > JD.PAROU_T) continue; if (!best || op.end.t > best.end.t || (op.end.t === best.end.t && op.id > best.id)) best = op; }
+    return best ? { op: best.id, por: best.end.why, fim: best.data.fim || '', venc: best.data.venc || 0, fora: Object.assign({}, best.data.fora), t: best.end.t } : null;
+  };
   // (the pot back to each one by what they put — the ref each paid from; one whose ref is no more, to the house's shelf)
   function giveBack(op) {
     const d = op.data; const b = S_().buildings.get(op.at);
@@ -585,6 +612,7 @@
   JD.verbo = function (v) {
     const x = bodyAt(v); if (!x.b) return { k: null, ok: false, why: x.why };
     const { b, top, g } = x; const mine = gameOf(v); if (mine) return { k: 'jogo', ok: true, op: mine.id };
+    if (top.data.fecha) return { k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo.' }; // (the closing called: no game begins — D-963)
     const op = atTable(b, g);
     if (op) { const d = op.data; const L = d.set && d.set.n && JC() ? JC().mesa(d.set.n) : null; const de = L ? JC().fonteDe(L, v) : '';
       if (d.fase === 'convite' && d.host !== v.id) { const s = d.aposta; const can = d.quem.length < JD.MAX && (!d.moeda || purse(v) + EPS >= s);

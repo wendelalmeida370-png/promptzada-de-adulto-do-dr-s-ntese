@@ -2723,7 +2723,9 @@
 // dia-inv: as regras do verificador para o dia de cada um (D-240, L-915) — carregado depois do qa/qa.js (QA.more), como o
 // praca-inv.js; o líder o junta (qa/junta-inv.js). Lê as pessoas, o relógio e as portas do passo do dia e do descanso
 // (G.pace, G.Vg.resting) — nenhuma pergunta muda o mundo. O sistema «dia»:
-//   · o passo do dia é o da porta: 1, ou o do sol que se demora (G.LINGER) — nunca outro (S2);
+//   · o passo do dia é o da porta: 1, ou o de uma causa registrada da demora (G.linger: a cena, G.LINGER; o corpo na taverna aberta e
+//     o corpo numa partida à mesa, D-960) — nunca outro (S2); e a parte dele que é do corpo (G.paceCorpo) fica entre o passo e 1, e é 1
+//     sem corpo nenhum: o mundo sem o corpo anda como antes (D-961; S3 — o corpo solto no último passo ainda o deixa, por um passo);
 //   · ninguém descansa a andar, a dormir, nem num afazer de trabalho (S2): o descanso é do corpo parado e à toa — a
 //     caminhada cansa como caminhada e o trabalho como trabalho, seja qual for o gesto;
 //   · ninguém acordado cansa mais depressa do que o dia (S3): entre duas olhadas do verificador a até doze segundos uma
@@ -2741,8 +2743,12 @@
   const NEAR = 12;   // (seconds between two looks, at the most, for the tiredness to be judged)
   const rule = function (add, s) {
     const Vg = G.Vg; if (!Vg || !Vg.resting || G.pace === undefined) return;
-    // ---- the pace of the step is the door's
-    if (!(G.pace === 1 || G.pace === G.LINGER)) add('dia', 2, `o passo do dia é ${G.pace}: só pode ser 1 ou o do sol que se demora (${G.LINGER})`);
+    // ---- the pace of the step is the door's: 1, or the pace of a cause registered — and the body's share of it, 1 without the body
+    const L = G.lingers ? G.lingers() : [{ id: 'cena', k: G.LINGER }];
+    if (!(G.pace === 1 || L.some(c => c.k === G.pace))) add('dia', 2, `o passo do dia é ${G.pace}: só pode ser 1 ou o de uma causa da demora (${L.map(c => c.id + ' ' + c.k).join(', ')})`);
+    const pc = G.paceCorpo === undefined ? 1 : G.paceCorpo;
+    if (!(pc >= G.pace - 1e-9 && pc <= 1 + 1e-9)) add('dia', 2, `a parte do corpo no passo do dia é ${pc}: fica entre o passo (${G.pace}) e 1`);
+    else if (!s.avatar && pc !== 1) add('dia', 3, `a parte do corpo no passo do dia é ${pc} sem corpo nenhum: o mundo sem o corpo anda como antes (D-961)`);
     const body = s.avatar ? s.avatar.id : 0;
     if (s !== pS || s.clock < pC) prev = new Map();
     const now = new Map(); const tDay = s.day + s.time; const K = G.DAY_K || 2;
@@ -4401,6 +4407,45 @@
   };
   QA.more.push(rule); QA.jogosCasa = rule;
   if (QA.canonMore) QA.canonMore.push(['jogos-casa', () => { const r = G.S && G.S.jogosMesa; if (!r) return null; return Object.keys(r.n).sort((a, c) => a - c).map(k => { const q = r.n[k]; return [q.id, q.jogo, q.b, q.k, q.n, q.ref, q.dono, q.lado]; }); }]);
+})();
+  // ---- qa/noite-inv.js ----
+// noite-inv: as regras do verificador para a noite que dura para quem a vive (a onda 4, N — D-960 a D-964) — carregado depois do
+// qa/qa.js (QA.more); o líder o junta (qa/junta-inv.js). Lê as tavernas, as partidas e as mesas (só lê). O sistema «noite»:
+//   · o dia de uma taverna passado da hora dela fica aberto só pela última partida do corpo (d.ultima), e só até a paciência do
+//     taverneiro (T.ULTIMA): nunca uma casa aberta noite adentro sem causa (S2; o olhar do dia da taverna é de segundo em segundo do
+//     mundo — a regra dá esse segundo);
+//   · numa partida das Tabuletas do corpo acabada por abandono, o pote é de quem ficou — o fim tem o lado que venceu (S2);
+//   · nenhuma partida do corpo começa depois do chamado do fechamento da taverna dela (S2);
+//   · as marcas da noite à mesa (o copo, a conversa, a espera que a noite não contou) são números do relógio: finitas, e a espera nunca
+//     negativa (S2).
+(function () {
+  if (!window.QA || !QA.more) return;
+  const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
+  const GRACE = 0.006; // (of the day: a second of the world at the plain pace — the day's look is once a second)
+  const num = x => typeof x === 'number' && Number.isFinite(x);
+  const rule = function (add, s) {
+    const T = G.Taverna; if (!T || !T.horas) return;
+    const days = new Map();
+    for (const op of s.acts || []) {
+      if (op.def !== 'taverna' || !LIVE[op.st]) continue; const d = op.data || {}; const b = s.buildings.get(op.at); if (!b) continue;
+      days.set(op.at, d); const h = T.horas(b); const nm = `a taverna #${b.id}`;
+      // ---- past its hour only for the body's last game, and only to the keeper's patience
+      if (op.st === 'on' && d.day === s.day && s.time >= h.fecha + GRACE) {
+        if (!d.ultima) add('noite', 2, `${nm} aberta às ${s.time.toFixed(3)}, passada a hora dela (${h.fecha}), sem a última partida do corpo`, op.id);
+        else if (s.time >= d.ultima.ate + GRACE) add('noite', 2, `${nm} aberta às ${s.time.toFixed(3)}, passada a paciência do taverneiro com a última partida (${d.ultima.ate})`, op.id);
+      }
+      // ---- the stamps of the night at the tables
+      for (const id of Object.keys(d.mesa || {})) { const m = d.mesa[id]; if (!m || m.corpo || m.body) continue;
+        for (const k of ['cup', 'nx', 'ws']) if (m[k] !== undefined && !num(m[k])) add('noite', 2, `${nm}: a marca «${k}» de #${id} à mesa não é um número (${m[k]})`, +id);
+        if (num(m.ws) && m.ws < -1e-9) add('noite', 2, `${nm}: a espera que a noite não contou de #${id} é negativa (${m.ws})`, +id); }
+    }
+    // ---- the tablets of the body's: the abandonment pays who stayed; none begun after the closing call
+    const c = s.cartas; if (!c || !c.j) return;
+    for (const k of Object.keys(c.j)) { const j = c.j[k]; if (!j || !(j.corpo >= 0) || !j.s) continue; const nm = `a partida ${j.id} do corpo (taverna #${j.b})`;
+      if (j.s.fim && j.s.fim.por === 'abandono' && !(j.s.fim.w === 0 || j.s.fim.w === 1)) add('noite', 2, `${nm} acabou por abandono sem o lado que ficou — o pote é de quem fica (D-964)`, j.id);
+      const d = days.get(j.b); if (d && j.fase === 'jogo' && num(d.fecha) && num(j.t0) && j.t0 > d.fecha && d.day === s.day) add('noite', 2, `${nm} começou às ${j.t0}, depois do chamado do fechamento (${d.fecha})`, j.id); }
+  };
+  QA.more.push(rule); QA.noite = rule;
 })();
   // ==== fim das invariantes dos sistemas novos ====
   // (the executions a load keeps: one in its aftermath, or with nobody left to execute, is over — the load of justice.js drops it,
