@@ -2221,5 +2221,61 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 { const pp = src['people3d.js'] || []; const p3 = pp.join('\n');
   if (!/function inArms\(v\) \{/.test(p3) || !/if \(v\.aboard \|\| v\.ug \|\| v\.held \|\| inArms\(v\)\) continue;/.test(p3)) fails.push('o bebê no colo vai com quem o carrega: o People3D não pula o bebê no colo pela porta inArms (L-1908)');
   pp.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bv\.carried\b/.test(c) && !/function inArms\(v\)/.test(c) && !/if \(v\.carried\) return true;/.test(c)) fails.push(`o bebê no colo vai com quem o carrega: people3d.js:${k + 1} decide pelo v.carried fora da porta inArms (L-1908): ${l.trim().slice(0, 100)}`); }); }
+// 330. "o som da sala tem dono e causa" (P9, D-780 a D-786): toda fonte que a cena faz (audio-src.js, `push({ k: …`) diz de quem é
+// (`de: {`), e os sons da sala nascem cada um da sua causa — o burburinho de quem conversa agora (A.vozesDe), o fogo só aceso
+// (G.Atmos.fire) e na peça de fogo da planta, a panela do fogo que cozinha (G.Atmos.within), a chuva no telhado só com chuva sobre ele
+// (chuvaEm), a porta e os passos só de quem passa (In.passage)
+{ const as = src['audio-src.js'] || []; const all = as.join('\n');
+  as.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/push\(\{ k: /.test(c) && !/de: \{/.test(c)) fails.push(`som da sala: audio-src.js:${k + 1} uma fonte sem dono (de: { … }, D-780): ${l.trim().slice(0, 110)}`); });
+  const need = (re, what) => { if (!re.test(all)) fails.push(`som da sala: o audio-src.js sem ${what}`); };
+  need(/V = A\.vozesDe\(b, dentro\.get\(b\.id\)\); if \(V\.fala >= 2\)/, 'o burburinho pela gente que conversa agora (A.vozesDe, D-780)');
+  need(/const fire = At && At\.fire \? At\.fire\(eb\) : null;[^\n]*\n\s*if \(fire && P\.items\) for \(const it of P\.items\) \{\n\s*if \(!it\.fire\) continue;/, 'o fogo só aceso e na peça de fogo da planta (G.Atmos.fire, D-782)');
+  need(/if \(lar && w && w\.cozinha\) push\(/, 'a panela só no fogo que cozinha (G.Atmos.within, D-782)');
+  need(/const rain = chuvaEm\(ex, ey\);[^\n]*\n\s*if \(rain > 0\.02 && tel\)/, 'a chuva no telhado só com chuva sobre ele (D-783)');
+  need(/if \(In && In\.passage && In\.passage\(v\)\) passam\.push\(v\);/, 'a porta e os passos só de quem passa (In.passage, D-784)'); }
+// 331. "o tocador da sala só toca a cena" (P9, D-786): os motores da sala no audio.js (do bedWay ao A.update — o burburinho, o fogo, a
+// panela, a chuva no telhado, a música) tocam o que a cena diz: não perguntam ao mundo pela causa (nem gente, nem prédio, nem tempo,
+// nem o G.Atmos, o G.Interiors, a taverna) e sorteiam só do acaso do que se ouve (G.VR)
+{ const au = (src['audio.js'] || []).join('\n'); const i = au.indexOf('  function bedWay() {'), j = au.indexOf('  A.update = function (dt) {');
+  if (i < 0 || j < i) fails.push('o tocador da sala: o audio.js sem os motores da sala (bedWay … A.update, D-786)');
+  else au.slice(i, j).split('\n').forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bS\.(villagers|buildings|weather|clouds|settlements|animals)\b|\bG\.(Atmos|Interiors|Taverna|Nature|Village|Fac)\b|\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random/.test(c)) fails.push(`o tocador da sala: audio.js (motores) pergunta ao mundo pela causa ou sorteia do mundo — a causa é da cena (D-786): ${l.trim().slice(0, 110)}`); }); }
+// 332. "o chão e o telhado do som são os do 3D" (P9, D-783): o chão de cada povo pelo porte do prédio (A.CHAO do audio-src.js) é o FLOOR
+// do build3d.js, com as mesmas regras dos andares (o terraço de lajes, as tábuas do andar de cima, do jirau e do elevado, a terra do
+// porão); e o telhado de cada povo (A.TELHA) é a telha que o build3d.js põe nele (a telha, a tégula e a de barro → telha; a palha →
+// palha; as tabuinhas → tábua)
+{ const as = (src['audio-src.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+  const fl = /const FLOOR = \{([\s\S]*?)\n  \};/.exec(b3), ch = /A\.CHAO = \{([\s\S]*?)\n  \};/.exec(as);
+  const rows = (txt, re) => { const o = {}; for (const m of txt.matchAll(re)) o[m[1]] = [m[2], m[3], m[4]].join('/'); return o; };
+  if (!fl || !ch) fails.push('o chão do som: sem o FLOOR do build3d.js ou o A.CHAO do audio-src.js (D-783)');
+  else { const F = rows(fl[1], /(\w+): \{ noble: \['(\w+)', \[[^\]]*\]\], mid: \['(\w+)', \[[^\]]*\]\], low: \['(\w+)'/g), C = rows(ch[1], /(\w+): \{ noble: '(\w+)', mid: '(\w+)', low: '(\w+)' \}/g);
+    for (const k of new Set(Object.keys(F).concat(Object.keys(C)))) if (F[k] !== C[k]) fails.push(`o chão do som: o povo «${k}» pisa ${C[k] || 'nada'} no som e ${F[k] || 'nada'} no 3D (A.CHAO × FLOOR, D-783)`); }
+  if (!/if \(l\.kind === 'terraco'\) return \['lajes'/.test(b3) || !/if \(l && l\.kind === 'terraco'\) return 'lajes';/.test(as) || !/if \(l\.lv > 0 \|\| l\.kind === 'jirau' \|\| l\.kind === 'elevado'\) return \['tabuado'/.test(b3) || !/if \(l && \(l\.lv > 0 \|\| l\.kind === 'jirau' \|\| l\.kind === 'elevado'\)\) return 'tabuado';/.test(as)) fails.push('o chão do som: as regras dos andares (terraço, andar de cima, porão) do audio-src.js não são as do floorMat do build3d.js (D-783)');
+  // (and the buildings that show the noble floor: the same list in both)
+  const keysOf = m => (m ? [...m[1].matchAll(/(\w+): 1/g)].map(x => x[1]).sort().join(',') : '');
+  const nb3 = keysOf(/const NOBLE = \{([^}]*)\}/.exec(b3)), nas = keysOf(/const NOBRE = \{([^}]*)\}/.exec(as));
+  if (!nb3 || nb3 !== nas) fails.push(`o chão do som: os prédios do chão nobre do audio-src.js (${nas || 'nada'}) não são os do build3d.js (${nb3 || 'nada'}; D-783)`);
+  const TIL = { tile: 'telha', tegula: 'telha', mud: 'telha', thatch: 'palha', shingle: 'tabua' }; const tl = /A\.TELHA = \{([^}]*)\}/.exec(as);
+  if (!tl) fails.push('o telhado do som: sem o A.TELHA do audio-src.js (D-783)');
+  else for (const m of b3.matchAll(/(\w+): \{ wall: '\w+', base: '\w+', tile: '(\w+)' \}/g)) { const w = new RegExp(`\\b${m[1]}: '(\\w+)'`).exec(tl[1]); if (!w || w[1] !== TIL[m[2]]) fails.push(`o telhado do som: o povo «${m[1]}» tem «${m[2]}» no 3D e «${w ? w[1] : 'nada'}» no som (A.TELHA, D-783)`); } }
+// 333. "os atos da noite têm som" (P9, D-781): os atos da noite da taverna (a P7: o brinde, os ossinhos, a dança, as palmas, o canto junto,
+// o cochilo, o pano na mesa, as canecas recolhidas, a gorjeta, quem é posto para fora, o fechar) têm a sua linha no A.ATO do audio-src.js
+// (a da frente dos atos, ou a do TAVERNA_ATO, que só preenche o que falta) — e todo som que essas linhas nomeiam está na biblioteca do
+// audio.js
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  const lib = new Set(); for (const m of au.matchAll(/^\s{4}([A-Za-z]\w*): \(t, v(?:, o)?\) =>/gm)) lib.add(m[1]); for (const m of au.matchAll(/\bLIB\.([A-Za-z]\w*) = /g)) lib.add(m[1]);
+  const t0 = as.indexOf('const TAVERNA_ATO = {'), tv = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
+  if (!tv || !/for \(const k in TAVERNA_ATO\) if \(!A\.ATO\[k\]\) A\.ATO\[k\] = TAVERNA_ATO\[k\];/.test(as)) fails.push('os atos da noite: o audio-src.js sem as linhas da taverna (TAVERNA_ATO, D-781)');
+  for (const a of ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar']) {
+    const re = new RegExp(`(?:^|[\\s,{])'?${a}'?: \\{ s: '(\\w+)'`, 'm'); const m = re.exec(tv) || re.exec(as);
+    if (!m) fails.push(`os atos da noite: o ato «${a}» sem a sua linha de som (A.ATO, D-781)`); else if (!lib.has(m[1])) fails.push(`os atos da noite: o ato «${a}» nomeia o som «${m[1]}», que a biblioteca do audio.js não tem (D-781)`); } }
+// 334. "palmas, dança e canto no compasso da música" (P9, D-785): as linhas de quem bate palmas, dança e canta junto pedem o compasso
+// (compasso: 1); a cena dá a elas o compasso do músico da sala (o A.compasso de quem toca: o pulso do povo dele e o começo da sua vez,
+// t.mw — o relógio do mundo, que o 3D também pode seguir); e o tocador as toca no pulso da música que se ouve (o pulse, pelo músico)
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  for (const a of ['danca', 'palmas', "'cantar-junto'"]) if (!new RegExp(`${a}: \\{[^}]*compasso: 1`).test(as)) fails.push(`o compasso: a linha de «${a.replace(/'/g, '')}» sem o compasso da música (D-785)`);
+  if (!/if \(L\.compasso && v\.inside > 0\) \{ const m = musicoEm\(v\.inside\); if \(m\) o\.ritmo = A\.compasso\(m\); \}/.test(as)) fails.push('o compasso: a cena não dá a quem acompanha o compasso do músico da sala (D-785)');
+  if (!/t0: t && Number\.isFinite\(t\.mw\) \? t\.mw : 0/.test(as)) fails.push('o compasso: o pulso da música não conta do começo da vez do músico (t.mw, D-785)');
+  if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
