@@ -40,7 +40,7 @@ const TEMAS = (process.env.TEMAS || 'romano,grego,egipcio,nordico,asteca,classic
   for (const porte of PORTES) for (const tema of TEMAS) {
     await page.evaluate(([tema, porte]) => {
       const F = window.__F; const s = F.fake(tema); G.Taverna.carta = () => s; G.Taverna.corpo = () => s;
-      // (SEMPRE=1: a regular of the house — «o de sempre» at the top, D-794)
+      // (SEMPRE=1: a regular of the house — «o de sempre» at the top, D-804)
       if (window.__SEMPRE) { const it = F.items.find(x => x.ok && x.sort === 'beber') || F.items.find(x => x.ok); if (it) { s.sempre = { key: G.Taverna.keyOf(it), k: it.k, of: it.of, nome: it.nome }; s.ola = G.Falas.line('carta_sempre', { v: F.kp, civ: tema, nome: F.v.name, bem: G.cap(it.nome) }); } }
       G.CardapioUI.close(); G.CardapioUI.force = { tema, porte }; G.CardapioUI.open(true);
       // (a thing chosen: the second one that can be had)

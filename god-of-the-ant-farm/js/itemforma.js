@@ -78,7 +78,7 @@
     barro: { c: hex('#a35a37'), c2: hex('#8c4a2c'), grain: 'pebble', g: 0.18 },
     barroE: { c: hex('#5a3322'), c2: hex('#4a2a1c'), grain: 'pebble', g: 0.3 },
     ferroB: { c: hex('#47494d'), c2: hex('#3a3b3e'), edge: hex('#7d8288'), grain: 'metal', m: 0.85, g: 0.38 },
-    // (P7, D-795: the knucklebones' bone, worn smooth by the hands; a twist of dry straw; the loom's undyed wool, a rag)
+    // (P7, D-805: the knucklebones' bone, worn smooth by the hands; a twist of dry straw; the loom's undyed wool, a rag)
     osso: { c: hex('#e3d8bc'), c2: hex('#c2b28c'), grain: 'pebble', g: 0.1 },
     palha: { c: hex('#d2b064'), c2: hex('#a4823c'), grain: 'wicker', g: 0.06 },
     la: { c: hex('#d9d0b9'), c2: hex('#b5a888'), grain: 'cloth', g: 0.05 },
@@ -883,7 +883,7 @@
     M.marks.centro = C.slice(); M.marks.ponta = [C[0] + r, 0, 0];
   };
 
-  // the knucklebones (P7, D-795): five little ankle bones in the closed fist (the origin: the palm; they sit toward +X, the palm's
+  // the knucklebones (P7, D-805): five little ankle bones in the closed fist (the origin: the palm; they sit toward +X, the palm's
   // side, as the ball), each a knobbly block with its waist — the astragalus of a sheep —, one a little apart, ready to be thrown
   R.ossinhos = (M, mat) => {
     const q = M.q; const pal = PAL.osso; const C = [0.022, 0, 0];
@@ -893,7 +893,7 @@
       if (q === 0) ball(M, add(c, [0, 0.0058, 0]), [0.0045, 0.0018, 0.0035], 6, pal, { f: () => ({ ao: 0.86 }) }); });
     M.marks.centro = C.slice(); M.marks.ponta = add(C, [0.02, 0, 0]);
   };
-  // the rag (P7, D-795): of wool — a wad of cloth in the fist, a fold of it hanging out of the hand toward +Z (what hangs goes to +Z,
+  // the rag (P7, D-805): of wool — a wad of cloth in the fist, a fold of it hanging out of the hand toward +Z (what hangs goes to +Z,
   // D-386) —, or of straw: a twist of dry stalks bent double, bound round its middle with a stalk, the ends splayed
   R.pano = (M, mat) => {
     const q = M.q, straw = mat === 'palha'; const C = [0.024, 0, 0];

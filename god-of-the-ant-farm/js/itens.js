@@ -69,7 +69,7 @@
     caneca: { nome: 'caneca', plural: 'canecas', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.3, bem: null, vale: 0, tags: ['beber'], mats: ['madeira', 'barro'], desc: 'Para a cerveja, o vinho e a água: na taverna, na festa, no brinde.' },
     // (P7, D-768: the plate the keeper carries to the table — one in a hand, held by its rim —, of the tavern's own, as the cup)
     prato: { nome: 'prato', plural: 'pratos', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.4, bem: null, vale: 0, tags: ['servir'], mats: ['madeira', 'barro'], desc: 'O prato da taverna: o taverneiro o traz à mesa com a comida da casa.' },
-    // (P7, D-795: the tavern's game and its cloth — the five knucklebones of a sheep's or a goat's ankle, of the beast's own bone: a
+    // (P7, D-805: the tavern's game and its cloth — the five knucklebones of a sheep's or a goat's ankle, of the beast's own bone: a
     // people that never slaughtered, hunted nor offered a beast has none, and no game; thrown on the board from the fist. And the rag
     // the keeper wipes a table with: of the loom's wool where the people has had woven cloth, else a twist of straw — the place's, as
     // the cup; none a weapon)
@@ -99,7 +99,7 @@
     ferro: { nome: 'de ferro', peso: 1.05, dano: 1.15, tech: 'ferro', ord: 2, cor: '#a4adb8', trabalho: 1.2, bloqueio: 1.1, protecao: 1.15 },
     // (the fired clay of the pottery: a cup — 22c, D-612; a people has it once its pottery made it or it came in, G.Origem)
     barro: { nome: 'de barro', peso: 1.4, dano: 0.7, ord: 0, cor: '#b0603a', trabalho: 0.6, bloqueio: 0.4, protecao: 0.3 },
-    // (P7, D-795: the carcass's bone; the field's and the meadow's straw; the loom's wool — G.Origem.matOK says who has each)
+    // (P7, D-805: the carcass's bone; the field's and the meadow's straw; the loom's wool — G.Origem.matOK says who has each)
     osso: { nome: 'de osso', peso: 1, dano: 0.8, ord: 0, cor: '#e6dcc2', trabalho: 0.6, bloqueio: 0.3, protecao: 0.3 },
     palha: { nome: 'de palha', peso: 0.8, dano: 0.5, ord: 0, cor: '#d4b56a', trabalho: 0.5, bloqueio: 0.2, protecao: 0.2 },
     la: { nome: 'de lã', peso: 1, dano: 0.5, ord: 0, cor: '#e8e0cc', trabalho: 0.5, bloqueio: 0.3, protecao: 0.4 },
@@ -204,7 +204,7 @@
   // (the fired clay of a thing is the pottery's ware of the store — the good ceramica: 22c, D-612)
   const CLAY = { caneca: 0.25, prato: 0.3 };
   // (the loom's wool of a rag is the store's cloth — tecido; the bones of a carcass and a twist of straw are no good of a store: what
-  // they are made of is nothing it keeps — P7, D-795)
+  // they are made of is nothing it keeps — P7, D-805)
   const CLOTH = { pano: 0.05 };
   const NOGOOD = { osso: 1, palha: 1 };
   It.METALS = { bronze: 1, ferro: 1 };

@@ -2193,7 +2193,7 @@
   // asked by the step and by the drawing, for whoever the world has inside
   const RULES = {};
   In.placeRule = function (use, fn) { if (typeof fn === 'function') RULES[use] = fn; else delete RULES[use]; };
-  // the places a kind of building keeps for someone who is away from them now (D-790): fn(b) → [[item, q, who], …] — the seat of the
+  // the places a kind of building keeps for someone who is away from them now (D-800): fn(b) → [[item, q, who], …] — the seat of the
   // god's body at a tavern's table while its order waits there (act-taverna.js). Nobody else is given them; the one they are kept
   // for may take them back (the body's own probe, In.freeNear, leaves them out). Pure: the share-out asks it at every look
   const KEEPS = {};
@@ -2306,7 +2306,7 @@
       else if (!nobody && !body.sleeping) discs.push({ lv: Number.isFinite(A.lv) ? A.lv : t.entry ? t.entry.lv : 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0, body: 1 });
       if (!body.sleeping) mine.add(body.id);
     }
-    // (0c) the places kept for someone away from them (In.keepRule, D-790): taken for nobody — but the one they are kept for, in its
+    // (0c) the places kept for someone away from them (In.keepRule, D-800): taken for nobody — but the one they are kept for, in its
     // own probe (nobody: the body's places)
     { const kr = KEEPS[T.use]; const L = kr ? kr(b) : null;
       if (L) for (const k of L) { if (nobody && body && k[2] === body.id) continue; const e = t.spots.find(s => s.it.id === k[0] && s.q === k[1] && s.ok); if (!e || used.has(e.k)) continue; used.add(e.k); discs.push({ lv: e.lv, x: e.x, z: e.z, it: e.it.id, on: e.on }); } }
@@ -2364,7 +2364,7 @@
       // (at someone's side: the one who serves at the table stands on the floor nearest the one served — D-763; the one served gone from
       // the place meanwhile — up, walking out —, by the seat they had, t.nearAt: never a jump back to the counter mid-walk)
       // (or by a place of the plan — [the piece, its place]: the seat the body's order is set down at, the stage the dancers keep to —
-      // D-790)
+      // D-800)
       if (tk && tk.near) { const o = Array.isArray(tk.near) ? spotAt(tk.near) : by.get(tk.near) || spotAt(tk.nearAt); if (o && standBy(v, o, tk)) continue; }
       if (tk && (tk.item || tk.use)) {
         if (tk.item) e = t.spots.find(s => s.it.id === tk.item && (!tk.use || s.use === tk.use) && !APPROACH[s.use] && free(s)) || null;

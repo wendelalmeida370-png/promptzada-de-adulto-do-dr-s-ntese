@@ -8,7 +8,7 @@
 //  v3 a pessoa que morre sentada: sai da mesa e do livro do dia, ninguém fica no lugar dela por ela, a caneca não some sem linha
 //  v4 o deus tira a bebida do estoque: nada servido do nada; quem tem companhia fica à mesa, quem está só vai para casa
 //  v5 o taverneiro preso: ninguém mais servido pelas mãos dele; quem espera se serve no balcão; o dia fecha sem ele e ninguém fica
-//  v7 a taverna viva (D-796 a D-800), na mesma noite da v1: cada ato novo — o brinde, os ossinhos, a dança, as palmas, o canto, o
+//  v7 a taverna viva (D-806 a D-810), na mesma noite da v1: cada ato novo — o brinde, os ossinhos, a dança, as palmas, o canto, o
 //     cochilo, a mesa limpa, as canecas recolhidas, a gorjeta, a expulsão, o fechamento — contado com a sua causa no livro do dia e
 //     visto nas pessoas; a conversa das mesas: cada fala com a sua fonte (o boato que a pessoa sabe, a festa, a guerra, a colheita,
 //     a bebida) — nenhuma solta —, e as canecas e os pratos deixados nas mesas até o taverneiro recolher
@@ -127,7 +127,7 @@ let SNAP = null; const shot = {}; // (the snapshot for the other cases: the tabl
     const atos = {}, falas = {}; let lav = 0, gorj = 0;
     for (const op of ops) { const d = op.data; for (const a of Object.keys(d.atos || {})) { const e = atos[a] || (atos[a] = {}); for (const w of Object.keys(d.atos[a])) e[w] = (e[w] || 0) + d.atos[a][w]; }
       for (const w of Object.keys(d.falas || {})) falas[w] = (falas[w] || 0) + d.falas[w]; lav += d.lavadas || 0; gorj += d.gorjetas || 0; }
-    const CAUSE = { brinde: ['rodada', 'chegada'], 'jogo-ossos': ['indole', 'corpo', 'aposta'], danca: ['indole', 'bebida'], palmas: ['musica'], 'cantar-junto': ['bebida', 'indole'], cochilo: ['cansaco', 'bebida'], 'limpar-mesa': ['mesa-deixada'], 'recolher-canecas': ['canecas-vazias'], gorjeta: ['musica', 'corpo'], expulsar: ['briga'], fechar: ['hora'] };
+    const CAUSE = { brinde: ['rodada', 'chegada'], 'jogo-ossos': ['indole', 'corpo', 'aposta'], danca: ['indole', 'bebida'], palmas: ['musica'], 'cantar-junto': ['bebida', 'indole'], cochilo: ['cansaco', 'bebida'], 'limpar-mesa': ['mesa-deixada', 'chao-sujo'], 'recolher-canecas': ['canecas-vazias'], gorjeta: ['musica', 'corpo'], expulsar: ['briga'], fechar: ['hora'] };
     const odd = []; for (const a of Object.keys(atos)) if (CAUSE[a]) for (const w of Object.keys(atos[a])) if (!CAUSE[a].includes(w)) odd.push(`${a} por «${w}»`);
     const count = a => Object.values(atos[a] || {}).reduce((x, y) => x + y, 0);
     console.log(`   os atos da noite (no livro do dia, com a causa): ${ACTS.map(a => `${a} ${count(a)}${atos[a] ? ' (' + Object.keys(atos[a]).map(w => w + ' ' + atos[a][w]).join(', ') + ')' : ''}`).join('; ')}`);

@@ -1563,7 +1563,7 @@ canvas#game3d { touch-action: none; transition: none; }
 #menu-panel .mn-row { position: relative; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; margin: 0 0 4px; padding: 6px 10px 6px 8px; border-radius: 9px; border: 1px solid transparent; background: var(--row); color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background .15s, border-color .15s, transform .15s; }
 #menu-panel .mn-row:hover, #menu-panel .mn-row.hov { background: var(--rowh); }
 #menu-panel .mn-row.sel { border-color: var(--acc2); background: var(--sel); box-shadow: inset 0 0 0 1px var(--acc2), 0 2px 8px rgba(0, 0, 0, .12); }
-/* (P7, D-794: «o de sempre» of a regular, at the top of the menu — the line it is, chosen at once; out of it today, said so) */
+/* (P7, D-804: «o de sempre» of a regular, at the top of the menu — the line it is, chosen at once; out of it today, said so) */
 #menu-panel .mn-sempre { display: flex; align-items: center; gap: 10px; margin: 2px 12px 10px; padding: 8px 12px; border-radius: 10px; border: 1px dashed var(--acc2); background: linear-gradient(90deg, var(--sel), transparent 90%); color: var(--ink); }
 #menu-panel button.mn-sempre { width: calc(100% - 24px); min-height: 48px; font: inherit; text-align: left; cursor: pointer; }
 #menu-panel .mn-sempre .star { font-size: 20px; color: var(--acc2); line-height: 1; text-shadow: 0 1px 0 rgba(0, 0, 0, .25); }

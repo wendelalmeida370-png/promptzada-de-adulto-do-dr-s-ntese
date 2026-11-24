@@ -1833,7 +1833,7 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
 // coisa de barro é feita da cerâmica do armazém (G.Itens.feitoDe); a caneca e os grilhões são do lugar (a taverna, quem leva o preso) e
 // passam também a quem tem coisas de verdade — o corpo do deus —, nada mais (regra 155); e nenhum clipe das pessoas diz que coisa segura (regra 217)
 { const iv = (src['inventario.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
-  if (!/const PLACE_TOOL = \{ caneca: 1, grilhoes: 1(, ossinhos: 1, pano: 1)? \};/.test(iv) || !/if \(!key && own && PLACE_TOOL\[t\]\) key = made\(t, /.test(iv)) fails.push('a coisa do gesto tem origem: só a caneca e os grilhões — e os ossinhos e o pano da taverna (D-795): as coisas do lugar, não da pessoa — passam a quem tem coisas de verdade (PLACE_TOOL, D-612)');
+  if (!/const PLACE_TOOL = \{ caneca: 1, grilhoes: 1(, ossinhos: 1, pano: 1)? \};/.test(iv) || !/if \(!key && own && PLACE_TOOL\[t\]\) key = made\(t, /.test(iv)) fails.push('a coisa do gesto tem origem: só a caneca e os grilhões — e os ossinhos e o pano da taverna (D-805): as coisas do lugar, não da pessoa — passam a quem tem coisas de verdade (PLACE_TOOL, D-612)');
   if (!/drink: 'caneca', toast: 'caneca', bound: 'grilhoes'/.test(iv)) fails.push('a coisa do gesto tem origem: o ACT_TOOL do inventario.js sem a caneca de quem bebe e brinda e os grilhões de quem é levado (D-612)');
   if (!/const k = made\('bola', G\.Fac\.idOfV\(v\), artsOf\(v\)\)/.test(iv) || !/const k = mk\('muleta'\)/.test(iv)) fails.push('a coisa do gesto tem origem: a bola e a muleta do kit sem o material que o povo teve (made / mk, D-612)');
   if (!/ceramica: 'barro'/.test(og) || !/m === 'couro' \|\| m === 'ouro' \|\| m === 'barro'( \|\| m === 'la')?\) return !!O\.had\(fid, m\)/.test(og) || !/if \(\(f\.stock\.ceramica \|\| 0\) > EPS\) mark\(f\.id, 'barro'\)/.test(og)) fails.push('a coisa do gesto tem origem: o barro tido sem a cerâmica (O.MAT_OF, O.matOK, a marca do armazém — D-612)');
@@ -2227,47 +2227,48 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   if (!/\bprato: \{ nome: 'prato'[^\n]*pega: 'copo'[^\n]*mats: \['madeira', 'barro'\]/.test(it) || !/const CLAY = \{[^}]*prato: [\d.]+/.test(it)) fails.push('o prato é de verdade: o prato do catálogo sem a pega, o material e o barro de que é feito (D-768)');
   if (!/R\.prato = \(M, mat\) =>/.test(fo)) fails.push('o prato é de verdade: o prato sem a sua receita no itemforma.js (D-768)');
   if (!/v\.task && v\.task\.type === 'atender' \? 'prato'/.test(iv)) fails.push('o prato é de verdade: o kit não põe o prato na mão de quem o leva à mesa (G.Inv, D-768)'); }
-// 330. "o pedido do corpo é da casa" (D-790, D-791): o que está nas mesas de um dia da taverna — o lugar 't:' do livro (o pedido do
-// corpo deixado no lugar dele, o resto de um prato) e as canecas e os pratos deixados (d.deixa) — só o act-taverna.js escreve; o
+// 340. "o pedido do corpo é da casa" (D-800, D-801): o que está nas mesas de um dia da taverna — o lugar 't:' do livro (o pedido do
+// corpo deixado no lugar dele, o resto de um prato), as canecas e os pratos deixados (d.sujo) e o chão de uma briga (d.chao) — só o
+// act-taverna.js escreve; o
 // lugar do corpo guardado é do repartidor, pela porta In.keepRule (a regra que guarda, lida no assign); e levantar com um pedido a
 // caminho ou na mesa não desfaz a entrada do corpo
-{ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bdata\.(?:na|deixa)\s*=(?!=)|\.deixa\s*=(?!=)|addKind\(\s*'t'/.test(c)) fails.push(`o pedido do corpo é da casa: ${f}:${k + 1} escreve o que está nas mesas da taverna (D-790): ${line.trim().slice(0, 110)}`); });
+{ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bdata\.(?:na|sujo|chao)\s*=(?!=)|addKind\(\s*'t'/.test(c)) fails.push(`o pedido do corpo é da casa: ${f}:${k + 1} escreve o que está nas mesas da taverna (D-800): ${line.trim().slice(0, 110)}`); });
   const tv = (src['act-taverna.js'] || []).join('\n'), ir = (src['interiors.js'] || []).join('\n');
-  if (!/D\.addKind\('t', \{/.test(tv)) fails.push('o pedido do corpo é da casa: as mesas da taverna sem o seu lugar no livro (D.addKind \'t\', D-790)');
-  if (!/if \(!has && m\.srv !== -1 && !pending\(m\)\) \{ delete d\.mesa\[v\.id\]; return; \}/.test(tv)) fails.push('o pedido do corpo é da casa: levantar desfaz a entrada do corpo com o pedido a caminho (D-790)');
-  if (!/In\.keepRule = function \(use, fn\)/.test(ir) || !/const kr = KEEPS\[T\.use\]; const L = kr \? kr\(b\) : null;/.test(ir) || !/G\.Interiors\.keepRule\('taverna', kept\)/.test(tv)) fails.push('o pedido do corpo é da casa: o lugar do corpo sem a guarda do repartidor (In.keepRule, D-790)');
-  for (const f of files) if (f !== 'interiors.js') src[f].forEach((line, k) => { if (/\bKEEPS\[/.test(line)) fails.push(`o pedido do corpo é da casa: ${f}:${k + 1} lê a guarda dos lugares fora do repartidor (D-790)`); }); }
-// 331. "a casa lembra pelo livro" (D-792, D-794): a memória dos fregueses de sempre (b.freg) e o grão da cerveja da casa (b.malte) só o
+  if (!/D\.addKind\('t', \{/.test(tv)) fails.push('o pedido do corpo é da casa: as mesas da taverna sem o seu lugar no livro (D.addKind \'t\', D-800)');
+  if (!/if \(!has && m\.srv !== -1 && !pending\(m\)\) \{ delete d\.mesa\[v\.id\]; return; \}/.test(tv)) fails.push('o pedido do corpo é da casa: levantar desfaz a entrada do corpo com o pedido a caminho (D-800)');
+  if (!/In\.keepRule = function \(use, fn\)/.test(ir) || !/const kr = KEEPS\[T\.use\]; const L = kr \? kr\(b\) : null;/.test(ir) || !/G\.Interiors\.keepRule\('taverna', kept\)/.test(tv)) fails.push('o pedido do corpo é da casa: o lugar do corpo sem a guarda do repartidor (In.keepRule, D-800)');
+  for (const f of files) if (f !== 'interiors.js') src[f].forEach((line, k) => { if (/\bKEEPS\[/.test(line)) fails.push(`o pedido do corpo é da casa: ${f}:${k + 1} lê a guarda dos lugares fora do repartidor (D-800)`); }); }
+// 341. "a casa lembra pelo livro" (D-802, D-804): a memória dos fregueses de sempre (b.freg) e o grão da cerveja da casa (b.malte) só o
 // act-taverna.js escreve — a memória do livro do dia no fechamento, o grão pelos lotes da cuba —; e as leituras (T.sempre, T.freg,
 // T.malte) não tiram de acaso nenhum
-{ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.(?:freg|malte)\s*(=(?!=)|\[[^\]]*\]\s*=(?!=))/.test(c)) fails.push(`a casa lembra pelo livro: ${f}:${k + 1} escreve a memória da taverna (D-794): ${line.trim().slice(0, 110)}`); });
+{ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.(?:freg|malte)\s*(=(?!=)|\[[^\]]*\]\s*=(?!=))/.test(c)) fails.push(`a casa lembra pelo livro: ${f}:${k + 1} escreve a memória da taverna (D-804): ${line.trim().slice(0, 110)}`); });
   const tv = (src['act-taverna.js'] || []).join('\n'); const body = (a, b) => { const i = tv.indexOf(a), j = b ? tv.indexOf(b, i + 1) : -1; return i < 0 ? null : tv.slice(i, j < 0 ? undefined : j); };
   for (const [n, a, b] of [['T.sempre', 'T.sempre = function', 'function remember('], ['T.malte', 'T.malte = function', '// ------------------------------ the body\'s verbs at a tavern']]) { const f = body(a, b); if (!f) { fails.push(`a casa lembra pelo livro: o act-taverna.js sem o ${n}`); continue; } if (/\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(f)) fails.push(`a casa lembra pelo livro: o ${n} sorteia`); }
-  if (!/if \(R\.of && r\.parts\)/.test((src['act-oficio.js'] || []).join('\n')) || !/r\.parts = take\(pa, k, r\.n, of\)/.test((src['origem.js'] || []).join('\n'))) fails.push('a casa lembra pelo livro: a cuba sem o grão que tomou (G.Origem: as partes de um uso; o lote as guarda — D-792)'); }
-// 332. "a taverna viva tem causa, e nenhum sorteio" (D-796, D-798, D-800): o que se faz às mesas — o brinde, os ossinhos, a dança, as
+  if (!/if \(R\.of && r\.parts\)/.test((src['act-oficio.js'] || []).join('\n')) || !/r\.parts = take\(pa, k, r\.n, of\)/.test((src['origem.js'] || []).join('\n'))) fails.push('a casa lembra pelo livro: a cuba sem o grão que tomou (G.Origem: as partes de um uso; o lote as guarda — D-802)'); }
+// 342. "a taverna viva tem causa, e nenhum sorteio" (D-806, D-808, D-810): o que se faz às mesas — o brinde, os ossinhos, a dança, as
 // palmas, o canto, o cochilo, a gorjeta, a fala das mesas, a mesa limpa, o lance do corpo — sai das causas do mundo (a índole, a
-// bebida, o relógio e os ids, G.hash), nunca do acaso do mundo nem do que só se vê; cada ato tem a sua linha de som (A.ATO); cada fala
-// das mesas diz a sua fonte (o boato, a festa, a guerra, a colheita, a bebida); e as portas novas do corpo à mesa (a rodada, a música,
+// bebida, o relógio e os ids, G.hash), nunca do acaso do mundo nem do que só se vê; cada fala
+// das mesas diz a sua fonte (o boato, a festa, a guerra, a colheita, a bebida) — o som de cada ato é o da sala (a P9, regra 333) —; e as
+// portas novas do corpo à mesa (a rodada, a música,
 // a gorjeta, os ossinhos) só se chamam de dentro de um G.Possess.apply
 { const tv = (src['act-taverna.js'] || []).join('\n'); const body = (a, b) => { const i = tv.indexOf(a), j = b ? tv.indexOf(b, i + 1) : -1; return i < 0 ? null : tv.slice(i, j < 0 ? undefined : j); };
-  const live = body('// ------------------------------ the tables\' own life (D-796, D-800)', '// ------------------------------ the regulars (D-794)');
-  const verbs = body('// ------------------------------ the body\'s verbs at a tavern (D-798)', '// ------------------------------ the definition, and the god\'s body at the tavern');
-  if (!live || !verbs) fails.push('a taverna viva tem causa: o act-taverna.js sem a vida das mesas ou sem os verbos do corpo (D-796, D-798)');
-  else { if (/\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(live + verbs)) fails.push('a taverna viva tem causa: a vida das mesas ou os verbos do corpo sorteiam (o G.hash, D-796)');
-    for (const m of body('function wordOf(', '// ------------------------------ the regulars') .matchAll(/L\.push\(\{[^}]*\}/g)) if (!/why: '(?:boato|festa|guerra|colheita|bebida)'/.test(m[0])) fails.push(`a taverna viva tem causa: uma fala das mesas sem a sua fonte (D-800): ${m[0].slice(0, 90)}`); }
-  const as = (src['audio-src.js'] || []).join('\n'); const t0 = as.indexOf('A.ATO = {'); const ato = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
-  for (const a of ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar']) if (!new RegExp(`[\\s,{]'?${a}'?:`).test(ato)) fails.push(`a taverna viva tem causa: o ato «${a}» sem a sua linha de som (A.ATO, D-796)`);
+  const live = body('// ------------------------------ the tables\' own life (D-806, D-810)', '// ------------------------------ the regulars (D-804)');
+  const verbs = body('// ------------------------------ the body\'s verbs at a tavern (D-808)', '// ------------------------------ the definition, and the god\'s body at the tavern');
+  if (!live || !verbs) fails.push('a taverna viva tem causa: o act-taverna.js sem a vida das mesas ou sem os verbos do corpo (D-806, D-808)');
+  else { if (/\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(live + verbs)) fails.push('a taverna viva tem causa: a vida das mesas ou os verbos do corpo sorteiam (o G.hash, D-806)');
+    for (const m of body('function wordOf(', '// ------------------------------ the regulars') .matchAll(/L\.push\(\{[^}]*\}/g)) if (!/why: '(?:boato|festa|guerra|colheita|bebida)'/.test(m[0])) fails.push(`a taverna viva tem causa: uma fala das mesas sem a sua fonte (D-810): ${m[0].slice(0, 90)}`); }
+  // (the sound of each act: the room's own lines, P9's — rule 333)
   const CALL = /\b(?:Taverna|T\(\))\.(rodada|musica|gorjeta|jogar)\(/;
-  for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (CALL.test(c) && !/Possess\.apply\(|\basked\(w =>/.test(c)) fails.push(`a taverna viva tem causa: ${f}:${k + 1} chama uma porta do corpo à mesa fora do G.Possess.apply (D-798): ${line.trim().slice(0, 110)}`); }); }
-// 333. "o cardápio só com o que existe" (D-793): cada linha da carta sai da prateleira e da origem — a bebida que a prateleira tem (a do
+  for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => { const c = line.replace(/(^|\s)\/\/\s.*$/, ''); if (CALL.test(c) && !/Possess\.apply\(|\basked\(w =>/.test(c)) fails.push(`a taverna viva tem causa: ${f}:${k + 1} chama uma porta do corpo à mesa fora do G.Possess.apply (D-808): ${line.trim().slice(0, 110)}`); }); }
+// 343. "o cardápio só com o que existe" (D-803): cada linha da carta sai da prateleira e da origem — a bebida que a prateleira tem (a do
 // povo «não há» só onde a casa a faz ou o armazém a tem), o prato pela parte da comida que está lá (G.Origem.free), a descrição pela
 // origem de verdade (o que o povo fez, G.Origem.madeBy, ou os meios que tem) —; e os ossinhos e o pano são do que o povo teve (o osso
 // da carcaça, a lã do tear, a palha de todos), e o armazém não os dá do nada
 { const tv = (src['act-taverna.js'] || []).join('\n'), og = (src['origem.js'] || []).join('\n'), iv = (src['inventario.js'] || []).join('\n'), it = (src['itens.js'] || []).join('\n');
-  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/desc: descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-793)');
-  if (!/O\.madeBy = \(fid, t, win\) =>/.test(og) || !/if \(t === 'carne'\) mark\(fid, 'osso'\)/.test(og) || !/if \(m === 'osso'\) return !!O\.had\(fid, 'osso'\) \|\| !!O\.had\(fid, 'couro'\);/.test(og) || !/tecido: 'la'/.test(og)) fails.push('o cardápio só com o que existe: a origem sem o que o povo fez, ou sem o osso e a lã tidos (D-793, D-795)');
-  if (!/return !!L && L\.length > 0 && art\(m\)/.test(iv)) fails.push('os ossinhos e o pano: o armazém dá uma coisa que não é feita de nada que ele tem (D-795)');
-  if (!/ossinhos: \{[^\n]*mats: \['osso'\]/.test(it) || !/pano: \{[^\n]*mats: \['palha', 'la'\]/.test(it) || !/else if \(d\.mat === 'la' && CLOTH\[d\.kind\]\) out = \[\{ k: 'tecido'/.test(it)) fails.push('os ossinhos e o pano: o catálogo sem o osso, a palha e a lã de que são feitos (D-795)'); }
+  if (!/if \(n < 1 && !\(k === dk\.k && \(brew === k \|\| \(f && \(f\.stock\[k\] \|\| 0\) >= 1\)\)\)\) continue;/.test(tv) || !/const n = Math\.floor\(O1\.free\(ref, 'food', parts\) \+ EPS\); if \(n < 1\) continue;/.test(tv) || !/desc: descFood\(fid, t\)/.test(tv)) fails.push('o cardápio só com o que existe: a carta não sai da prateleira e da origem (D-803)');
+  if (!/O\.madeBy = \(fid, t, win\) =>/.test(og) || !/if \(t === 'carne'\) mark\(fid, 'osso'\)/.test(og) || !/if \(m === 'osso'\) return !!O\.had\(fid, 'osso'\) \|\| !!O\.had\(fid, 'couro'\);/.test(og) || !/tecido: 'la'/.test(og)) fails.push('o cardápio só com o que existe: a origem sem o que o povo fez, ou sem o osso e a lã tidos (D-803, D-805)');
+  if (!/return !!L && L\.length > 0 && art\(m\)/.test(iv)) fails.push('os ossinhos e o pano: o armazém dá uma coisa que não é feita de nada que ele tem (D-805)');
+  if (!/ossinhos: \{[^\n]*mats: \['osso'\]/.test(it) || !/pano: \{[^\n]*mats: \['palha', 'la'\]/.test(it) || !/else if \(d\.mat === 'la' && CLOTH\[d\.kind\]\) out = \[\{ k: 'tecido'/.test(it)) fails.push('os ossinhos e o pano: o catálogo sem o osso, a palha e a lã de que são feitos (D-805)'); }
 // 303. "toca-se o que se tem na mão; a rodada é caneca" (D-757, D-758): o gesto de tocar é escolhido pelo instrumento que o inventário
 // põe na mão (G.Vida3D.instrument, a etiqueta 'tocar'), nunca pelo ofício nem pelo povo; e a rodada da taverna nas mãos é desenhada
 // como as canecas do inventário (G.Inv.roundOf), não como carga

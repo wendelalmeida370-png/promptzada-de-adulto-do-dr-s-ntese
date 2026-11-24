@@ -12,10 +12,10 @@
 //   · o músico do dia está às mesas, no estrado (S3); a porta da taverna aberta enquanto o dia dela está (S4);
 //   · o corpo do deus às mesas (D-767): a entrada dele num estado que a taverna conhece, o pedido com o que foi pedido, quem o
 //     atende vivo e capaz, o que lhe serviram nas mãos enquanto a entrada diz «servido» (S2, S3);
-//   · o que está nas mesas (D-790, D-791): cada coisa do livro sobre a mesa ('t:' do dia) num lugar da planta e de um tipo que a
+//   · o que está nas mesas (D-800, D-801): cada coisa do livro sobre a mesa ('t:' do dia) num lugar da planta e de um tipo que a
 //     taverna conhece; o pedido do corpo «na mesa» com a sua coisa lá; o lugar guardado só para um pedido que espera; as canecas e os
 //     pratos deixados num lugar da planta; quem joga ossinhos está àquela mesa (S2, S3);
-//   · a memória dos fregueses de sempre e o grão da cerveja da casa bem formados (S3, D-792, D-794).
+//   · a memória dos fregueses de sempre e o grão da cerveja da casa bem formados (S3, D-802, D-804).
 (function () {
   if (!window.QA || !QA.more) return;
   const LIVE = { plan: 1, rsv: 1, on: 1, wait: 1 };
@@ -65,24 +65,26 @@
         if (m.srv > 0) { const k = s.villagers.get(m.srv); if (!k || !G.Act.able(k)) add('taverna', 3, `taverna #${op.at}: o pedido do corpo ${nm} com quem já não pode atender (#${m.srv}: D-767)`); }
         if (m.cv === 'servido' && !(v.carry && v.carry.op === op.id && v.carry.n > 1e-6)) add('taverna', 3, `taverna #${op.at}: o corpo ${nm} «servido» de mãos vazias (D-767)`);
       }
-      // (what lies on the tables — D-790, D-791)
+      // (what lies on the tables — D-800, D-801)
       const KIND = { pedido: 1, sobra: 1 }; const na = Array.isArray(d.na) ? d.na : [];
-      for (const x of na) { if (!KIND[x.kind] || !(x.n > 1e-6) || !x.it) add('taverna', 2, `taverna #${op.at}: na mesa ${x.k} ${x.n} de um tipo «${x.kind}» ou sem lugar (D-790)`);
+      for (const x of na) { if (!KIND[x.kind] || !(x.n > 1e-6) || !x.it) add('taverna', 2, `taverna #${op.at}: na mesa ${x.k} ${x.n} de um tipo «${x.kind}» ou sem lugar (D-800)`);
         else if (b.ip && In.ready && In.ready(b) && In.table && In.table(b) && !In.slots(b).some(q => q.item && q.item.id === x.it)) add('taverna', 3, `taverna #${op.at}: ${x.k} na mesa num lugar que a planta não tem (${x.it}#${x.q})`); }
       for (const id in d.mesa || {}) { const m = d.mesa[id]; if (!m || !m.corpo) continue;
-        if (m.cv === 'mesa' && !na.some(x => x.id === m.na && x.kind === 'pedido')) add('taverna', 2, `taverna #${op.at}: o pedido do corpo #${id} «na mesa» sem nada na mesa (D-790)`);
-        if (m.guarda && m.cv !== 'pedido' && m.cv !== 'mesa') add('taverna', 3, `taverna #${op.at}: o lugar guardado para o corpo #${id} sem pedido que espere («${m.cv}»: D-790)`); }
-      for (const x of Array.isArray(d.deixa) ? d.deixa : []) if ((x.k !== 'caneca' && x.k !== 'prato') || !x.it) add('taverna', 3, `taverna #${op.at}: deixado na mesa ${x.k} sem lugar (D-791)`);
-      if (d.jogo) for (const g of Object.keys(d.jogo)) for (const id of d.jogo[g].quem || []) { const m = d.mesa && d.mesa[id]; if (!m || String(m.g) !== g) add('taverna', 3, `taverna #${op.at}: #${id} no jogo de ossinhos da mesa ${g} sem estar a ela (D-796)`); }
+        if (m.cv === 'mesa' && !na.some(x => x.id === m.na && x.kind === 'pedido')) add('taverna', 2, `taverna #${op.at}: o pedido do corpo #${id} «na mesa» sem nada na mesa (D-800)`);
+        if (m.guarda && m.cv !== 'pedido' && m.cv !== 'mesa') add('taverna', 3, `taverna #${op.at}: o lugar guardado para o corpo #${id} sem pedido que espere («${m.cv}»: D-800)`); }
+      for (const x of Array.isArray(d.sujo) ? d.sujo : []) if (typeof x.k !== 'string' || !x.it || !Number.isFinite(x.x) || !Number.isFinite(x.z) || !(x.resto >= 0 && x.resto <= 1)) add('taverna', 3, `taverna #${op.at}: deixado na mesa ${x.k} sem lugar ou sem a sua parte (D-801)`);
+      for (const x of Array.isArray(d.chao) ? d.chao : []) if ((x.k !== 'cacos' && x.k !== 'poca') || !Number.isFinite(x.x) || !Number.isFinite(x.z)) add('taverna', 3, `taverna #${op.at}: no chão ${x.k} sem lugar (D-801)`);
+      if (G.Taverna.luz) { const L = G.Taverna.luz(b); if (L && !((L.vela === undefined || (L.vela >= 0 && L.vela <= 1)) && (L.azeite === undefined || (L.azeite >= 0 && L.azeite <= 1)) && L.lenha >= 0)) add('taverna', 3, `taverna #${op.at}: o fogo e a luz da noite fora da conta (${JSON.stringify(L)}: D-811)`); }
+      if (d.jogo) for (const g of Object.keys(d.jogo)) for (const id of d.jogo[g].quem || []) { const m = d.mesa && d.mesa[id]; if (!m || String(m.g) !== g) add('taverna', 3, `taverna #${op.at}: #${id} no jogo de ossinhos da mesa ${g} sem estar a ela (D-806)`); }
       if (d.mus) { const m = d.mesa && d.mesa[d.mus]; const v = s.villagers.get(d.mus); if (!m || m.st !== 6 || !v || !v.task || v.task.type !== 'tavern' || v.task.st !== 6) add('taverna', 3, `taverna #${op.at}: o músico #${d.mus} não está no estrado`); }
       if (T.aberta(b) && b.ip && In.doorState && In.plan(b) && In.plan(b).entrance) { const ds = In.doorState(b, In.plan(b).entrance.door); if (ds && ds.state !== 'aberta' && ds.state !== 'bloqueada') add('taverna', 4, `taverna #${op.at}: aberta, e a porta ${ds.state} (D-766)`); }
     }
   };
-  // (the house's memory and its beer's grain — D-792, D-794)
+  // (the house's memory and its beer's grain — D-802, D-804)
   const house = function (add, s) {
     for (const b of s.buildings.values()) { if (b.type !== 'taverna') continue;
-      if (b.freg !== undefined && !(Array.isArray(b.freg) && b.freg.length <= ((G.Taverna && G.Taverna.FREG) || 40) && b.freg.every(e => Array.isArray(e) && Number.isInteger(e[0]) && e[1] >= 1 && Number.isFinite(e[2]) && e[3] && typeof e[3] === 'object'))) add('taverna', 3, `taverna #${b.id}: a memória dos fregueses mal formada (D-794)`);
-      if (b.malte !== undefined && !(b.malte && typeof b.malte === 'object' && Object.keys(b.malte).every(k => (k === '?' || (G.Origem && G.Origem.FOOD[k] && G.Origem.FOOD[k].cereal)) && b.malte[k] > 0))) add('taverna', 3, `taverna #${b.id}: o grão da cerveja da casa mal formado (D-792)`); }
+      if (b.freg !== undefined && !(Array.isArray(b.freg) && b.freg.length <= ((G.Taverna && G.Taverna.FREG) || 40) && b.freg.every(e => Array.isArray(e) && Number.isInteger(e[0]) && e[1] >= 1 && Number.isFinite(e[2]) && e[3] && typeof e[3] === 'object'))) add('taverna', 3, `taverna #${b.id}: a memória dos fregueses mal formada (D-804)`);
+      if (b.malte !== undefined && !(b.malte && typeof b.malte === 'object' && Object.keys(b.malte).every(k => (k === '?' || (G.Origem && G.Origem.FOOD[k] && G.Origem.FOOD[k].cereal)) && b.malte[k] > 0))) add('taverna', 3, `taverna #${b.id}: o grão da cerveja da casa mal formado (D-802)`); }
   };
   QA.more.push(rule, house); QA.tavernaVida = rule; QA.tavernaCasa = house;
 })();

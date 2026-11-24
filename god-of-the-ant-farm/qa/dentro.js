@@ -224,7 +224,8 @@ if (want('d10')) {
       return { c: c.length, vs: c.length ? c[0].vs | 0 : -1, l: l.length, fy: pl.fontes.filter(s => s.kind === 'vela').map(s => s.y), fl: pl.fontes.filter(s => s.kind === 'lamparina').map(s => s.forca), qa: dentroQA(b).length }; };
     const whole = read(1, 0), half = read(0.45, 0), stub = read(0.1, 0), out = read(0, 0), oilFull = read(0, 1), oilLow = read(0, 0.12);
     // (the morning, uncounted: the candle stands only with wax in the store)
-    T0.luz = was; inSim(() => G.Depot.use('f:' + f.id, 'cera', f.stock.cera || 0, { code: 'prova' })); fresh(); const noWax = D.plan(b, plan(b), true).list.filter(t => t.k === 'vela').length;
+    // (no count of tonight's: the house's real one — P7's T.luz, D-811 — lit by an earlier part's evening, left out here, T-1830)
+    T0.luz = () => ({}); inSim(() => G.Depot.use('f:' + f.id, 'cera', f.stock.cera || 0, { code: 'prova' })); fresh(); const noWax = D.plan(b, plan(b), true).list.filter(t => t.k === 'vela').length;
     inSim(() => G.Depot.make('f:' + f.id, 'cera', 2, { code: 'prova' })); fresh(); const wax = D.plan(b, plan(b), true).list.filter(t => t.k === 'vela' || t.k === 'lamparina').length;
     if (guest) guest.inside = 0;
     info = `taverna#${b.id}: a vela inteira → ${whole.c} vela(s) no tanto ${whole.vs}, chama a ${whole.fy[0] && whole.fy[0].toFixed(3)}; 55% gasta → ${half.vs}, chama a ${half.fy[0] && half.fy[0].toFixed(3)}; um toco → ${stub.vs}; acabou → ${out.c} vela(s), ${out.l} lamparina(s); o azeite cheio → luz ${oilFull.fl[0]}, quase no fim → ${oilLow.fl[0]}; de manhã sem cera no armazém → ${noWax} vela(s), com cera → ${wax} luz(es) na mesa`;
@@ -246,6 +247,8 @@ if (want('d11')) {
     T0.luz = was;
     // (the building's own wood: brought from the store, burnt, brought again)
     const f = G.Fac.ofSet(b.set); const book = [];
+    // (from none: the keeper buys the night's wood — P7's D-811 —, and an earlier part's evening may have left some by the fire, T-1830)
+    if ((b.inv && b.inv.wood) > 0) inSim(() => G.Depot.use('b:' + b.id, 'wood', b.inv.wood, { code: 'prova' }));
     const r0 = inSim(() => G.Depot.move('f:' + f.id, 'b:' + b.id, 'wood', 2, { code: 'prova' }));
     if (r0 && r0.ok) { book.push(['trazida 2', pile()]); inSim(() => G.Depot.use('b:' + b.id, 'wood', 1.6, { code: 'lenha' })); book.push(['queimou 1,6', pile()]);
       inSim(() => G.Depot.use('b:' + b.id, 'wood', b.inv.wood || 0, { code: 'lenha' })); book.push(['queimou tudo', pile()]);
@@ -299,7 +302,13 @@ if (want('d14')) {
   if (b) {
     const op = G.Taverna.dia(b); const seated = op ? Object.keys(op.data.mesa).filter(id => { const v = S().villagers.get(+id); const pl = v && G.Interiors.placeOf(v); return pl && !op.data.mesa[id].corpo; }) : [];
     let game = 'sem freguês sentado';
-    if (seated.length) { const m = op.data.mesa[seated[0]]; m.jogo = 1; fresh(); const n1 = D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length; const qa1 = dentroQA(b); delete m.jogo; fresh(); const n0 = D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length;
+    // (the world's own games at the tables — P7's living tavern, D-806 — counted first: the planted one is one more, and gone again, T-1830)
+    const gOf = id => String(op.data.mesa[id].g); const playing = new Set(seated.filter(id => op.data.mesa[id].jogo || S().villagers.get(+id).act === 'jogo-ossos').map(gOf).concat(Object.keys(op.data.jogo || {})));
+    const seatedFree = seated.filter(id => !playing.has(gOf(id)));
+    // (one at a table — a seat by the fire has no board for the bones —: the first of them whose planted game shows)
+    { const nb = () => { fresh(); return D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length; }; const b0 = nb(); const hit = seatedFree.find(id => { const m = op.data.mesa[id]; m.jogo = 1; const n = nb(); delete m.jogo; return n > b0; }); if (hit) seatedFree.splice(0, seatedFree.length, hit, ...seatedFree.filter(id => id !== hit)); } if (seatedFree.length) seated.splice(0, seated.length, ...seatedFree);
+    const nw = () => { fresh(); return D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length; }; const nBase = seated.length ? nw() : 0;
+    if (seated.length) { const m = op.data.mesa[seated[0]]; m.jogo = 1; fresh(); const n1 = D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length - nBase; const qa1 = dentroQA(b); delete m.jogo; fresh(); const n0 = D.plan(b, plan(b), true).list.filter(t => t.k === 'ossos').length - nBase;
       game = `o jogo à mesa de #${seated[0]} → ${n1} jogo(s) de ossinhos; acabou → ${n0}${qa1.length ? '; ' + qa1.map(q => q[1]).join(' | ') : ''}`; good = n1 === 1 && n0 === 0 && !qa1.length; }
     const sv = b.served; const rings = n => { b.served = n; fresh(); return D.plan(b, plan(b), true).list.filter(t => /^mancha-/.test(t.k)).length; };
     const r0 = rings(0), r1 = rings(60), r2 = rings(400); const qa2 = dentroQA(b); b.served = sv; fresh();

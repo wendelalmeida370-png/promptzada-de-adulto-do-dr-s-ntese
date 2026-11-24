@@ -148,14 +148,6 @@
     agree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 }, disagree: { s: 'voz', q: 'curso', cada: 2.4, v: 0.35, alc: 0.8 },
     laugh: { s: 'riso', q: 'curso', cada: 2, v: 0.45, alc: 0.9 }, tell: { s: 'voz', q: 'curso', cada: 2.2, v: 0.3, alc: 0.7 },
     console: still('quem consola fala baixo demais para se ouvir longe'),
-    // (P7, D-796: the living tavern — the cups knocked together in the toast, the bones thrown on the board, the dance's and the claps'
-    // beat, the song of the tables, the doze silent, the rag on the board, the cups taken up, the coin thrown, the brawler put out, the
-    // closing called)
-    brinde: { s: 'cup', q: 'curso', cada: 2.2, v: 0.45, alc: 0.8 }, 'jogo-ossos': { s: 'clack', q: 'curso', cada: 1.7, v: 0.35, alc: 0.7 },
-    danca: { s: 'clap', q: 'curso', cada: 0.62, v: 0.35, alc: 1 }, palmas: { s: 'clap', q: 'curso', cada: 0.55, v: 0.4, alc: 1 },
-    'cantar-junto': { s: 'chant', q: 'curso', cada: 2.6, v: 0.4, alc: 1 }, cochilo: still('quem cochila à mesa não soa'),
-    'limpar-mesa': { s: 'sweep', q: 'curso', cada: 1.1, v: 0.25, alc: 0.5 }, 'recolher-canecas': { s: 'cup', q: 'curso', cada: 1.4, v: 0.35, alc: 0.6 },
-    gorjeta: { s: 'coin', q: 'curso', cada: 1.6, v: 0.4, alc: 0.7 }, expulsar: { s: 'hey', q: 'curso', cada: 2, v: 0.6, alc: 1.2 }, fechar: { s: 'hey', q: 'curso', cada: 2.4, v: 0.55, alc: 1.2 },
   };
   // the acts of the tavern's night (P7: the toast, the knucklebones, the dance and the claps and the song with the music, the doze at
   // the table, the cloth on the table, the cups gathered, the coin of the tip, the one thrown out, the closing) — the sounds of P9

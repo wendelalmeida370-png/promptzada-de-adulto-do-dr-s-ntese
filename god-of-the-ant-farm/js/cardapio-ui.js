@@ -62,7 +62,7 @@
       if (s.hold) return s.hold.food ? `Comer ${def(s.hold.nome)}` : `Beber um gole de ${drinkWord(s.hold.k)}`;
       if (s.cv === 'carta') return 'Ver o cardápio';
       if (s.cv === 'pedido') return `Esperando ${def(s.pedido ? s.pedido.nome : 'o pedido')}`;
-      if (s.cv === 'mesa') return s.mesa && s.mesa.aqui ? `${cap(def(s.mesa.nome))} na mesa` : 'O seu pedido está na outra mesa'; // (D-790)
+      if (s.cv === 'mesa') return s.mesa && s.mesa.aqui ? `${cap(def(s.mesa.nome))} na mesa` : 'O seu pedido está na outra mesa'; // (D-800)
       if (s.cv === 'chama') return s.can && !s.so ? `Esperando ${kname(s.keeper)}` : 'Ninguém para servir';
       return s.can ? `Chamar ${kname(s.keeper)}` : 'Ninguém para servir';
     },
@@ -86,7 +86,7 @@
     },
   });
 
-  // ------------------------------ the body's verbs at the tavern (D-798) ------------------------------
+  // ------------------------------ the body's verbs at the tavern (D-808) ------------------------------
   // (F and the card's keys, seated at a table: a round for the table, a song asked of the night's musician, the game of bones at the
   // table — each done by the world in its step, G.Possess.apply → G.Taverna, the answer told when it comes; the coin to the musician is
   // a verb of the person. Only read here: what can be done is G.Taverna.verbos)
@@ -228,7 +228,7 @@
       top.querySelector('small').textContent = kp ? (P().knows.person(v, kp) ? `${kp.name}, ${kp.g === 'f' ? 'a taverneira' : 'o taverneiro'}` : cap(P().knows.call(v, kp))) : 'No balcão';
       const cv = top.querySelector('canvas'); top.querySelector('.mn-face').classList.toggle('none', !kp); face(cv, kp);
     }
-    // (a regular of the house: «o de sempre» at the top — the line of the menu it is, chosen at once; out of it today, said so — D-794)
+    // (a regular of the house: «o de sempre» at the top — the line of the menu it is, chosen at once; out of it today, said so — D-804)
     const sp = s.sempre && s.sempre.key ? s.sempre : null; const us = sp ? items.findIndex(x => T().keyOf(x) === sp.key || (sp.k === 'food' && x.k === 'food' && [].concat(x.of || []).includes(sp.of))) : -1;
     if (sp && us >= 0 && items[us].ok && sel < 0 && !UI._sempre) { sel = us; UI._sempre = s.op + ':' + s.ck; }
     const st = JSON.stringify([items.map(x => [x.id, x.n, x.ok]), pu.n, sel, busy, note, touch, us]);
@@ -300,7 +300,7 @@
     if (s.so && s.so !== said.so) { said.so = s.so; toast('Ninguém vem atender: vá ao balcão e sirva-se.', 3.2); }
     if (s.sem && s.sem !== said.sem) { said.sem = s.sem; toast('Faltou dinheiro: o pedido voltou para o balcão.', 3); }
     if (s.mao && s.mao !== said.mao) { said.mao = s.mao; toast(s.cv === 'mesa' ? 'Com as mãos ocupadas: o pedido espera na mesa.' : 'Com as mãos ocupadas, o pedido voltou para o balcão.', 3); }
-    // (the order set down at the body's seat: the keeper's call, said on the screen too — D-790; and back in the hands at the seat)
+    // (the order set down at the body's seat: the keeper's call, said on the screen too — D-800; and back in the hands at the seat)
     if (s.ch && s.ch !== said.ch) { said.ch = s.ch; if (s.chegou) toast(`${cap(kname(s.keeper))}: «${s.chegou}»`, 3.6); }
     if (said.cv === 'mesa' && s.cv === 'servido') toast(s.frio ? 'O seu pedido esfriou na mesa — mas está aí.' : 'O seu pedido, ainda quente.', 2.6);
     said.cv = s.cv || '';

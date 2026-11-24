@@ -9,13 +9,13 @@
 //     bocados pelas mãos (T.bite): a fome cai pelo que se comeu, da origem da comida, e o prato acaba; os gestos da mesa existem e o
 //     corpo sentado os faz sentado
 //  c3 a bebida: a caneca na mão do corpo, os goles (três), o efeito da bebida no último, a caneca deixada na mesa
-//  c4 o corpo levanta antes de chegar o pedido: o pedido fica (D-790) — o taverneiro o deixa no lugar guardado e chama; senta, paga
+//  c4 o corpo levanta antes de chegar o pedido: o pedido fica (D-800) — o taverneiro o deixa no lugar guardado e chama; senta, paga
 //  c5 sem dinheiro: o cardápio diz por quê, e o pedido é recusado; o deus tira da prateleira o que foi pedido: «acabou», e o
 //     taverneiro volta à mesa com o cardápio de novo
 //  c6 o taverneiro morre no meio do pedido: chamado de novo; ninguém vem — o corpo vai ao balcão e se serve da prateleira, pago
 //  c7 um save no meio do pedido: o pedido volta, buscado de novo, servido e pago uma vez só
 //  c8 o mundo sem o corpo: nenhuma entrada do corpo nas mesas, e o mesmo mundo dos fregueses — e o verificador limpo em tudo
-//  (o pedido que fica e a taverna viva, D-790 a D-800; o c4 é o de antes, agora com o pedido que fica)
+//  (o pedido que fica e a taverna viva, D-800 a D-810; o c4 é o de antes, agora com o pedido que fica)
 //  c9 o corpo sai da taverna com o pedido a caminho: deixado na mesa, quente e depois frio; volta, senta, recebe, paga uma vez
 //  c10 fora tempo demais: o taverneiro leva o pedido frio de volta à prateleira, nada pago, nada some
 //  c11 um save com o pedido na mesa: volta na mesa, no lugar guardado; senta e paga uma vez
@@ -123,8 +123,12 @@ if (on('c1') || on('c2')) {
     const W = G.Atmos.within(B()); const onTable = W.mesa.find(q => q.id === v.id);
     ok('c2 o pedido pelas mãos do corpo: o taverneiro busca, enche da prateleira a parte pedida e traz o prato na mão', !!res && res.ok && m && !!fill && /^prato\./.test(plateInHand) && !crate && v.carry && v.carry.k === 'food' && Object.keys(parts).every(p => want.includes(p)),
       `«${it.nome}» (${want.join('+')}): ${res ? res.msg || res.why : '-'}; enchido ${fill ? fill.n : 0} pelo livro; na mão dele: ${plateInHand || 'nada'}${crate ? ' (uma carga nos braços)' : ''}; nas mãos do corpo: ${v.carry ? v.carry.k + ' ' + JSON.stringify(parts) : 'nada'}`);
-    ok('c2 entregue e pago à mesa, uma vez; o prato na mesa diante do corpo', paid === 1 && Math.abs(coin0 - coin1 - T.PRICE.food) < 1e-6 && !!onTable && !!onTable.prato,
-      `pago ${paid}× (${(coin0 - coin1).toFixed(2)}); na mesa: ${onTable ? JSON.stringify({ prato: onTable.prato, cup: onTable.cup }) : 'nada'}`);
+    // (the coins' leg of the same deal — the same instant, from the body's house to the keeper's: the house's coins are the family's
+    // too, and a coin thrown to a musician of the family moves them in the same while, T-1824)
+    const goods = seen.find(e => e.t >= t1 && e.c === 'taverna' && e.op === op && e.k !== 'moedas' && e.to === 'v:' + v.id);
+    const coinLeg = goods ? seen.filter(e => e.t === goods.t && e.c === 'taverna' && e.op === op && e.k === 'moedas' && e.from === G.Eco.coinRef(v)).reduce((a, e) => a + e.n, 0) : 0;
+    ok('c2 entregue e pago à mesa, uma vez; o prato na mesa diante do corpo', paid === 1 && Math.abs(coinLeg - T.PRICE.food) < 1e-6 && !!onTable && !!onTable.prato,
+      `pago ${paid}× (${coinLeg.toFixed(2)} das moedas da casa ao taverneiro; a bolsa ${coin0.toFixed(2)} → ${coin1.toFixed(2)}); na mesa: ${onTable ? JSON.stringify({ prato: onTable.prato, cup: onTable.cup }) : 'nada'}`);
     // (the mouthfuls: the gesture of the table seated, the world at its contact)
     const A3 = G.Anim3D; const clips = !!(A3.CLIPS['mesa-comer'] && A3.CLIPS['mesa-comer~m'] && A3.CLIPS['mesa-beber'] && A3.CLIP_OF.dine === 'mesa-comer');
     const prov = I.list.find(p => p.id === 'taverna'); const tg = prov.find(I.ctx())[0]; const lb = tg ? prov.label(I.ctx(), tg) : '';
@@ -152,7 +156,7 @@ if (on('c3')) {
   }
 }
 
-// ---------------- c4 up from the seat before the order comes: the order stays (D-790) ----------------
+// ---------------- c4 up from the seat before the order comes: the order stays (D-800) ----------------
 if (on('c4')) {
   fresh(); bad.length = 0; const r = toMenu(); const v = Po.body(); const kp = T.keeperOf(B());
   if (r.fail || !r.got) ok('c4 levanta antes', false, r.why || 'o cardápio não abriu');
@@ -293,7 +297,7 @@ if (on('c11')) {
   }
 }
 
-// ---------------- c12 the menu is what the house has (D-793) ----------------
+// ---------------- c12 the menu is what the house has (D-803) ----------------
 if (on('c12')) {
   fresh(); bad.length = 0;
   // (three taverns of different peoples and lands — else of different towns —: each menu by its own shelf and its own people's origin)
@@ -315,7 +319,7 @@ if (on('c12')) {
     `${said.join(' | ')}${bads.length ? ' — FALHOU: ' + bads.slice(0, 6).join(' | ') : ''}`);
 }
 
-// ---------------- c13 the regulars and «o de sempre» (D-794) ----------------
+// ---------------- c13 the regulars and «o de sempre» (D-804) ----------------
 if (on('c13')) {
   fresh(); bad.length = 0;
   // (the house's memory written at the closing from the day's book: everyone who sat tonight, one night more, and what they had)
@@ -339,7 +343,7 @@ if (on('c13')) {
   watch(); ok('c13 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
 }
 
-// ---------------- c14 a round for the table (D-798) ----------------
+// ---------------- c14 a round for the table (D-808) ----------------
 // (a table with two or more of the world at it between rounds: lived from the snapshot until there is one, the body sits at it)
 // (of every tavern open: the first with such a table, its keeper at hand and a body of its people — the cases' tavern for these two)
 const tableWith = b => { const op = T.dia(b); if (!op || !T.atHand(b)) return 0; const by = new Map(); for (const id of Object.keys(op.data.mesa)) { const m = op.data.mesa[id]; const o = S().villagers.get(+id); if (!m.g || m.body || !o || !o.task || o.task.type !== 'tavern' || o.task.st < 2) continue; by.set(m.g, (by.get(m.g) || 0) + 1); } for (const [k, n] of by) if (n >= 2 && In.freeNear(b, 0, 0, 0, 999, ['sentar', 'comer']).some(q => In.groupOf(b, q.item) === k)) return k; return 0; };
@@ -349,19 +353,20 @@ if (on('c14') || on('c15')) {
   const v = S().villagers.get(PICK.v); const r = g ? seatIn(B(), v, q => In.groupOf(B(), q.item) === g) : { why: 'nenhuma mesa com gente' };
   if (!r.ok) ok('c14 a rodada', false, r.why || 'não sentou');
   else {
-    const op = OP().id; for (let i = 0; i < 6; i++) fast(); const vb = T.verbos(v); const t1 = S().clock; const fama0 = JSON.stringify(v.fama || []);
+    // (the entry made at the tavern's next second of the world)
+    const op = OP().id; until(() => mine() && mine().seat, 5); const vb = T.verbos(v); const t1 = S().clock; const fama0 = JSON.stringify(v.fama || []);
     const quem = vb.rodada.ok ? vb.rodada.quem.map(o => o.id) : []; const ask = Po.apply(w => T.rodada(w, op)); until(() => !!ask.res, 2);
     until(() => quem.every(id => !OP().data.mesa[id] || !OP().data.mesa[id].paga), 90);
     const ref = G.Eco.coinRef(v); const paidFor = seen.filter(e => e.t >= t1 && e.c === 'taverna' && e.k === 'moedas' && e.from === ref && e.op === op).length;
     const served = quem.filter(id => seen.some(e => e.t >= t1 && e.c === 'taverna' && e.k !== 'moedas' && e.to === 'v:' + id)).length;
     const ties = quem.filter(id => { const o = S().villagers.get(id); const L = G.Lacos && o ? G.Lacos.sente(o, v) : null; return L && L.afeto > 0; }).length;
     ok('c14 pagar uma rodada para a mesa: o taverneiro serve a todos da mesa, o corpo paga cada caneca, e os laços e a fama sobem', !!ask.res && ask.res.ok && quem.length >= 1 && served === quem.length && paidFor >= quem.length && ties >= 1 && JSON.stringify(v.fama || []) !== fama0,
-      `«${ask.res ? ask.res.msg || ask.res.why : '-'}»: ${served} de ${quem.length} servidos, ${paidFor} canecas pagas pelo corpo; ${ties} com afeto pelo corpo; a fama ${JSON.stringify(v.fama || [])}`);
+      `«${ask.res ? ask.res.msg || ask.res.why : '-'}»${ask.res && ask.res.ok ? '' : ` (a entrada: ${JSON.stringify(mine() && { cv: mine().cv, seat: mine().seat, corpo: mine().corpo })}; o lugar: ${JSON.stringify(Po.useOf())}; dentro de #${v.inside}, a taverna #${PICK.b})`}: ${served} de ${quem.length} servidos, ${paidFor} canecas pagas pelo corpo; ${ties} com afeto pelo corpo; a fama ${JSON.stringify(v.fama || [])}`);
     watch(); ok('c14 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
     // ---------------- c15 a song asked, a coin to the musician, the game of bones ----------------
     if (on('c15')) {
       // (a moment for the round to be drunk and someone of the night to be one to play: the song is asked of who plays)
-      bad.length = 0; { const t9 = S().clock; while (S().clock - t9 < 40 && !(T.verbos(v) && T.verbos(v).musica.ok && Object.keys(OP().data.mesa).some(id => +id !== v.id && OP().data.mesa[id].g === mine().g && OP().data.mesa[id].st === 5))) fast(); }
+      bad.length = 0; { const t9 = S().clock; while (S().clock - t9 < 40 && !(T.verbos(v) && T.verbos(v).musica.ok && Object.keys(OP().data.mesa).some(id => +id !== v.id && OP().data.mesa[id].g === mine().g && OP().data.mesa[id].st >= 2 && OP().data.mesa[id].st <= 5))) fast(); }
       const vb2 = T.verbos(v); const mu = vb2.musica.ok ? vb2.musica.mu : null; const t2 = S().clock;
       const ask2 = mu ? Po.apply(w => T.musica(w, op)) : null; if (ask2) until(() => !!ask2.res, 2);
       const sabe = mu && ask2.res && ask2.res.ok && !ask2.res.nao; const coin = seen.filter(e => e.t >= t2 && e.c === 'musica' && e.k === 'moedas' && e.from === G.Eco.coinRef(v)).length;
@@ -372,7 +377,7 @@ if (on('c14') || on('c15')) {
         ok('c15 dar gorjeta ao músico: de bolsa em bolsa, pelo livro', !!ask3.res && ask3.res.ok && tip === 1, `«${ask3.res ? ask3.res.msg || ask3.res.why : '-'}»`); }
       // (the game of bones at the body's table — the test's hand starts one between two of the table, as the índole would —: in, a
       // throw, the stake from the loser to the winner at once; the same throw from the same moment, the same bones)
-      const d = OP().data; const me = d.mesa[v.id]; const two = Object.keys(d.mesa).map(Number).filter(id => id !== v.id && d.mesa[id].g === me.g && d.mesa[id].st === 5).slice(0, 2);
+      const d = OP().data; const me = d.mesa[v.id]; const two = Object.keys(d.mesa).map(Number).filter(id => id !== v.id && d.mesa[id].g === me.g && d.mesa[id].st >= 2 && d.mesa[id].st <= 5).slice(0, 2); // (at the table: waiting, drinking or between rounds)
       if (two.length >= 1 && G.Origem.matOK(G.Fac.idOfV(v), 'osso')) {
         god(() => { (d.jogo || (d.jogo = {}))[me.g] = { t0: S().clock, ate: S().clock + 30, quem: two.slice(), n: 0 }; });
         const a1 = Po.apply(w => T.jogar(w, op)); until(() => !!a1.res, 2); const snap = G.Save.serialize(); const t3 = S().clock;

@@ -43,11 +43,11 @@
   // ------------------------------ the trade's kit ------------------------------
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
-  // (P7, D-795: the knucklebones of the tavern's game and the keeper's rag — the place's too, the body's hands among them)
+  // (P7, D-805: the knucklebones of the tavern's game and the keeper's rag — the place's too, the body's hands among them)
   const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
-    // (the living tavern's acts, P7 D-796: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
+    // (the living tavern's acts, P7 D-806: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
     brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca' };
   // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
   // the people had, as the cup is of its clay or wood: P7, D-764)
@@ -592,7 +592,7 @@
     const cnt = Math.max(1, Math.floor((n === undefined ? (kind === 'flecha' ? 20 : 1) : n) + EPS));
     const have = o => (o.of && Or() ? Or().free(F, o.k, o.of) : D.free(F, o.k));
     const art = m => !It.METALS[m] || !!(arts && arts[m] !== undefined);
-    // (a thing of no good of the store — the bones of a carcass, a twist of straw: P7, D-795 — never comes out of one)
+    // (a thing of no good of the store — the bones of a carcass, a twist of straw: P7, D-805 — never comes out of one)
     const can = m => { const L = It.feitoDe(It.keyOf(kind, m)); return !!L && L.length > 0 && art(m) && L.every(o => have(o) + EPS >= r4(o.n * cnt)); };
     const need = key => (It.feitoDe(key) || []).map(o => ({ k: o.k, n: r4(o.n * cnt), of: o.of || null }));
     const m = mat || It.bestOf(kind, can);

@@ -33,7 +33,7 @@
 //  noite sobe ao estrado na hora dele e toca o instrumento do povo.
 //  Na hora de ir para casa, levanta e sai andando pela porta, que a
 //  taverna deixa aberta enquanto atende.
-//  A taverna viva (P7, D-790 a D-800): o pedido do corpo é da casa
+//  A taverna viva (P7, D-800 a D-810): o pedido do corpo é da casa
 //  — levantar não o desfaz; o taverneiro o deixa no lugar guardado e
 //  chama —; a carta é a prateleira e a origem; a casa lembra os
 //  fregueses de sempre e «o de sempre»; às mesas se brinda, se joga
@@ -376,7 +376,7 @@
     for (const id of Object.keys(d.mesa)) { const v = S.villagers.get(+id); if (!v) continue; finishCup(v, op); if (v.task && v.task.type === 'tavern' && v.task.op === op.id) G.Vg.endTask(v, { walk: 1 }); }
     d.mesa = {}; d.fila = []; d.mus = 0;
     // (what lies on the tables — the body's order waiting, a plate's rest —: back to the shelf, the rest to the slop; the vessels taken up;
-    // and the day's book into the house's memory of its regulars, D-790, D-794)
+    // and the day's book into the house's memory of its regulars, D-800, D-804)
     emptyTables(op, b, keeperOf(b)); if (b) remember(b, d);
     // (the cups the keeper was carrying go back to the shelf)
     for (const v of S.villagers.values()) if (v.carry && v.carry.op === op.id && v.carry.n > EPS && b) D.move('v:' + v.id, 'b:' + b.id, v.carry.k, v.carry.n, { op: op.id, code: 'taverna-volta', by: v.id, part: true });
@@ -401,7 +401,7 @@
     const S = S_(); const b = S.buildings.get(op.at); const d = op.data;
     if (!b || b.type !== 'taverna' || !b.built) return close(op, 'int', 'a taverna caiu');
     if (G.Village.facOfSet(b.set) !== op.fac) return close(op, 'int', 'a taverna mudou de dono');
-    // (the closing call, a little before the hour: the keeper calls, the tables get up and go out by the door — the sleepers woken —, D-797)
+    // (the closing call, a little before the hour: the keeper calls, the tables get up and go out by the door — the sleepers woken —, D-807)
     { const h = T.horas(b); if (!d.fecha && d.day === S.day && S.time >= h.fecha - T.FECHA) { d.fecha = r1(S.clock); if (Object.keys(d.mesa).some(id => !d.mesa[id].corpo)) { say(keeperOf(b), 'fechando', {}); tally(d, 'fechar', 'hora'); } } }
     if (d.day !== S.day || !inHours(b)) { if (Object.keys(d.mesa).length && !d.fecha) say(keeperOf(b), 'fechando', {}); return close(op, 'ok', 'fechou'); }
     // (no keeper of it any more — the trade given to someone else, the keeper gone — for half a minute: the tavern closes,
@@ -420,8 +420,8 @@
     const n = Object.keys(d.mesa).length; if (n > (d.mesas || 0)) d.mesas = n;
     // a cup set down where someone fell is spilt
     for (const o of (S.loose || []).slice()) if (o.op === op.id) D.use('g:' + o.id, o.k, o.n, { op: op.id, code: 'derramou' });
-    // (the tables' own life: the toast, the game, the talk — D-796, D-800)
-    alive(op, b);
+    // (the tables' own life: the toast, the game, the talk — D-806, D-810; the night's fire and light, burning what the house has — D-811)
+    alive(op, b); burn(op, b);
   }
 
   // ------------------------------ a round: served, paid, drunk ------------------------------
@@ -439,7 +439,7 @@
     const item = from0 ? brought(b, k0) : pickItem(b, m); if (item && dish0) item.dish = dish0;
     if (!item) { d.faltas++; say(v, 'acabou', { bem: m.want === 'food' ? 'a comida' : 'a bebida' }); m.out = 1; return { ok: false, why: 'Acabou.' }; }
     const key = 'tv:' + op.id + ':' + d.q;
-    // (a round the god's body paid for the table: from its coins, while it has them — D-798)
+    // (a round the god's body paid for the table: from its coins, while it has them — D-808)
     const pay = m.paga ? S.villagers.get(m.paga) : null; const payer = pay && coin(b) && canPay(pay, item.p) ? pay : c;
     const from = coin(b) ? E.coinRef(payer) : null;
     if (from && D.get(from, 'moedas') + EPS < item.p) { d.recusas++; say(c, 'sem_dinheiro', {}); m.out = 2; return { ok: false, why: 'Sem dinheiro para pagar.' }; }
@@ -470,7 +470,7 @@
     if (G.Urban) G.Urban.noteB(b, 'noite', 1); // (the life of the quarter: a round served)
     m.st = fed ? 4 : 3; m.k = item.k; m.cup = r1(S.clock); if (fed) taste(c, item.k, b);
     d.fila = d.fila.filter(id => id !== c.id);
-    // (the regular greeted by name with «o de sempre» — D-794)
+    // (the regular greeted by name with «o de sempre» — D-804)
     if (!self) { const sp = T.sempre(b, c); say(v, sp && sp.key === bk ? 'servir_sempre' : 'servir_taverna', { bem: item.dish || T.nome(item.k, b), nome: c.name }); }
     if (c.task && c.task.type === 'tavern' && c.task.op === op.id) { c.task.st = m.st; c.actT = 0; }
     return { ok: true, k: item.k, n: item.n, p: from ? item.p : 0 };
@@ -478,7 +478,7 @@
   T.serve = (op, v, c) => (G.inSim && op && live(op) ? serve(op, v, c) : { ok: false, why: '' });
   // (what was asked, of the shelf's — or the other thing on it on the first round)
   function pickItem(b, m) {
-    // (a regular's own drink, when the shelf has it — «o de sempre», D-794)
+    // (a regular's own drink, when the shelf has it — «o de sempre», D-804)
     if (m.want !== 'food' && m.sk && T.DOSE[m.sk] && D.free('b:' + b.id, m.sk) >= T.DOSE[m.sk] - EPS) return { k: m.sk, n: T.DOSE[m.sk], p: T.PRICE.drink };
     const menu = T.menu(b); const asked = m.want === 'food' ? menu.find(x => x.k === 'food') : menu.find(x => x.k !== 'food');
     return asked || (m.r === 0 ? menu[0] : null); // (on the first round one takes what there is; later, only what one wants)
@@ -531,6 +531,7 @@
   T.SELF = 12;  // (nobody at the counter this long: one serves oneself there)
   T.WAIT = 45;  // (waited this long for a round: one leaves unserved)
   const cupOf = v => T.CUP + T.CUPX * G.hash(Math.imul(v.id | 0, 61) + 41);
+  T.cupOf = cupOf; // (the seconds of the world one's cup lasts: the 3D reads how much is drunk by it, P5)
   // (at the table with someone to talk to: one at the same table — In.groupOf of the seats —, or a friend anywhere in the room)
   function company(v, b, op) {
     const d = op.data; const m = d.mesa[v.id]; if (!m) return false;
@@ -579,7 +580,7 @@
       if (rIdx && rS === S && rT === S.clock && rIdx.has(b.id)) rIdx.set(b.id, rIdx.get(b.id) - 1);
       if (gIdx && gS === S && gT === S.clock && gIdx.has(b.id)) { const e = gIdx.get(b.id); e.coming = Math.max(0, e.coming - 1); e.way = e.way.filter(o => o !== v); e.at.push(v); }
       d.mesa[v.id] = { t: r1(S.clock), r: 0, want: want(v, b), st: 1, it: pl ? pl.item : 0, q: pl ? pl.q : -1, g: pl && In.groupOf ? In.groupOf(b, pl.item) : 0, nx: 0, cup: 0 };
-      // (a regular's own drink, the house remembers — and tonight's visit, in the day's book: D-794)
+      // (a regular's own drink, the house remembers — and tonight's visit, in the day's book: D-804)
       { const sp = T.sempre(b, v); if (sp && sp.k && sp.k !== 'food') d.mesa[v.id].sk = sp.k; book(d, v.id, null); }
       t.st = 1; v.actT = 0; return;
     }
@@ -589,12 +590,12 @@
       say(v, 'pedir_taverna', { bem: m.want === 'food' ? T.dish(b) : T.nome(drinkOn(b) || 'cerveja') });
       return order(v, t, b, op);
     }
-    // (the closing call: up and out by the door, each a moment after the other — the one dozing woken first —, D-797)
+    // (the closing call: up and out by the door, each a moment after the other — the one dozing woken first —, D-807)
     if (d.fecha && t.st !== 6 && S.clock >= d.fecha + T.SAI * G.hash(Math.imul(v.id | 0, 89) + 7)) { if (m.zz) m.zz = 0; return leave(v, t, op, H); }
     if ((sleepy(v) && !m.zz) || !inHours(b)) return leave(v, t, op, H);
     if (t.st === 6) return playing(v, t, b, op, dt, H);
     if (t.st === 7 || t.st === 8) return selfServe(v, t, b, op, dt, H);
-    if (t.st === 9) { // dancing by the stage while the song is on (D-796); the song over, or worn out, back to one's seat — kept for one
+    if (t.st === 9) { // dancing by the stage while the song is on (D-806); the song over, or worn out, back to one's seat — kept for one
       v.act = 'danca'; t.pose = undefined; life(v, t, b, op, dt);
       if (musicOn(op) && v.energy > T.DANCA_E - 12 && !brawls.has(v.id)) return;
       t.use = m.use || 'sentar'; t.near = null; t.st = 5; m.st = 5; m.nx = r1(S.clock + T.TALK); v.actT = 0; return;
@@ -606,7 +607,7 @@
     if (t.st === 2) { // at the table, waiting to be served
       if (v.carry && v.carry.op === op.id) { t.st = 3; v.actT = 0; m.st = 3; m.cup = r1(S.clock); return; }
       v.act = sit; t.pose = talk ? 'sittalk' : undefined; t.wt = (t.wt || 0) + dt;
-      // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-796)
+      // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-806)
       if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : musicOn(op) && !d.fecha ? listen(v, m, d) : ''; if (a === 'jogo-ossos') v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); }
       // (nobody at the counter for a while — the keeper away —: one gets up, walks to the counter, serves oneself there and pays
       // as to the keeper, and walks back to one's seat, kept — L-1930; a tavern with no buyer's place at its counter, at the table)
@@ -624,12 +625,13 @@
       // (the first draught as the cup comes, one at its middle, the last at its end; the talk of the table between)
       const drinking = food || a < sip || (a >= dur / 2 && a < dur / 2 + sip * 0.5) || a >= dur - sip * 0.5;
       v.act = drinking ? (food ? AN.comerMesa.act : AN.beber.act) : sit; t.pose = food ? 'eat' : talk ? 'sittalk' : undefined; // (the plate on the table, the hand from it to the mouth: D-769)
-      // (the toast of the friends at the table, the cups raised together: a round just come, or one of them just sat down — D-796)
+      if (food) m.comido = r2(Math.min(1, a / dur)); // (how much of the plate is eaten, by the meal's time: P5)
+      // (the toast of the friends at the table, the cups raised together: a round just come, or one of them just sat down — D-806)
       { const br = !food && d.brinde && m.g ? d.brinde[m.g] : null; if (br && S.clock - br.t < T.BRINDE && br.quem.includes(v.id)) v.act = 'brinde';
         else if (!food && musicOn(op) && listen(v, m, d) === 'cantar-junto') v.act = shown(d, m, 'cantar-junto'); }
       life(v, t, b, op, dt);
       if (a < dur) return;
-      { const part = food && OR() ? OR().next('v:' + v.id, 'food') : null; if (finishCup(v, op)) leaveVessel(d, m, v, food ? 'prato' : 'caneca', part, 0, 0); } m.r++;
+      { const part = food && OR() ? OR().next('v:' + v.id, 'food') : null; const k0 = c.k; if (finishCup(v, op)) leaveVessel(d, b, m, v, k0, part, 0, 0); delete m.comido; } m.r++;
       if (S.time < T.leaveOf(v, b) - T.MIN && again(v, b, m)) return order(v, t, b, op);
       t.st = 5; m.st = 5; m.nx = r1(S.clock + T.TALK); v.actT = 0; return;
     }
@@ -644,7 +646,7 @@
     if (t.st === 5) { // at the table between rounds: the talk; now and then, another round — or home, with nobody to talk to
       v.act = sit; t.pose = talk ? 'sittalk' : undefined;
       life(v, t, b, op, dt);
-      // (what one does between the rounds, by its cause — the doze, the bones, the song, the coin to the musician: D-796)
+      // (what one does between the rounds, by its cause — the doze, the bones, the song, the coin to the musician: D-806)
       if (t.st === 5 && d.mus !== v.id && !brawls.has(v.id) && !(d.expulsa && d.expulsa.b === v.id) && !(v.carry && v.carry.n > EPS)) { const a = mood(v, t, b, op, m); if (a) { v.act = a; if (a === 'cochilo') t.pose = undefined; if (t.st === 9) return; } }
       if (m.zz) return; // (dozing: no round more, no going home at one's hour — till the closing, or one wakes)
       if (S.clock < (m.nx || 0)) return;
@@ -669,13 +671,13 @@
   T.musHour = v => 0.62 + 0.08 * G.hash(Math.imul(v.id | 0, 71) + 47);
   function life(v, t, b, op, dt) {
     const S = S_(); const d = op.data; const night = G.isNight() || G.isEvening();
-    // (put out by the keeper: the two of the act — D-799)
+    // (put out by the keeper: the two of the act — D-809)
     if (d.expulsa && d.expulsa.b === v.id) { v.act = 'expulsar'; const k = S.villagers.get(d.expulsa.a); if (k) G.faceTo(v, k.x - v.x, k.y - v.y); return; }
     if (night && !d.mus && S.clock >= (d.musT || 0) && t.st === 5) {
       // (once a look of the musician's own seat: the room of two or more, and the best of who would play there now)
       let n = 0, best = null, bs = T.MUSE;
       for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (m.body) continue; n++; const o = S.villagers.get(+id); if (!o || m.st !== 5 || !o.task || o.task.type !== 'tavern' || S.time < T.musHour(o)) continue; const s = muse(o); if (s > bs) { bs = s; best = o; } }
-      if (n >= 2 && best === v) startSet(v, t, b, op); // (two at the tables: someone to play to — the living tavern, D-796)
+      if (n >= 2 && best === v) startSet(v, t, b, op); // (two at the tables: someone to play to — the living tavern, D-806)
       else if (n >= 2 && !best) d.musT = r1(S.clock + T.TALK);
     }
     const br = brawls.get(v.id);
@@ -684,7 +686,7 @@
       if (!o || br.t < S.clock) { brawls.delete(v.id); return; }
       // (with the fists, not a weapon: the shove and the blow of two at a table — the kit puts the sword in the hand of «fight», P7)
       v.act = 'shove'; G.faceTo(v, o.x - v.x, o.y - v.y);
-      if (G.R() < dt * 1.5) { if (o.hp > 25) { G.Vg.damage(o, 2, 'brawl'); blood(op, br); } o.stagT = S.clock + 0.3; G.Audio && G.Audio.at(v.x, v.y, 'hit'); }
+      if (G.R() < dt * 1.5) { if (o.hp > 25) { G.Vg.damage(o, 2, 'brawl'); blood(op, br); if (G.R() < T.DERRUBA) spill(op, b, o); } o.stagT = S.clock + 0.3; G.Audio && G.Audio.at(v.x, v.y, 'hit'); }
       return;
     }
     // (a fight has a cause: how quarrelsome the drunk one is, and whom of the drunk at the tables he dislikes — G.Convivio, 22b D-581)
@@ -697,7 +699,7 @@
     }
   }
   // (a brawl between two at the tables: who started it — a, the drunk one —, the time it lasts, the world's chance as it always was; the
-  // first blow that lands is its first blood, and the keeper may put the one who started it out, D-799)
+  // first blow that lands is its first blood, and the keeper may put the one who started it out, D-809)
   function brawl(v, o, b, op) {
     const S = S_(); const cv = G.Convivio;
     const until = S.clock + G.rr(4, 7); brawls.set(v.id, { with: o.id, t: until, a: v.id }); brawls.set(o.id, { with: v.id, t: until, a: v.id });
@@ -706,6 +708,17 @@
     G.Vg.emote(v, 'angry', 3); G.Vg.emote(o, 'angry', 3);
     const set = S.settlements.get(b.set);
     if (G.R() < 0.35 || !(set && set._brawl)) { if (set) set._brawl = S.day; G.Village.log(G.pick([`Briga na taverna de ${set ? set.name : ''}: ${v.name} e ${o.name} beberam demais e saíram no braço.`, `${v.name} acusou ${o.name} de roubar no jogo de dados. A taverna de ${set ? set.name : ''} virou ringue.`, `Uma jarra voou na taverna de ${set ? set.name : ''}: ${v.name} e ${o.name}, bêbados, foram separados à força.`]), 'war', b.x, b.y); }
+  }
+  // (the cup knocked out of the hand of who is hit in a brawl: the drink spilt — by the ledger, «derramou» —, the cup on the floor by the
+  // seat — of clay it breaks, of wood it rolls whole: the 3D says which by the people's ware — and the spill; until the keeper wipes them,
+  // D-749. Kept in the day's book in the form the 3D reads, op.data.chao: [{ k: 'cacos' | 'poca', x, z, lv, bebida, n }])
+  T.DERRUBA = 0.35;
+  function spill(op, b, o) {
+    const c = o.carry; if (!c || c.op !== op.id || c.k === 'food' || !(c.n > EPS)) return; const m = op.data.mesa[o.id]; const In = G.Interiors; const pl = In && In.placeOf ? In.placeOf(o) : null;
+    const r = D.use('v:' + o.id, c.k, c.n, { op: op.id, code: 'derramou', by: o.id, mine: true, part: true }); if (!r.ok || !pl) return;
+    const L = chaoOf(op.data); if (L.length >= 12) L.splice(0, 2); const h = G.hash(Math.imul(o.id | 0, 97) + L.length * 13 + 5) * 6.283; const at = m && m.it ? { it: m.it, q: m.q, g: m.g || 0 } : {};
+    L.push(Object.assign({ k: 'cacos', x: r2(pl.x + Math.cos(h) * 0.35), z: r2(pl.z + Math.sin(h) * 0.35), lv: pl.lv || 0, bebida: c.k, n: 1, t: r1(S_().clock) }, at));
+    L.push(Object.assign({ k: 'poca', x: r2(pl.x + Math.cos(h) * 0.55), z: r2(pl.z + Math.sin(h) * 0.55), lv: pl.lv || 0, bebida: c.k, n: r2(0.6 + r.n / (T.DOSE[c.k] || r.n) * 0.6), t: r1(S_().clock) }, at));
   }
   function blood(op, br) { const d = op.data; if (!d.briga && br && br.a) { const w = brawls.get(br.a); d.briga = { a: br.a, b: w ? w.with : 0, t: r1(S_().clock), k: 0 }; } }
   // (the god's hand — or a proof's —: two at the tables come to blows now, the first one the starter)
@@ -745,7 +758,7 @@
     v.act = AN.tocar.act; t.pose = undefined;
     if (G.VR() < dt * 0.8 && G.FX && G.FX.floater) G.FX.floater(v.x + G.vrr(-0.2, 0.3), v.y - 0.1, G.vpick(['♪', '♫']), '#ffe9a8', 1.6);
     if (S.clock < t.me && (G.isNight() || G.isEvening())) return;
-    // (the set over: the coins of who liked it thrown to the musician, D-796; back to one's seat, and a rest before the next)
+    // (the set over: the coins of who liked it thrown to the musician, D-806; back to one's seat, and a rest before the next)
     tips(op, b, v); if (d.pedida && d.pedida.mus === v.id) delete d.pedida;
     t.use = m.use || 'sentar'; t.st = 5; m.st = 5; m.nx = r1(S.clock + T.TALK); d.mus = 0; d.musT = r1(S.clock + T.REST); v.actT = 0;
   }
@@ -773,6 +786,11 @@
     if (food < want - 1 && (f.stock.food || 0) >= 16) cands.push({ k: 'food', n: want - food, of: grain });
     if (bw === 'pulque' && D.get(ref, 'aguamiel') < 4 && D.free('f:' + f.id, 'aguamiel') >= 1) cands.push({ k: 'aguamiel', n: 4 - D.get(ref, 'aguamiel') });
     for (const k of [d.k, d.alt]) if (k && !BREW[k] && D.get(ref, k) < T.DOSE[k] * 4 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 2 }); break; }
+    // (and what the night burns, D-811: the wood of the fire, the wax of the candle, the oil of the lamp — what the store has of them; bought
+    // before the doors open, never leaving the counter in the evening for it)
+    if (!T.aberta(b) && D.get(ref, 'wood') < T.LENHA_N && D.free('f:' + f.id, 'wood') >= 4) cands.push({ k: 'wood', n: T.LENHA_N + 1 - D.get(ref, 'wood') });
+    if (!T.aberta(b) && D.get(ref, 'cera') < VELA() * 2 && D.free('f:' + f.id, 'cera') >= 1) cands.push({ k: 'cera', n: 1 });
+    if (!T.aberta(b)) for (const k of OIL) if (D.get(ref, 'azeite') + D.get(ref, 'oleo') < T.OLEO * 2 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 1 }); break; }
     for (const c of cands) {
       const n = Math.floor(Math.min(c.n, c.of ? OR().free('f:' + f.id, c.k, c.of) : D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);
       if (n < 1) continue;
@@ -830,12 +848,12 @@
     }
     if (G.Vg.entering(v) || S.clock < (t.ww || 0)) { v.act = ''; return; } // (walking: from the door, to a table, back)
     if (t.st === 1) {
-      v.act = d.fecha && S.clock - d.fecha < T.FECHA_ATO ? 'fechar' : AN.servir.act; // (the closing called from the counter, D-797)
+      v.act = d.fecha && S.clock - d.fecha < T.FECHA_ATO ? 'fechar' : AN.servir.act; // (the closing called from the counter, D-807)
       // (cups or a plate of this day in the hands, for nobody's round — a save in the middle of one —: back to the shelf first. With
       // them the next round's cups did not fit his hands, and every guest after was told «acabou» all night: L-1932)
       if (v.carry && v.carry.op === op.id && v.carry.n > EPS) D.move('v:' + v.id, 'b:' + b.id, v.carry.k, v.carry.n, { op: op.id, code: 'taverna-volta', by: v.id, part: true });
       // (a brawl at the tables past its first blood: the keeper puts out the one who started it — if he is one who would, by his índole
-      // and his strength —, before anything else, D-799)
+      // and his strength —, before anything else, D-809)
       { const br = d.briga; if (br && !br.k) { const o = S.villagers.get(br.a); br.k = -1;
         if (o && brawls.has(o.id) && d.mesa[o.id] && brave(v)) { br.k = v.id; t.ex = o.id; t.corpo = null; t.cust = null; walkTo(v, t, b, o.id); t.st = 30; tally(d, 'expulsar', 'briga'); return; } } }
       // (the god's body at a table, calling — or its order nobody is fetching —: to it before the guests of the world, D-767)
@@ -846,7 +864,7 @@
         walkTo(v, t, b, cb.id); t.st = 10; return;
       }
       // (the body's order gone cold on a table: taken back first; the tables waiting to be cleared, between rounds every T.CHORE_N of
-      // them on a busy night — D-790, D-796)
+      // them on a busy night — D-800, D-806)
       { const ch = choreOf(b, op); if (ch && (ch.kind === 'volta' || (d.fila.length && (t.n || 0) - (t.nc || 0) >= T.CHORE_N))) { t.ch = ch; t.nc = t.n || 0; walkTo(v, t, b, ch.near); t.st = 20; return; } }
       const id = d.fila.find(q => d.mesa[q] && d.mesa[q].st === 2 && !d.mesa[q].body);
       const body = !id && d.fila.find(q => d.mesa[q] && d.mesa[q].body);
@@ -854,7 +872,7 @@
       if (!id && !body) {
         t.wt = (t.wt || 0) + dt;
         // (nobody waiting: the body's order cold on a table taken back; a table left with its cups and plates cleared and wiped; the
-        // empty cups of a table taken up — D-790, D-796)
+        // empty cups of a table taken up — D-800, D-806)
         if (t.wt > T.CHORE_WAIT) { const ch = choreOf(b, op); if (ch) { t.ch = ch; t.nc = t.n || 0; walkTo(v, t, b, ch.near); t.st = 20; return; } }
         if (t.wt > (t.idle ? 25 : 8)) { const f = G.Fac.ofV(v); if (!(f && T.task(v, b, f, H, true))) return H.end(v); } return;
       }
@@ -863,7 +881,7 @@
       if (body) { t.st = 7; t.cust = [c.id]; v.actT = 0; return; }
       const m = d.mesa[c.id]; const item = pickItem(b, m);
       if (!item) { d.faltas++; say(v, 'acabou', { bem: m.want === 'food' ? 'a comida' : 'a bebida' }); m.out = 1; d.fila = d.fila.filter(q => q !== c.id); return; }
-      // (a regular whose own drink the shelf is out of: said so, by name, and the other one brought — D-794)
+      // (a regular whose own drink the shelf is out of: said so, by name, and the other one brought — D-804)
       if (m.sk && m.want !== 'food' && item.k !== 'food' && item.k !== m.sk) say(v, 'sempre_acabou', { nome: c.name, bem: THE[m.sk] || 'a bebida de sempre', outro: T.nome(item.k) });
       // (the others waiting at the same table for the same thing: one walk for all of them)
       const g = m.g || 0; const L = [c.id];
@@ -904,7 +922,7 @@
         v.act = 'listen'; faceTo(v, c);
         const L = cartaOf(b).filter(x => x.ok).slice(0, 2).map(x => x.nome); const bem = L.length > 1 ? L.join(' e ') : L[0] || 'pouca coisa';
         const hi = G.Falas ? G.Falas.hello(v).replace('Bom dia!', S.time >= 0.72 ? 'Boa noite!' : 'Boa tarde!') : ''; // (the evening's greeting)
-        // (a regular of the house: by name, «o de sempre» — or, out of it today, said so and another thing offered — D-794)
+        // (a regular of the house: by name, «o de sempre» — or, out of it today, said so and another thing offered — D-804)
         const sp = T.sempre(b, c); const its = cartaOf(b); const us = sp && sp.key ? its.find(x => keyOf(x) === sp.key || (sp.k === 'food' && x.k === 'food' && [].concat(x.of || []).includes(sp.of))) : null;
         const alt = its.find(x => x.ok && x !== us);
         m.ola = (m.falta ? say(v, 'carta_falta', { bem: m.falta }) : sp && sp.key && us && us.ok ? say(v, 'carta_sempre', { nome: c.name, bem: G.cap(us.nome) })
@@ -933,7 +951,7 @@
       if (!mineM || m.cv !== 'pedido' || !m.pedido) return corpoBack(v, t, b);
       v.act = AN.entregar.act; faceTo(v, c); if (v.actT < AN.entregar.contact) return;
       delete m.vem; const p = m.pedido;
-      // (the body up from its seat — or out of the house —: the order set down at the seat kept for it, and the call, D-790)
+      // (the body up from its seat — or out of the house —: the order set down at the seat kept for it, and the call, D-800)
       if ((!m.seat || c.inside !== b.id) && m.guarda) return setDown(op, b, v, t, m, c);
       if (c.carry && c.carry.n > EPS) { m.cv = 'entre'; m.srv = 0; m.st = 5; m.mao = r1(S.clock); delete m.pedido; delete m.guarda; return corpoBack(v, t, b); }
       if (coin(b) && !canPay(c, p.k === 'food' ? T.PRICE.food : T.PRICE.drink)) { m.cv = 'entre'; m.srv = 0; m.st = 5; m.sem = r1(S.clock); delete m.pedido; delete m.guarda; return corpoBack(v, t, b); }
@@ -942,16 +960,16 @@
       delete m.guarda;
       m.srv = 0; delete m.pedido; return corpoBack(v, t, b);
     }
-    // the keeper's chores (D-790, D-796): st 20 on the way to the table, 21 at it — the cold order taken back, the table cleared and
+    // the keeper's chores (D-800, D-806): st 20 on the way to the table, 21 at it — the cold order taken back, the table cleared and
     // wiped, the empty cups taken up —, and the walk back (st 5)
     if (t.st === 20) { t.st = 21; v.actT = 0; return; }
     if (t.st === 21) {
       const ch = t.ch; if (!ch) return corpoBack(v, t, b);
-      v.act = ch.kind === 'volta' ? AN.servir.act : ch.kind === 'limpar' ? 'limpar-mesa' : 'recolher-canecas';
+      v.act = ch.kind === 'volta' ? AN.servir.act : ch.kind === 'limpar' || ch.kind === 'chao' ? 'limpar-mesa' : 'recolher-canecas';
       if (v.actT < (ch.kind === 'volta' ? AN.servir.contact : T.CHORE)) return;
       chore(op, b, v, ch); t.ch = null; return corpoBack(v, t, b);
     }
-    // the brawler put out (D-799): st 30 on the way to him, 31 the act of the two — and out by the door he goes, not to come back tonight
+    // the brawler put out (D-809): st 30 on the way to him, 31 the act of the two — and out by the door he goes, not to come back tonight
     if (t.st === 30) { const o = S.villagers.get(t.ex); if (!o || !d.mesa[o.id]) { delete d.expulsa; return corpoBack(v, t, b); } t.st = 31; v.actT = 0; d.expulsa = { a: v.id, b: o.id, t: r1(S.clock) }; return; }
     if (t.st === 31) {
       const o = S.villagers.get(t.ex); if (!o || !d.mesa[o.id]) { delete d.expulsa; return corpoBack(v, t, b); }
@@ -1014,7 +1032,7 @@
   // (what each dish is, as its line says it — by what it is made of, and where that came from: of the people's own work — the catch, the
   // fields, the slaughter or the hunt, the cows, the hens, the garden, the trees (G.Origem.madeBy: «do dia» only when it was today) —,
   // or come from elsewhere, the people making none of it in the T.FRESCO days and more its record covers (by the trade, a gift, a raid);
-  // with no record of the people long enough — a save of before —, only what it is. D-793: nothing said that the world does not say)
+  // with no record of the people long enough — a save of before —, only what it is. D-803: nothing said that the world does not say)
   T.FRESCO = 4;
   const DESC_FOOD = { peixe: 'peixe cozido', marisco: 'mariscos cozidos', carne: 'carne assada na brasa', arroz: 'arroz cozido', trigo: 'pão de trigo com caldo quente', cevada: 'caldo grosso de cevada', milho: 'tortilhas de milho, quentes', sorgo: 'mingau de sorgo', horta: 'sopa de legumes', ovos: 'ovos cozidos', leite: 'coalhada fresca', fruta: 'frutas', mel: 'pão com mel', azeite: 'pão com azeite', provisao: 'das provisões guardadas', '?': 'o que a cozinha tem hoje' };
   const OWN_FOOD = { peixe: 'peixe do dia, da pesca do povo', marisco: 'mariscos da praia, catados pelo povo', carne: 'carne do abate e da caça do povo, assada na brasa', arroz: 'arroz das lavouras do povo', trigo: 'pão do trigo das lavouras do povo, com caldo', cevada: 'caldo da cevada das lavouras do povo', milho: 'tortilhas do milho das roças do povo', sorgo: 'mingau do sorgo das lavouras do povo', horta: 'sopa dos legumes das hortas do povo', ovos: 'ovos das galinhas do povo', leite: 'coalhada do leite dos currais do povo', fruta: 'frutas dos pomares e do mato, colhidas pelo povo', mel: 'pão com o mel das colmeias do povo', azeite: 'pão com o azeite do povo' };
@@ -1042,7 +1060,7 @@
   }
   T.meansOf = meansOf;
   T.descFood = (b, t) => descFood(G.Village.facOfSet(b.set), t);
-  // (what each drink is: the beer of the house's vat by the grain it was brewed of — b.malte, D-792 —, or the people's store's; the pulque
+  // (what each drink is: the beer of the house's vat by the grain it was brewed of — b.malte, D-802 —, or the people's store's; the pulque
   // of the agave's sap; the wine and the mead of the store)
   function descDrink(b, k, brew) {
     if (k === 'cerveja') { const g = T.malte(b); const nm = g && OR().FOOD[g] ? OR().FOOD[g].nome : ''; if (nm) return `cerveja de ${nm} da casa, da cuba`; return brew === 'cerveja' && b.malte && b.malte['?'] ? 'cerveja do armazém do povo' : brew === 'cerveja' ? 'cerveja da casa' : 'cerveja do armazém do povo'; }
@@ -1051,7 +1069,7 @@
     if (k === 'vinho') return 'vinho das ânforas do armazém do povo';
     return 'do armazém do povo';
   }
-  // the menu of the house (D-768, D-793), as its screen says it — only what is there, nothing made up: each drink on the shelf, and the
+  // the menu of the house (D-768, D-803), as its screen says it — only what is there, nothing made up: each drink on the shelf, and the
   // people's own drink «não há» only where the house makes it or the store has it to buy (an Aztec tavern with no agave says nothing of
   // a pulque it never had); each dish of the shelf's food by its part (the rice only with rice on the shelf, the fish only with fish),
   // the parts said alike as one dish, with where it came from; the plate of the day «não há» when the kitchen has nothing; the house's
@@ -1099,8 +1117,8 @@
     if (!b || b.type !== 'taverna' || !b.built) return null; const op = T.dia(b); if (!op || !live(op)) return null;
     const d = op.data; const m = d.mesa[v.id] && d.mesa[v.id].corpo ? d.mesa[v.id] : null; const u = bodyUse(b);
     const k = keeperOf(b); const can = !!k && k !== v && atHand(k); const c = holding(v, op) ? v.carry : null;
-    // (the order on the table, D-790: what it is, still hot or not, and whether the body is on the seat kept for it; the keeper's call;
-    // the regular's «o de sempre», D-794)
+    // (the order on the table, D-800: what it is, still hot or not, and whether the body is on the seat kept for it; the keeper's call;
+    // the regular's «o de sempre», D-804)
     const x = m && m.cv === 'mesa' ? naOf(d).find(q => q.id === m.na) : null;
     const mesa = x ? { nome: m.prato || T.nome(x.k, b), k: x.k, food: x.k === 'food', quente: S.clock - x.t < T.QUENTE, aqui: !!u && !!m.guarda && u.it === m.guarda[0] && u.q === m.guarda[1] } : null;
     return { op: op.id, b: b.id, open: T.aberta(b), cv: m ? m.cv : null, ck: m ? m.ck || 0 : 0, srv: m ? m.srv || 0 : 0, seat: !!u, it: u ? u.it : 0, mesa, guarda: !!(m && m.guarda), ch: m ? m.ch || 0 : 0, chegou: m ? m.chegou || '' : '', sempre: T.sempre(b, v), frio: m ? m.frio || 0 : 0,
@@ -1116,11 +1134,11 @@
     return { t: r1(S.clock), r: 0, want: 'drink', st: has ? 3 : 1, body: 1, corpo: 1, cv: has ? 'servido' : 'chama', srv: 0, ck: 0, seat: u ? 1 : 0, it: u ? u.it : 0, q: u ? u.q : -1, g: u ? groupOf(b, u.it) : 0, nx: 0, cup: has ? r1(S.clock) : 0, cs: r1(S.clock) };
   }
   // the body's entry, each second of the world (tick): made when it sits down, its seat followed. The body's order is the house's
-  // (D-790): up from the seat — or out of the house — it stays in the day's book with the seat kept for the body (In.keepRule); the
+  // (D-800): up from the seat — or out of the house — it stays in the day's book with the seat kept for the body (In.keepRule); the
   // keeper brings it all the same and, the body not on its seat, sets it down there and calls; sat down again, it is handed over and
   // paid there, once; the body gone from the house, the order waits on the table a while — the food cooling, T.QUENTE —, and after
   // T.FORA the keeper takes it back to the shelf, nothing paid. Let go: up with nothing of the house in the hands and nothing asked, or
-  // out of the house (what it held of the house set down at its seat — a plate's rest —, D-791); the keeper who had its order still on
+  // out of the house (what it held of the house set down at its seat — a plate's rest —, D-801); the keeper who had its order still on
   // it, or the order called again; the menu waited out; the keeper called, or the counter said
   const pending = m => m.cv === 'pedido' || m.cv === 'mesa';
   function corpoTick(op, b) {
@@ -1142,11 +1160,11 @@
         if (m.cv === 'entre' && !has) { m.cv = 'chama'; m.cs = r1(S.clock); m.so = 0; }
         if (m.cv === 'pedido') m.guarda = [u.it, u.q, m.g]; // (the order on its way follows the body to its new seat)
       }
-      // (back on the seat its order waits at: handed over now, paid there, once — D-790)
+      // (back on the seat its order waits at: handed over now, paid there, once — D-800)
       if (m.cv === 'mesa' && m.guarda && m.guarda[0] === u.it && m.guarda[1] === u.q) atSeatAgain(op, b, v, m);
     } else if (m.seat) {
       m.seat = 0; m.it = 0; m.q = -1; m.g = 0;
-      // (up from the seat with nothing of the house in the hands and nothing asked: off the tables — the order asked stays, D-790)
+      // (up from the seat with nothing of the house in the hands and nothing asked: off the tables — the order asked stays, D-800)
       if (!has && m.srv !== -1 && !pending(m)) { delete d.mesa[v.id]; return; }
       if (m.cv === 'carta' && m.srv > 0) { m.cv = has ? 'servido' : 'entre'; m.srv = 0; m.st = has ? 3 : 5; } // (the menu shut by getting up)
     }
@@ -1167,7 +1185,7 @@
   // (where the keeper stands to hand the body its order: by the body on its seat, else by the seat kept for it — In.places)
   const nearOf = (m, id) => (m.seat || !m.guarda ? id : [m.guarda[0], m.guarda[1]]);
   // (the order set down at the body's seat, the body not on it: from the keeper's hands onto the table — the house's still, unpaid —,
-  // and the call from where he is, the body's name as he knows it — D-790)
+  // and the call from where he is, the body's name as he knows it — D-800)
   T.QUENTE = 14;  // (seconds of the world a plate set down keeps its steam)
   T.FORA = 30;    // (seconds of the world the order waits on the table after the body left the house — and after it was set down)
   function setDown(op, b, v, t, m, c) {
@@ -1197,12 +1215,12 @@
     m.cv = 'servido'; m.st = 3; m.cup = r1(S.clock); m.want = x.k === 'food' ? 'food' : x.k; m.frio = hot ? 0 : 1; m.pof = (Array.isArray(of) ? of[0] : of) || null; delete m.na; delete m.guarda; delete m.sem; delete m.mao;
   }
   // (out of the house with the house's cup or plate in the hands: set down at its last seat — the rest of it on the table, for the
-  // keeper to clear (D-791) —; with no seat known, the rest is spilt, as it was)
+  // keeper to clear (D-801) —; with no seat known, the rest is spilt, as it was)
   function leaveOn(op, b, w, m) {
     const S = S_(); const c = w.carry; const food = c.k === 'food'; const u = m.ult;
     const part = food && OR() ? OR().next('v:' + w.id, 'food') : null;
     if (u && u[0]) { const id = S.nextId++; const r = D.move('v:' + w.id, 't:' + op.id, c.k, c.n, { op: op.id, code: 'sobra-mesa', by: w.id, mesa: { id, it: u[0], q: u[1], g: u[2], who: w.id, kind: 'sobra', of: part } });
-      if (r.ok) { leaveVessel(op.data, { it: u[0], q: u[1], g: u[2] }, w, food ? 'prato' : 'caneca', part, id, food ? c.n : c.n / (T.DOSE[c.k] || c.n)); return; } }
+      if (r.ok) { leaveVessel(op.data, b, { it: u[0], q: u[1], g: u[2] }, w, c.k, part, id, food ? c.n : c.n / (T.DOSE[c.k] || c.n)); return; } }
     D.use('v:' + w.id, c.k, c.n, { op: op.id, code: 'sobra', by: w.id, mine: true });
   }
   // (the next of the body's to see to, for a keeper at the counter: its call at a table, or its order nobody is fetching)
@@ -1234,7 +1252,7 @@
     }
     const kp = S.villagers.get(m.srv);
     m.pedido = { k, of: it.of || null, nome: it.nome }; m.cv = 'pedido'; m.st = 2; m.want = k === 'food' ? 'food' : k;
-    if (m.seat) m.guarda = [m.it, m.q, m.g]; // (the seat kept for the order while it is on its way — and on the table: D-790)
+    if (m.seat) m.guarda = [m.it, m.q, m.g]; // (the seat kept for the order while it is on its way — and on the table: D-800)
     if (kp) { say(kp, 'pedido_ok', { bem: it.nome }); if (G.Possess.dealt) G.Possess.dealt({ to: kp.id }); } // (face to face: the two have met)
     return { ok: true, k, msg: kp ? `${G.cap(G.Possess.knows.call(v, kp))} vai buscar ${it.nome}.` : 'Pedido feito.' };
   };
@@ -1285,24 +1303,27 @@
     const r = D.use('v:' + v.id, k, n, { op: op.id, code: food ? 'refeicao' : 'bebida', by: v.id, mine: true, part: true });
     if (!r.ok) return { ok: false, why: 'Não deu.' };
     if (food) v.hunger = Math.max(0, v.hunger - 35 * r.n);
-    const left = holding(v, op) ? v.carry.n : 0; const last = !(left > EPS);
+    const left = holding(v, op) ? v.carry.n : 0; const last = !(left > EPS); if (food) m.comido = r2(1 - left); // (how much of the plate is eaten: P5)
     if (last) {
       if (food) m.pr = (m.pr || 0) + 1; else { taste(v, k, b); m.r++; }
-      if (m.seat) leaveVessel(op.data, m, v, food ? 'prato' : 'caneca', food ? m.pof || null : null, 0, 0); // (the cup drunk, the plate scraped, left on the table)
+      if (m.seat) leaveVessel(op.data, b, m, v, k, food ? m.pof || null : null, 0, 0); // (the cup drunk, the plate scraped, left on the table)
+      delete m.comido;
       m.cv = 'entre'; m.st = 5; m.nx = r1(S_().clock + T.TALK); G.Possess.deed(food ? 'refeicao' : 'rodada');
     }
     return { ok: true, k, food, last, left };
   };
 
-  // ------------------------------ what stays on the tables (D-790, D-791) ------------------------------
+  // ------------------------------ what stays on the tables (D-800, D-801) ------------------------------
   // The tables of a tavern's day are a holder of the ledger ('t:' and the day's id): what lies on them — the body's order set down at
   // its seat while it was up, a plate left half eaten — is there by the ledger, each thing at its seat (the piece and its place, the
   // table), until a hand takes it: the body sitting down again (paid there), the keeper taking it back to the shelf (nothing paid), or
   // the keeper clearing a plate's rest (the slop, «sobra»). The vessels emptied and left on a table — the cups drunk, the plates scraped
-  // — are the day's own list (d.deixa): the cup and the plate are the house's, of its kit (D-612), never goods of the ledger; the keeper
-  // takes them up. Only this file writes the tables (rule 330); the 3D reads them by T.mesas (P5)
+  // — are the day's own list (d.sujo, the form the 3D reads: P5): the cup and the plate are the house's, of its kit (D-612), never goods
+  // of the ledger; the keeper
+  // takes them up. Only this file writes the tables (rule 340); the 3D reads them by T.mesas (P5)
   const naOf = d => (Array.isArray(d.na) ? d.na : (d.na = []));
-  const deixaOf = d => (Array.isArray(d.deixa) ? d.deixa : (d.deixa = []));
+  const deixaOf = d => (Array.isArray(d.sujo) ? d.sujo : (d.sujo = []));
+  const chaoOf = d => (Array.isArray(d.chao) ? d.chao : (d.chao = []));
   D.addKind('t', {
     obj: id => { const op = A.get(id); return op && op.def === 'taverna' && live(op) ? op : null; },
     get: (op, k, c) => { let n = 0; for (const x of naOf(op.data)) if (x.k === k && (!c || !c.cid || x.id === c.cid)) n += x.n; return r4(n); },
@@ -1318,11 +1339,13 @@
     all: () => A.all().filter(op => op.def === 'taverna' && live(op)),
   });
   T.DEIXA = 16; // (vessels left on a day's tables, at most: past it, the oldest with nothing in it is forgotten)
-  // (a vessel emptied — or left with a rest — at a seat: the cup drunk, the plate scraped; na: the rest of it on the table, by the ledger)
-  function leaveVessel(d, m, v, k, of, na, sobra) {
-    if (!m || !m.it) return; const L = deixaOf(d);
+  // (a vessel emptied — or left with a rest — at a seat: the cup drunk, the plate scraped. In the form the 3D reads (P5, T-1782): x, z,
+  // lv — the seat, metres of the lot (In.placeFor) —, k — 'food' or the drink —, prato — the part of the food —, resto — 0 to 1 not
+  // eaten —; and the world's own: the table, the seat, who, when, na — the rest of it on the table, by the ledger)
+  function leaveVessel(d, b, m, v, k, of, na, resto) {
+    if (!m || !m.it) return; const L = deixaOf(d); const In = G.Interiors; const pl = b && In && In.placeFor ? In.placeFor(b, m.it, m.q) : null; if (!pl) return;
     if (L.length >= T.DEIXA) { const i = L.findIndex(x => !x.na); if (i >= 0) L.splice(i, 1); }
-    L.push({ g: m.g || 0, it: m.it, q: m.q, k, of: of || null, sobra: sobra ? r2(Math.min(1, sobra)) : 0, na: na || 0, who: v ? v.id : 0, t: r1(S_().clock) });
+    L.push({ x: r2(pl.x), z: r2(pl.z), lv: pl.lv || 0, k, prato: k === 'food' ? of || '?' : null, resto: resto ? r2(Math.min(1, resto)) : 0, g: m.g || 0, it: m.it, q: m.q, na: na || 0, who: v ? v.id : 0, t: r1(S_().clock) });
   }
   // what is on the tables of a tavern now (P5 reads it — only read): [{ g the table, it + q the seat, k 'caneca' | 'prato', bem the
   // good, who, of the part of the food, comido 0..1 of the plate, quente, estado }]: the round in a hand at its seat (bebendo, comendo:
@@ -1335,10 +1358,10 @@
       const eaten = food ? (m.corpo ? 1 - c.n : (S.clock - (m.cup || S.clock)) / T.MEAL) : 0;
       out.push({ g: m.g || 0, it: m.it, q: m.q, k: food ? 'prato' : 'caneca', bem: c.k, who: v.id, of: food && OR() ? OR().next('v:' + v.id, 'food') : null, comido: r2(Math.max(0, Math.min(1, eaten))), quente: food && !m.frio, estado: food ? 'comendo' : 'bebendo' }); }
     for (const x of naOf(d)) if (x.kind === 'pedido') out.push({ g: x.g, it: x.it, q: x.q, k: x.k === 'food' ? 'prato' : 'caneca', bem: x.k, who: x.who, of: x.of, comido: 0, quente: S.clock - x.t < T.QUENTE, estado: 'pedido' });
-    for (const x of deixaOf(d)) out.push({ g: x.g, it: x.it, q: x.q, k: x.k, bem: x.k === 'prato' ? 'food' : null, who: x.who, of: x.of, comido: x.k === 'prato' ? r2(1 - (x.sobra || 0)) : 1, quente: false, estado: 'deixado' });
+    for (const x of deixaOf(d)) out.push({ g: x.g, it: x.it, q: x.q, k: x.k === 'food' ? 'prato' : 'caneca', bem: x.k, who: x.who, of: x.prato, comido: r2(1 - (x.resto || 0)), quente: false, estado: 'deixado' });
     return out;
   };
-  // (the seat kept for the body's order while it is up — In.keepRule: nobody else is given it, D-790)
+  // (the seat kept for the body's order while it is up — In.keepRule: nobody else is given it, D-800)
   const kept = b => { const op = T.dia(b); if (!op) return null; let L = null; for (const id in op.data.mesa) { const m = op.data.mesa[id]; if (m.corpo && m.guarda && pending(m)) (L || (L = [])).push([m.guarda[0], m.guarda[1], +id]); } return L; };
   G.worldHooks.push(() => { if (G.Interiors && G.Interiors.keepRule) G.Interiors.keepRule('taverna', kept); });
   // (everything on the tables at the end of the day: the order waiting back to the shelf, the rests to the slop; the vessels taken up)
@@ -1346,10 +1369,38 @@
     const d = op.data; const ref = 't:' + op.id; const shelf = b && D.exists('b:' + b.id) ? 'b:' + b.id : null;
     for (const x of naOf(d).slice()) { const c = { op: op.id, by: k ? k.id : 0, cid: x.id, part: true, of: x.of || undefined };
       if (x.kind === 'pedido' && shelf) D.move(ref, shelf, x.k, x.n, Object.assign(c, { code: 'taverna-volta' })); else D.use(ref, x.k, x.n, Object.assign(c, { code: 'sobra' })); }
-    d.na = []; d.deixa = [];
+    d.na = []; d.sujo = []; d.chao = []; // (the floor swept at the closing too)
   }
 
-  // ------------------------------ the keeper's chores (D-790, D-796) ------------------------------
+
+  // ------------------------------ the fire and the light of the night (D-811) ------------------------------
+  // What the house burns, by the book: the keeper buys it at the store with the rest (restockPick: the wood, the wax, the oil); the
+  // fire of the open tavern burns its wood all evening (T.LENHA_S a second of the world), the candle is lit in the dark — a candle is
+  // G.Atmos.VELA of wax off the shelf — and burns down by the night (T.VELA_S), the lamp is filled with T.OLEO of oil and burns it
+  // (T.OLEO_S); each burnt a share at a time (every T.QUEIMA seconds, «lenha», «vela», «lamparina»). The 3D reads what is left by
+  // G.Taverna.luz(b) → { vela 0..1 (the candle of tonight), azeite 0..1 (the lamp's oil), lenha (the wood by the fire) } (P5, T-1782)
+  T.LENHA_N = 2; T.LENHA_S = 0.025; T.VELA_S = 0.0016; T.OLEO = 0.25; T.OLEO_S = 0.004; T.QUEIMA = 10;
+  const VELA = () => (G.Atmos && G.Atmos.VELA) || 0.1;
+  const OIL = ['azeite', 'oleo'];
+  const dark = () => G.isNight() || (G.isEvening() && S_().time > 0.66);
+  function burn(op, b) {
+    const S = S_(); const d = op.data; const ref = 'b:' + b.id; if (S.clock < (d.luzT || 0)) return; const dt = d.luzT ? Math.min(T.QUEIMA * 2, S.clock - d.luzT + T.QUEIMA) : 0; d.luzT = r1(S.clock + T.QUEIMA);
+    if (!T.aberta(b) || !(dt > 0)) return; const c = { op: op.id, by: 0, part: true, mine: true };
+    // (the fire: its wood all evening)
+    { const n = Math.min(D.get(ref, 'wood'), T.LENHA_S * dt); if (n > EPS) D.use(ref, 'wood', r4(n), Object.assign({ code: 'lenha' }, c)); }
+    if (!dark()) return;
+    // (the candle: lit in the dark when there is none burning and the shelf has the wax of one; down by the night)
+    if (!(d.vela > EPS) && !d.velaT && D.get(ref, 'cera') >= VELA() - EPS) { d.vela = VELA(); d.velaT = r1(S.clock); }
+    if (d.vela > EPS) { const n = Math.min(d.vela, T.VELA_S * dt, D.get(ref, 'cera')); if (n > EPS) { const r = D.use(ref, 'cera', r4(n), Object.assign({ code: 'vela' }, c)); if (r.ok) d.vela = r4(Math.max(0, d.vela - r.n)); } else d.vela = 0; }
+    // (the lamp: filled in the dark from the shelf's oil, and burnt)
+    if (!(d.oleo > EPS) && !d.oleoT) { const k = OIL.find(q => D.get(ref, q) >= T.OLEO - EPS); if (k) { d.oleo = T.OLEO; d.oleoK = k; d.oleoT = r1(S.clock); } }
+    if (d.oleo > EPS) { const k = d.oleoK || 'azeite'; const n = Math.min(d.oleo, T.OLEO_S * dt, D.get(ref, k)); if (n > EPS) { const r = D.use(ref, k, r4(n), Object.assign({ code: 'lamparina' }, c)); if (r.ok) d.oleo = r4(Math.max(0, d.oleo - r.n)); } else d.oleo = 0; }
+  }
+  // what the house has to burn now (only read): the candle of tonight and the lamp's oil, each 0..1 of a whole one — not yet lit tonight,
+  // not counted (undefined: the 3D draws the one the store has, whole) —; the wood by the fire
+  T.luz = function (b) { const op = b && T.dia(b); if (!op) return null; const d = op.data; return { vela: d.velaT ? r2(Math.min(1, (d.vela || 0) / VELA())) : undefined, azeite: d.oleoT ? r2(Math.min(1, (d.oleo || 0) / T.OLEO)) : undefined, lenha: r2(D.get('b:' + b.id, 'wood')) }; };
+
+  // ------------------------------ the keeper's chores (D-800, D-806) ------------------------------
   // with nobody waiting: the body's order gone cold on a table, taken back to the shelf (the body away from the house T.FORA); a table
   // left — nobody at it — with its cups and plates: taken up, the rests to the slop, the board wiped with the rag (the kit: the loom's
   // wool, or a twist of straw); the empty cups of a table with people at it, taken up when there are two or more
@@ -1360,10 +1411,12 @@
     for (const id of Object.keys(d.mesa).sort((a, c) => a - c)) { const m = d.mesa[id]; if (m.corpo && cold(m, S) && m.guarda && m.na) return { kind: 'volta', g: m.guarda[2], near: [m.guarda[0], m.guarda[1]], id: +id }; }
     // (an order whose body is no more — dead, or let go —: taken back as a cold one)
     for (const x of naOf(d)) if (x.kind === 'pedido' && !Object.keys(d.mesa).some(id => d.mesa[id].corpo && d.mesa[id].na === x.id)) return { kind: 'volta', g: x.g, near: [x.it, x.q], na: x.id };
+    // (the floor after a brawl — the shards, the spill —: wiped first, D-749)
+    const CH = chaoOf(d); if (CH.length && CH[0].it) return { kind: 'chao', g: CH[0].g, it: CH[0].it, near: [CH[0].it, CH[0].q] };
     const L = deixaOf(d); const rests = naOf(d).filter(x => x.kind === 'sobra'); if (!L.length && !rests.length) return null;
     const sat = new Set(); for (const id in d.mesa) { const m = d.mesa[id]; if (m.g && m.st >= 1) sat.add(m.g); if (m.corpo && m.guarda && pending(m)) sat.add(m.guarda[2]); }
-    const by = new Map(); const add = x => { if (!x.g) return; let e = by.get(x.g); if (!e) by.set(x.g, e = { g: x.g, cups: 0, t: x.t, near: [x.it, x.q] }); if (x.k === 'caneca') e.cups++; };
-    for (const x of L) add(x); for (const x of rests) add({ g: x.g, it: x.it, q: x.q, k: 'sobra', t: x.t });
+    const by = new Map(); const add = (x, cup) => { if (!x.g) return; let e = by.get(x.g); if (!e) by.set(x.g, e = { g: x.g, cups: 0, t: x.t, near: [x.it, x.q] }); if (cup) e.cups++; };
+    for (const x of L) add(x, x.k !== 'food'); for (const x of rests) add(x, false);
     let best = null;
     for (const e of [...by.values()].sort((a, c) => a.t - c.t || gcmp(a.g, c.g))) { if (!sat.has(e.g)) return { kind: 'limpar', g: e.g, near: e.near }; if (e.cups >= 2 && !best) best = { kind: 'recolher', g: e.g, near: e.near }; }
     return best;
@@ -1376,7 +1429,8 @@
       if (r.ok) { say(v, 'pedido_volta', {}); if (m) delete d.mesa[ch.id]; d.voltas = (d.voltas || 0) + 1; tally(d, 'pedido-volta', m ? 'esfriou' : 'sem-dono'); }
       return;
     }
-    let n = 0; d.deixa = deixaOf(d).filter(x => { if (x.g !== ch.g || (ch.kind !== 'limpar' && x.k !== 'caneca')) return true; n++; return false; });
+    if (ch.kind === 'chao') { const before = chaoOf(d).length; d.chao = chaoOf(d).filter(x => x.it !== ch.it); d.lavadas = (d.lavadas || 0) + before - d.chao.length; tally(d, 'limpar-mesa', 'chao-sujo'); return; }
+    let n = 0; d.sujo = deixaOf(d).filter(x => { if (x.g !== ch.g || (ch.kind !== 'limpar' && x.k === 'food')) return true; n++; return false; });
     if (ch.kind === 'limpar') for (const x of naOf(d).slice()) if (x.g === ch.g && x.kind === 'sobra') { D.use('t:' + op.id, x.k, x.n, { op: op.id, code: 'sobra', by: v.id, cid: x.id, part: true }); n++; }
     d.lavadas = (d.lavadas || 0) + n; tally(d, ch.kind === 'limpar' ? 'limpar-mesa' : 'recolher-canecas', ch.kind === 'limpar' ? 'mesa-deixada' : 'canecas-vazias');
   }
@@ -1387,7 +1441,7 @@
   const brave = k => !A.isBody(k) && k.age >= 16 && k.age < 66 && D.strength(k) > 0 && (k.hp === undefined || k.hp > 40) && (1 - ax(k, 'neu')) * 0.6 + (G.Indole && G.Indole.faceta ? G.Indole.faceta(k, 'agressivo') : 0.5) * 0.4 >= T.BRAVO;
   T.brave = brave;
 
-  // ------------------------------ the tables' own life (D-796, D-800) ------------------------------
+  // ------------------------------ the tables' own life (D-806, D-810) ------------------------------
   // Each thing one does at a table has its cause in the world, and each is counted with it in the day's book (d.atos): the toast when
   // a round comes to friends or one of them sits down; the game of knucklebones where the people has the bone, between who is of the
   // índole for it; with the song on, the dance by the stage (who likes it, not worn out, the drink helping), the song sung along (who
@@ -1447,7 +1501,8 @@
   function tips(op, b, mu) {
     const S = S_(); const d = op.data; if (!coin(b)) return;
     for (const id of Object.keys(d.mesa).sort((a, c) => a - c)) {
-      const m = d.mesa[id]; if (m.body || m.mt !== d.sets || !m.ma) continue; // (who answered this song: clapped, sang, danced) const v = S.villagers.get(+id); if (!v || v === mu || !v.task || v.task.type !== 'tavern') continue;
+      // (who answered this song: clapped, sang, danced)
+      const m = d.mesa[id]; if (m.body || m.mt !== d.sets || !m.ma) continue; const v = S.villagers.get(+id); if (!v || v === mu || !v.task || v.task.type !== 'tavern') continue;
       if (G.hash(Math.imul(v.id | 0, 211) + Math.imul(d.sets | 0, 97) + 13) >= T.GORJETA_P * (0.5 + ax(v, 'ama'))) continue;
       if (E.coinRef(v) === E.coinRef(mu) || E.purse(v) + EPS < T.TIP + T.PRICE.drink) continue;
       if (E.spend(v, T.TIP, E.coinRef(mu), 'gorjeta')) { m.gt = r1(S.clock); tally(d, 'gorjeta', 'musica'); d.gorjetas = r2((d.gorjetas || 0) + T.TIP); }
@@ -1461,6 +1516,8 @@
     // (the games of tables left: who is still at it — at the table, its round in the hands or between the rounds, or the body seated there
     // —, and the game's end)
     if (d.jogo) for (const g of Object.keys(d.jogo)) { const j = d.jogo[g]; j.quem = j.quem.filter(id => { const m = d.mesa[id]; return !!m && String(m.g) === g && ((m.st >= 2 && m.st <= 5) || (m.corpo && m.seat)); }); if (S.clock > j.ate || j.quem.length < 2) delete d.jogo[g]; }
+    // (each one's entry says the table whose game one is in — m.jogo, what the 3D reads: P5)
+    for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; const j = d.jogo && m.g ? d.jogo[m.g] : null; if (j && j.quem.includes(+id)) m.jogo = m.g; else if (m.jogo) delete m.jogo; }
   }
   function toast(op, d, g, L) {
     const S = S_(); const cups = L.filter(([v, m]) => m.st === 3 && v.carry && v.carry.op === op.id && v.carry.k !== 'food'); if (cups.length < 2) return;
@@ -1478,7 +1535,7 @@
     if (quem.length < 2 || G.hash(Math.imul(op.id | 0, 31) + Math.imul(gk(g), 7) + Math.imul(k, 977) + 5) >= T.JOGO_P) return;
     (d.jogo || (d.jogo = {}))[g] = { t0: r1(S.clock), ate: r1(S.clock + T.JOGO), quem, n: 0 }; tally(d, 'jogo-ossos', 'indole');
   }
-  // the talk of a table (D-800): one of it speaks now and then — the turn by the ids and the clock —, of what one knows of the world:
+  // the talk of a table (D-810): one of it speaks now and then — the turn by the ids and the clock —, of what one knows of the world:
   // a rumour one knows (G.Boatos: by name, or by the talk of one's town), the town's feast today, the people's war, the store running
   // low, the jokes of who drank; never a word with no cause. The body near the table hears it: the rumour is its own now, by name — the
   // NOTÍCIA of its screen (G.Possess.knows)
@@ -1504,9 +1561,9 @@
     return L.length ? L[Math.floor(G.hash(Math.imul(v.id | 0, 17) + Math.imul(n, 613) + 11) * L.length) % L.length] : null;
   }
 
-  // ------------------------------ the regulars (D-794) ------------------------------
+  // ------------------------------ the regulars (D-804) ------------------------------
   // the house remembers who comes and what they ask — from the day's book (d.ped: who sat tonight, what each was served), into the
-  // tavern's memory at the closing (b.freg: [[id, noites, dia, { what: times }], …], up to T.FREG; only this file writes it, rule 331).
+  // tavern's memory at the closing (b.freg: [[id, noites, dia, { what: times }], …], up to T.FREG; only this file writes it, rule 341).
   // A regular: T.SEMPRE nights or more, the last within T.ESQUECE days; «o de sempre», what one asks most. The body's memory is the
   // person's: the record is by the person, never by who lives it
   T.FREG = 40; T.SEMPRE = 3; T.ESQUECE = 30;
@@ -1538,10 +1595,10 @@
   const theOf = sp => (sp.k === 'food' ? String(sp.nome).replace(/^um /, 'o ').replace(/^uma /, 'a ') : THE[sp.k] || sp.nome);
   T.keyOf = keyOf;
 
-  // ------------------------------ the grain of the house's beer (D-792) ------------------------------
+  // ------------------------------ the grain of the house's beer (D-802) ------------------------------
   // what its vat's batches were brewed of — the parts of the grain each took (G.Origem: a use tells the parts that left; the batch keeps
   // them, act-oficio.js) —, kept on the tavern as the beer on its shelf: a batch made adds its grain, a pour out of the shelf takes its
-  // share, beer that came from the store is of a grain not known. Only this file writes b.malte (rule 331)
+  // share, beer that came from the store is of a grain not known. Only this file writes b.malte (rule 341)
   G.worldHooks.push(() => { if (D.onMove && !D.onMove.includes(malt)) D.onMove.push(malt); });
   function malt(e) {
     if (e[5] !== 'cerveja') return; const S = S_(); const from = e[3], to = e[4], n = e[6];
@@ -1556,7 +1613,7 @@
   // (the grain the beer on a shelf is mostly of — a cereal of G.Origem —, or null: none brewed here, or not known)
   T.malte = function (b) { const M = b && b.malte; if (!M) return null; let best = null, bn = 0; for (const k of Object.keys(M).sort()) if (M[k] > bn) { bn = M[k]; best = k; } return best && best !== '?' && OR() && OR().FOOD[best] ? best : null; };
 
-  // ------------------------------ the body's verbs at a tavern (D-798) ------------------------------
+  // ------------------------------ the body's verbs at a tavern (D-808) ------------------------------
   // what the body's hands can do there besides the menu, as it is now (only read: the screen's verbs ask it): a round for its table —
   // the keeper serves everyone at it, the body pays each cup as it is handed over —; a song asked of the night's musician, of the body's
   // people if he knows it; a coin to the musician; a place in the game of bones at its table, and a throw with a little stake
@@ -1804,16 +1861,17 @@
         if (!live(op)) continue;
         d.mesa = d.mesa && typeof d.mesa === 'object' ? d.mesa : {}; d.fila = Array.isArray(d.fila) ? d.fila.filter(id => d.mesa[id]) : [];
         // (what lies on the tables — the ledger's 't:' holder — and the vessels left, as they were; a damaged one mended, never trusted.
-        // The brawl is the world's chance of the moment, not saved: its blood and its expulsion with it — D-790, D-799)
+        // The brawl is the world's chance of the moment, not saved: its blood and its expulsion with it — D-800, D-809)
         d.na = Array.isArray(d.na) ? d.na.filter(x => x && typeof x === 'object' && typeof x.k === 'string' && Number.isFinite(x.n) && x.n > EPS && Number.isFinite(x.id)) : [];
-        d.deixa = Array.isArray(d.deixa) ? d.deixa.filter(x => x && typeof x === 'object' && (x.k === 'caneca' || x.k === 'prato') && x.it) : [];
+        d.sujo = Array.isArray(d.sujo) ? d.sujo.filter(x => x && typeof x === 'object' && typeof x.k === 'string' && x.it && Number.isFinite(x.x) && Number.isFinite(x.z)) : [];
+        d.chao = Array.isArray(d.chao) ? d.chao.filter(x => x && typeof x === 'object' && (x.k === 'cacos' || x.k === 'poca') && Number.isFinite(x.x) && Number.isFinite(x.z)) : [];
         delete d.briga; delete d.expulsa;
         for (const id of Object.keys(d.mesa)) {
           const v = S.villagers.get(+id); const m = d.mesa[id];
           // (the god's body's entry kept as it was — the order to fetch again, what was served in the hands; the menu shut, called
           // again: whoever had it has no errand now — D-767. The step lets it go if the body is not there)
           if (v && m.corpo) { m.srv = 0; delete m.vem; if (!CV[m.cv]) m.cv = 'chama'; if (m.cv === 'carta') m.cv = 'chama'; if (m.cv === 'pedido' && !m.pedido) m.cv = 'chama'; if (m.cv === 'servido' && !holding(v, op)) { m.cv = 'entre'; m.st = 5; }
-            // (the order on the table: its thing there still — D-790)
+            // (the order on the table: its thing there still — D-800)
             if (m.cv === 'mesa' && !(m.na && d.na.some(x => x.id === m.na && x.kind === 'pedido'))) { m.cv = 'entre'; m.st = 5; delete m.na; delete m.guarda; }
             if (m.guarda && (!(Array.isArray(m.guarda) && m.guarda.length === 3) || !pending(m))) delete m.guarda;
             m.cs = r1(S.clock); continue; }
@@ -1829,7 +1887,7 @@
         }
         d.fila = d.fila.filter(id => d.mesa[id] && d.mesa[id].st === 2); d.mus = 0;
       }
-      // (the house's memory of its regulars and the grain of its beer, as they were — a damaged one let go: D-792, D-794)
+      // (the house's memory of its regulars and the grain of its beer, as they were — a damaged one let go: D-802, D-804)
       for (const b of S.buildings.values()) {
         if (b.type !== 'taverna') continue;
         if (b.freg !== undefined) b.freg = Array.isArray(b.freg) ? b.freg.filter(e => Array.isArray(e) && Number.isInteger(e[0]) && Number.isFinite(e[1]) && Number.isFinite(e[2]) && e[3] && typeof e[3] === 'object').slice(0, T.FREG) : undefined;

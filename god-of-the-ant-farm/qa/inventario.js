@@ -531,7 +531,7 @@ if (on('i17')) {
     if (kindOf(c.mao) !== 'cajado' || kindOf(c.outra) !== 'muleta') bad.push(`o ancião sem perna: ${JSON.stringify({ mao: c.mao, outra: c.outra })}`);
     if ([w.mao, w.outra].some(x => kindOf(x) === 'muleta')) bad.push(`o guerreiro sem perna com a muleta no lugar da arma: ${JSON.stringify({ mao: w.mao, outra: w.outra })}`);
     said.push(`a muleta: ímpar na mão ${a.mao}, par na outra ${b.outra}, o ancião cajado e muleta`); }
-  // (P7, D-795: the tavern's knucklebones in the hand of who plays — of the carcass's bone, none where the people never had it —, and the
+  // (P7, D-805: the tavern's knucklebones in the hand of who plays — of the carcass's bone, none where the people never had it —, and the
   // keeper's rag in the hand of who wipes a table: of the loom's wool where the people has had woven cloth, else of straw)
   { const h = Inv.kit(copy(o, { act: 'jogo-ossos' })); const bone = O.matOK(fid, 'osso', arts); if (bone ? kindOf(h.mao) !== 'ossinhos' : !!h.mao) bad.push(`quem joga ossinhos: ${h.mao} (o povo ${bone ? 'tem' : 'não tem'} osso)`);
     const r = Inv.kit(copy(o, { act: 'limpar-mesa' })); const want = O.matOK(fid, 'la', arts) ? 'la' : 'palha'; if (kindOf(r.mao) !== 'pano' || matOf(r.mao) !== want) bad.push(`quem limpa a mesa: ${r.mao} (o povo teria ${want})`);

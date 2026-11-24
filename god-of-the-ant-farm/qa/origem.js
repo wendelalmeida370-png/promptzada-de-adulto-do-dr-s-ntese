@@ -208,7 +208,7 @@ if (on('o5')) {
   const ff = f || facs()[0]; const w = warrior(ff);
   const before = w ? G.Inv.made('elmo', w) : 'x'; const cb = w ? G.Inv.made('couraca', w) : 'x';
   // (and the knucklebones of the tavern's game are the carcass's bone: none where no beast was ever slaughtered, hunted nor offered —
-  // P7, D-795)
+  // P7, D-805)
   const osB = w && !O.had(ff.id, 'osso') ? G.Inv.made('ossinhos', w) : null; if (osB) bad.push('ossinhos sem osso: ' + osB);
   if (before && matOf(before) === 'couro') bad.push('elmo de couro sem couro: ' + before);
   if (cb && matOf(cb) === 'couro') bad.push('couraça de couro sem couro: ' + cb);

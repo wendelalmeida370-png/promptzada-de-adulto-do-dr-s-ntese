@@ -130,12 +130,12 @@
   // a material entered a people when its good came into a holder of the people — the store, a house, the hands, a bag — from a
   // true source or from another people that had it; the day it first came is kept (the kit and the fight read it)
   // (and the pottery's ware: the fired clay a cup is made of — 22c, D-612)
-  // (and the loom's cloth: the wool a rag is of where the people has had woven cloth — P7, D-795)
+  // (and the loom's cloth: the wool a rag is of where the people has had woven cloth — P7, D-805)
   O.MAT_OF = { couro: 'couro', cobre: 'cobre', estanho: 'estanho', ouro: 'ouro', minerio: 'minerio', ceramica: 'barro', tecido: 'la' };
   const ownerFac = ref => { const o = D.owner(ref); return o && o.fac ? o.fac : 0; };
   function mark(fid, m) { if (!fid || !m || m === '?' || O.PLAIN[m]) return; const o = st(); const h = o.had[fid] || (o.had[fid] = {}); if (!h[m]) h[m] = G.S.day || 1; }
   O.had = (fid, m) => { const o = G.S && G.S.orig; const h = o && o.had[fid]; return h ? h[m] || 0 : 0; };
-  // what a people itself made of each food, and the last day (D-793): the catch landed, the harvest of its fields, the beast slaughtered
+  // what a people itself made of each food, and the last day (D-803): the catch landed, the harvest of its fields, the beast slaughtered
   // or hunted, the milk, the eggs, the garden, the fruit — a make of the food with its part, into a holder of the people (never what came
   // by a hand from elsewhere: O.carried, O.came). The tavern's menu says it: «peixe do dia, da pesca do povo», or «que veio de fora».
   // O.madeBy(fid, t, win) → the last day it made it; 0, never within the win days the record covers; −1, not known — the record of the
@@ -145,7 +145,7 @@
   // a material a people may make and draw things in: wood, stone, and the fibres of the wood (wicker, cord) always — every people
   // fells and quarries —; leather once it has had hides, fired clay once it has had the pottery's ware (22c, D-612); bronze and
   // iron with the art and the metal had (D-442)
-  // (the straw: the dry stalks every people cuts for its roofs and its beds — P7, D-795; the bone: the carcass's, of the beast slaughtered,
+  // (the straw: the dry stalks every people cuts for its roofs and its beds — P7, D-805; the bone: the carcass's, of the beast slaughtered,
   // hunted or offered — the meat made of it, or a hide had, which came of one)
   O.PLAIN = { madeira: 1, pedra: 1, vime: 1, corda: 1, palha: 1 };
   O.matOK = function (fid, m, arts) {
@@ -211,7 +211,7 @@
     if (of) { const have = O.amountIn(pa, of); if (have + EPS < n) { if (!c.part) return { ok: false, n: 0, why: 'não há tanto' }; n = r4(have); if (!(n > EPS)) return { ok: false, n: 0, why: 'não há' }; } }
     const r = use0.call(this, from, k, n, c);
     if (!r || !r.ok || r.again) return r;
-    r.parts = take(pa, k, r.n, of); sync(from, k, true); // (the parts that left: the vat's batch keeps the grain it took, D-792)
+    r.parts = take(pa, k, r.n, of); sync(from, k, true); // (the parts that left: the vat's batch keeps the grain it took, D-802)
     return r;
   };
   const drop0 = D.drop;
@@ -368,7 +368,7 @@
         }
         const had = {};
         if (x.had && typeof x.had === 'object' && !Array.isArray(x.had)) for (const fid of Object.keys(x.had)) { const h = x.had[fid]; if (!h || typeof h !== 'object') continue; const c = {}; for (const m of Object.keys(h)) if (fin(h[m]) && h[m] > 0) c[m] = h[m]; had[fid] = c; }
-        // (what each people made, the last day of each food — D-793; a save of before has none: the record starts with this world)
+        // (what each people made, the last day of each food — D-803; a save of before has none: the record starts with this world)
         let mk; if (x.mk && typeof x.mk === 'object' && !Array.isArray(x.mk)) { mk = {}; for (const fid of Object.keys(x.mk)) { const h = x.mk[fid]; if (!h || typeof h !== 'object') continue; const c = {}; for (const t of Object.keys(h)) if ((O.FOOD[t] || t === '_') && fin(h[t]) && h[t] > 0) c[t] = h[t]; if (!c._) c._ = G.S.day || 1; mk[fid] = c; } }
         S.orig = { p, had, q: clean(x.q), qw: clean(x.qw), old: fin(x.old) ? x.old : 0 }; if (mk) S.orig.mk = mk;
         pruneSoon = true;

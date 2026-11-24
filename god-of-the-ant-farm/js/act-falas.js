@@ -70,7 +70,7 @@
       carta_falta: ['{bem}: acabou, sinto muito. Quer outra coisa?', 'Não tem mais {bem}. Escolha outra coisa, que eu trago.'],
       pedido_ok: ['É pra já!', 'Um momento, já trago.', '{bem}, saindo!'],
       carta_depois: ['Quando quiser, é só chamar.', 'Fico no balcão. É só chamar.'],
-      // (P7, D-790 to D-800: the order kept on the table; the regulars and «o de sempre»; the brawler put out; the song asked and the coin
+      // (P7, D-800 to D-810: the order kept on the table; the regulars and «o de sempre»; the brawler put out; the song asked and the coin
       // to the musician; the round for the table; the talk of the tables — what they know of the world, and the jokes of who drank)
       pedido_chegou: ['{nome}, sente-se — o seu pedido chegou.', '{nome}! O seu pedido está na mesa: sente-se.', '{nome}, deixei o seu pedido na sua mesa. Sente-se!'],
       pedido_volta: ['Esfriou e ninguém veio... volta para o balcão.', 'Não voltou: levo de volta.'],
