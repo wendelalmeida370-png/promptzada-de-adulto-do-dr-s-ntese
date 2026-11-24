@@ -74,6 +74,10 @@
     // the keeper wipes a table with: of the loom's wool where the people has had woven cloth, else a twist of straw — the place's, as
     // the cup; none a weapon)
     ossinhos: { nome: 'ossinhos', plural: 'ossinhos', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.06, bem: null, vale: 0, tags: ['jogar'], mats: ['osso'], desc: 'Cinco ossinhos do tornozelo de um carneiro: lançados na mesa, o jogo da taverna.' },
+    // (wave 4, T4 — D-852: the dice of the tavern's cup game, a set of eight little cubes — two for each one at a table of four —,
+    // pipped one to six: of the bone of a slaughtered or hunted beast where the people has had bone (nothing of the store, as the
+    // knucklebones), else of wood whittled from the store's or the shelf's wood. Thrown from the fist; none a weapon)
+    dados: { nome: 'jogo de dados', plural: 'jogos de dados', tipo: 'brinquedo', maos: 1, slots: ['mao', 'cinto'], pega: 'bola', peso: 0.08, bem: null, vale: 0, tags: ['jogar'], mats: ['madeira', 'osso'], desc: 'Oito dadinhos de um a seis, para o jogo de copo da taverna: cada um esconde dois sob o copo e se adivinha a soma da mesa.' },
     pano: { nome: 'pano', plural: 'panos', tipo: 'ferramenta', maos: 1, slots: ['mao', 'cinto'], pega: 'bola', peso: 0.12, bem: null, vale: 0, tags: ['limpar'], mats: ['palha', 'la'], desc: 'Limpa a mesa da taverna: um pano de lã onde o povo tece, um feixe de palha onde não.' },
     bola: { nome: 'bola', plural: 'bolas', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.25, bem: null, vale: 0, tags: ['brincar'], mats: ['vime', 'couro'], desc: 'O brinquedo das crianças: de vime trançado, ou de couro cosido e cheio.' },
     grilhoes: { nome: 'grilhões', plural: 'grilhões', tipo: 'ferramenta', maos: 2, slots: ['mao'], pega: 'algema', peso: 1.6, bem: 'ferramentas', vale: 0.5, tags: ['prender'], mats: ['corda', 'ferro'], desc: 'Prendem as mãos de quem é levado: corda trançada, ou duas argolas de ferro com a corrente.' },
@@ -197,6 +201,7 @@
     lanca: { stone: 0.25, wood: 0.75 }, clava: { wood: 1 }, arco: { wood: 1 }, flecha: { stone: 0.0125, wood: 0.0125 }, funda: { wood: 0.25 }, escudo: { wood: 1 },
     caneca: { wood: 0.1 }, bola: { wood: 0.1 }, grilhoes: { wood: 0.1 }, // (22c: a cup carved of wood; the withies of a ball, the cord of a binding)
     prato: { wood: 0.15 }, // (P7: a plate turned of wood)
+    dados: { wood: 0.05 }, // (T4, D-852: eight little cubes whittled of wood)
   };
   const HIDE = { elmo: 1, couraca: 3, bola: 0.15 };
   // (a thing of the beast's hide and gut and of wood: the instruments — P7, D-764 — the hide of the store and its wood)

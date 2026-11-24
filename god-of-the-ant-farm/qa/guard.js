@@ -29,7 +29,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js', /* T4, D-851: a tela do jogo de dados */ 'jogo-dados-ui.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -483,7 +483,7 @@ for (const f of files) if (f !== 'possess.js') src[f].forEach((line, k) => {
   if (KEN_WRITE.test(line)) fails.push(`sabe: ${f}:${k + 1} escreve o registro do que a pessoa sabe (.ken) fora de possess.js: ${line.trim().slice(0, 110)}`); });
 // 56. "a tela do corpo pergunta à porta" (D-171, D-172): nas telas do corpo, as moedas de uma casa e o nome de um bairro só
 // saem numa linha que pergunta ao G.Possess.knows; e um encontro só se pede ao mundo (Possess.apply) ou no feito (activity.js)
-const BODY_SCREEN = ['incui.js', 'interact.js', 'diario-ui.js', /* P7, D-768: o cardápio da taverna */ 'cardapio-ui.js'];
+const BODY_SCREEN = ['incui.js', 'interact.js', 'diario-ui.js', /* P7, D-768: o cardápio da taverna */ 'cardapio-ui.js', /* T4, D-851: o jogo de dados */ 'jogo-dados-ui.js'];
 const ASKS = /\bknows\.|\bK\.(house|stock|person|name|call|town|district|where|how)\(/;
 // (a linha, ou uma das 8 antes dela, abre um G.Possess.apply( — o encontro do interact.js fica 6 linhas depois dele)
 const inApply = (f, k) => { for (let j = k; j >= Math.max(0, k - 8); j--) if (/\bPossess\.apply\(/.test(src[f][j])) return true; return false; };
@@ -1695,7 +1695,7 @@ for (const f of files) { if (f === 'soc-boatos.js') continue; src[f].forEach((l,
     for (const [k, l, c] of b) if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random|\b(Lacos|L)\.(ato|marca|desmarca|corte)\(|\b(Fama|F)\.(feito|desfeito|lembra|lembraPovo|respondida)\(|\b(ensina|semeia|carry|desmente|distort|fama|st)\(|\bB\.(nasce|ensina|leva|porto|fofoca|fala|cala)\(|\bsetTask\(|\b(v|o|r|w|e|sr|set)\.[A-Za-z_]\w*(\[[^\]]*\])?\s*(=(?!=)|\+=|-=|\+\+|--|\|=|&=)|\bw\[[^\]]+\]\s*(=(?!=)|\+=|-=|\|=|&=)/.test(c)) fails.push(`as leituras dos boatos são puras: soc-boatos.js:${k + 1} (${nm}) sorteia ou escreve (D-621): ${l.trim().slice(0, 110)}`); } }
 // 230. "o corpo ouve pela porta" (D-623): a tela do corpo sabe dos boatos só pelo G.Possess.knows (boatos, hearsNow) — nem o incui.js
 // nem outra tela leem o G.Boatos ou o S.boatos —, e a faixa de notícia de outra cidade passa pelo hearsNow
-{ const UIF = ['incui.js', 'interact.js', 'diario-ui.js', 'inv-ui.js', 'guardados-ui.js', 'combate-ui.js', 'trabalho-ui.js', 'cardapio-ui.js'];
+{ const UIF = ['incui.js', 'interact.js', 'diario-ui.js', 'inv-ui.js', 'guardados-ui.js', 'combate-ui.js', 'trabalho-ui.js', 'cardapio-ui.js', 'jogo-dados-ui.js'];
   for (const f of UIF) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.Boatos\b|\.boatos\b(?!\s*\()/.test(c) && !/knows\.boatos/.test(c)) fails.push(`o corpo ouve pela porta: ${f}:${k + 1} lê os boatos sem o G.Possess.knows (D-623): ${l.trim().slice(0, 110)}`); });
   const iu = (src['incui.js'] || []).join('\n'); if (!/knows\.hearsNow/.test(iu) || !/knows\.boatos\(/.test(iu)) fails.push('o corpo ouve pela porta: a faixa de notícia do incui.js não pergunta ao knows.hearsNow e ao knows.boatos (D-623)'); }
 // 231. "o boato sem o acaso do mundo" (D-620): o js/soc-boatos.js não sorteia — quem sabe, a versão e o culpado trocado são do
@@ -2390,5 +2390,52 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
 { const as = (src['audio-src.js'] || []).join('\n'), au = src['audio.js'] || [];
   if (!/const st = In\.doorState\(best\.b, best\.e\.door\); return \{ b: best\.b\.id, door: best\.e\.door,/.test(as)) fails.push('a porta cede pelo mundo: a cena não lê o estado da porta forçada no In.doorState (D-895)');
   au.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'portaCede'/.test(c) && !/f\.porta === 'arrombada' && st\.porta !== undefined && st\.porta !== 'arrombada'/.test(c)) fails.push(`a porta cede pelo mundo: audio.js:${k + 1} toca a porta que cede fora da mudança do estado dela (D-895): ${l.trim().slice(0, 110)}`); }); }
+// ---------------- Onda 4 — T4: o jogo de dados (js/jogo-dados.js, js/jogo-dados-ui.js; D-850 a D-859) ----------------
+// 380. "o lance é do mundo" (D-669, D-850): o js/jogo-dados.js não sorteia — as faces de cada dado são o G.hash da partida, da rodada, de
+// quem joga e do dado (R.face), e os palpites, as apostas, quem joga, quem trapaceia e quem vê saem da índole e da bolsa pelo mesmo hash:
+// nada do acaso do mundo nem do que só se vê
+{ const jd = src['jogo-dados.js'] || [];
+  if (!jd.length) fails.push('o lance é do mundo: falta o js/jogo-dados.js (D-850)');
+  jd.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`o lance é do mundo: jogo-dados.js:${k + 1} sorteia (D-669): ${l.trim().slice(0, 110)}`); });
+  if (jd.length && !/R\.face = \(seed, r, id, i\) => Math\.min\(6, 1 \+ Math\.floor\(R\.h\(seed, r, id, i, 11\) \* 6\)\);/.test(jd.join('\n'))) fails.push('o lance é do mundo: as faces não são o G.hash da partida, da rodada, de quem joga e do dado (R.face, D-669)'); }
+// 381. "a tela só mostra o que o mundo decidiu" (D-669, D-851): o js/jogo-dados-ui.js não escreve no mundo (o livro, uma operação, uma
+// pessoa), não lê o livro da partida por fora da leitura do corpo (G.JogoDados.corpo: os dados dos outros só com os copos de pé) e pede
+// toda mudança pelas mãos do corpo (G.Possess.apply): chamar, entrar, a aposta, começar, o palpite, a mão rápida, largar
+{ const ui = src['jogo-dados-ui.js'] || []; const DOOR = /\bJD\(\)\.(chamar|entrar|aposta|comecar|palpite|trapacear|sair)\(/;
+  if (!ui.length) fails.push('a tela só mostra: falta o js/jogo-dados-ui.js (D-851)');
+  ui.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\b(Depot|D)\.(move|use|swap|make|drop)\(|\bG\.Act\b|\bA\.get\(|\.data\.(faces|pal|n|fora|pote|quem)\b|\bG\.S\.\w+\s*=(?!=)/.test(c)) fails.push(`a tela só mostra: jogo-dados-ui.js:${k + 1} escreve no mundo ou lê a partida por fora da leitura do corpo (D-669): ${l.trim().slice(0, 110)}`);
+    if (DOOR.test(c) && !/Possess\.apply\(w => JD\(\)\.|\bask\(w => JD\(\)\./.test(c)) fails.push(`a tela só mostra: jogo-dados-ui.js:${k + 1} chama uma porta do jogo fora do G.Possess.apply (D-851): ${l.trim().slice(0, 110)}`); });
+  for (const f of files) { if (f === 'jogo-dados.js' || f === 'jogo-dados-ui.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bJogoDados\.(chamar|entrar|aposta|comecar|palpite|trapacear|sair)\(/.test(c) && !/Possess\.apply\(/.test(c)) fails.push(`a tela só mostra: ${f}:${k + 1} chama uma porta do corpo no jogo de dados fora do G.Possess.apply (D-851): ${l.trim().slice(0, 110)}`); }); } }
+// 382. "a aposta pelo livro" (D-853): as moedas do jogo andam só pelo G.Depot, com a causa (dados-aposta, dados-premio, dados-volta,
+// torneio-premio, torneio-campeao), entre a bolsa de cada um e o pote — o lugar 'j:' do livro, que só o js/jogo-dados.js cria e escreve
+{ const jd = (src['jogo-dados.js'] || []).join('\n');
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/addKind\('j'/.test(c) && f !== 'jogo-dados.js') fails.push(`a aposta pelo livro: ${f}:${k + 1} cria o lugar 'j:' do livro fora do jogo de dados (D-853)`);
+    if (/\.pote\s*(=(?!=)|\+=|-=)/.test(c) && f !== 'jogo-dados.js') fails.push(`a aposta pelo livro: ${f}:${k + 1} escreve o pote do jogo à mão (D-853): ${l.trim().slice(0, 110)}`); });
+  if (jd && (!/D\.addKind\('j', \{/.test(jd) || !/code: 'dados-aposta'/.test(jd) || !/code: 'dados-premio'/.test(jd) || !/code: 'dados-volta'/.test(jd))) fails.push('a aposta pelo livro: o jogo de dados sem o pote do livro e as linhas da aposta, do prêmio e da volta (D-853)');
+  (src['jogo-dados.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\.pote\s*(=(?!=)|\+=|-=)/.test(c) && !/take: \(op, k, n\) => \{ op\.data\.pote = |put: \(op, rec\) => \{ op\.data\.pote = /.test(c)) fails.push(`a aposta pelo livro: jogo-dados.js:${k + 1} escreve o pote fora do lugar do livro (D-853): ${l.trim().slice(0, 110)}`); }); }
+// 383. "os dados têm origem" (D-852, D-440): a coisa `dados` é de osso (da carcaça que o povo teve: nada do armazém, como os ossinhos) ou
+// de madeira (da madeira do armazém ou da prateleira); os dados da casa nascem só no houseDice — os de osso depois do G.Origem.matOK do
+// osso, os de madeira depois do D.use da madeira —, e ninguém mais os faz; uma partida só começa com um jogo de dados de verdade (setFor)
+{ const it = (src['itens.js'] || []).join('\n'), jd = (src['jogo-dados.js'] || []).join('\n');
+  if (!/dados: \{[^\n]*mats: \['madeira', 'osso'\]/.test(it) || !/dados: \{ wood: 0\.05 \}/.test(it)) fails.push('os dados têm origem: o catálogo sem os dados de madeira e de osso, ou sem o que os de madeira gastam (D-852)');
+  if (!/if \(G\.Origem && G\.Origem\.matOK\(fid, 'osso', arts\)\) r = D\.make\(shelf\(b\), 'dados\.osso'/.test(jd) || !/D\.use\(shelf\(b\), 'wood', JD\.MADEIRA, \{ code: 'dados', by: k0\.id \}\)\.ok\) \{ r = D\.make\(shelf\(b\), 'dados\.madeira'/.test(jd)) fails.push('os dados têm origem: os dados da casa sem o osso que o povo teve ou sem a madeira gasta (D-852)');
+  if (!/const set = setFor\(b, null\); if \(!set\)/.test(jd) || !/const set = setFor\(b, v\); if \(!set\)/.test(jd)) fails.push('os dados têm origem: uma partida que começa sem um jogo de dados de verdade (setFor, D-852)');
+  for (const f of files) { if (f === 'jogo-dados.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bmake\([^)]*'dados\./.test(c)) fails.push(`os dados têm origem: ${f}:${k + 1} faz um jogo de dados fora do jogo de dados (D-852): ${l.trim().slice(0, 110)}`); }); } }
+// 384. "a índole joga, a aparência e o povo não" (D-854, regra 194): quem joga, a aposta, o palpite, o blefe e a trapaça saem da índole
+// (G.Indole), da bebida e da bolsa — as leituras do jogo (JD.tracos, JD.apostaDe, JD.entra, R.palpite, R.quer) não leem o povo, o
+// genoma, a pele nem o cabelo
+{ const jd = src['jogo-dados.js'] || []; let on = false;
+  jd.forEach((l, k) => { if (/^\s{2}(JD\.(tracos|apostaDe|entra)|R\.(palpite|quer|estima)) = function/.test(l)) on = true; else if (/^\s{2}\};/.test(l)) on = false;
+    const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (on && /\bciv\b|civOfV|genoma|\.skin\b|\.hair\b|Feicao/.test(c)) fails.push(`a índole joga: jogo-dados.js:${k + 1} uma leitura do jogo pela aparência ou pelo povo (D-854): ${l.trim().slice(0, 110)}`); }); }
+// 385. "o jogo tem gesto, som e coisa na mão" (D-855): os atos do jogo (jogo-dados, trapaca, trapaca-pega) têm a sua linha no G.Audio.ATO
+// (a da T8), e o kit põe na mão de quem joga o jogo de dados de verdade da mesa (G.JogoDados.dadosDe) — nunca um de arte do povo
+{ const iv = (src['inventario.js'] || []).join('\n'), as = (src['audio-src.js'] || []).join('\n');
+  for (const a of ['jogo-dados', 'trapaca', 'trapaca-pega']) if (!new RegExp(`(?:^|[\\s,{])'?${a}'?: (?:\\{ s: '\\w+'|still\\()`, 'm').test(as)) fails.push(`o jogo tem som: o ato «${a}» sem a sua linha no A.ATO (D-855)`);
+  if (!/'jogo-dados': 'dados'/.test(iv) || !/if \(t === 'dados'\) \{ if \(!key && G\.JogoDados && G\.JogoDados\.dadosDe\) key = G\.JogoDados\.dadosDe\(v\); if \(!key\) return; \}/.test(iv)) fails.push('o jogo tem coisa na mão: o kit sem os dados de verdade da mesa (G.JogoDados.dadosDe, D-855)'); }
+// 386. "uma mesa, um jogo" (D-856): a mesa que joga dados não começa os ossinhos, e a que joga ossinhos não começa os dados
+{ const tv = (src['act-taverna.js'] || []).join('\n'), jd = (src['jogo-dados.js'] || []).join('\n');
+  if (!/if \(G\.JogoDados && G\.JogoDados\.atMesa\(op\.at, g\)\) return;/.test(tv) || !/if \(top\.data\.jogo && top\.data\.jogo\[g\]\) \{ why\('ossinhos'\); continue; \}/.test(jd)) fails.push('uma mesa, um jogo: os ossinhos e os dados na mesma mesa (D-856)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
