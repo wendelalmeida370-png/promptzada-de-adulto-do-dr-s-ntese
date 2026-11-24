@@ -2142,7 +2142,7 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   const inv = fs.existsSync(path.join(root, 'qa', 'dentro-inv.js')) ? fs.readFileSync(path.join(root, 'qa', 'dentro-inv.js'), 'utf8') : '';
   const i = inv.indexOf('const CAUSA = {'), j = inv.indexOf('\n  };', i); const causa = i < 0 ? '' : inv.slice(i, j);
   if (!causa) fails.push('coisa nova chega com a sua causa: o qa/dentro-inv.js sem a tabela CAUSA (D-744)');
-  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C2?\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
+  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C\d?\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
 // 297. "o material é o que o povo teve" (D-440, D-744): o within diz o barro, o metal e o pano pelas portas da origem e da roupa
 // (G.Origem.matOK, artsOf) — nunca pela arte sozinha —, e o dentro3d.js pinta o barro, o metal e o pano pelo que o within diz
 { const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
@@ -2164,6 +2164,28 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   if (!/const L = T\.look\(b\); const items = T\.cartaOf\(b\);/.test(f)) fails.push('a lousa diz o que a cozinha tem: o within não lê a lousa do cardápio (G.Taverna.cartaOf, G.Taverna.look; D-749)');
   const dt = (src['dentro3d.js'] || []).join('\n');
   if (!/const lines = D\.words\(w\.t\.lousa\);/.test(dt) || !/lousa: \{ prato: L\.prato, bebidas: L\.bebidas \}/.test(dt) || /cartaOf|\.menu\(/.test(dt)) fails.push('a lousa diz o que a cozinha tem: o dentro3d.js escreve na lousa outra coisa que o W.lousa do within (D-749)'); }
+// === 23, a taverna, quarta onda — T7, o que se vê (planos/taverna-onda4.md) ===
+// 410. "o enfeite pelo material" (D-880, D-881): a festa que se vê é a do mundo (b.festa, da T1), e cada enfeite pelo que ele é feito —
+// as bandeirolas e o pano só onde o povo tece, o estandarte em pano ou no couro do abate —; o dentro3d.js põe os enfeites e o prato da
+// festa só pelo W.festa (nunca lendo o b.festa), e o prato só com as partes que a receita gastou (t.de)
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function festaOf(b, civ, weave, couro, why) {'), j = at.indexOf('\n  }', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!f || !/const S = G\.S, fe = b\.festa; if \(!festaNow\(S, fe\)\) return null;/.test(f) || !/else if \(k === 'fita' \|\| k === 'pano'\) \{ if \(!weave\) continue;/.test(f) || !/else if \(k === 'estandarte'\) \{ if \(!weave && !couro\) continue;/.test(f)) fails.push('o enfeite pelo material: o festaOf do atmos.js não lê a festa do mundo ou não pede o tear às bandeirolas e ao pano, o pano ou o couro ao estandarte (D-881)');
+  const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, '')); dt.forEach((l, k) => { if (/\b\w+\.festa\b(?!\s*:)/.test(l) && /\bb\.festa\b/.test(l)) fails.push(`o enfeite pelo material: dentro3d.js:${k + 1} lê a festa do prédio por conta própria, fora do W.festa (D-880)`); });
+  if (!/if \(pt\.startsWith\('x-'\)\) return !t\.de \|\| t\.de\.includes\(pt\);/.test(dt.join('\n'))) fails.push('o enfeite pelo material: o prato da festa do dentro3d.js mostra partes que a receita não gastou (t.de, D-881)'); }
+// 411. "a porta é a do mundo" (D-882): a tranca e a porta arrombada saem do estado da porta do mundo (G.Interiors.doorState, lido no
+// portaOf do within); o dentro3d.js não pergunta à porta por conta própria; o build3d.js só esconde a folha da porta arrombada
+{ const at = (src['atmos.js'] || []).join('\n'); if (!/const st = In\.doorState\(b, p\.entrance\.door\); const e = st && st\.state; if \(e !== 'trancada' && e !== 'arrombada'\) return null;/.test(at)) fails.push('a porta é a do mundo: o portaOf do atmos.js não lê o estado da porta pelo G.Interiors.doorState (D-882)');
+  (src['dentro3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/doorState\(/.test(c)) fails.push(`a porta é a do mundo: dentro3d.js:${k + 1} pergunta à porta por conta própria, fora do W.porta (D-882)`); });
+  const b3 = (src['build3d.js'] || []).join('\n'); if (!/l\.m\.visible = !\(st && st\.state === 'arrombada'\);/.test(b3)) fails.push('a porta é a do mundo: o build3d.js não esconde a folha da porta arrombada (a folha caída é do G.Dentro3D, D-882)'); }
+// 412. "o lance é do mundo" (D-884, D-669): os dados mostram as faces que o jogo do mundo jogou (W.jogos, pela porta do jogo) — o
+// dentro3d.js não escolhe uma face: vira cada dado pela face do within; as cartas e o monte também só pelo W.jogos
+{ const dt = (src['dentro3d.js'] || []).join('\n'); if (!/j\.dados\.faces\.forEach\(\(f, i\) =>/.test(dt) || !/pre: faceUp\(f, dm\.h \/ 2\)/.test(dt)) fails.push('o lance é do mundo: o dentro3d.js não vira os dados pelas faces que o within diz (D-884)');
+  const at = (src['atmos.js'] || []).join('\n'); if (!/const d = JD && JD\.atMesa \? JD\.atMesa\(b, g\) : null, c = CA && CA\.atMesa \? CA\.atMesa\(b, g\) : null;/.test(at)) fails.push('o lance é do mundo: o jogosOf do atmos.js não pergunta às portas dos jogos (atMesa, D-884)'); }
+// 413. "seca pelo relógio do mundo" (D-883): a poça do chão e a roupa molhada secam pelo tempo do mundo desde que a bebida correu
+// (G.S.clock, At.SECA, At.SECA_ROUPA), nunca pelo relógio da tela
+{ const at = (src['atmos.js'] || []).join('\n');
+  if (!/const dry = k === 'poca' && Number\.isFinite\(q\.t\) \? G\.clamp\(1 - \(S\.clock - q\.t\) \/ At\.SECA, 0, 1\) : 1;/.test(at) || !/const n = G\.clamp\(1 - \(S\.clock - t\) \/ At\.SECA_ROUPA, 0, 1\);/.test(at)) fails.push('seca pelo relógio do mundo: a poça ou a roupa molhada do atmos.js não seca pelo G.S.clock (D-883)');
+  if (/performance\.now|Date\.now/.test(at)) fails.push('seca pelo relógio do mundo: o atmos.js pergunta ao relógio da tela (D-883)'); }
 // === 23, os interiores 2.0 — P7, a vida da taverna no mundo ===
 // 310. "o lugar tomado é do repartidor" (D-762): o lugar que uma pessoa toma e guarda (t.lugar: a peça e o lugar dela) só o
 // interiors.js escreve — In.hold, In.holdAt, In.unhold —; quem senta ou deita pede por essas portas, nunca escreve o lugar à mão
