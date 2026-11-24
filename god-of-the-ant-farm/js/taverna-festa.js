@@ -278,13 +278,15 @@
     for (const id of f.bardos) {
       // (a bard answering what was done to him at the table — the drink in the face —, or in a brawl, stays at it: L-2162)
       if (id === lead.id) continue; const m = d.mesa[id]; const v = S.villagers.get(id); if (!m || !v || m.vem || !(m.st === 5 || m.st === 2 || m.st === 3) || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id || m.zz || G.Vg.entering(v) || (T.answering && T.answering(m)) || (T.brawling && T.brawling(v))) continue;
+      if (T.segura && T.segura(v)) continue; // (… nor at a game with the god's body: D-962)
       TF.toStage(op, v); if (v.carry && v.carry.n > EPS) continue; const t = v.task; m.use = t.use; t.use = 'dancar'; t.near = mp && mp.item ? [mp.item, mp.q] : null; t.st = 6; m.st = 6; t.coro = 1; t.mw = lt.mw; t.me = lt.me; v.actT = 0; coro.push(id);
       if (!d.musicos.includes(id)) d.musicos.push(id);
     }
     d.coro = coro; f.tocaram = Array.from(new Set((f.tocaram || []).concat([lead.id], coro)));
   };
   // (the feast's music: the bards before anyone, from the opening — the first of them at the tables)
-  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; const v = m && S_().villagers.get(id); if (v && (m.st === 5 || m.st === 2 || m.st === 3) && !m.vem && !m.zz && v.task && v.task.type === 'tavern' && v.task.op === op.id && !G.Vg.entering(v) && !(v.carry && v.carry.k === 'food')) return v; } return null; };
+  // (a bard at a game with the god's body stays at it to its end — the next bard leads: G.Taverna.segura, D-962)
+  TF.lider = function (op, b) { const f = TF.noiteDe(b); if (!f || f.fase < 2) return null; const d = op.data; for (const id of f.bardos) { const m = d.mesa[id]; const v = m && S_().villagers.get(id); if (v && (m.st === 5 || m.st === 2 || m.st === 3) && !m.vem && !m.zz && v.task && v.task.type === 'tavern' && v.task.op === op.id && !G.Vg.entering(v) && !(v.carry && v.carry.k === 'food') && !(T.segura && T.segura(v))) return v; } return null; };
 
   // ------------------------------ the drinking match and the arm wrestle (D-823, D-824) ------------------------------
   const compete = v => 0.5 * fac(v, 'ambicioso') + 0.3 * ax(v, 'ext') + 0.2 * (1 - ax(v, 'con'));

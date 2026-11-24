@@ -691,15 +691,17 @@ for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const
     const a = L.findIndex(l => st.test(l)); if (a < 0) { fails.push(`as portas que só leem: act-casa.js sem ${st} — a regra 84 não acha a porta`); continue; }
     let z = a + 1; while (z < L.length && !/^  \};?$/.test(L[z])) z++;
     for (let k = a; k < z; k++) { const c = L[k].replace(/(^|\s)\/\/\s.*$/, ''); if (bad.test(c)) fails.push(`as portas que só leem: act-casa.js:${k + 1} escreve no mundo dentro de uma porta de leitura (D-236): ${L[k].trim().slice(0, 110)}`); } } }
-// 62. "o passo do dia tem uma porta só" (L-915, D-241): enquanto uma cena corre o sol se demora, e o que guarda o ritmo do dia
-// vai com ele. (a) só o G.dayPace (world.js) pergunta ao Scene.lingers; (b) o passo de cada passo do mundo (G.pace) só o tick
-// do main.js escreve — e o world.js, que o declara e o repõe a 1 num mundo novo ou num save aberto —, e só o tick chama o
-// G.dayPace: quem vive o passo lê o G.pace, uma conta por passo, não por pessoa; (c) o relógio do dia anda por ele (main.js) e
-// a fome e a energia do dia também (villagers.js needs: «dn»); a idade, a doença e o que se conta em segundos, não
+// 62. "o passo do dia tem uma porta só" (L-915, D-241; o registro das causas, D-960): o sol se demora por uma causa — a cena que corre,
+// o corpo do deus na taverna aberta ou numa partida à mesa (G.linger, a mais lenta vale) —, e o que guarda o ritmo do dia vai com ele.
+// (a) só a causa «cena» do world.js (G.linger('cena', …)) pergunta ao Scene.lingers; (b) o passo de cada passo do mundo (G.pace) e a
+// parte dele que é do corpo (G.paceCorpo) só o tick do main.js escreve — e o world.js, que os declara e os repõe a 1 num mundo novo ou
+// num save aberto —, e só o tick chama o G.dayPace e o G.dayPace.corpo: quem vive o passo lê o G.pace, uma conta por passo, não por
+// pessoa; (c) o relógio do dia anda por ele (main.js) e a fome e a energia do dia também (villagers.js needs: «dn»); a idade, a doença
+// e o que se conta em segundos, não
 for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
-  if (/\.lingers\s*\(/.test(c) && !(f === 'world.js' && /G\.dayPace = \(\) =>/.test(c))) fails.push(`o passo do dia: ${f}:${k + 1} pergunta ao Scene.lingers fora do G.dayPace (L-915): ${l.trim().slice(0, 110)}`);
-  if (/\bG\.pace\s*(=(?!=)|[-+*/]=|\+\+|--)/.test(c) && !(f === 'main.js' && c.trim() === 'G.pace = G.dayPace();') && !(f === 'world.js' && (c.trim() === 'G.pace = 1;' || c.trim() === 'G.worldHooks.push(() => { G.pace = 1; });'))) fails.push(`o passo do dia: ${f}:${k + 1} escreve o G.pace fora do tick (L-915): ${l.trim().slice(0, 110)}`);
-  if (/\bG\.dayPace\s*\(/.test(c) && !(f === 'main.js' && c.trim() === 'G.pace = G.dayPace();')) fails.push(`o passo do dia: ${f}:${k + 1} chama o G.dayPace fora do tick — quem vive o passo lê o G.pace (L-915): ${l.trim().slice(0, 110)}`); });
+  if (/\.lingers\s*\(/.test(c) && !(f === 'world.js' && /^\s*G\.linger\('cena', /.test(c))) fails.push(`o passo do dia: ${f}:${k + 1} pergunta ao Scene.lingers fora da causa «cena» do world.js (L-915, D-960): ${l.trim().slice(0, 110)}`);
+  if (/\bG\.pace(Corpo)?\s*(=(?!=)|[-+*/]=|\+\+|--)/.test(c) && !(f === 'main.js' && (c.trim() === 'G.pace = G.dayPace();' || c.trim() === 'G.paceCorpo = G.dayPace.corpo();')) && !(f === 'world.js' && (c.trim() === 'G.pace = 1; G.paceCorpo = 1;' || /^G\.worldHooks\.push\(\(\) => \{ G\.pace = 1; G\.paceCorpo = 1; /.test(c.trim())))) fails.push(`o passo do dia: ${f}:${k + 1} escreve o G.pace (ou o G.paceCorpo) fora do tick (L-915, D-961): ${l.trim().slice(0, 110)}`);
+  if (/\bG\.dayPace(\.corpo)?\s*\(/.test(c) && !(f === 'main.js' && (c.trim() === 'G.pace = G.dayPace();' || c.trim() === 'G.paceCorpo = G.dayPace.corpo();'))) fails.push(`o passo do dia: ${f}:${k + 1} chama o G.dayPace fora do tick — quem vive o passo lê o G.pace (L-915): ${l.trim().slice(0, 110)}`); });
 { const code = l => l.replace(/(^|\s)\/\/\s.*$/, ''); const Lm = (src['main.js'] || []).map(code), Lv = (src['villagers.js'] || []).map(code), Lw = (src['world.js'] || []).map(code);
   const tk = Lm.filter(l => /\bS\.time\s*\+=/.test(l));
   if (tk.length !== 1 || !/S\.time \+= dt \/ G\.DAY_LEN \* G\.pace;/.test(tk[0])) fails.push('o passo do dia: o relógio do dia (main.js tick, «S.time += …») não anda pelo G.pace, ou anda em mais de um lugar (L-915)');
@@ -708,7 +710,8 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (en.length !== 1 || !/\(awake \? -dn \* /.test(en[0]) || !/ : dn \* \(100 \/ 22\)\)/.test(en[0])) fails.push('o passo do dia: a energia do dia (villagers.js needs) não anda pelo passo do dia («dn») (L-915)');
   if (Lv.filter(l => /const dn = dd \* G\.pace;/.test(l)).length !== 1) fails.push('o passo do dia: villagers.js needs sem «const dn = dd * G.pace» (L-915)');
   if (!Lv.some(l => /^\s*v\.age \+= dt \/ day;/.test(l))) fails.push('o passo do dia: a idade (villagers.js needs) deixou de andar em segundos («v.age += dt / day») (D-241)');
-  if (!Lw.some(l => /G\.worldHooks\.push\(\(\) => \{ G\.pace = 1; \}\);/.test(l))) fails.push('o passo do dia: world.js não repõe o G.pace num mundo novo ou num save aberto (L-915)'); }
+  if (!Lw.some(l => /G\.worldHooks\.push\(\(\) => \{ G\.pace = 1; G\.paceCorpo = 1; /.test(l))) fails.push('o passo do dia: world.js não repõe o G.pace e o G.paceCorpo num mundo novo ou num save aberto (L-915, D-961)');
+  if (Lm.filter(l => /^\s*G\.paceCorpo = G\.dayPace\.corpo\(\);/.test(l)).length !== 1) fails.push('o passo do dia: o tick do main.js não guarda a parte do corpo no passo (G.paceCorpo = G.dayPace.corpo(), D-961)'); }
 // 63. "o descanso tem uma tabela só, e o cansaço do dia é do needs" (D-240, D-242): (a) a parte do descanso (Vg.REST) e a porta
 // (Vg.resting) entram na conta da energia numa linha só — a do needs (villagers.js) —, e nenhum outro arquivo do jogo lê o
 // Vg.REST; (b) a porta e a tabela só leem: nenhuma escrita na pessoa, na tarefa ou no mundo e nenhum sorteio, do «Vg.REST =»
@@ -2871,5 +2874,60 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 // «jogo-volta»), o aluguel («aluguel-jogo»), a venda do taverneiro («venda-jogo») e o baralho da casa feito do material do povo
 { let om = ''; try { om = fs.readFileSync(path.join(dir, '..', 'ORIGEM.md'), 'utf8'); } catch (e) { om = ''; }
   for (const w of ['jogo-mesa', 'jogo-volta', 'aluguel-jogo', 'venda-jogo', 'Os jogos da casa']) if (!om.includes(w)) fails.push(`o mapa das causas: o ORIGEM.md sem «${w}» (os jogos da casa, D-930)`); }
+// === Onda 4 — N: a noite que dura para quem a vive ===
+// 476. "a demora do dia é um registro, e as causas só leem" (D-960): o sol se demora pelas causas registradas com G.linger — a cena
+// (world.js), o corpo na taverna aberta e o corpo numa partida à mesa (act-taverna.js, do corpo: o quarto argumento true) —, a mais lenta
+// vale. (a) só o world.js e o act-taverna.js registram causas; (b) as do act-taverna.js são do corpo; (c) as perguntas delas (salaCorpo,
+// corpoJoga, mesaCorpo, lastGame, segura) só leem: nenhuma escrita no mundo, nenhum sorteio; (d) o G.paceCorpo — a parte do passo que é do
+// corpo — só o act-taverna.js e o embriaguez.js leem, no passo do mundo (o que a noite gasta)
+{ const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
+  for (const f of files) (src[f] || []).forEach((l, k) => { const c = code(l);
+    if (/\bG\.linger\s*\(/.test(c) && f !== 'world.js' && f !== 'act-taverna.js') fails.push(`a demora do dia: ${f}:${k + 1} registra uma causa da demora fora do world.js e do act-taverna.js (D-960): ${l.trim().slice(0, 110)}`);
+    if (/\bG\.paceCorpo\b/.test(c) && !['world.js', 'main.js', 'act-taverna.js', 'embriaguez.js'].includes(f)) fails.push(`a demora do dia: ${f}:${k + 1} lê o G.paceCorpo — o que a noite gasta é da taverna e da bebida (D-961): ${l.trim().slice(0, 110)}`); });
+  const at = (src['act-taverna.js'] || []).map(code); const regs = at.filter(l => /\bG\.linger\s*\(/.test(l));
+  if (!regs.some(l => /G\.linger\('taverna', \(\) => T\.PACE_SALA, salaCorpo, true\);/.test(l)) || !regs.some(l => /G\.linger\('mesa', \(\) => T\.PACE_MESA, mesaCorpo, true\);/.test(l)) || regs.length !== 2) fails.push('a demora do dia: o act-taverna.js sem as suas duas causas do corpo — a taverna aberta e a partida à mesa (G.linger, D-960)');
+  for (const fn of ['salaCorpo', 'corpoJoga', 'mesaCorpo', 'lastGame', 'segura']) {
+    const a = at.findIndex(l => new RegExp(`^  function ${fn}\\(`).test(l)); if (a < 0) { fails.push(`a demora do dia: o act-taverna.js sem a pergunta ${fn} (D-960)`); continue; }
+    let z = a; let depth = 0; for (; z < at.length; z++) { for (const ch of at[z]) { if (ch === '{') depth++; else if (ch === '}') depth--; } if (depth <= 0 && z >= a) break; }
+    for (let k = a; k <= z; k++) { const c = at[k].replace(/'[^']*'/g, "''");
+      if (/\b(G\.R|G\.rr|G\.ri|G\.pick|G\.chance|G\.shuffle|Math\.random)\s*\(/.test(c) || /(^|[^=!<>])=(?![=>])/.test(c.replace(/\b(const|let)\s+[^;]*;/g, '').replace(/^\s*function [^{]*\{/, '')) || /\.(push|splice|set|delete)\s*\(/.test(c)) fails.push(`a demora do dia: act-taverna.js:${k + 1} — a pergunta ${fn} escreve no mundo ou sorteia (D-960): ${at[k].trim().slice(0, 110)}`); } } }
+// 477. "o que a noite gasta vai pelo relógio dela" (D-961): com o corpo demorando o sol, o copo, o prato e a conversa entre as rodadas dos
+// fregueses do mundo andam pelo G.paceCorpo — as marcas deslizam (noite: m.cup e m.nx), o gole na boca fica nos segundos do mundo
+// (AN.beber.dur × G.paceCorpo) —, e a bebida no sangue também (G.Ebrio.passo: o estômago, o fígado e a ressaca, menos o corpo, cujo gole é do
+// jogador). Sem o corpo, o mesmo de antes
+{ const at = (src['act-taverna.js'] || []).join('\n'), eb = (src['embriaguez.js'] || []).join('\n');
+  if (!/function noite\(m, dt\) \{ const k = G\.paceCorpo; if \(!\(k < 1\) \|\| m\.corpo \|\| m\.body\) return; const s = dt \* \(1 - k\), now = S_\(\)\.clock; if \(\(m\.st === 3 \|\| m\.st === 4\) && m\.cup > 0\) m\.cup \+= s; if \(m\.nx > now\) m\.nx \+= s; if \(m\.st === 2\) m\.ws = \(m\.ws \|\| 0\) \+ s; \}/.test(at)) fails.push('o que a noite gasta: o act-taverna.js sem o relógio da noite das mesas (noite: o copo, a conversa e a espera pelo G.paceCorpo, D-961)');
+  if ((at.match(/m\.cup = r1\(S\.clock\);( if \(!m\.corpo\))? veio\(m\);/g) || []).length !== 3 || !/function veio\(m\) \{ if \(m\.ws\) \{ m\.pw = m\.ws; m\.ws = 0; \} else if \(m\.pw\) m\.pw = 0; \}/.test(at) || !/const dur = \(food \? T\.MEAL : cupOf\(v\)\) \+ pwOf\(m\);/.test(at)) fails.push('o que a noite gasta: a rodada que chega não leva a espera que a noite não contou (veio, m.pw — D-961)');
+  if (!/\n    noite\(m, dt\);/.test(at)) fails.push('o que a noite gasta: o freguês à mesa (runFregues) não anda pelo relógio da noite (noite(m, dt), D-961)');
+  if (!/const sip = AN\.beber\.dur \* G\.paceCorpo;/.test(at)) fails.push('o que a noite gasta: o gole na boca não fica nos segundos do mundo (AN.beber.dur × G.paceCorpo, D-961)');
+  if (!/if \(!isBody\(v\)\) dt \*= G\.paceCorpo;\n    const S = S_\(\); const cheio = E\.cheio\(v\);/.test(eb)) fails.push('o que a noite gasta: a bebida no sangue (G.Ebrio.passo) não anda pelo relógio da noite (G.paceCorpo, D-961)'); }
+// 478. "quem larga a partida do corpo perde" (D-964): numa partida do corpo do deus, quem sai da mesa no meio dela — por qualquer caminho
+// que não seja a casa que fecha ou o jogo que some — perde, e o pote é de quem fica. (a) nas Tabuletas, o abandono de uma partida do corpo dá
+// a vitória ao lado que ficou (fim = { w, por: 'abandono', saiu, causa }); entre dois do mundo, cada um leva o que pôs (w −1), como sempre;
+// (b) no copo — onde quem sai já perde os dados, e o último com dados leva o pote —, o dono dos dados que sai de uma partida do corpo perde o
+// que pôs (perde): o pote a quem ficou com dados, o fim «sobrou» como o do último com dados (a tela diz quem largou a mesa pelo fora)
+{ const cm = (src['cartas-mesa.js'] || []).join('\n'), jd = (src['jogo-dados.js'] || []).join('\n');
+  if (!/else if \(why === 'abandono' && j\.corpo >= 0\) \{ const x = saiuDe\(j\); j\.s\.fim = \{ w: 1 - x\.lado, por: 'abandono', saiu: j\.quem\[x\.lado\], causa: x\.causa \}; \}/.test(cm) || !/function saiuDe\(j\) \{/.test(cm)) fails.push('quem larga a partida do corpo perde: as Tabuletas não dão o pote a quem ficou (C.passo, saiuDe — D-964)');
+  if (/w: -1, por: 'abandono'/.test(cm)) fails.push('quem larga a partida do corpo perde: as Tabuletas com um abandono que devolve o pote (w −1) escrito à parte (D-964)');
+  if (!/\{ if \(ofBody\(d\) && d\.fase !== 'convite' && d\.fase !== 'fim'\) perde\(op, d\.set\.dono\); return close\(op, 'o dono levou os dados'\); \}/.test(jd) || !/function perde\(op, gone\)/.test(jd)) fails.push('quem larga a partida do corpo perde: o dono dos dados que sai de uma partida do corpo leva o que pôs de volta (perde, D-964)');
+  if (!/L\.sort\(\(a, c\) => \(d\.n\[c\] \| 0\) - \(d\.n\[a\] \| 0\) \|\| ord\.indexOf\(a\) - ord\.indexOf\(c\) \|\| a - c\);\n    d\.venc = L\[0\]; finish\(op, 'sobrou'\);/.test(jd)) fails.push('quem larga a partida do corpo perde: o pote do dono dos dados que sai não vai a quem ficou com dados (perde → finish «sobrou», D-964)'); }
+// 479. "a partida do corpo segura quem joga com ele, e o fechamento a espera" (D-962, D-963): (a) quem joga com o corpo fica à mesa até o fim —
+// o caminho de saída do freguês (o chamado do fechamento, a hora de ir, a espera sem serviço, o que faltou, a dança da espera) pergunta ao
+// held, o dia do freguês não escolhe outra coisa (villagers.js decide: G.Taverna.segura), o afazer pesa T.SEGURA; o estrado, o músico, o
+// cochilo, a dança do bêbado, o amigo que leva o desmaiado e os bardos da festa (TF.lider, TF.coro) o deixam; (b) chamado o fechamento com o
+// corpo numa partida, a casa espera a última (d.ultima, T.ULTIMA) — o T.aberta e o fim do dia a contam —, e nenhuma partida nova começa
+// (o G.Cartas.podeCorpo, o G.JogoDados.verbo e os ossinhos dizem por quê)
+{ const at = (src['act-taverna.js'] || []).join('\n'), vg = (src['villagers.js'] || []).join('\n'), tf = (src['taverna-festa.js'] || []).join('\n'), cm = (src['cartas-mesa.js'] || []).join('\n'), jd = (src['jogo-dados.js'] || []).join('\n');
+  const need = [[/const held = segura\(v\); if \(held && !\(t\.pri >= T\.SEGURA\)\)/, 'o afazer de quem joga com o corpo não pesa T.SEGURA'], [/if \(d\.fecha && t\.st !== 6 && !held && /, 'o chamado do fechamento leva quem joga a última partida'],
+    [/\(sleepy\(v\) && !m\.zz && !held && /, 'a hora de ir leva quem joga com o corpo'], [/if \(t\.wt > T\.WAIT && !held\)/, 'a espera sem serviço leva quem joga com o corpo'], [/if \(\(!talk \|\| m\.out === 2\) && !held\)/, 'o que faltou leva quem joga com o corpo'],
+    [/a === 'danca' && d\.festa && !m\.vem && !d\.fecha && !held && /, 'a dança da espera leva quem joga com o corpo'], [/if \(!segura\(v\) && doze\(v, m, d\)\) return 'cochilo';/, 'o cochilo pega quem joga com o corpo'], [/if \(imp\.a === 'danca' && segura\(v\)\) return false;/, 'a dança do bêbado leva quem joga com o corpo'],
+    [/\|\| segura\(f\)\) continue;/, 'o amigo que leva o desmaiado sai da partida do corpo'], [/if \(\(G\.Cartas && G\.Cartas\.prende && G\.Cartas\.prende\(o\)\) \|\| segura\(o\)\) continue;/, 'o músico da noite sai da partida do corpo'],
+    [/T\.aberta = b => \{ const op = T\.dia\(b\); return !!op && op\.st === 'on' && \(inHours\(b\) \|\| lastGame\(op, b\)\); \};/, 'o T.aberta não conta a última partida'], [/if \(ul\) d\.ultima = \{ t: r1\(S\.clock\), ate: r4\(h\.fecha \+ T\.ULTIMA\) \};/, 'o chamado do fechamento não guarda a última partida (d.ultima)'],
+    [/if \(d\.day !== S\.day \|\| !\(inHours\(b\) \|\| lastGame\(op, b\)\)\)/, 'o fim do dia da taverna não espera a última partida'], [/const busy = !!op && op\.st === 'on' && \(inHours\(b\) \|\| lastGame\(op, b\)\);/, 'o afazer do taverneiro deixa o balcão na última partida'], [/if \(!b \|\| !b\.built \|\| !op \|\| !live\(op\) \|\| !\(inHours\(b\) \|\| lastGame\(op, b\)\)\) return backToShelf/, 'o taverneiro larga o balcão na última partida'], [/!dentro && d\.fecha \? \{ ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \}/, 'os ossinhos começam depois do chamado do fechamento']];
+  for (const [re, why] of need) if (!re.test(at)) fails.push(`a partida do corpo segura e o fechamento espera: act-taverna.js — ${why} (D-962, D-963)`);
+  if (!/if \(cur && cur\.type === 'tavern' && G\.Taverna && G\.Taverna\.segura && G\.Taverna\.segura\(v\)\) return;/.test(vg)) fails.push('a partida do corpo segura: o dia de quem joga com o corpo escolhe outra coisa (villagers.js decide, D-962)');
+  if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
+  if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
+  if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

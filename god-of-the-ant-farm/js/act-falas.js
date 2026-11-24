@@ -64,6 +64,10 @@
       acabou: ['Acabou {bem}! Só amanhã.', 'Hoje não tem mais {bem}, amigo.'],
       cheia: ['Está lotado! Volte mais tarde.', 'Não cabe mais ninguém hoje.'],
       fechando: ['Vamos fechar! Todo mundo para casa.', 'Última rodada já foi. Boa noite a todos!'],
+      // (the god's body at a game at the closing: the last game, and the door shut after it — D-963)
+      ultima_partida: ['Última partida, depois fecho a porta.', 'Terminem essa partida, que depois eu fecho.', 'Só esta partida, hein? Depois fecho a porta.'],
+      ultima_fim: ['Pronto, acabou a partida: fecho a porta. Boa noite!', 'Partida acabada, taverna fechada. Boa noite!'],
+      ultima_tempo: ['Não dá para esperar mais: fecho a porta. Cada um leva o que pôs.', 'Já passou muito da hora: fecho agora. Boa noite!'],
       sem_servico: ['Ninguém vem servir... vou embora.', 'Cansei de esperar.'],
       // (the keeper at the god's body's table, D-767: the menu, what ran out, the order taken, the menu let be)
       carta_taverna: ['{nome} O que vai ser hoje?', '{nome} Hoje temos {bem}. O que vai querer?', 'Boa noite! Temos {bem}. O que lhe sirvo?'],

@@ -12,15 +12,27 @@
   // harvests) is measured in days; walking and working in seconds, so a longer day gets more done.
   G.DAY_LEN = 200;
   G.DAY_K = G.DAY_LEN / 100; // (rhythms first tuned for a 100-second day divide by this)
-  // the day's pace (L-915, D-240): while a scene is happening the sun lingers — the clock of the day goes at G.LINGER —, and
-  // what keeps the rhythm of the day goes with it: the hunger and the tiredness (villagers.js needs). The clock alone
-  // lingered: an afternoon with a scene cost near three times the energy of its hours, and the rows of a theatre went to bed
-  // in the middle of the play. Asked once a step, by the clock's own step (main.js tick), and kept in G.pace for who lives
-  // that step; the age, the illness and what is counted in seconds go on in seconds
+  // the day's pace (L-915, D-240, D-960): the sun lingers for a cause — the slowest of the causes registered with G.linger: a scene
+  // happening (G.LINGER, the world's own), the god's body in a tavern open or at a game at one of its tables (the body's own: the
+  // night that lasts for who lives it, act-taverna.js) —, and what keeps the rhythm of the day goes with it: the hunger and the
+  // tiredness (villagers.js needs). The clock alone lingered: an afternoon with a scene cost near three times the energy of its
+  // hours, and the rows of a theatre went to bed in the middle of the play. Asked once a step, by the clock's own step (main.js
+  // tick), and kept in G.pace for who lives that step; the age, the illness and what is counted in seconds go on in seconds.
+  // G.paceCorpo is the share of it that is the body's own — 1 without the body —: what the night of a tavern spends (the rounds,
+  // the plates, the drink in the blood) goes by it, and the world without the body is the one before (D-961)
   G.LINGER = 0.35;
-  G.dayPace = () => (G.Scene && G.Scene.lingers && G.Scene.lingers() ? G.LINGER : 1);
-  G.pace = 1;
-  G.worldHooks.push(() => { G.pace = 1; }); // (a new world, or a save loaded: the pace is the next step's to ask)
+  // (a cause: its name, its pace — a reading —, whether it is on now — a question of yes or no, pure: it reads the world, never
+  // writes nor draws, rule 476 —, and whether it is the god's body's own; registered once, by name, in the order of the files)
+  const LINGERS = []; let lastP = 1, lastW = 1;
+  G.linger = function (id, k, on, corpo) { const c = { id, k, on, corpo: !!corpo }; const i = LINGERS.findIndex(x => x.id === id); if (i >= 0) LINGERS[i] = c; else LINGERS.push(c); };
+  // (the causes as they are registered, and their paces — for the checker and the proofs: only read)
+  G.lingers = () => LINGERS.map(c => ({ id: c.id, k: c.k(), corpo: c.corpo }));
+  G.linger('cena', () => G.LINGER, () => !!(G.Scene && G.Scene.lingers && G.Scene.lingers()));
+  G.dayPace = function () { let p = 1, w = 1; for (const c of LINGERS) { if (!c.on()) continue; const k = c.k(); if (!(k > 0 && k < 1)) continue; if (k < p) p = k; if (!c.corpo && k < w) w = k; } lastP = p; lastW = w; return p; };
+  // (the body's share of the pace the tick has just asked: no cause asked again)
+  G.dayPace.corpo = () => lastP / lastW;
+  G.pace = 1; G.paceCorpo = 1;
+  G.worldHooks.push(() => { G.pace = 1; G.paceCorpo = 1; lastP = 1; lastW = 1; }); // (a new world, or a save loaded: the pace is the next step's to ask)
   G.WEAR_MAX = 60;           // footpath wear saturation
 
   G.newState = function (seed) {

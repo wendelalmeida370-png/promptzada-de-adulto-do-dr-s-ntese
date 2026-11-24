@@ -281,15 +281,26 @@
     const d = op.data;
     for (const i of [0, 1]) { const v = S.villagers.get(j.quem[i]); if (!v) return 'abandono';
       if (j.corpo === i) { if (!A.isBody(v) || v.inside !== b.id) return 'desiste-corpo'; continue; }
+      // (a partida do corpo: quem desmaia da bebida larga a mesa — a força do mundo que o tira dela, D-962 —, olhado antes de onde ele está: o
+      // amigo que o leva para casa o tira da mesa no mesmo segundo)
+      if (j.corpo >= 0 && v.ebrioD > 0) return 'abandono';
       const m = d.mesa[v.id]; if (!m || m.st < 2 || m.st === 6 || m.st === 9 || !v.task || v.task.type !== 'tavern' || v.task.op !== op.id) return 'abandono'; }
     return null;
+  }
+  // (quem largou a partida do corpo — o valida disse 'abandono' — e por quê: o lado de quem já não existe ('morreu', na ordem do valida),
+  // senão o do outro, desmaiado da bebida ('desmaio') ou fora da mesa ('saiu'); só lê)
+  function saiuDe(j) {
+    const S = S_(); for (const i of [0, 1]) if (!S.villagers.get(j.quem[i])) return { lado: i, causa: 'morreu' };
+    const i = 1 - j.corpo; const v = S.villagers.get(j.quem[i]); return { lado: i, causa: v && v.ebrioD > 0 ? 'desmaio' : 'saiu' };
   }
   C.passo = function () {
     const S = S_(); if (!S) return;
     for (const j of jogos()) {
       if (j.fase === 'fim') { if (S.clock - j.fimT >= C.FIM_T && !(j.cofre > EPS)) delete st().j[j.id]; else if (j.cofre > EPS) paga(j); continue; }
       const why = valida(j);
-      if (why) { if (why === 'desiste-corpo') C.desiste(j.s, j.corpo); else j.s.fim = { w: -1, por: why }; fecha(j); continue; }
+      // (na partida do corpo, quem larga a mesa no meio perde: o pote é de quem fica — o lado que ficou, w; quem saiu e por quê, saiu e causa
+      // (D-964). Entre dois do mundo, cada um leva o que pôs, como sempre: quem tem de ir chama a partida de lado)
+      if (why) { if (why === 'desiste-corpo') C.desiste(j.s, j.corpo); else if (why === 'abandono' && j.corpo >= 0) { const x = saiuDe(j); j.s.fim = { w: 1 - x.lado, por: 'abandono', saiu: j.quem[x.lado], causa: x.causa }; } else j.s.fim = { w: -1, por: why }; fecha(j); continue; }
       if (j.corpo < 0 && S.clock >= j.prox) rodada(j);
     }
     for (const op of A.all()) { if (op.def !== 'taverna' || !A.live(op)) continue; const b = S.buildings.get(op.at); if (b) mesas(op, b); }
@@ -354,6 +365,8 @@
     const s = sentado(v); if (!s) return { ok: false, why: 'Sente-se a uma mesa da taverna.' };
     const b = S_().buildings.get(s.b);
     const j = C.vivoDe(v); if (j) return { ok: true, jogo: j.id, b: s.b };
+    // (chamado o fechamento, nenhuma partida começa: a que está na mesa é a última — D-963)
+    { const op = A.get(s.op); if (op && op.data && op.data.fecha) return { ok: false, why: 'A taverna está fechando: não começa outra partida.' }; }
     const L = quemJoga(v, s, oId); if (!L.length) return { ok: false, why: oId ? 'Já está noutro jogo, ou não está à sua mesa.' : 'Ninguém à sua mesa para jogar.' };
     const fs = L.map(o => decksFor(b, v, o)); const i = fs.findIndex(Boolean);
     if (i < 0) { const meu = JC() && JC().proprio(v, 'baralho', b); return { ok: false, espera: 1, why: (JC() && JC().semJogo(v, b, 'baralho', meu ? 1 : 2)) || 'Não há baralho aqui.' }; }
@@ -442,6 +455,9 @@
   };
   // (quem está no meio de uma partida não pede outra rodada nem vai embora por falta de conversa: a mesa o segura)
   C.prende = v => { const s = S_() && S_().cartas; if (!s || !v) return false; for (const k of Object.keys(s.j)) { const j = s.j[k]; if (j.fase === 'jogo' && j.quem.includes(v.id)) return true; } return false; };
+  // (e quem joga com o corpo do deus fica até o fim da partida: nada da noite o tira da mesa, só o que não pode esperar — o fogo, a guerra à
+  // porta, o pânico, o taverneiro que põe o brigão para fora, o desmaio da bebida: G.Taverna.segura, D-962. Só lê)
+  C.prendeCorpo = v => { const S = S_(); const s = S && S.cartas; if (!s || !v || !S.avatar) return false; for (const k in s.j) { const j = s.j[k]; if (j.fase === 'jogo' && j.corpo >= 0 && j.quem[1 - j.corpo] === v.id) return true; } return false; };
   // o que está numa mesa, para quem desenha (o 3D, o som, a vista do deus), no molde que a T7 lê (D-884): mesa — quantas tabuletas há
   // na mesa (as postas nesta rodada, viradas; sem nenhuma posta, as duas da rodada de antes, abertas) —, maos — quantos têm tabuletas na
   // mão (em leque) —, monte — quantas sobram nos dois montes —, mat — o material das tabuletas (o baralho da casa, ou o do corpo); e o

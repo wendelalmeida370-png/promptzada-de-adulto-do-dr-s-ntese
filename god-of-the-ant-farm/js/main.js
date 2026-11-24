@@ -179,8 +179,10 @@
     const S = G.S;
     S.clock += dt;
     // (while a scene is happening the sun lingers: a night scene does not end in the middle of it — watched or not, the same;
-    // the pace of this step, for the clock and for what keeps its rhythm — G.dayPace, world.js: L-915)
+    // the pace of this step, for the clock and for what keeps its rhythm — G.dayPace, world.js: L-915; and the share of it that is
+    // the god's body's own — the night of a tavern that lasts for who lives it, D-960, D-961)
     G.pace = G.dayPace();
+    G.paceCorpo = G.dayPace.corpo();
     S.time += dt / G.DAY_LEN * G.pace;
     if (S.time >= 1) {
       S.time -= 1; S.day++;
