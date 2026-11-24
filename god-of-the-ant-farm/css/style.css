@@ -1146,6 +1146,9 @@ canvas#game3d { touch-action: none; transition: none; }
 .ih-bar.warn i { box-shadow: inset 0 0 0 1px rgba(255, 110, 100, .55); }
 .ih-carry { font-size: 11px; color: var(--ih-gold); margin-top: 7px; font-weight: 800; }
 .ih-carry:empty { display: none; }
+/* (the drink in the body, said lightly: T2, D-838) */
+.ih-ebrio { font-size: 11px; color: #e0b46c; margin-top: 4px; font-style: italic; opacity: .9; }
+.ih-ebrio:empty { display: none; }
 
 /* where and when: the day, the hour, the place */
 .ih-clock { position: absolute; right: calc(14px + env(safe-area-inset-right, 0px)); top: calc(14px + env(safe-area-inset-top, 0px)); padding: 8px 12px 9px; text-align: right; min-width: 170px; max-width: 280px; }

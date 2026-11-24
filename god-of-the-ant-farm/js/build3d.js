@@ -5181,6 +5181,7 @@ float m3scale(float p) {
       const st = In.doorState(b, l.f.id); const open = !!st && st.state === 'aberta'; const w = open ? l.f.swing * 1.45 : 0; if (open) o.open.add(l.f.id);
       if (l.was !== undefined && open !== l.was && G.Audio && G.Audio.play) { const d = Math.hypot(l.f.at[0] - focus.X, l.f.at[2] - focus.Z); const v = G.clamp(1 - d / 14, 0, 1); if (v > 0.05) G.Audio.play(open ? 'door' : 'doorShut', v); }
       l.was = open; const c0 = l.cur; l.cur += (w - l.cur) * k; l.m.rotation.y = l.f.yaw + l.cur; if (Math.abs(l.cur - c0) > 1e-3) moving = true;
+      l.m.visible = !(st && st.state === 'arrombada'); // (a door broken in: its leaf lies fallen inside — G.Dentro3D, T7 D-882 —, the doorway empty)
     }
     // (a lid lifts while the body goes through its hole: the flight it climbs on the stair the lid closes)
     const fl = G.Avatar && G.Avatar.flight ? G.Avatar.flight() : null;

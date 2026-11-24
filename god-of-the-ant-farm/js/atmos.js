@@ -284,8 +284,9 @@
   At.deep = (id, civ) => (At.DEEP[civ] || At.DEEP.classico)[Math.floor(hh(id, 42) * 3)];
   At.bright = id => At.BRIGHT[Math.floor(hh(id, 43) * At.BRIGHT.length)];
   At.odd = id => hh(id, 41) < 0.08;
-  // how drunk one is, 0 to 1: the tavern's rounds and the wine of the wells leave v.drunk, the instant it wears off
-  At.drunk = function (v) { const S = G.S; if (!S || !v || !(v.drunk > S.clock)) return 0; return G.clamp(0.45 + (v.drunk - S.clock) / 120, 0.45, 1); };
+  // how drunk one is, 0 to 1: the drink in the blood against what one bears — G.Ebrio, one truth (embriaguez.js: the tavern's rounds,
+  // the wine of the wells; none below merry, the stagger with the arms out from the staggering mark, the whole of it out: T2, D-830)
+  At.drunk = function (v) { return G.Ebrio && v ? G.Ebrio.k(v) : 0; };
 
   // ------------------------------ what a building shows inside (the interiors 2.0, the front P5: D-740 to D-749) ------------------------------
   // The rule above all (the owner, 23/11/2026; D-651): what is seen inside a building is there because the world has it — the
@@ -330,6 +331,86 @@
   const cooking = b => { const f = At.fire(b); return !!f && (f.why === 'cozinha' || f.why === 'taverna'); };
   // what a person holds of a tavern's now — the cup the keeper carries to a table, the cup a guest drinks from, the plate the body
   // holds —, for the drawing of the hands (the front P6: G.Dentro3D.served): { b, k, prato, st, fresco, quente, t0, why }. Pure
+  // ------------------------------ the fourth wave: what a tavern shows of it (the front T7, D-880 to D-889) ------------------------------
+  At.SECA = 24;       // (seconds of the world a spill on the floor takes to dry)
+  At.SECA_ROUPA = 30; // (and a drink thrown on someone's clothes)
+  // ---- the feast (D-880, D-881): the day's decorations, each by what it is made of — T1's b.festa = { motivo, causa, dia, ate, prato,
+  // enfeites: [{ k, de }] } —: a garland of the wild's flowers or of the garden's greens, bunting and drapes only where the people
+  // weaves, the standard of the people's colours (cloth, or the hide of its slaughter), petals of flowers, the feast's candles of the
+  // wax it spent; and the feast's platter of the people, its parts the parts of the food the recipe spent (prato: { de: [parts] })
+  const FESTA_K = { guirlanda: 'guirlanda', guirlandas: 'guirlanda', flores: 'guirlanda', fita: 'fita', fitas: 'fita', bandeirolas: 'fita', pano: 'pano', panos: 'pano',
+    estandarte: 'estandarte', estandartes: 'estandarte', petalas: 'petalas', 'pétalas': 'petalas', vela: 'vela', velas: 'vela' };
+  const FESTA_PART = { carne: 'x-carne', ave: 'x-carne', peixe: 'x-peixe', marisco: 'x-peixe', trigo: 'x-pao', cevada: 'x-pao', sorgo: 'x-pao', pao: 'x-pao', fruta: 'x-fruta', horta: 'x-horta', milho: 'x-milho', mel: 'x-pao' };
+  const FESTA_CIV = { classico: 1, romano: 1, grego: 1, egipcio: 1, nordico: 1, asteca: 1 };
+  const festaNow = (S, fe) => { if (!fe) return false; if (Number.isFinite(fe.dia) && S.day < fe.dia) return false; if (!Number.isFinite(fe.ate)) return true;
+    return fe.ate > S.day * 2 + 10 ? S.clock <= fe.ate : S.day <= fe.ate; }; // (ate: a day, or a moment of the world's clock)
+  function festaOf(b, civ, weave, couro, why) {
+    const S = G.S, fe = b.festa; if (!festaNow(S, fe)) return null; const out = [];
+    for (const e of Array.isArray(fe.enfeites) ? fe.enfeites : NONE) {
+      const k = e && FESTA_K[e.k]; if (!k) continue; const de = String(e.de || '');
+      let modelo = null, w = '';
+      if (k === 'guirlanda') { modelo = de === 'horta' ? 'guirlanda-horta' : 'guirlanda-flores'; w = de === 'horta' ? 'as folhas e os bulbos da horta' : 'as flores do mato'; }
+      else if (k === 'fita' || k === 'pano') { if (!weave) continue; modelo = k === 'fita' ? 'bandeirolas' : 'pano-festa'; w = 'o pano de um povo que tece'; }
+      else if (k === 'estandarte') { if (!weave && !couro) continue; modelo = 'estandarte-' + (FESTA_CIV[civ] ? civ : 'classico'); w = `as cores e o emblema do povo, em ${weave ? 'pano' : 'couro'}`; }
+      else if (k === 'petalas') { modelo = 'petalas'; w = de === 'horta' ? 'as flores da horta' : 'as flores do mato'; }
+      else if (k === 'vela') { modelo = 'vela'; w = 'a cera que a festa gastou'; }
+      out.push(Object.freeze({ k, de, modelo, why: `${w} — a festa: ${fe.motivo || 'comemoração'}` }));
+    }
+    // (the platter: the people's, its parts those of the food the recipe spent — said by the recipe; all, where it does not say)
+    let prato = null; const pr = fe.prato;
+    if (pr) { const L = Array.isArray(pr) ? pr : Array.isArray(pr.de) ? pr.de : Array.isArray(pr.of) ? pr.of : null; const de = L ? [...new Set(L.map(x => FESTA_PART[x]).filter(Boolean))].sort() : ['x-carne', 'x-fruta', 'x-horta', 'x-milho', 'x-pao', 'x-peixe'];
+      prato = Object.freeze({ civ: FESTA_CIV[civ] ? civ : 'classico', de: Object.freeze(de), why: `o prato da festa${L ? ': ' + L.join(', ') : ''} (a receita da festa)` }); }
+    if (out.length || prato) why.festa = `a festa de hoje: ${fe.motivo || ''}${fe.causa ? ' (' + fe.causa + ')' : ''}`;
+    // (the feast's candles lit as the house's lamps are: someone awake inside, in the dark)
+    return Object.freeze({ motivo: String(fe.motivo || 'festa'), enfeites: Object.freeze(out), prato, acesa: At.lit(b) && darkHour() ? 1 : 0 });
+  }
+  // ---- the door (D-882): locked (the bar across it, inside) or broken in (its leaf fallen and its splinters, till it is mended) — the
+  // world's door state (G.Interiors.doorState: T1's, by the rule of the tavern or what someone made of it), on the plan made only
+  function portaOf(b) {
+    const In = G.Interiors; const p = G.Space && G.Space.planMade ? G.Space.planMade(b) : null; if (!p || !p.entrance || !In || !In.doorState) return null;
+    const st = In.doorState(b, p.entrance.door); const e = st && st.state; if (e !== 'trancada' && e !== 'arrombada') return null;
+    return Object.freeze({ id: p.entrance.door, estado: e, why: e === 'trancada' ? `a porta trancada (${st.by === 'pessoa' ? 'o taverneiro passou a tranca' : 'a regra da casa'}): a tranca atravessada por dentro` : 'a porta arrombada: a folha caída e as lascas, até o conserto' });
+  }
+  // ---- the games at its tables (D-884): the dice and their cup (T4's G.JogoDados.atMesa), the tablets of a game of cards and the deck
+  // (T5's G.Cartas.atMesa) — each asked of every table, by its group of seats (the world's own key of a table: In.groupOf)
+  const MATS_CARTA = { papiro: 1, amate: 1, madeira: 1, cera: 1, barro: 1 };
+  // (the doors of the two games, by the contract's names — planos/taverna-onda4.md: G.JogoDados.atMesa, G.Cartas.atMesa —, looked up by
+  // name: their modules are the fronts T4's and T5's, not in this branch yet; the guard's rule 10 sees them once they are, T-2000)
+  const JOGO_MOD = Object.freeze({ dados: 'JogoDados', cartas: 'Cartas' });
+  function jogosOf(b) {
+    const JD = G[JOGO_MOD.dados], CA = G[JOGO_MOD.cartas]; if (!(JD && JD.atMesa) && !(CA && CA.atMesa)) return NONE;
+    const p = G.Space && G.Space.planMade ? G.Space.planMade(b) : null; if (!p || !p.items) return NONE; const In = G.Interiors; const out = []; const seen = new Set();
+    for (const it of p.items) {
+      if (!/^mesa/.test(it.kind)) continue; const g = In && In.groupOf ? In.groupOf(b, it.id) : it.id; if (seen.has(g)) continue; seen.add(g);
+      const d = JD && JD.atMesa ? JD.atMesa(b, g) : null, c = CA && CA.atMesa ? CA.atMesa(b, g) : null; if (!d && !c) continue;
+      const faces = d ? (Array.isArray(d.dados) ? d.dados : Array.isArray(d.faces) ? d.faces : Array.from({ length: G.clamp(d.n | 0 || 2, 1, 6) }, () => 0)).slice(0, 6).map(x => G.clamp(x | 0, 0, 6)) : null;
+      out.push(Object.freeze({ it: it.id, g,
+        dados: d ? Object.freeze({ faces: Object.freeze(faces), copo: d.copo ? 1 : 0, mat: d.mat === 'madeira' ? 'madeira' : 'osso' }) : null,
+        cartas: c ? Object.freeze({ mesa: G.clamp(c.mesa | 0, 0, 3), maos: G.clamp(c.maos === undefined ? 2 : c.maos | 0, 0, 2), monte: G.clamp(c.monte | 0, 0, 40), mat: MATS_CARTA[c.mat] ? c.mat : 'madeira' }) : null,
+        why: `${d ? 'os dados' + (faces.some(x => x) ? ' (' + faces.join(', ') + ')' : '') : ''}${d && c ? ' e ' : ''}${c ? 'as cartas' : ''} na mesa: o jogo do mundo` }));
+    }
+    return out;
+  }
+  // ---- who fainted from drink inside it (D-885: T2's desmaio): lying where they fell — the cup fallen from the hand, the drink on the
+  // floor round them; the place, the person's own in the world (the lot's metres)
+  function caidosOf(b, op, T) {
+    const S = G.S; const L = G.Space ? G.Space.TILE : 1; const out = [];
+    for (const v of S.villagers.values()) {
+      if (v.inside !== b.id && !(v.x >= b.x - 1 && v.x < b.x + b.w + 1 && v.y >= b.y - 1 && v.y < b.y + b.h + 1)) continue;
+      if (!(v.act === 'desmaio' || (v.task && v.task.type === 'desmaio'))) continue;
+      const c = v.carry && v.carry.n > EPS && POURS.includes(v.carry.k) ? v.carry.k : null;
+      out.push(Object.freeze({ id: v.id, x: (v.x - b.x) * L, z: (v.y - b.y) * L, lv: v.lv | 0, bebida: c || 'cerveja', why: `#${v.id} desmaiado de bebida: a caneca caída da mão${c ? ', a ' + c + ' no chão' : ''}` }));
+    }
+    return out.sort((a, c) => a.id - c.id);
+  }
+  // how wet a person's clothes are with a drink thrown at them (D-883: T2's molhado — v.molhado: the clock it was thrown at, or
+  // { t, k }), drying as the time goes by (At.SECA_ROUPA): { k, n (1 just soaked … 0 dry), why } or null — for the drawing of the
+  // body (T6: the cloth darker where it is wet). Pure
+  At.molhado = function (v) {
+    const S = G.S; const m = v && v.molhado; if (!S || !m) return null; const t = typeof m === 'number' ? m : m.t; if (!Number.isFinite(t)) return null;
+    const n = G.clamp(1 - (S.clock - t) / At.SECA_ROUPA, 0, 1); if (n <= 0) return null; const k = typeof m === 'object' && POURS.includes(m.k) ? m.k : 'cerveja';
+    return { k, n: Math.round(n * 100) / 100, why: `${k} jogada na roupa há ${(S.clock - t).toFixed(1)} s do mundo, secando` };
+  };
   At.serving = function (v) {
     const S = G.S, T = G.Taverna, A = G.Act; const c = v && v.carry; if (!S || !c || !c.op || !(c.n > EPS) || !T || !A) return null;
     const op = A.get(c.op); if (!op || op.def !== 'taverna') return null; const b = S.buildings.get(op.at); if (!b || b.type !== 'taverna') return null;
@@ -352,7 +433,7 @@
     return c ? (c.value >= 62 ? 2 : c.value >= 28 ? 1 : 0) : 1;
   };
   const win = new Map(); let winK = -1, winS = null;
-  const NOWITHIN = Object.freeze({ sig: '', civ: 'classico', rico: 1, barro: false, metal: null, weave: false, bebida: NONE, comida: NONE, bens: NONE, louca: null, mesa: NONE, sujo: NONE, cozinha: null, lenha: null, luz: null, pano: null, rabiscos: 0, manchas: 0, chao: NONE, lousa: null, ombro: null, teia: null, why: NOINV });
+  const NOWITHIN = Object.freeze({ sig: '', civ: 'classico', rico: 1, barro: false, metal: null, weave: false, bebida: NONE, comida: NONE, bens: NONE, louca: null, mesa: NONE, sujo: NONE, cozinha: null, lenha: null, luz: null, pano: null, rabiscos: 0, manchas: 0, chao: NONE, lousa: null, ombro: null, festa: null, porta: null, jogos: NONE, caidos: NONE, teia: null, why: NOINV });
   At.within = function (b) {
     const S = G.S; if (!S || !b || !b.built || b.type === 'ruin') return NOWITHIN;
     if (winS !== S || winK !== S.clock) { win.clear(); winS = S; winK = S.clock; }
@@ -399,7 +480,7 @@
       let prato = null, ps = 0, cup = null, quente = 0, t0 = 0; const why = [];
       if (eating) { prato = (O && c ? O.most('v:' + v.id, 'food') : null) || (O ? O.next('b:' + b.id, 'food') : null) || '?'; const e = eatenOf(v, m, c, T); ps = stageOf(e); t0 = m.cup || 0;
         quente = HOT[prato] && kitchen && S.clock - t0 < At.COOL ? 1 : 0; why.push(`comendo ${prato}: ${Math.round(e * 100)}% comido${quente ? `, quente (servido há ${(S.clock - t0).toFixed(1)} s do fogo da cozinha)` : ''}`); }
-      else if (!drinking && (m.r || 0) >= 1 && m.k) {
+      else if (!drinking && (m.r || 0) >= 1 && m.k && !Array.isArray(op.data.sujo)) { // (where the world keeps what is left on the tables — P7's d.sujo —, its record says it: the dish too)
         // (the round done: its plate or its cup left empty — what the plate held the world no longer says, the dish of the day's)
         if (m.k === 'food') { prato = '?'; ps = 4; } else { cup = POURS.includes(m.k) ? m.k : 'cerveja'; }
         why.push(`a ${m.k === 'food' ? 'refeição' : 'rodada'} acabada (${m.r} já), ${m.k === 'food' ? 'o prato' : 'a caneca'} vazio na mesa até o taverneiro recolher`); }
@@ -454,7 +535,9 @@
     const chao = [];
     for (const q of (b.chao || (op && op.data && op.data.chao) || NONE)) { if (!q || !Number.isFinite(q.x) || !Number.isFinite(q.z)) continue;
       const k = q.k === 'poca' ? 'poca' : barro ? 'cacos' : 'caneca-caida'; const bb = POURS.includes(q.bebida) ? q.bebida : 'cerveja';
-      chao.push(Object.freeze({ k, x: q.x, z: q.z, lv: q.lv | 0, bebida: k === 'poca' ? bb : null, n: G.clamp(Number.isFinite(q.n) ? q.n : 1, 0.3, 1.6), why: k === 'poca' ? `${bb} derramada no chão (o registro da taverna), até alguém limpar` : k === 'cacos' ? 'uma caneca de barro quebrada na briga (perdida no livro), os cacos no chão até alguém limpar' : 'uma caneca de madeira caída na briga: não quebra' })); }
+      // (a spill dries as the time since it ran goes by — At.SECA —, smaller and smaller, gone when it has: T7, D-883)
+      const dry = k === 'poca' && Number.isFinite(q.t) ? G.clamp(1 - (S.clock - q.t) / At.SECA, 0, 1) : 1; if (dry < 0.22) continue;
+      chao.push(Object.freeze({ k, x: q.x, z: q.z, lv: q.lv | 0, bebida: k === 'poca' ? bb : null, n: G.clamp((Number.isFinite(q.n) ? q.n : 1) * (k === 'poca' ? 0.35 + 0.65 * dry : 1), 0.3, 1.6), why: k === 'poca' ? `${bb} derramada no chão (o registro da taverna), até alguém limpar` : k === 'cacos' ? 'uma caneca de barro quebrada na briga (perdida no livro), os cacos no chão até alguém limpar' : 'uma caneca de madeira caída na briga: não quebra' })); }
     // ---- the words at its door (D-749): the dish of the day and what it pours, as the kitchen and the shelf have them now — the menu's
     // own reading (G.Taverna.cartaOf: the same stock) —, on the slate of the small house, the board of the middling one, the painted
     // plaque of the large or rich one (G.Taverna.look: the porte)
@@ -467,6 +550,11 @@
     // ---- the keeper's cloth over his shoulder (for the drawing of the body, P6): a people that weaves, the keeper at his counter now
     const kp = b.type === 'taverna' && op && T && T.keeperOf ? T.keeperOf(b) : null;
     const ombro = kp && kp.inside === b.id && weave ? Object.freeze({ id: kp.id, why: 'o pano do taverneiro no ombro: o povo tece, a taverna aberta' }) : null;
+    // ---- the fourth wave (the front T7, D-880 to D-889: planos/taverna-onda4.md) ----
+    const festa = b.type === 'taverna' ? festaOf(b, civ, weave, couro, why) : null;
+    const porta = b.type === 'taverna' ? portaOf(b) : null;
+    const jogos = b.type === 'taverna' ? jogosOf(b) : NONE;
+    const caidos = b.type === 'taverna' ? caidosOf(b, op, T) : NONE;
     // ---- the cobweb: a building old and uncared for (G.Atmos.wear: the years, the care of its quarter, nobody living in it)
     const w = At.wear(b); const teia = w && w.ageLv >= 3 && w.care === 0 ? Object.freeze({ n: w.ageLv >= 4 ? 2 : 1, why: `${At.years(b)} anos, sem cuidado (G.Atmos.wear)` }) : null;
     const sig = [civ, rico, barro ? 1 : 0, metal || '-', weave ? 1 : 0,
@@ -474,8 +562,11 @@
       louca ? louca.mat + louca.n : '-', mesa.map(q => q.id + (q.cup || '') + q.cs + (q.prato ? ':' + q.prato + q.ps + (q.quente ? 'q' : '') : '') + (q.jogo ? 'j' : '')).join(','), cozinha ? 'c' + (cozinha.mat || '') : '-', lenha ? 'l' + lenha.q : '-',
       luz ? luz.comb.join('') + luz.mat + luz.acesa + (luz.cera ? 'v' + Math.min(3, Math.floor((1 - luz.vela) * 4)) : '') + (luz.oleo ? 'o' + Math.ceil(luz.azeite * 4) : '') : '-', pano ? `${pano.tapete}${pano.pele}${pano.tapecaria}${pano.cor || ''}` : '-', rabiscos, teia ? teia.n : 0,
       manchas, sujo.map(q => `${q.x.toFixed(2)},${q.z.toFixed(2)}${q.prato || q.cup}${q.st}`).join(','), chao.map(q => `${q.k}${q.x.toFixed(2)},${q.z.toFixed(2)}`).join(','),
-      lousa ? `${lousa.k}:${lousa.prato ? lousa.prato.de : '-'}:${lousa.bebidas.join('+')}` : '-', ombro ? ombro.id : 0].join('|');
-    return Object.freeze({ sig, civ, rico, barro, metal, couro, weave, bebida: Object.freeze(bebida), comida: Object.freeze(comida), bens: Object.freeze(bens), louca, mesa: Object.freeze(mesa), sujo: Object.freeze(sujo), cozinha, lenha, luz, pano, rabiscos, manchas, chao: Object.freeze(chao), lousa, ombro, teia, why: Object.freeze(why) });
+      lousa ? `${lousa.k}:${lousa.prato ? lousa.prato.de : '-'}:${lousa.bebidas.join('+')}` : '-', ombro ? ombro.id : 0,
+      festa ? `${festa.motivo}:${festa.enfeites.map(q => q.modelo).join('+')}:${festa.prato ? festa.prato.de.join('') : '-'}:${festa.acesa}` : '-', porta ? porta.estado : '-',
+      jogos.map(q => `${q.g}${q.dados ? 'd' + q.dados.faces.join('') + (q.dados.copo ? 'c' : '') : ''}${q.cartas ? 'k' + q.cartas.mesa + '.' + q.cartas.maos + '.' + q.cartas.monte : ''}`).join(','),
+      caidos.map(q => `${q.id}@${q.x.toFixed(1)},${q.z.toFixed(1)}`).join(','), chao.map(q => (q.k === 'poca' ? Math.round(q.n * 4) : '')).join('')].join('|');
+    return Object.freeze({ sig, civ, rico, barro, metal, couro, weave, bebida: Object.freeze(bebida), comida: Object.freeze(comida), bens: Object.freeze(bens), louca, mesa: Object.freeze(mesa), sujo: Object.freeze(sujo), cozinha, lenha, luz, pano, rabiscos, manchas, chao: Object.freeze(chao), lousa, ombro, festa, porta, jogos, caidos, teia, why: Object.freeze(why) });
   }
 
   // ------------------------------ in words (the proofs, the developer's panel) ------------------------------

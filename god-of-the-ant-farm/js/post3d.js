@@ -130,12 +130,19 @@ void main() {
   gl_FragColor = vec4(acc * ph * uSunCol, 1.0);
 }`;
   // the last pass: the picture, its shade, its glow; the exposure of the hour, the tone curve, the grade, to the screen's colours
-  const COMPFS = () => `varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tAOt; uniform sampler2D tBloom; uniform sampler2D tRays; uniform sampler2D tVL; uniform float uVLK; uniform vec2 uAOTexel; uniform float uAOK; uniform float uBloomK; uniform float uRayK; uniform float uExp;
+  const COMPFS = () => `varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tAOt; uniform sampler2D tBloom; uniform sampler2D tRays; uniform sampler2D tVL; uniform float uVLK; uniform vec2 uAOTexel; uniform float uAOK; uniform float uBloomK; uniform float uRayK; uniform float uExp; uniform vec4 uEbrio;
 ${VIEW}
 ${R3.GLSL.grade}
 vec3 toSRGB(vec3 c) { return mix(c * 12.92, pow(c, vec3(0.41666)) * 1.055 - 0.055, step(0.0031308, c)); }
 void main() {
   vec3 c = texture2D(tScene, vUv).rgb;
+  // (the drink in the body's eyes — G.EbrioCorpo, T2 D-837: x how much, yz the second image, w the blur's reach — blurred and seen twice)
+  if (uEbrio.x > 0.002) {
+    vec2 r = vec2(uEbrio.w, uEbrio.w * 1.6);
+    vec3 bl = (texture2D(tScene, vUv + vec2(r.x, 0.0)).rgb + texture2D(tScene, vUv - vec2(r.x, 0.0)).rgb + texture2D(tScene, vUv + vec2(0.0, r.y)).rgb + texture2D(tScene, vUv - vec2(0.0, r.y)).rgb) * 0.25;
+    c = mix(c, bl, min(1.0, uEbrio.x * 0.9));
+    c = mix(c, texture2D(tScene, vUv + uEbrio.yz).rgb, 0.4 * uEbrio.x);
+  }
 #ifdef AO
   // (the shade, brought up to the full picture without crossing edges: of the four nearest, those at this depth count)
   { float z = -vz(vUv); vec2 p = vUv / uAOTexel - 0.5; vec2 f = fract(p); vec2 b = (floor(p) + 0.5) * uAOTexel;
@@ -182,7 +189,7 @@ void main() {
       rblur: mk(RBLURFS, { tSrc: { value: null }, uSun: { value: new THREE.Vector2() }, uLen: { value: 0.5 } }),
       vl: null, vlU: Object.assign(view(), { tShadow: { value: null }, uShadowM: { value: new THREE.Matrix4() }, uCamW: { value: new THREE.Matrix4() }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uSunCol: { value: new THREE.Color(0) }, uMax: { value: 60 }, uBase: { value: 0.0016 }, uDust: { value: 0 },
         gxAirMap: R3.GX.gxAirMap, gxShade: R3.GX.gxShade, gxAirB: R3.GX.gxAirB, gxAirK: R3.GX.gxAirK, gxCanopy: R3.GX.gxCanopy }),
-      comp: null, compU: Object.assign(view(), { tScene: { value: null }, tAOt: { value: null }, tBloom: { value: null }, tRays: { value: null }, tVL: { value: null }, uVLK: { value: 0 }, uAOTexel: { value: new THREE.Vector2() }, uAOK: { value: 0.85 }, uBloomK: { value: 0.12 }, uRayK: { value: 0 }, uExp: { value: 1 }, gxGr: R3.GX.gxGr, gxTn: R3.GX.gxTn }),
+      comp: null, compU: Object.assign(view(), { tScene: { value: null }, tAOt: { value: null }, tBloom: { value: null }, tRays: { value: null }, tVL: { value: null }, uVLK: { value: 0 }, uAOTexel: { value: new THREE.Vector2() }, uAOK: { value: 0.85 }, uBloomK: { value: 0.12 }, uRayK: { value: 0 }, uExp: { value: 1 }, uEbrio: { value: new THREE.Vector4(0, 0, 0, 0) }, gxGr: R3.GX.gxGr, gxTn: R3.GX.gxTn }),
     };
     M.up.blending = THREE.AdditiveBlending; M.up.transparent = true;
     quad = new THREE.Mesh(g, M.blur); quad.frustumCulled = false;
@@ -287,6 +294,7 @@ void main() {
         }
       }
       M.compU.tScene.value = rtS.texture; M.compU.uExp.value = exp;
+      { const e = G.EbrioCorpo ? G.EbrioCorpo.vista() : null; M.compU.uEbrio.value.set(e ? e[0] : 0, e ? e[1] : 0, e ? e[2] : 0, e ? e[3] : 0); } // (the drink in the eyes: T2)
       pass(M.comp, prevT);
     } finally { ren.autoClear = ac; info.autoReset = true; ren.setRenderTarget(prevT); }
     P3.ms = performance.now() - t0;

@@ -166,7 +166,7 @@ if (on('j7') && need) {
   const Po = G.Possess; const In = G.Interiors; const tried = new Set(); let pick = null, x = null, taken = false;
   // (a customer seated at a table with two more who could play — awake, free, not in a game —, of coin, in an open tavern: the god takes
   // the body on its seat; the table it was at, still with someone to play when the tavern sees it there — else the next table)
-  const could = (v, m) => v && m.g && !m.zz && m.st >= 2 && m.st <= 5 && v.task && v.task.type === 'tavern' && v.energy > 36 && !(v.drunk > S().clock && (v.drinks || 0) >= 2) && !JD.gameOf(v);
+  const could = (v, m) => v && m.g && !m.zz && m.st >= 2 && m.st <= 5 && v.task && v.task.type === 'tavern' && v.energy > 36 && !(G.Ebrio && G.Ebrio.grau(v) >= 2) && !JD.gameOf(v);
   for (let tryN = 0; tryN < 6 && !(x && x.k === 'chamar' && x.ok); tryN++) {
     if (Po.body()) god(() => Po.release('deus')); M.reseed(99 + tryN); G.Save.apply(JSON.parse(SNAP)); G.Main.mode = 'game'; pick = null;
     for (let k = 0; k < 400 && !pick; k++) { calm(); M.viver(0.25);

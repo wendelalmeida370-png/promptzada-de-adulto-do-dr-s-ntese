@@ -199,17 +199,17 @@ if (run('r4')) {
 
 // ------------------------------ r5: the drink ------------------------------
 if (run('r5')) {
-  // two grown people standing in the street near one another; one of them drunk (the tavern's own mark: v.drunk)
+  // two grown people standing in the street near one another; one of them drunk (the drink in the blood: G.Ebrio, T2)
   // (standing, or walking: with no gesture of a task — one in the middle of a stroke of work bends more than any drunk, and the
   // sober one of the case was «0.00 e 0.68» of sway and lean: T-852)
-  const out = adults().filter(v => !v.inside && !v.sleeping && !v.act && G.W.inb(v.x, v.y) && !(v.drunk > S.clock));
+  const out = adults().filter(v => !v.inside && !v.sleeping && !v.act && G.W.inb(v.x, v.y) && !G.Ebrio.alegre(v));
   // (the drunk one with no other feeling on the face: the drink shows only there — grief and the moment's feeling come first, by
   // design (P3.look); with the friend's mourning of 22b a mourner was picked and «the face flushed» read as a fault: T-1582)
   let a = null, b = null; for (const p of out) { if (p.mourn > 0 || (p.emo && p.emo.k)) continue; const q = out.find(o => o !== p && G.dist(o.x, o.y, p.x, p.y) < 6); if (q) { a = p; b = q; break; } }
   if (!a) ok('r5 a bebedeira', false, 'ninguém de pé na rua perto de outro');
   else {
     const at = v => [v.x, v.y, v.face, v.moving, JSON.stringify(v.path || null)].join('|');
-    a.drunk = S.clock + 200; a.drinks = 3; const w0 = [at(a), at(b)];
+    G.Ebrio.prova(a, G.Ebrio.limiar(a, 'tonto') + 0.2); a.drinks = 3; const w0 = [at(a), at(b)];
     const focus = { X: a.x * TL, Y: 0, Z: a.y * TL }; let ma = 0, mb = 0, na = 0, off = 0, face = 0;
     const span = (id, f) => { let lo = 1e9, hi = -1e9; return { put() { const s = P3.visOf(id); if (!s) return; const x = f(s); lo = Math.min(lo, x); hi = Math.max(hi, x); }, get: () => hi - lo }; };
     const sa = span(a.id, s => s.pose.sway), sb = span(b.id, s => s.pose.sway), la = span(a.id, s => s.pose.lean), lb = span(b.id, s => s.pose.lean);
@@ -223,7 +223,7 @@ if (run('r5')) {
     const La = P3.look(a), Lb = P3.look(b);
     const god = Math.abs(G.Court.sway(a)) >= 0 && G.Court.sway(b) === 0; // (the god's view weaves the same one)
     const errs = P3.check();
-    a.drunk = 0; a.drinks = 0;
+    G.Ebrio.prova(a, 0); a.drinks = 0;
     // (the sober one's trunk: the weight passed from one leg to the other, standing, is ±0.05 of it (anim-pessoas idle) — 0.10 of
     // span in a shift that falls inside the 200 frames; the drunk's weave is past 0.2: T-1582)
     const SOBER = 0.12;
@@ -285,7 +285,7 @@ if (run('r9')) {
   const bad = []; let looks = 0;
   // (a drunk — the tavern's own mark, by the test's hand — and the god's sudden winter over a street; then the world lived)
   const out = adults().filter(v => !v.inside && !v.sleeping && G.W.inb(v.x, v.y));
-  const d = out[0]; if (d) { d.drunk = S.clock + 90; d.drinks = 3; S.faith = 999; G.Powers.cast('winter', d.x, d.y); }
+  const d = out[0]; if (d) { G.Ebrio.prova(d, G.Ebrio.limiar(d, 'bebado') + 0.3); d.drinks = 3; S.faith = 999; G.Powers.cast('winter', d.x, d.y); }
   for (let k = 0; k < 8; k++) { M.viver(6); const q = atm(); looks++; for (const x of q.slice(0, 2)) bad.push(`S${x.sev} ${x.msg}`); }
   const told = [];
   const lie = (name, rx, on, off) => { let q; try { on(); q = atm(); } finally { off(); flush(); } const hit = q.filter(x => rx.test(x.msg)).length; told.push(`${name}: ${hit ? 'acusa' : 'CALA'}`); if (!hit) bad.push(`o verificador cala diante de «${name}»`); };
@@ -293,7 +293,7 @@ if (run('r9')) {
   lie('todos vestidos de povo', /veste-se como povo/, () => { At.dress = () => At.NEUTRAL; }, () => { At.dress = d0; });
   lie('o agasalho dentro de casa', /agasalhado para o frio da rua dentro/, () => { At.dress = v => (v.inside ? Object.assign({}, d0(v), { cold: 2 }) : d0(v)); }, () => { At.dress = d0; });
   lie('todos cambaleando', /cambaleando sem ter bebido/, () => { At.drunk = () => 0.6; }, () => { At.drunk = k0; });
-  lie('o bêbado andando reto', /bêbado sem cambalear/, () => { const v = [...S.villagers.values()][0]; v.drunk = S.clock + 50; At.drunk = () => 0; }, () => { At.drunk = k0; [...S.villagers.values()][0].drunk = 0; });
+  lie('o bêbado andando reto', /bêbado sem cambalear/, () => { const v = [...S.villagers.values()][0]; G.Ebrio.prova(v, 0.9); At.drunk = () => 0; }, () => { At.drunk = k0; G.Ebrio.prova([...S.villagers.values()][0], 0); });
   const after = atm();
   ok('r9 o verificador: as regras do qa/atmos-inv.js para a roupa limpas com um bêbado na rua e o inverno do deus — e cada uma acusa a mentira contada pela mão do teste', !!d && !bad.length && !after.length && looks >= 8,
     `${looks} olhadas ao longo de ${looks * 6} s de mundo · ${told.join(' · ')} · depois, ${after.length} violações${bad.length ? ' · ' + bad.slice(0, 5).join(' · ') : ' · nenhuma violação'}`);

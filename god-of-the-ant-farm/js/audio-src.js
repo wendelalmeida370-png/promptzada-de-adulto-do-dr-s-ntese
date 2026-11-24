@@ -197,6 +197,13 @@
   };
   A.TAVERNA_ATO = TAVERNA_ATO;
   for (const k in TAVERNA_ATO) if (!A.ATO[k]) A.ATO[k] = TAVERNA_ATO[k];
+  // the acts of the drunk (T2, D-839) the tables above lack: the spit of the quarrelsome drunk (the others — the drink thrown, the wet one,
+  // the song alone, the faint, the drag — are the sounds of P9's, T8, above); these only fill what is missing
+  const EBRIO_ATO = {
+    spit: still('o cuspe não se ouve de longe'),
+  };
+  A.EBRIO_ATO = EBRIO_ATO;
+  for (const k in EBRIO_ATO) if (!A.ATO[k]) A.ATO[k] = EBRIO_ATO[k];
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {
     cao: { s: 'bark', cada: 9, v: 0.6, alc: 1.3 }, galinha: { s: 'cluck', cada: 7, v: 0.4, alc: 0.7, dia: 1 }, pombo: { s: 'coo', cada: 9, v: 0.25, alc: 0.5, dia: 1 },

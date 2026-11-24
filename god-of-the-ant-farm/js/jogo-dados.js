@@ -176,8 +176,9 @@
   // ------------------------------ who a person is at the table (pure readings of the índole and the drink) ------------------------------
   const ax = (v, k) => (G.Indole ? G.Indole.ax(v, k) : 50) / 99;
   const fac = (v, k) => (G.Indole && G.Indole.faceta ? G.Indole.faceta(v, k) : 0.5);
-  // (the drink in one, 0..1: wave 4's v.ebrio when it is there — T2 —, else the rounds of tonight while one is drunk)
-  JD.ebrio = function (v) { const S = S_(); if (v && Number.isFinite(v.ebrio)) return Math.max(0, Math.min(1, v.ebrio / 1.2)); return v && v.drunk > S.clock ? Math.min(1, 0.3 + 0.15 * (v.drinks || 0)) : 0; };
+  // (the drink in one, 0..1: the degree T2 reads of the blood — G.Ebrio.grau: merry, drunk, reeling, out —, one alcohol for the whole
+  // world, D-830; the reeling one is all drink)
+  JD.ebrio = v => (G.Ebrio && G.Ebrio.grau ? Math.min(1, G.Ebrio.grau(v) / 3) : 0);
   JD.tracos = function (v) {
     const eb = JD.ebrio(v);
     const ous = Math.max(0, Math.min(1, 0.45 * (1 - ax(v, 'neu')) + 0.3 * ax(v, 'ext') + 0.25 * (1 - ax(v, 'con')) + 0.15 * eb));
@@ -284,8 +285,8 @@
     if (!v || v.age < 14 || seatOf(v, b, top) !== g) return false; const m = top.data.mesa[v.id];
     if (m.zz || m.st === 6 || m.st === 9 || m.st === 1) return false;
     if (T().brawling && T().brawling(v)) return false;
-    // (one about to doze at the table — worn out, or drunk past the third round: the tavern's own doze — does not start a game)
-    if (v.energy < (T().SONO || 26) + 3 || (v.drunk > S_().clock && (v.drinks || 0) >= 3)) return false;
+    // (one about to doze at the table — worn out, or reeling with drink (G.Ebrio: the tavern's own doze, T2) — does not start a game)
+    if (v.energy < (T().SONO || 26) + 3 || (G.Ebrio && G.Ebrio.grau(v) >= 3)) return false;
     const j = top.data.jogo && top.data.jogo[g]; if (j && j.quem.includes(v.id)) return false;
     return !gameOf(v);
   }
