@@ -12,6 +12,9 @@ levantamentos dizem de cada degrau e de cada povo (`planos/levantamentos/`: o B 
 incrível, perfeito, bonito esteticamente, artístico»; «no palácio não vive só o governante, vivem outros burocratas»; a reunião com os
 aristocratas na mesa gigante; o banquete. E o padrão: **a taverna de hoje é o mínimo** — o palácio tem de ficar acima dela em cada
 critério da prova padrão (`qa/padrao.js`), e cada degrau maior mais majestoso pelo uso, não pelo vazio.
+**Nada vem do nada** (o lembrete do dono, 24/11/2026): o ouro do trono, as moedas do tesouro, a comida do banquete, as armas do armeiro,
+as tapeçarias, o material de escrever — cada um só onde o povo o tem, pelo livro e pela origem; e **a estrutura dos ofícios fica
+pronta** (os postos da frente O): quando o Patch 40 chegar, o governante, o conselho, a corte e o pessoal só ligam a jogabilidade.
 
 ## 1. O que o dono vai ver (a régua da onda)
 
