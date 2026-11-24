@@ -202,7 +202,25 @@
   // ------------------------------ the door, as the world holds it (D-812) ------------------------------
   // (broken in: the door forced, open to all till it is mended; barred: the keeper's bar — In.doorHold, interiors.js)
   function hold(b, id) { if (broken(b) && (b.porta.door === id || !(b.porta.door >= 0))) return 'arrombada'; return b.tranca ? 'trancada' : null; }
-  G.worldHooks.push(() => { if (G.Interiors && G.Interiors.doorHold) G.Interiors.doorHold('taverna', hold); });
+  // (the bar is on the inside, D-910: whoever is within lifts it — the god's body too, In.useDoor from inside, In.doorLift —; lifted, the house
+  // is barred no more: who hides in it stays, and the raider who comes finds the door unbarred. The keeper hiding there bars it again once the
+  // one who lifted it is out, the danger still at the door — keeper, below)
+  function unbar(b, id, v) {
+    if (!G.inSim) return { ok: false, why: 'fora do passo do mundo' };
+    if (!barred(b)) return { ok: true };
+    const S = S_(); const n = TC.hiders(b).length; delete b.tranca; delete b.portaHp;
+    const set = S.settlements.get(b.set);
+    if (v && n && TC.of(b).perigo) log(`${v.name} tirou a tranca da porta da taverna de ${set ? set.name : ''}, com ${n > 1 ? n + ' pessoas escondidas' : 'uma pessoa escondida'} lá dentro e a guerra à porta.`, 'war', b.x, b.y);
+    return { ok: true, n };
+  }
+  // (and what lifting it means, said to the hands before and after: who hides there, the war at the door. Pure)
+  function barSays(b) {
+    const n = TC.hiders(b).length; const war = !!TC.of(b).perigo;
+    const who = n > 1 ? `${n} pessoas escondidas` : n ? 'uma pessoa escondida' : '';
+    return { label: who ? `Tirar a tranca (${who} aqui)` : 'Tirar a tranca e abrir a porta',
+      msg: `Você tira a tranca e abre a porta${war ? ': lá fora, a guerra' : ''}${who ? `; aqui dentro, ${who}, sem a tranca entre ${n > 1 ? 'elas' : 'ela'} e a rua` : ''}.` };
+  }
+  G.worldHooks.push(() => { if (G.Interiors && G.Interiors.doorHold) G.Interiors.doorHold('taverna', hold); if (G.Interiors && G.Interiors.doorLift) G.Interiors.doorLift('taverna', { lift: unbar, says: barSays }); });
 
   // ------------------------------ the hiding (G.War.shelters, D-813) ------------------------------
   const hideTask = (b, v, dono) => ({ type: 'hide', pri: dono ? 4.6 : 4.4, kind: 'hide', b: b.id, sh: 'taverna', dono: dono ? 1 : undefined, st: v.inside === b.id ? 2 : 0, stay: v.inside === b.id ? b.id : undefined, t0: r1(S_().clock), calma: r1(S_().clock), chk: 2 });
@@ -252,6 +270,8 @@
     v.act = 'esconder'; v.moving = false;
     t.chk = (t.chk || 0) - dt; if (t.chk <= 0) { t.chk = 2; if (allClear(b, t)) H.end(v); }
   };
+  // (the god's body in the house — the world's record of it, v.inside —: the bar it lifted is put back only once it is out)
+  const bodyIn = b => { const w = G.Possess && G.Possess.body ? G.Possess.body() : null; return !!w && w.inside === b.id; };
   // the keeper in his house at the danger: the choice once (b.abrigo), the call at the door while it is open, the bar, the hiding
   function keeper(v, t, b, dt, H) {
     const S = S_();
@@ -273,6 +293,9 @@
       if (!b.tranca && !broken(b)) { b.tranca = { t: r1(S.clock), por: v.id, g: 0 }; b.portaHp = TC.hpOf(b); say(v, 'abrigar_tranca', {}); }
       t.ks = 'esconde'; v.actT = 0; return;
     }
+    // (the bar lifted from inside — the god's body went out by the door, D-910 — and the danger still at it: barred again, once the body is out
+    // of the house — never over it: the bar is its to lift)
+    if (!b.tranca && !broken(b) && TC.of(b).perigo && !bodyIn(b)) { t.ks = 'tranca'; v.actT = 0; return; }
     v.act = 'esconder'; v.moving = false;
     t.chk = (t.chk || 0) - dt; if (t.chk <= 0) { t.chk = 2; if (allClear(b, t)) { lift(b); H.end(v); } }
   }

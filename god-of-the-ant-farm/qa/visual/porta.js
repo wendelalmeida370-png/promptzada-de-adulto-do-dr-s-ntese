@@ -87,10 +87,13 @@ const aside = [], marks = []; const clear = (C) => { const [CX, CZ] = C || [SX, 
 const back = () => { god(() => { for (const [o, x, y] of aside) { o.x = x; o.y = y; } for (let k = marks.length - 1; k >= 0; k--) { const [m, i, id] = marks[k]; S[m][i] = id; } }); aside.length = 0; marks.length = 0; };
 // (for a proof the world runs in, those about the doorstep sent a few strides off along the street, to ground the world walks —
 // not out of the world, as for the proofs that only look —, and back after: someone standing at the door is whom «E» means — T-089)
-const asideRun = []; const clearRun = () => {
-  const spot = (o, sv) => { for (let r = 10; r <= 16; r += 2) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = (SX + Math.cos(a) * r) / TL, y = (SZ + Math.sin(a) * r) / TL; if (W.walkableXY(x, y) && (!sv || W.reaches(o, x, y))) return [x, y]; } return null; };
-  for (const o of S.villagers.values()) { if (o === v || o.inside || Math.hypot(o.x * TL - SX, o.y * TL - SZ) >= 6) continue; const to = spot(o, true); if (!to) continue; asideRun.push([o, o.x, o.y]); god(() => { G.Vg.endTask(o); o.x = to[0]; o.y = to[1]; o.path = null; }); }
-  for (const a of S.animals.values()) { if (Math.hypot(a.x * TL - SX, a.y * TL - SZ) >= 6) continue; const to = spot(a, false); if (!to) continue; asideRun.push([a, a.x, a.y]); god(() => { a.x = to[0]; a.y = to[1]; a.path = null; }); } };
+// (C, beasts: the beasts about the doorstep of another house, the 5's — one standing at its door pushed the body out of its contour on the
+// step up to the door, the world moved the body and the knock was undone, T-2062; its people stay: one of the house sent off walked home
+// through the door in the middle of the case)
+const asideRun = []; const clearRun = (C, beasts) => { const [CX, CZ] = C || [SX, SZ];
+  const spot = (o, sv) => { for (let r = 10; r <= 16; r += 2) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const x = (CX + Math.cos(a) * r) / TL, y = (CZ + Math.sin(a) * r) / TL; if (W.walkableXY(x, y) && (!sv || W.reaches(o, x, y))) return [x, y]; } return null; };
+  for (const o of S.villagers.values()) { if (beasts || o === v || o.inside || Math.hypot(o.x * TL - CX, o.y * TL - CZ) >= 6) continue; const to = spot(o, true); if (!to) continue; asideRun.push([o, o.x, o.y]); god(() => { G.Vg.endTask(o); o.x = to[0]; o.y = to[1]; o.path = null; }); }
+  for (const a of S.animals.values()) { if (Math.hypot(a.x * TL - CX, a.y * TL - CZ) >= 6) continue; const to = spot(a, false); if (!to) continue; asideRun.push([a, a.x, a.y]); god(() => { a.x = to[0]; a.y = to[1]; a.path = null; }); } };
 const backRun = () => { god(() => { for (const [o, x, y] of asideRun) { o.x = x; o.y = y; o.path = null; } }); asideRun.length = 0; };
 // (an animal the hands may pet: the yard's own, or one of the world's)
 const petable = a => { const d = G.Animals.DEF[a.kind]; return !a.dead && !a.held && d && d.cls !== 'water' && d.cls !== 'air' && (a.dom || a.tamed || d.dom || d.pet); };
@@ -220,6 +223,7 @@ function throughGates(x0, y0, pts) {
     // from there, ran it into a cliff; and a leg the world walks a hair from a lot — 0.28 m from the sobrado#18371, the body
     // 0.32 m round — held it at that wall: the house#25170 of the sixth generation, five tiles from the body, thirty on foot,
     // round a cliff — T-233)
+    clearRun([sx, sz], true); // (the beasts off the doorstep of the house, as the 2's: T-089, T-2062)
     const path2 = W.findPath(v.x, v.y, sx / TL, sz / TL, true, 40000);
     if (path2) for (const w of throughGates(v.x, v.y, path2)) walkTo(w[0] * TL, w[1] * TL, legFrames(w[0] * TL, w[1] * TL, 300));
     walkTo(sx, sz, legFrames(sx, sz, 200));
@@ -227,10 +231,11 @@ function throughGates(x0, y0, pts) {
     if (t2) { st.yaw = Math.atan2(t2.Z - st.Z, t2.X - st.X); IN.camYaw = st.yaw; still(2); }
     const r = I.best(); const x0 = st.X, z0 = st.Z; said.length = 0;
     const ran = r && r.id === 'portaPlanta' && /Bater/.test(r.label) ? I.run(r) : null; for (let k = 0; k < 240 && G.Avatar.busy(); k++) frame(); for (let k = 0; k < 4; k++) frame();
-    const dd = t2 ? Math.hypot(t2.X - st.X, t2.Z - st.Z) : 9; const s2 = In.doorState(q, pq.entrance.door).state;
+    // (one of the house walking in or out by it has it open while he passes, the lock on — D-766: read once nobody passes, T-2062)
+    const dd = t2 ? Math.hypot(t2.X - st.X, t2.Z - st.Z) : 9; for (let k = 0; k < 300 && [...S.villagers.values()].some(o => o.inside === q.id && In.passage(o)); k++) frame(); const s2 = In.doorState(q, pq.entrance.door).state;
     ok('5. a porta trancada de outra casa, da soleira: «Bater à porta» — o corpo dá o passo até ela e bate; ela fica trancada', !!ran && dd <= 1.0 && said.some(t => /bate à porta/.test(t)) && s2 === 'trancada' && !v.inside,
       `${q.type}#${q.id}: «${r ? r.label : 'nada'}» a ${Math.hypot(x0 - (t2 ? t2.X : x0), z0 - (t2 ? t2.Z : z0)).toFixed(2)} m; depois a ${dd.toFixed(2)} m, «${said.join(' / ') || '-'}»; a porta ${s2}`);
-    god(() => { In.useDoor(q, pq.entrance.door, 'destrancar', owner); });
+    god(() => { In.useDoor(q, pq.entrance.door, 'destrancar', owner); }); backRun();
   }
 }
 
