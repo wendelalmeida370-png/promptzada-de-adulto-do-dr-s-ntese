@@ -33,7 +33,7 @@ async function abre(browser, dev, reduz) {
   page.on('pageerror', e => errs.push(e.message));
   page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|WebGL|GL Driver/.test(t)) errs.push('console: ' + t.slice(0, 200)); });
   // (o laço do jogo — o passo do mundo e o desenho dele — parado: só o que a festa pede ao quadro corre — a camada, as contagens, a medida)
-  await page.addInitScript(() => { const r0 = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = cb => (cb && (cb.name === 'loop' || cb.name === 'frame') ? 0 : r0(cb)); try { localStorage.clear(); } catch (e) { } });
+  await page.addInitScript(() => { const r0 = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = cb => (cb && (cb.name === 'loop' || cb.name === 'frame') ? 0 : r0(cb)); try { localStorage.clear(); localStorage.setItem('gotaf-guia-tabuletas', '1'); localStorage.setItem('gotaf-guia-copo', '1'); } catch (e) { } }); // (o guia da primeira partida — a frente E — já visto: esta prova é da festa, D-947)
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(700);
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') });

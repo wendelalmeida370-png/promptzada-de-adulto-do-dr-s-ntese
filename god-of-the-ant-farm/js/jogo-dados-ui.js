@@ -307,7 +307,7 @@
     if (!scene || scene.op !== s.op) { scene = newScene(s); fimMostrado = null; }
     const sc = scene; const now = s.now; const F = (s.fase === 'revela' || s.fase === 'fim') ? 1 : 0; void F;
     const L = seated(s); const me = L.find(p => p.eu) || null; sc.cnt = contagem(s, L);
-    const { w, h, dpr } = fit(); const geo = geoOf(w, h, L.length); const set = s.set || { mat: 'osso' }; const mat = set.mat;
+    const { w, h, dpr } = fit(); const geo = geoOf(w, h, L.length); const set = s.set || { mat: 'osso' }; const mat = set.mat; lastGeo = geo;
     // (the table resized — the hands' strip taller in another phase, the window turned —: the body's dice go with the board, not the pixels)
     const gk = `${geo.mx}:${geo.my}:${geo.tw}:${geo.th}`;
     if (sc.geo && sc.geo.k !== gk) for (const d of sc.dice) { d.x = geo.mx + (d.x - sc.geo.mx) * geo.tw / sc.geo.tw; d.y = geo.my + (d.y - sc.geo.my) * geo.th / sc.geo.th; }
@@ -604,7 +604,7 @@
       <li>Na sua vez, diga quanto dá a <b>soma de todos os dados da mesa</b> — os seus e os dos outros. Não vale repetir um número que alguém já disse.</li>
       <li>Levantam-se os copos. Quem <b>cravou</b> a soma em cheio faz <b>cada um dos outros</b> perder um dado. Se ninguém cravou, quem ficou <b>mais longe</b> perde um.</li>
       <li>Quem fica sem dados está fora. O último que ainda tem dados leva o pote.</li></ol>
-      <p>Dica: o palpite dos outros diz alguma coisa dos dados deles — ou é blefe. E há quem vire um dado na hora de levantar o copo… se ninguém estiver olhando.</p><button class="jd-go" data-a="ajuda">Entendi</button>`;
+      <p>Dica: o palpite dos outros diz alguma coisa dos dados deles — ou é blefe. E há quem vire um dado na hora de levantar o copo… se ninguém estiver olhando.</p><div class="jd-btns"><button class="jd-no" data-a="guia">Ver o guia</button><button class="jd-go" data-a="ajuda">Entendi</button></div>`;
   }
   // (the line of the numbers — the least and the most the dice on the table can make —: the bids said, the one chosen, the sum expected,
   // and, the cups up, the sum)
@@ -625,6 +625,7 @@
     if (a === 'denovo') { denovo(); return; }
     const v = P().body(); const s = v && JD().corpo(v); if (!s) return;
     if (a === 'ajuda') { help = !help; sig = ''; return; }
+    if (a === 'guia') { help = false; sig = ''; if (G.JogosEnsina) G.JogosEnsina.comeca('copo', { forcado: 1 }); return; } // (the «?» brings the guide back: D-948)
     if (a === 'aposta') { UI.lastStake = n; ask(w => JD().aposta(w, s.op, n), () => snd('aposta', { n: 1, vol: 0.5 })); return; }
     if (a === 'comecar') { ask(w => JD().comecar(w, s.op), r => { toast(r.msg, 1.8); snd('aposta', { n: s.jogadores.length }); }); return; }
     if (a === 'entrar') { ask(w => JD().entrar(w, s.op), () => snd('aposta', { n: 1 })); return; }
@@ -681,6 +682,9 @@
     if (!s.eu && s.fase === 'convite' && said.call !== s.op) { said.call = s.op; const x = vb(); if (x && x.k === 'entrar') { const how = G.AcoesUI && G.AcoesUI.how ? G.AcoesUI.how('jd-dados') : ''; toast(`Chamam a sua mesa para o jogo de copo${s.moeda ? ` (${s.price(s.aposta)})` : ''}. Para entrar: ${how || (G.Input3D.touch ? 'toque em «Ações»' : `«Ações» (${G.Input3D.label('acoes')})`)}.`, 3.4); } } // (the bar's own slot: the F is the table's first verb that can be done — the round —, and the phone has none: L-2183)
   };
   UI.render = (s, dt) => render(s, dt || 0); // (the photos' hand: a frame drawn from a view of their own, never the world's)
+  // (where a thing of the table is on the screen — the tray of the body's dice —, for the guide to point at: the last frame drawn, only read; D-948)
+  let lastGeo = null;
+  UI.zona = k => { if (!open || !lastGeo || !cv || k !== 'bandeja') return null; const r = cv.getBoundingClientRect(); const T = lastGeo.tray; return { l: r.left + T[0], t: r.top + T[1], r: r.left + T[2], b: r.top + T[3] }; };
   UI.scene = () => scene;
   const frame0 = G.IncUI && G.IncUI.frame;
   if (frame0) G.IncUI.frame = function (rdt) { const r = frame0.apply(this, arguments); UI.frame(rdt); return r; };

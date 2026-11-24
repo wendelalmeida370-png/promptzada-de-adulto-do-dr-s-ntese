@@ -29,7 +29,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['embriaguez-corpo.js', 'render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js', /* T4, D-851: a tela do jogo de dados */ 'jogo-dados-ui.js', /* T5, D-862, D-869: a arte e a mesa das Tabuletas */ 'cartas-arte.js', 'cartas-ui.js', /* D-940: a festa das mesas */ 'jogo-fx.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js', /* T4, D-851: a tela do jogo de dados */ 'jogo-dados-ui.js', /* T5, D-862, D-869: a arte e a mesa das Tabuletas */ 'cartas-arte.js', 'cartas-ui.js', /* D-940: a festa das mesas */ 'jogo-fx.js', /* D-945: os jogos se ensinam */ 'jogos-ensina.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -2871,6 +2871,47 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 // «jogo-volta»), o aluguel («aluguel-jogo»), a venda do taverneiro («venda-jogo») e o baralho da casa feito do material do povo
 { let om = ''; try { om = fs.readFileSync(path.join(dir, '..', 'ORIGEM.md'), 'utf8'); } catch (e) { om = ''; }
   for (const w of ['jogo-mesa', 'jogo-volta', 'aluguel-jogo', 'venda-jogo', 'Os jogos da casa']) if (!om.includes(w)) fails.push(`o mapa das causas: o ORIGEM.md sem «${w}» (os jogos da casa, D-930)`); }
+// 465. "o guia só mostra" (E, D-946): o js/jogos-ensina.js está na lista LOOK e não segura nem muda o mundo — não pede às mãos (o
+// G.Possess.apply), não escreve no G.S, não mexe no relógio nem na velocidade (setSpeed, Modes.menu, debug, pace, LINGER, Space.TIME),
+// não sorteia, e das portas dos jogos (G.Cartas, G.JogoDados, G.JogosCasa) só lê a vista da partida e a tábua das tabuletas
+{ const L = src['jogos-ensina.js'] || []; if (!L.length) fails.push('o guia só mostra: sem o js/jogos-ensina.js (D-945)');
+  if (!LOOK.includes('jogos-ensina.js')) fails.push('o guia só mostra: o jogos-ensina.js fora da lista LOOK (D-946)');
+  L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/Possess\.apply|\bG\.S\.\w+\s*(=(?!=)|\+=|-=)|setSpeed|Modes\.menu|G\.debug|G\.pace\s*=|LINGER|Space\.TIME\s*=|Math\.random|\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(/.test(c)) fails.push(`o guia só mostra: jogos-ensina.js:${k + 1} segura, muda ou sorteia o mundo (D-946): ${l.trim().slice(0, 110)}`);
+    for (const x of c.match(/\bG\.(Cartas|JogoDados|JogosCasa)\.\w+/g) || []) if (!/\.(doCorpo|corpo|card|OF|DECKS|POVOS)$/.test(x)) fails.push(`o guia só mostra: jogos-ensina.js:${k + 1} chama ${x} — o guia só lê a vista da partida (D-946)`); }); }
+// 466. "a lembrança do guia é do navegador, com try" (E, D-947): a primeira partida de cada jogo é lembrada só no navegador, como a dica da
+// mesa (D-923) — cada uso do localStorage num try, e só as chaves do guia (gotaf-guia-…)
+{ (src['jogos-ensina.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (!/localStorage/.test(c)) return;
+    if (!/try \{/.test(c)) fails.push(`a lembrança do guia: jogos-ensina.js:${k + 1} usa o localStorage fora de um try (D-947)`);
+    if (/localStorage\.\w+\(\s*'(?!gotaf-guia-)/.test(c)) fails.push(`a lembrança do guia: jogos-ensina.js:${k + 1} guarda uma chave que não é do guia (D-947)`); }); }
+// 467. "cada passo diz onde aponta e o que diz" (E, D-945): os passos de cada guia são dados — cada um com o seu id (sem repetir no guia),
+// o título, o texto e o alvo (null: o balão no meio) —, e o último de cada guia é o do fim
+{ const t = (src['jogos-ensina.js'] || []).join('\n'); const guias = [...t.matchAll(/\n  GUIAS\.(\w+) = \{([\s\S]*?)\n  \};/g)];
+  if (guias.length < 2) fails.push('cada passo diz onde aponta: os guias das Tabuletas e do copo não estão no GUIAS do jogos-ensina.js (D-945)');
+  for (const [, nome, corpo] of guias) {
+    const ps = corpo.split(/\n(?=\s{6}\{ id: ')/).filter(x => /^\s{6}\{ id: '/.test(x)); const ids = [];
+    if (ps.length < 4) fails.push(`cada passo diz onde aponta: o guia «${nome}» com ${ps.length} passos (D-945)`);
+    ps.forEach((p, k) => { const id = /\{ id: '(\w+)'/.exec(p)[1]; if (ids.includes(id)) fails.push(`cada passo diz onde aponta: o guia «${nome}» repete o passo «${id}» (D-945)`); ids.push(id);
+      for (const f of ['titulo:', 'texto:', 'alvo:']) if (!p.includes(f)) fails.push(`cada passo diz onde aponta: o passo «${nome}/${id}» sem o ${f.slice(0, -1)} (D-945)`);
+      if ((k === ps.length - 1) !== /\bfim: true\b/.test(p)) fails.push(`cada passo diz onde aponta: no guia «${nome}» o passo do fim tem de ser o último, e só ele (D-945)`); });
+  } }
+// 468. "a tabuleta pequena se lê" (E, D-941, L-2200): a mão e a mesa desenham a tabuleta pequena (o cartas-ui.js pede mini), que não leva
+// a frase do mito; a letra da regra dela é de 8 % da tabuleta ou mais, e a mesa do celular nunca a faz menor que 100 px — a letra passa dos
+// 8 px que o WebView do Android impõe, e nada é empurrado para fora da caixa
+{ const css = (() => { try { return fs.readFileSync(path.join(dir, '..', 'css', 'style.css'), 'utf8'); } catch (e) { return ''; } })();
+  const ca = (src['cartas-arte.js'] || []).join('\n'), cu = (src['cartas-ui.js'] || []).join('\n');
+  const mesa = /\n#tab-panel \.tb-mesa \{ --cwh: clamp\((\d+)px, [^;]+; --cws: clamp\((\d+)px,/.exec(css);
+  if (!mesa || +mesa[1] < 100 || +mesa[2] < 100) fails.push('a tabuleta pequena se lê: a mesa do celular deixa a tabuleta da mão ou a da mesa abaixo de 100 px (--cwh, --cws: D-941, L-2200)');
+  const pw = /\n\.ct-card\.ct-mini \.ct-pw \{[^}]*font-size: ([\d.]+)cqw/.exec(css); if (!pw || +pw[1] < 8) fails.push('a tabuleta pequena se lê: a regra da pequena com a letra abaixo de 8 % da tabuleta (D-941, L-2200)');
+  const mini = /if \(o\.mini\) \{([\s\S]*?)\n    \}/.exec(ca); if (!mini || /ct-mito/.test(mini[1])) fails.push('a tabuleta pequena se lê: a pequena (A.html mini) sem o seu ramo, ou com a frase do mito (D-941)');
+  if (!/\.tb-mao'\)\.innerHTML = v\.mao\.map\(\(id, i\) => Ar\.html\(id, \{ mini: true,/.test(cu) || !/const flip = [^\n]*mini: true/.test(cu)) fails.push('a tabuleta pequena se lê: a mão ou a mesa do cartas-ui.js sem a tabuleta pequena (mini: D-941)'); }
+// 469. "o «?» traz o guia" (E, D-945, D-948): a mesa das Tabuletas tem o «?» (as regras com figuras e o guia de novo) e as regras do copo
+// têm o «Ver o guia»; o jogos-ensina.js carrega depois do jogo-fx.js e antes das telas dos jogos
+{ const cu = (src['cartas-ui.js'] || []).join('\n'), du = (src['jogo-dados-ui.js'] || []).join('\n');
+  if (!/class="tb-ajuda" data-a="ajuda"/.test(cu) || !/if \(act === 'ajuda'\) \{ if \(G\.JogosEnsina\) G\.JogosEnsina\.ajuda\('tabuletas'\)/.test(cu)) fails.push('o «?» traz o guia: a mesa das Tabuletas sem o «?» que abre as regras do jogos-ensina.js (D-945)');
+  if (!/data-a="guia"/.test(du) || !/if \(a === 'guia'\) \{[^\n]*G\.JogosEnsina\.comeca\('copo', \{ forcado: 1 \}\)/.test(du)) fails.push('o «?» traz o guia: as regras do copo sem o «Ver o guia» (D-948)');
+  let html = ''; try { html = fs.readFileSync(path.join(dir, '..', 'index.html'), 'utf8'); } catch (e) { html = ''; }
+  const at = f => html.indexOf(`src="js/${f}"`); if (at('jogos-ensina.js') < 0 || at('jogos-ensina.js') < at('jogo-fx.js') || at('jogos-ensina.js') > at('cartas-ui.js') || at('jogos-ensina.js') > at('jogo-dados-ui.js')) fails.push('o «?» traz o guia: o index.html sem o jogos-ensina.js entre o jogo-fx.js e as telas dos jogos (D-945)'); }
 // ---------------- Onda 4 — F: ganhar dá gosto (js/jogo-fx.js, a festa das Tabuletas e do copo; D-950 a D-959) ----------------
 // 470. "a festa só se vê" (D-940, D-950, D-955): o js/jogo-fx.js não lê nem escreve o mundo — nem o G.S, nem o livro, nem uma operação, nem
 // as mãos do corpo — e não tira do acaso do mundo (só o G.vrr, o do que se vê); as partículas no ar têm teto (a mais velha cede o lugar), e o

@@ -413,17 +413,25 @@
     if (povo === 'romano') { let s = ''; for (let x = 22; x < 230; x += 12) s += `<ellipse cx="${x}" cy="6.5" rx="5" ry="2.2" transform="rotate(${x % 24 ? 20 : -20} ${x} 6.5)" fill="#c9a24a"/><ellipse cx="${x}" cy="343.5" rx="5" ry="2.2" transform="rotate(${x % 24 ? -20 : 20} ${x} 343.5)" fill="#c9a24a"/>`; return s; }
     let d = ''; for (let x = 18; x < 232; x += 16) d += `M${x} 9C${x} 3 ${x + 8} 3 ${x + 8} 7C${x + 8} 9 ${x + 5} 9 ${x + 5} 7`; let e = d.replace(/(\d+(\.\d+)?) (\d+)/g, (m, a, b, c) => `${a} ${+c + 335}`); return `<path d="${d}${e}" fill="none" stroke="#e8c878" stroke-width="1.4"/>`;
   }
-  // (a janela da figura: a forma dela em cada povo — o arco romano, os cantos em degrau do asteca, o friso reto do grego…)
-  const JANELA = {
-    grego: 'M25 28H225V208H25Z',
-    egipcio: 'M25 40Q25 28 37 28H213Q225 28 225 40V208H25Z',
-    nordico: 'M25 44Q25 28 41 28H209Q225 28 225 44V192Q225 208 209 208H41Q25 208 25 192Z',
-    asteca: 'M33 28H217V36H225V200H217V208H33V200H25V36H33Z',
-    romano: 'M25 208V88C25 50 70 28 125 28C180 28 225 50 225 88V208Z',
-    classico: 'M25 38Q25 28 35 28H215Q225 28 225 38V198Q225 208 215 208H35Q25 208 25 198Z',
-  };
+  // (a janela da figura: a forma dela em cada povo — o arco romano, os cantos em degrau do asteca, o friso reto do grego…), com o fundo
+  // em yb: 208 na tabuleta grande, mais alto na pequena (MINI)
+  const janela = (povo, yb) => ({
+    grego: `M25 28H225V${yb}H25Z`,
+    egipcio: `M25 40Q25 28 37 28H213Q225 28 225 40V${yb}H25Z`,
+    nordico: `M25 44Q25 28 41 28H209Q225 28 225 44V${yb - 16}Q225 ${yb} 209 ${yb}H41Q25 ${yb} 25 ${yb - 16}Z`,
+    asteca: `M33 28H217V36H225V${yb - 8}H217V${yb}H33V${yb - 8}H25V36H33Z`,
+    romano: `M25 ${yb}V88C25 50 70 28 125 28C180 28 225 50 225 88V${yb}Z`,
+    classico: `M25 38Q25 28 35 28H215Q225 28 225 38V${yb - 10}Q225 ${yb} 215 ${yb}H35Q25 ${yb} 25 ${yb - 10}Z`,
+  }[povo]);
+  const JANELA = {}; for (const p of ['grego', 'egipcio', 'nordico', 'asteca', 'romano', 'classico']) JANELA[p] = janela(p, 208);
   A.JANELA = JANELA;
-  function moldura(povo, rar) {
+  // ------------------------------ a tabuleta pequena (a mão e a mesa: D-941) ------------------------------
+  // a pequena mostra só o que cabe inteiro — o nome, a força, o símbolo e a regra com a palavra-chave em negrito —, e a frase do mito
+  // fica na grande, a que se segura. A janela desce menos (jan), a figura vem um pouco menor, presa perto do alto (o rosto, a cabeça
+  // ficam: fig, figY), e o painel do poder sobe (pan1; pan2 quando o nome pede duas linhas) para a regra mais longa caber numa letra que
+  // se lê — nunca abaixo dos 8 px do celular (o WebView do Android sobe toda letra menor para 8, e o texto transbordava: L-2200)
+  const MINI = A.MINI = { jan: 165, nome: 168, pan1: 197, pan2: 218, fim: 332, fig: 0.88, figY: -6 };
+  function moldura(povo, rar, mini) {
     const P = stOf(povo); let s = '';
     // (a tabuleta em si: o material de cada povo — a madeira, o barro, a cera, o amate, o papiro —, com o seu veio)
     s += `<rect x="0" y="0" width="${W}" height="${Hh}" rx="14" fill="url(#ctBase-${povo})"/>`;
@@ -431,10 +439,11 @@
     // (a borda de dentro, a janela e o painel do texto)
     const inner = { grego: '#1c120b', egipcio: '#d9a62a', nordico: '#2a170b', asteca: '#140b06', romano: '#c9a24a', classico: '#c9a55a' }[povo];
     s += `<rect x="12" y="12" width="${W - 24}" height="${Hh - 24}" rx="7" fill="none" stroke="${inner}" stroke-width="2"/>`;
-    s += `<path d="${JANELA[povo]}" fill="none" stroke="${inner}" stroke-width="4"/>`;
+    s += `<path d="${mini ? janela(povo, MINI.jan) : JANELA[povo]}" fill="none" stroke="${inner}" stroke-width="4"/>`;
     // (o painel do poder: o fundo claro onde se lê)
     const pan = { grego: '#e8a06a', egipcio: '#f3e5bd', nordico: '#e9d6ac', asteca: '#efdcae', romano: '#f4ede0', classico: '#efe3c4' }[povo];
-    s += `<rect x="25" y="232" width="200" height="98" rx="5" fill="${pan}" stroke="${inner}" stroke-width="2"/>`;
+    const py = mini ? mini.pan : 232, ph = mini ? MINI.fim - mini.pan : 98;
+    s += `<rect x="25" y="${py}" width="200" height="${ph}" rx="5" fill="${pan}" stroke="${inner}" stroke-width="2"/>`;
     // (os enfeites dos cantos e do alto)
     if (povo === 'egipcio') s += `<g transform="translate(125 20)"><path d="M-40 4C-28 -6 -14 -4 -8 2H8C14 -4 28 -6 40 4C28 2 18 6 10 8H-10C-18 6 -28 2 -40 4Z" fill="#d9a62a" stroke="#22180e" stroke-width="1"/><circle r="7" fill="#a63a24" stroke="#22180e" stroke-width="1"/></g>`;
     if (povo === 'nordico') for (const [x, y, sx, sy] of [[12, 12, 1, 1], [238, 12, -1, 1], [12, 338, 1, -1], [238, 338, -1, -1]]) s += `<g transform="translate(${x} ${y}) scale(${sx} ${sy})"><path d="M-6 -6H34L26 4H4V26L-6 34Z" fill="#5a5d62" stroke="#1a1a1e" stroke-width="1.4"/><circle cx="4" cy="4" r="2.6" fill="#a9aeb5"/><circle cx="20" cy="0" r="2" fill="#a9aeb5"/><circle cx="0" cy="20" r="2" fill="#a9aeb5"/></g>`;
@@ -508,7 +517,7 @@
       asteca: ['#b5262a', '#951c1f', '#6e1416'], romano: ['#f4efe6', '#ddd5c8', '#bdb3a4'], classico: ['#3a3048', '#2a2236', '#171222'],
     };
     for (const p of Object.keys(BASE)) { const c = BASE[p]; s += `<linearGradient id="ctBase-${p}" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset=".55" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[2]}"/></linearGradient>`; const bg = stOf(p).bg; s += `<radialGradient id="ctBg-${p}" cx=".5" cy=".38" r=".75"><stop offset="0" stop-color="${bg[0]}"/><stop offset=".65" stop-color="${bg[1]}"/><stop offset="1" stop-color="${bg[2]}"/></radialGradient>`; }
-    for (const p of Object.keys(JANELA)) s += `<clipPath id="ctJan-${p}"><path d="${JANELA[p]}"/></clipPath>`;
+    for (const p of Object.keys(JANELA)) s += `<clipPath id="ctJan-${p}"><path d="${JANELA[p]}"/></clipPath><clipPath id="ctJanM-${p}"><path d="${janela(p, MINI.jan)}"/></clipPath>`;
     return `<svg id="ct-defs" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true"><defs>${s}</defs></svg>`;
   }
   A.defs = defs;
@@ -519,13 +528,46 @@
   // a face: a moldura do povo, a janela com o fundo e a figura, o medalhão — o texto (o nome, a força, o poder) vem por cima, em HTML
   // (A.html), para ler com a letra do jogo no tamanho da tela. Guardada por chave: a mesma figura é a mesma corda
   const memo = new Map();
-  A.face = function (id) {
-    if (memo.has(id)) return memo.get(id);
+  // (mini: a tabuleta pequena — a janela mais baixa, a figura um pouco menor e o painel do poder maior, que desce quando o nome pede
+  // duas linhas: D-941)
+  A.face = function (id, mini) {
+    const nm = mini ? A.nomeMini(id) : null; const key = mini ? `${id}|m${nm.l}` : id;
+    if (memo.has(key)) return memo.get(key);
     const c = C() && C().card(id); if (!c) return '';
     const P = stOf(c.povo); const art = ART[id]; const cena = art ? art[0] : 'ceu';
     let fig = ''; try { fig = art ? art[1](P) : ''; } catch (e) { fig = ''; if (G.modErr) G.modErr.Tabuletas = (G.modErr.Tabuletas || 0) + 1; }
-    const s = `<svg class="ct-art" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${moldura(c.povo, c.rar)}<g clip-path="url(#ctJan-${c.povo})"><g transform="translate(25 28)">${fundo(c.povo, cena)}${fig}</g></g><path d="${JANELA[c.povo]}" fill="none" stroke="${{ grego: '#1c120b', egipcio: '#d9a62a', nordico: '#2a170b', asteca: '#140b06', romano: '#c9a24a', classico: '#c9a55a' }[c.povo]}" stroke-width="3"/>${medalha(c.povo)}</svg>`;
-    memo.set(id, s); return s;
+    const inner = { grego: '#1c120b', egipcio: '#d9a62a', nordico: '#2a170b', asteca: '#140b06', romano: '#c9a24a', classico: '#c9a55a' }[c.povo];
+    // (na pequena, a figura inteira um pouco menor, no meio, presa perto do alto da janela: a cena do fundo fica do tamanho dela)
+    const figura = mini ? `<g transform="translate(${(200 * (1 - MINI.fig) / 2).toFixed(1)} ${MINI.figY}) scale(${MINI.fig})">${fig}</g>` : fig;
+    const jan = mini ? janela(c.povo, MINI.jan) : JANELA[c.povo];
+    const s = `<svg class="ct-art" viewBox="0 0 ${W} ${Hh}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${moldura(c.povo, c.rar, mini ? { pan: nm.l > 1 ? MINI.pan2 : MINI.pan1 } : null)}<g clip-path="url(#${mini ? 'ctJanM' : 'ctJan'}-${c.povo})"><g transform="translate(25 28)">${fundo(c.povo, cena)}${figura}</g></g><path d="${jan}" fill="none" stroke="${inner}" stroke-width="3"/>${medalha(c.povo)}</svg>`;
+    memo.set(key, s); return s;
+  };
+  // ------------------------------ o nome na tabuleta pequena (D-941) ------------------------------
+  // (a largura de cada letra do Cinzel do jogo, em maiúsculas, a 800, com o espaçamento das tabuletas — medida no navegador —, em em)
+  const LARG = { A: 0.758, B: 0.741, C: 0.827, D: 0.857, E: 0.687, F: 0.653, G: 0.889, H: 0.917, I: 0.442, J: 0.444, K: 0.83, L: 0.671, M: 1.001, N: 0.897, O: 0.945,
+    P: 0.72, Q: 0.95, R: 0.805, S: 0.652, T: 0.739, U: 0.873, V: 0.793, W: 1.015, X: 0.791, Y: 0.756, Z: 0.705, ' ': 0.3, '-': 0.42, "'": 0.25 };
+  const ACENTO = { Á: 'A', Â: 'A', Ã: 'A', À: 'A', Ä: 'A', É: 'E', Ê: 'E', Í: 'I', Ó: 'O', Ô: 'O', Õ: 'O', Ö: 'O', Ú: 'U', Ü: 'U', Ç: 'C' };
+  A.largura = s => [...String(s).toUpperCase()].reduce((a, ch) => a + (LARG[ACENTO[ch] || ch] !== undefined ? LARG[ACENTO[ch] || ch] : 0.8), 0);
+  // como o nome cabe na faixa da pequena (FAIXA, em cqw da tabuleta): a letra (f, em cqw: do tamanho da tabuleta, e nunca menos de
+  // NOME_MIN, que numa tabuleta de 100 px já passa dos 8 px), um aperto de lado que não se nota (x, até 0,86), ou duas linhas partidas
+  // num espaço ou depois do hífen (l, a, b) — o mesmo nome dá sempre o mesmo
+  const FAIXA = 86, NOME_MAX = 9.4, NOME2_MAX = 9.1, NOME_MIN = 8.3, APERTO = 0.86;
+  const nomes = new Map();
+  A.nomeMini = function (id) {
+    if (nomes.has(id)) return nomes.get(id);
+    const c = C() && C().card(id); const nome = c ? c.nome : String(id || ''); const em = A.largura(nome); let r;
+    const f = Math.min(NOME_MAX, FAIXA / Math.max(1, em));
+    if (f >= NOME_MIN) r = { f, x: 1, l: 1 };
+    else if (FAIXA / (em * NOME_MIN) >= APERTO) r = { f: NOME_MIN, x: FAIXA / (em * NOME_MIN), l: 1 };
+    else {
+      // (as duas linhas: o corte que deixa a linha mais longa mais curta)
+      let best = null;
+      for (let i = 1; i < nome.length; i++) { const ch = nome[i - 1]; if (ch !== ' ' && ch !== '-') continue; const a = nome.slice(0, ch === ' ' ? i - 1 : i), b = nome.slice(i); const w = Math.max(A.largura(a), A.largura(b)); if (!best || w < best.w) best = { a, b, w }; }
+      if (!best) r = { f: NOME_MIN, x: Math.max(0.7, FAIXA / (em * NOME_MIN)), l: 1 };
+      else { const f2 = Math.min(NOME2_MAX, FAIXA / best.w); r = f2 >= NOME_MIN ? { f: f2, x: 1, l: 2, a: best.a, b: best.b } : { f: NOME_MIN, x: Math.max(0.7, FAIXA / (best.w * NOME_MIN)), l: 2, a: best.a, b: best.b }; }
+    }
+    r.f = +r.f.toFixed(2); r.x = +r.x.toFixed(3); nomes.set(id, r); return r;
   };
   // o verso de cada povo: o emblema no meio, o ornamento em volta, o nome do jogo
   const VERSO = {
@@ -556,14 +598,28 @@
   };
 
   // ------------------------------ a tabuleta em HTML (a tela e a folha leem esta) ------------------------------
-  // o (opções): { cls — classes a mais —, f — a força agora, se a rodada a mudou —, mini — sem o texto do poder (a mão no celular) }
+  // o (opções): { cls — classes a mais —, f — a força agora, se a rodada a mudou —, mini — a tabuleta pequena da mão e da mesa: só o que
+  // cabe inteiro, sem a frase do mito (D-941) }
+  // (a palavra-chave do poder: o nome e o número dele, como a tela e o guia a dizem)
+  A.chave = c => (c && c.p ? `${c.pnome}${c.n > 1 || (c.n && c.p !== 'compra' && c.p !== 'colhe') ? ' ' + c.n : ''}` : '');
   A.html = function (id, o) {
     o = o || {}; const c = C() && C().card(id); if (!c) return '';
     const f0 = Number.isFinite(o.f) ? o.f : c.f; const ch = f0 > c.f ? ' up' : f0 < c.f ? ' down' : '';
-    const pw = c.p ? `<div class="ct-pw">${A.icone(c.p, 'ct-pi')}<span><b>${esc(c.pnome)}${c.n > 1 || (c.n && c.p !== 'compra' && c.p !== 'colhe') ? ' ' + c.n : ''}:</b> ${esc(c.txt)}</span></div>` : '<div class="ct-pw none"><span>Sem poder: só a força.</span></div>';
-    return `<div class="ct-card ct-p-${c.povo} ct-r-${c.rar}${o.cls ? ' ' + o.cls : ''}" data-id="${esc(id)}">${A.face(id)}<div class="ct-foil"></div><div class="ct-f${ch}">${f0}</div><div class="ct-tipo" title="${esc(C().TIPO_NOME[c.tipo])}">${A.icone(c.tipo, 'ct-ti')}</div><div class="ct-nome" style="--nf:${c.nome.length <= 10 ? 7.2 : c.nome.length <= 13 ? 6.3 : c.nome.length <= 16 ? 5.4 : 4.7}cqw"><span>${esc(c.nome)}</span></div>${pw}<div class="ct-mito">${esc(c.mito)}</div><div class="ct-rar">${esc(C().RAR_NOME[c.rar])}</div></div>`;
+    if (o.mini) {
+      // (a pequena: o símbolo na linha da regra, a palavra-chave em negrito, e a regra inteira; o nome na letra que cabe)
+      const nm = A.nomeMini(id);
+      const pw = c.p ? `<div class="ct-pw"><p>${A.icone(c.p, 'ct-pi')}<b>${esc(A.chave(c))}:</b> ${esc(c.txt)}</p></div>` : '<div class="ct-pw none"><p>Sem poder: só a força.</p></div>';
+      const nome = nm.l > 1 ? `<span>${esc(nm.a)}<br>${esc(nm.b)}</span>` : `<span>${esc(c.nome)}</span>`;
+      return `<div class="ct-card ct-mini${nm.l > 1 ? ' ct-n2' : ''} ct-p-${c.povo} ct-r-${c.rar}${o.cls ? ' ' + o.cls : ''}" data-id="${esc(id)}">${A.face(id, true)}<div class="ct-foil"></div><div class="ct-f${ch}">${f0}</div><div class="ct-tipo" title="${esc(C().TIPO_NOME[c.tipo])}">${A.icone(c.tipo, 'ct-ti')}</div><div class="ct-nome" style="--nf:${nm.f}cqw;--nx:${nm.x}">${nome}</div>${pw}</div>`;
+    }
+    const pw = c.p ? `<div class="ct-pw">${A.icone(c.p, 'ct-pi')}<span><b>${esc(A.chave(c))}:</b> ${esc(c.txt)}</span></div>` : '<div class="ct-pw none"><span>Sem poder: só a força.</span></div>';
+    // (a grande: a regra e, logo embaixo dela, o mito inteiro — os dois no painel: D-942)
+    return `<div class="ct-card ct-p-${c.povo} ct-r-${c.rar}${o.cls ? ' ' + o.cls : ''}" data-id="${esc(id)}">${A.face(id)}<div class="ct-foil"></div><div class="ct-f${ch}">${f0}</div><div class="ct-tipo" title="${esc(C().TIPO_NOME[c.tipo])}">${A.icone(c.tipo, 'ct-ti')}</div><div class="ct-nome" style="--nf:${c.nome.length <= 10 ? 7.2 : c.nome.length <= 13 ? 6.3 : c.nome.length <= 16 ? 5.4 : 4.7}cqw"><span>${esc(c.nome)}</span></div><div class="ct-tx">${pw}<div class="ct-mito">${esc(c.mito)}</div></div><div class="ct-rar">${esc(C().RAR_NOME[c.rar])}</div></div>`;
   };
   A.htmlVerso = (povo, cls) => `<div class="ct-card ct-verso ct-p-${ST[povo] ? povo : 'classico'}${cls ? ' ' + cls : ''}">${A.verso(povo)}</div>`;
   // (para as provas: quais tabuletas não têm a sua figura, ou cuja figura falha)
-  A.check = function () { const out = []; const D = C() ? C().DECKS : {}; for (const p of Object.keys(D)) for (const c of D[p]) { const a = ART[c.id]; if (!a) { out.push(c.id + ': sem figura'); continue; } let s = ''; try { s = a[1](stOf(p)); } catch (e) { out.push(c.id + ': ' + e.message); continue; } if (s.length < 200) out.push(c.id + ': figura vazia'); } return out; };
+  A.check = function () { const out = []; const D = C() ? C().DECKS : {}; for (const p of Object.keys(D)) for (const c of D[p]) { const a = ART[c.id]; if (!a) { out.push(c.id + ': sem figura'); continue; } let s = ''; try { s = a[1](stOf(p)); } catch (e) { out.push(c.id + ': ' + e.message); continue; } if (s.length < 200) out.push(c.id + ': figura vazia');
+    // (a pequena: a figura dela, e o nome que cabe — a letra, o aperto, as linhas: D-941)
+    const m = A.face(c.id, true); if (!/^<svg[^>]*class="ct-art"/.test(m) || !m.endsWith('</svg>') || /NaN|undefined/.test(m)) out.push(c.id + ': a tabuleta pequena não fecha');
+    const nm = A.nomeMini(c.id); if (!(nm.f >= NOME_MIN && nm.f <= NOME_MAX && nm.x >= 0.84 && nm.x <= 1 && (nm.l === 1 || (nm.l === 2 && nm.a && nm.b)))) out.push(`${c.id}: o nome na pequena (${JSON.stringify(nm)})`); } return out; };
 })(window.G);
