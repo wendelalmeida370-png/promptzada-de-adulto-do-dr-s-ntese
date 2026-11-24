@@ -29,11 +29,17 @@ const r2 = x => Math.round(x * 100) / 100;
 // (a grown man the proof can set at rest: blank() clears the sickness, the mourning, the feelings, the house and the sleep — the
 // ready worlds made with the society (22b) have most of their grown men mourning a friend, and «none in mourning» found nobody: T-1598)
 const adult = () => [...S.villagers.values()].find(v => v.age >= 25 && v.age < 45 && !v.aboard && !v.captive && !v.jail && v.g === 'm');
+// (the subject of each cause's porte — v1, v2 — of a middling temperament too: who one is is a cause of the porte — the bold and the
+// shy, confia; the open, expans — and blank() cannot make anyone middling (the índole is soc-indole.js's, rule 204). The cidade made
+// again for the tavern (96a5e48) gave as the first grown man one shy to the bone (confia −0,97): «the healthy one in a mild place»
+// showed the porte of his shyness, and the shyness bent the neck and the back against the child's and the pregnancy's own, T-2042)
+const middling = v => { const p = V3.porteOf(v, {}); return Math.abs(p.confia) <= 0.3 && Math.abs(p.expans - 0.5) <= 0.25; };
+const calmAdult = () => [...S.villagers.values()].find(v => v.age >= 25 && v.age < 45 && !v.aboard && !v.captive && !v.jail && v.g === 'm' && middling(v)) || adult();
 const blank = v => { v.age = 30; v.energy = 90; v.sick = 0; v.wound = null; v.hp = 100; v.lost = null; v.preg = 0; v.mourn = 0; v.fear = 0; v.fury = 0; v.emo = null; v.grp = 'povo'; v.inside = 0; v.sleeping = false; v.traits = v.traits.filter(t => t !== 'Corajoso' && t !== 'Medroso' && t !== 'Sociável'); };
 // (the place of a person made mild, cold or hot by the proof's hand on a copy of the map: the map's warmth, the hour, the sky)
 const mild = v => { S.temp[G.W.idx(v.x, v.y)] = 128; S.time = 0.35; S.weather.rain = 0; S.weather.storm = -1; };
 // the animator on its own, the porte given: standing (idle) or walking at 1.3 m/s, a second and a half; the pose at the end
-const LOOK = P3.look(adult() || [...S.villagers.values()][0]);
+const LOOK = P3.look(calmAdult() || [...S.villagers.values()][0]);
 function poseOf(porte, st, extra) {
   const a = A.memory(), pose = A.POSE0(), L = Object.assign({}, LOOK, { plant: [{ on: 0 }, { on: 0 }], held: null, carry: false, reach: null, pair: null, gnd: null }); const I = {};
   let z = 0; const sp = st === 'walk' ? 1.3 : 0;
@@ -54,7 +60,10 @@ const ZERO = Object.fromEntries(V3.PORTE.map(k => [k, 0]));
 const ZERO_W = () => ZERO;
 
 if (on('v1') || on('v2')) {
-  const v = adult(); blank(v); mild(v);
+  // (the warmth of the map the proof's hand changes is a copy's: the save does not keep the map's warmth — it is made again from the map
+  // at the load —, and the one the hand left mild was the subject's own at the v4, after the load «another porte», T-2042)
+  const temp0 = S.temp; S.temp = temp0.slice();
+  const v = calmAdult(); blank(v); mild(v);
   const base = V3.porteOf(v, {}); const baseAny = base.any;
   // each case: the proof's hand, the cause the reader must give, the channels the pose must move (standing; walking: the gait's)
   const CASES = [
@@ -103,13 +112,15 @@ if (on('v1') || on('v2')) {
     ok('v2 e o contrário: sem a causa, nada dela', hot.frio === 0 && hot.calor > 0.5 && shiver < 0.005 && cold.calor === 0 && cold.frio > 0.5 && hotNight.calor === 0 && !calm.any && a1 === a2 && !baseAny,
       `no calor do meio-dia: frio ${hot.frio}, calor ${r2(hot.calor)}, tremor ${r2(shiver * 1000)} mrad · no frio: calor ${cold.calor}, frio ${r2(cold.frio)} · a terra quente de noite: calor ${hotNight.calor} · a pessoa sã num lugar ameno: ${calm.any ? 'COM PORTE' : 'nada'} · outra pele, outro cabelo, outro povo: ${a1 === a2 ? 'o mesmo porte' : 'OUTRO PORTE'}`);
   }
+  S.temp = temp0;
 }
 
 if (on('v3')) {
   const kids = [...S.villagers.values()].filter(v => v.age >= 4 && v.age < 11 && !v.aboard);
   const k = kids[0], o = kids[1]; let chase = '—';
   if (k && o) { k.sleeping = false; k.inside = 0; G.Vg.setTask(k, { type: 'play', pri: 0.1, kind: 'play' }); k.task.st = 2; k.task.chase = o.id; k.task.rt = 0; chase = A.stateOf(k, 1.4); }
-  const p = adult(); const keepAct = p.act; p.act = 'bound'; const boundWalk = V3.overOf(p, A.stateOf(p, 1.3)), boundStill = A.stateOf(p, 0); p.act = 'talk'; const talkWalk = V3.overOf(p, 'walk'); p.act = keepAct;
+  // (the prisoner led is awake — asleep, the state is the sleep's —: the v3 passed only after the v1's hand had woken its subject, T-2042)
+  const p = adult(); const keepAct = p.act, keepZz = p.sleeping; p.sleeping = false; p.act = 'bound'; const boundWalk = V3.overOf(p, A.stateOf(p, 1.3)), boundStill = A.stateOf(p, 0); p.act = 'talk'; const talkWalk = V3.overOf(p, 'walk'); p.act = keepAct; p.sleeping = keepZz;
   const f = [...S.villagers.values()].find(v => v !== p && v.age >= 20 && !v.inside && !v.sleeping); const keepT = f.task;
   f.task = { type: 'fight', id: 0, pri: 4 }; f.act = ''; const fight = V3.taskState(f, { inv: { mao: null } }), fightArmed = V3.taskState(f, { inv: { mao: 'lanca.ferro' } }), fightSt = A.stateOf(f, 0);
   f.task = { type: 'funeral', id: 0, pri: 1.1 }; const fun = A.stateOf(f, 0); f.task = keepT;
