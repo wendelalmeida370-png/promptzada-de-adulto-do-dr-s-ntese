@@ -261,9 +261,11 @@
   // goes to the card)
   function addVerb() {
     const I = G.Interact; if (!I || !I.verb) return;
+    // (one indoors — a person to the body in its room since the wave 4 I — is refused by the can, as the world refuses the duel there
+    // (combate.js reachable): the F of the one at the tavern's table was «Desafiar», and the world said «Não está mais aqui», L-2175)
     const mine = {
       id: 'desafiar', k: 'outra', label: (ctx, t) => `Desafiar ${G.Possess.knows ? G.Possess.knows.call(ctx.v, t.o) : t.o.name} para um duelo`,
-      can(ctx, t) { const o = t.o; if (!G.S.villagers.has(o.id)) return { ok: false, why: 'Não está mais aqui.' }; if (Cb.duel()) return { ok: false, why: 'Já há um duelo.' }; if (o.age < 16) return { ok: false, why: 'Uma criança não duela.' }; if (o.sleeping) return { ok: false, why: 'Está dormindo.' }; return { ok: true }; },
+      can(ctx, t) { const o = t.o; if (!G.S.villagers.has(o.id)) return { ok: false, why: 'Não está mais aqui.' }; if (o.inside) return { ok: false, why: 'Aqui dentro, não: um duelo é na rua.' }; if (Cb.duel()) return { ok: false, why: 'Já há um duelo.' }; if (o.age < 16) return { ok: false, why: 'Uma criança não duela.' }; if (o.sleeping) return { ok: false, why: 'Está dormindo.' }; return { ok: true }; },
       run(ctx, t) {
         const o = t.o; const ask = G.Possess.apply(wv => { const r = Cb.challenge(wv, o); if (G.Possess.meet(o.id)) G.Possess.deed('conversa'); return r; }); // (asked face to face: the two meet — Possess.knows)
         Av.act({ anim: 'talk', dur: 1.2, lock: false, face: Math.atan2(t.Z - ctx.Z, t.X - ctx.X) });

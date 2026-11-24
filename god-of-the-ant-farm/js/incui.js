@@ -64,7 +64,7 @@
         <div class="ih-calls"></div>
         <div class="ih-lead hidden"><i></i><span></span></div>
         <div class="ih-mark hidden"><i></i><u></u><b></b></div>
-        <div class="ih-prompt hidden"><div class="ih-main"><kbd>E</kbd><span></span></div><i class="ih-alt hidden"><kbd>F</kbd><b></b></i><i class="ih-hold hidden"><kbd>E</kbd><u class="ih-ring"></u><em>segurar</em><b></b></i><i class="ih-cyc hidden"><kbd>Roda</kbd><b></b></i></div>
+        <div class="ih-prompt hidden"><div class="ih-main"><kbd>E</kbd><span></span></div><i class="ih-alt hidden"><kbd>F</kbd><b></b></i><i class="ih-hold hidden"><kbd>E</kbd><u class="ih-ring"></u><em>segurar</em><b></b></i><i class="ih-cyc hidden"><kbd>Roda</kbd><b></b></i><i class="ih-more hidden"><kbd>Y</kbd><b></b></i></div>
         <div class="ih-hotbar"></div>
         <div class="ih-reticle"></div>
         <div class="ih-lockmark hidden"><i></i></div>
@@ -89,7 +89,7 @@
     $('.ih-diary', hud).onclick = () => G.Input3D.press('diario'); // (the same as its key)
     touchBuild();
     // (20e: the prompt is a button for the fingers — its E line the E, its F line the F)
-    { const pr = $('.ih-prompt', hud); pr.addEventListener('click', e => { if (!G.Modes.is('INC') || G.Modes.panel()) return; e.stopPropagation(); if (e.target.closest('.ih-alt')) IU.useVerb('outra'); else if (e.target.closest('.ih-hold')) IU.useVerb('segurar'); else if (e.target.closest('.ih-cyc')) IU.cycle(1); else { IU.press(); IU.release(); } }); }
+    { const pr = $('.ih-prompt', hud); pr.addEventListener('click', e => { if (!G.Modes.is('INC') || G.Modes.panel()) return; e.stopPropagation(); if (e.target.closest('.ih-alt')) IU.useVerb('outra'); else if (e.target.closest('.ih-hold')) IU.useVerb('segurar'); else if (e.target.closest('.ih-cyc')) IU.cycle(1); else if (e.target.closest('.ih-more')) { if (G.AcoesUI) G.AcoesUI.open(); } else { IU.press(); IU.release(); } }); }
     card.addEventListener('click', onCardClick); menu.addEventListener('click', onMenuClick); menu.addEventListener('input', onMenuInput);
     // (the cards and the menu are the mouse's: a click there is not a look-around)
     for (const el of [card, menu]) el.addEventListener('mousedown', e => e.stopPropagation());
@@ -123,7 +123,8 @@
   // lying —, clear of the body in the middle — on the owner's phone they fell over the hotbar and the body: L-1246)
   function footBand() {
     let top = innerHeight;
-    for (const s of ['.ih-hotbar', '.ih-corner']) { const e = $(s, hud); if (!e) continue; const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && r.top < top) top = r.top; }
+    // (and the bar of the table, seated at a tavern's: the buttons of the thumb stand above it — acoes-ui.js, the wave 4 I)
+    for (const s of ['.ih-hotbar', '.ih-corner', '.ac-mesa:not(.hidden)']) { const e = $(s, hud); if (!e) continue; const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0 && r.top < top) top = r.top; }
     return Math.max(0, Math.round(innerHeight - top));
   }
   IU.compactTouch = () => innerWidth < 600 || innerHeight < 500;
@@ -345,7 +346,7 @@
       if (sl._k !== k) { sl._k = k; sl.innerHTML = dz ? 'Desmaiado… <small>você bebeu demais · o tempo passa até o corpo acordar</small>' : 'Dormindo… <small>o tempo passa depressa · <kbd>E</kbd> para acordar</small>'; }
       const w = G.Possess.knows.ebrio ? G.Possess.knows.ebrio(v) : ''; const el = $('.ih-ebrio', hud); if (el._w !== w) { el._w = w; el.textContent = w ? G.cap(w) : ''; } }
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
-    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['travar', 'travar a mira'], ['vista', 'vista da sala'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
+    if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['acoes', 'todas as ações'], ['travar', 'travar a mira'], ['vista', 'vista da sala'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
   };
   // the words over the heads and the little texts of the world: what the god's view draws over it, over the body's eyes too —
   // the words said (G.Talk: a bubble over the one who speaks, typed out by the world's clock; the same bubble by the same hand,
@@ -479,13 +480,19 @@
   function renderPrompt(c) {
     const pr = $('.ih-prompt', hud); const I = G.Interact;
     G.People3D.highlight = best && best.id === 'pessoa' && !hudOff ? best.t.o.id : 0; // (the mark over the one faced is the screen's)
-    if (!best) { pr.classList.add('hidden'); aim.verbs = null; aim.hv = false; return; }
+    // (the table one sits at, with its bar in sight: the bar says its E and its verbs — the prompt would say them again over it; the E
+    // still does the table's E: acoes-ui.js, the wave 4 I)
+    const tableBar = !!(best && best.id === 'taverna' && !best.t.bal && G.AcoesUI && G.AcoesUI.mesaOn && G.AcoesUI.mesaOn());
+    if (!best || tableBar) { pr.classList.add('hidden'); aim.verbs = null; aim.hv = false; return; }
     pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok);
     pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`;
     const o = I.offer ? I.offer(best) : null; aim.verbs = o ? o.verbs.map(x => ({ k: x.k, label: x.label, ok: x.ok, why: x.why })) : null;
     // (the target's second verb, F — the second wave's contract, D-460: shown beside the E when the target has one)
     { const al = $('.ih-alt', pr); const x = o && o.verbs.find(q => q.k === 'outra'); al.classList.toggle('hidden', !x); if (x) { al.querySelector('kbd').textContent = G.Input3D.label('outra'); al.querySelector('b').textContent = x.ok ? x.label : `${x.label} — ${x.why}`; al.classList.toggle('no', !x.ok); } }
     { const hl = $('.ih-hold', pr); const x = o && o.verbs.find(q => q.k === 'segurar'); aim.hv = !!x; hl.classList.toggle('hidden', !x); if (x) { hl.querySelector('kbd').textContent = G.Input3D.label('interagir'); hl.querySelector('b').textContent = x.ok ? x.label : `${x.label} — ${x.why}`; hl.classList.toggle('no', !x.ok); } }
+    // (the wave 4 I, D-919: the verbs that have no key of their own — the dice, the Tabuletas, the social ones —, how many, and the key of
+    // the list of them all: acoes-ui.js)
+    { const mo = $('.ih-more', pr); const n = o && G.AcoesUI ? o.more.length : 0; mo.classList.toggle('hidden', !n); if (n) { mo.querySelector('kbd').textContent = G.Input3D.device === 'touch' ? 'Ações' : G.Input3D.label('acoes') || 'Y'; mo.querySelector('b').textContent = n === 1 ? 'mais 1 ação' : `mais ${n} ações`; } }
     { const cy = $('.ih-cyc', pr); const n = aim.cands.length; cy.classList.toggle('hidden', n < 2); if (n >= 2) { const i = Math.max(0, aim.cands.findIndex(q => q.key === aim.key)); const pad = G.Input3D.device === 'pad', touch = G.Input3D.device === 'touch';
       cy.querySelector('kbd').textContent = pad ? '← →' : touch ? 'Toque' : (G.Input3D.keyLabel('alvoProx') && /Roda/.test(G.Input3D.keyLabel('alvoProx')) ? 'Roda' : G.Input3D.keyLabel('alvoProx') || 'Roda'); cy.querySelector('b').textContent = `${i + 1} de ${n} · trocar de alvo`; } }
     void c;
@@ -493,7 +500,7 @@
   function aimFrame(rdt, v) {
     // (a panel over the middle of the screen — the bag, the things kept —: what lies behind it, the news, the hint, the prompt,
     // steps out of sight, and the world's answers rise above it: the panel is read, not the screen behind it)
-    { const on = !!(G.Modes.panelIs('mochila') || G.Modes.panelIs('guardados') || G.Modes.panelIs('cardapio')); if (root._po !== on) { root._po = on; root.classList.toggle('panel-on', on); } } // (and the tavern's menu: cardapio-ui.js, P7)
+    { const on = !!(G.Modes.panelIs('mochila') || G.Modes.panelIs('guardados') || G.Modes.panelIs('cardapio') || G.Modes.panelIs('acoes')); if (root._po !== on) { root._po = on; root.classList.toggle('panel-on', on); } } // (and the tavern's menu: cardapio-ui.js, P7; the list of actions: acoes-ui.js)
     if (G.GuardUI) G.GuardUI.frame(rdt); // (the screen of what is kept, on the body's beat: guardados-ui.js)
     bestT -= rdt;
     if (bestT <= 0) { bestT = 0.12; const c = look(v); renderPrompt(c); }
@@ -520,7 +527,7 @@
       // (on the side of the target away from the middle of the picture, where the body is: never over the body itself; the side
       // kept while the target stays near the middle, so the box does not jump across it)
       if (at) { const w = pr.offsetWidth || 260, h = pr.offsetHeight || 60; const c = Wd / 2; aim.side = Math.abs(x - c) < 40 && aim.side ? aim.side : x < c ? -1 : 1;
-        x = G.clamp(aim.side < 0 ? x - 34 - w : x + 34, 12, Wd - w - 12); y = G.clamp(y - h / 2, 64, Ht - h - (G.Input3D.touch ? 240 : 96)); }
+        x = G.clamp(aim.side < 0 ? x - 34 - w : x + 34, 12, Wd - w - 12); y = G.clamp(y - h / 2, 64, Ht - h - Math.max(G.Input3D.touch ? 240 : 96, G.AcoesUI && G.AcoesUI.alto ? G.AcoesUI.alto() + 12 : 0)); } // (over the bar of the table, when it is up)
     }
     if (at !== aim.at) { aim.at = at; pr.classList.toggle('at', at); if (!at) { pr.style.transform = ''; aim.sx = NaN; } }
     if (!at) return;
@@ -637,9 +644,11 @@
       const hug = o ? G.Interact.canHug(G.Possess.body(), o) : { ok: false };
       // (20e, D-395: the verbs of this person that lost their key — another part's took it — are buttons here)
       const chosen = best && best.id === 'pessoa' && best.t.o.id === c.id ? best : null; const of = chosen && G.Interact.offer ? G.Interact.offer(chosen) : null;
-      const more = of ? of.more.filter(x => x.id !== 'abraco') : []; // (the hug has its own button above)
+      // (the wave 4 I, D-922: every verb of the person but the word just said — the F's too, not only the ones that lost their key —, and
+      // the why of the ones that cannot be done now in sight, not in a tooltip the fingers never see)
+      const more = of ? of.verbs.filter(x => x.k === 'outra').concat(of.more).filter(x => x.id !== 'abraco') : []; // (the hug has its own button above)
       // (22b: the first five on the number keys — the quick keys, while a person's card is open: IU.cardKey)
-      const vb = more.map((x, i) => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${i < 5 ? `<kbd>${esc(G.Input3D.label('rapido' + (i + 1)) || i + 1)}</kbd> ` : ''}${esc(x.label)}</button>`).join('');
+      const vb = more.map((x, i) => `<button data-c="verb" data-vk="${esc(x.k)}" data-v="${esc(x.id)}"${x.ok ? '' : ` disabled title="${esc(x.why)}"`}>${i < 5 ? `<kbd>${esc(G.Input3D.label('rapido' + (i + 1)) || i + 1)}</kbd> ` : ''}${esc(x.label)}${x.ok || !x.why ? '' : `<small class="why">${esc(x.why)}</small>`}</button>`).join('');
       h += `<div class="btns">${hug.label ? `<button data-c="hug" data-id="${c.id}"${hug.ok ? '' : ` disabled title="${esc(hug.why)}"`}>${esc(hug.label)}</button>` : ''}${vb}${can.ok ? `<button data-c="swap" data-id="${c.id}">${(G.ICON && G.ICON.eye) || ''} Encarnar ${esc(c.knows === 0 ? 'esta pessoa' : o.name)}</button>` : ''}<button data-c="close">Fechar <kbd>E</kbd></button></div>`;
     } else {
       h += `<div class="ic-head"><div><h3>${esc(c.name)}</h3><div class="sub">${esc(c.sub || '')}</div></div></div>`;

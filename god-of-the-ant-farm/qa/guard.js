@@ -2765,6 +2765,55 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const at = (src['act-taverna.js'] || []).join('\n'), tf = (src['taverna-festa.js'] || []).join('\n');
   if (!/const held = answering\(d\.mesa\[v\.id\]\) \|\| brawls\.has\(v\.id\);/.test(at) || !/if \(lead === v && !held\)/.test(at) || !/\|\| answering\(m\) \|\| brawls\.has\(o\.id\)\) continue;/.test(at) || !/TF\(\)\.ocupado\(v, op\)\) && !answering\(m\)\)/.test(at)) fails.push('a resposta vem primeiro: o estrado, o músico ou a dança da festa levam quem responde à bebida na cara (act-taverna.js life, L-2162)');
   if (!/\(T\.answering && T\.answering\(m\)\) \|\| \(T\.brawling && T\.brawling\(v\)\)\) continue;/.test(tf)) fails.push('a resposta vem primeiro: o coro da festa (TF.coro) leva o bardo que responde à bebida na cara (L-2162)'); }
+// === Onda 4 — I: a interação clara ===
+// 445. "a barra da mesa e a lista das ações pedem pelos verbos" (I, D-915, D-916, D-919): o js/acoes-ui.js mostra o que os verbos dizem
+// e faz cada ação pela porta do verbo (G.IncUI.use / useVerb → Interact.run / runVerb): não procura nem julga alvos por conta própria
+// (Interact.list, o find, o run ou o label de um provedor — a regra 140, como a tela), não pede ao mundo fora do run de um verbo que ele
+// traz pelo registro (todo G.Possess.apply dele dentro de um G.Interact.verb), não lê uma tecla pela letra (as teclas são ações: a regra
+// 121), e a dica da primeira vez fica no navegador sempre com try (um navegador que não guarda mostra a dica de novo, nunca quebra: D-923)
+{ const L = src['acoes-ui.js'] || []; if (!L.length) fails.push('as ações: js/acoes-ui.js não existe (D-915)');
+  let depth = 0, open = false;
+  L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bI\.verb\(/.test(c)) { open = true; depth = 0; }
+    const inVerb = open; if (open) { for (const ch of c) { if (ch === '{') depth++; else if (ch === '}') depth--; } if (depth <= 0 && /\}\s*\);/.test(c)) open = false; }
+    if (/\bInteract\.list\b|\bI\.list\b|\.p\.(find|run|label)\(|\bp\.find\(ctx/.test(c)) fails.push(`as ações pelas portas: acoes-ui.js:${k + 1} procura ou faz um alvo por um provedor, fora das portas do G.Interact (D-916): ${l.trim().slice(0, 110)}`);
+    if (/\b(Possess|P\(\))\.apply\(/.test(c) && !inVerb) fails.push(`as ações pelos verbos: acoes-ui.js:${k + 1} pede ao mundo fora do run de um verbo do registro (D-916): ${l.trim().slice(0, 110)}`);
+    if (/\blocalStorage\./.test(c) && !/\btry\s*\{/.test(c)) fails.push(`a dica no navegador: acoes-ui.js:${k + 1} lê ou escreve o localStorage sem try (D-923): ${l.trim().slice(0, 110)}`);
+    if (/\b(e|ev|event)\.(key|code)\s*[!=]==?\s*['"]/.test(c)) fails.push(`as teclas são ações: acoes-ui.js:${k + 1} lê uma tecla pela letra (D-339): ${l.trim().slice(0, 110)}`); }); }
+// 446. "os lugares da barra são verbos da mesa" (I, D-916, D-920): cada lugar da barra da mesa (o UI.ORDER do acoes-ui.js, menos o E da
+// mesa) é um verbo do registro no provedor 'taverna', pelo seu id — a barra lê os verbos pelo id, e um id mudado tiraria uma ação da barra
+// sem ninguém ver (a frente J reescreve o can, o label e o run dos jogos, nunca o id)
+{ const A = (src['acoes-ui.js'] || []).join('\n'); const m = A.match(/UI\.ORDER = \[([^\]]*)\]/); const ids = m ? [...m[1].matchAll(/'([\w-]*)'/g)].map(q => q[1]).filter(Boolean) : [];
+  if (!ids.length) fails.push('a barra da mesa: o acoes-ui.js sem o UI.ORDER (D-916)');
+  const all = files.map(f => src[f].join('\n')).join('\n');
+  for (const id of ids) if (!new RegExp(`\\b(I|Interact)\\.verb\\(\\s*'taverna'\\s*,\\s*\\{\\s*id:\\s*'${id}'`).test(all)) fails.push(`a barra da mesa: o lugar «${id}» não é um verbo da mesa no registro (G.Interact.verb('taverna', { id: '${id}', … }) — D-916)`); }
+// 447. "quem está na sala fica no lugar" (I, L-2170, L-2171): as pessoas da sala do corpo são alvos dele, e uma tarefa dada a quem está
+// dentro de um prédio o faz sair pela porta antes (o setTask do villagers.js): a palavra do corpo (o run da pessoa, no interact.js), a
+// resposta dos verbos sociais (o responde do soc-verbos.js) e o abraço não dão tarefa a quem está dentro — a pessoa responde do lugar
+{ const sv = (src['soc-verbos.js'] || []).join('\n'), ia = (src['interact.js'] || []).join('\n');
+  const r0 = sv.indexOf('function responde('); const rb = r0 < 0 ? '' : sv.slice(r0, sv.indexOf('\n  }', r0));
+  if (!/if \(!o\.inside\) \{/.test(rb) || !/type: 'resposta'/.test(rb)) fails.push('quem está na sala fica no lugar: o responde do soc-verbos.js dá a tarefa da resposta sem perguntar se a pessoa está dentro (L-2171)');
+  if (!/if \(txt && !room && \(!o\.task \|\| o\.task\.pri <= 1\)\) G\.Vg\.setTask\(o, \{ type: 'talk'/.test(ia)) fails.push('quem está na sala fica no lugar: a palavra do corpo (o run da pessoa, interact.js) dá a tarefa da conversa a quem está dentro (L-2171)');
+  if (!/if \(o\.inside && o\.inside === me\.inside\) return \{ ok: false, label, why:/.test(ia)) fails.push('quem está na sala fica no lugar: o canHug do interact.js deixa abraçar quem está na sala do corpo (L-2171)'); }
+// 448. "a briga de dentro é a das mesas" (I, L-2173): o golpe de quem responde a um insulto ou a uma ameaça dentro de um prédio é a briga
+// das mesas da taverna (G.Taverna.briga: o empurrão e os punhos, o taverneiro que põe para fora), e em outro prédio nenhuma — nunca a luta
+// da rua (o G.Convivio.agride, cuja tarefa de combate punha quem estava à mesa na porta, para lutar com o corpo lá dentro)
+{ const sv = (src['soc-verbos.js'] || []).join('\n');
+  if (!/const hits = \(o, me\) => \(o\.inside \? !!\(room\(o, me\) && adult\(o\) && G\.Taverna && G\.Taverna\.briga && G\.Taverna\.briga\(o, me\)\) : /.test(sv)) fails.push('a briga de dentro é a das mesas: o hits do soc-verbos.js leva quem está dentro à luta da rua (L-2173)'); }
+// 449. "o corpo fica no assento" (I, L-2177): cortar o ato do corpo sentado (um verbo pedido no meio de um gole) não o põe «no chão» — o
+// Av.cancelAct do avatar.js guarda o 'seat'; posto no chão, o passo do lugar não rodava mais, e levantar não soltava o lugar no mundo
+{ const av = (src['avatar.js'] || []).join('\n');
+  if (!/Av\.cancelAct = \(\) => \{ if \(b && b\.act\) \{ cutAct\(\); if \(b\.loco !== 'seat'\) b\.loco = 'ground'; \} \};/.test(av)) fails.push('o corpo fica no assento: o Av.cancelAct do avatar.js põe o corpo sentado «no chão» (L-2177)'); }
+// 450. "diante da porta, a porta" (I, T-2061, L-2178): na soleira de um prédio que não é casa, a porta da planta fechada ou trancada, de
+// frente e ao alcance, vem antes da oferta do prédio («Examinar taverna», o ponto dela sob os pés) — salvo a carga para o armazém (pref) —:
+// o I.best do interact.js tem a sua regra
+{ const ia = (src['interact.js'] || []).join('\n');
+  if (!/if \(best\.p\.id === 'porta' && !\(best\.t\.pref > 0\) && G\.Interiors && G\.Interiors\.doorState\) \{/.test(ia) || !/if \(st && \(st\.state === 'fechada' \|\| st\.state === 'trancada'\) && aim\(ctx, pd\.t\.X, pd\.t\.Z\)\.ang <= I\.FACE\) best = pd;/.test(ia)) fails.push('diante da porta, a porta: o I.best do interact.js sem a regra da porta na soleira (T-2061, L-2178)'); }
+// 451. "de pé, a coisa da sala antes de quem está nela" (I, L-2181, D-918): o corpo de pé numa sala, de frente para uma coisa dela — o
+// assento livre de uma mesa com gente, a cama, o balcão, a porta — mais de frente do que para uma pessoa da sala, tem essa coisa no E; o
+// alcance da pessoa (3,2 m contra os 2,2 do assento) dava mais a quem senta ao lado do que o ROOM_PREF tira: o I.best tem a sua regra
+{ const ia = (src['interact.js'] || []).join('\n');
+  if (!/if \(best\.t\.room && !G\.Avatar\.seated\(\)\) \{/.test(ia) || !/if \(q\.p\.id === 'pessoa' \|\| q\.p\.here \|\| q\.t\.here\) continue; const a = aim\(ctx, q\.t\.X, q\.t\.Z\)\.ang; if \(a <= I\.FACE && a < pa && \(!th \|\| q\.sc > th\.sc\)\) th = q;/.test(ia)) fails.push('de pé, a coisa da sala antes de quem está nela: o I.best do interact.js sem a regra que dá ao assento de frente o E, antes de quem senta ao lado (L-2181)'); }
 // ---------------- Onda 4 — J: os jogos da casa (js/jogos-casa.js; D-930 a D-939) ----------------
 // 455. "o jogo na mesa é do jogos-casa.js" (D-932): o lugar 'n:' do livro (o jogo fora do seu lugar, numa mesa) e o registro dos jogos na
 // mesa (S.jogosMesa) só o js/jogos-casa.js cria e escreve — a letra do lugar é uma só (L-2064: outro arquivo que registre a 'n' apaga a mesa)

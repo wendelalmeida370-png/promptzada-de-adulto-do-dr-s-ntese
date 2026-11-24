@@ -12,9 +12,15 @@
   const L = () => G.Lacos, I = () => G.Indole, F = () => G.Fama;
   const S_ = () => G.S;
   // (in the world's tiles — four metres each: the reach of a word is one, a friend's ear two and a half)
-  const near = (a, b, t) => G.dist(a.x, a.y, b.x, b.y) <= t;
+  // (where one is: in a room, at one's place — the world keeps the door's point in v.x, v.y: G.Interiors.posOf, the wave 4 I, D-917)
+  const at = v => (G.Interiors && G.Interiors.posOf ? G.Interiors.posOf(v) : [v.x, v.y, 0]);
+  const near = (a, b, t) => { const p = at(a), q = at(b); return G.dist(p[0], p[1], q[0], q[1]) <= t; };
+  // (one in the body's own room — the tavern it sits in, its house —, there to be spoken to where they are: L-2170)
+  const room = (o, me) => !!o.inside && o.inside === me.inside;
+  // (the two at the tables of an open tavern: the body's there, by the tavern's own reading — G.Taverna.corpo)
+  const atTav = (o, me) => room(o, me) && !!(G.Taverna && G.Taverna.corpo && G.Taverna.convida && G.Taverna.corpo(me));
   const oa = v => (v && v.g === 'f' ? 'a' : 'o');
-  const who = (me, o) => G.Possess.knows.call(me, o), Who = (me, o) => G.cap(who(me, o));
+  const who = (me, o) => G.Possess.knows.call(me, o), Who = (me, o) => G.cap(who(me, o)), ao = (me, o) => G.Possess.knows.ao(me, o); // (ao: after «a», «ao mineiro»)
   const pick = (o, me, arr, n) => arr[Math.floor(G.hash(o.id * 131 + me.id * 7 + S_().day * 3 + (n || 0)) * arr.length)];
   // (whether the other knows the body by name: a tie, or the family)
   const knowsMe = (o, me) => !!(L().find(o, me.id) || L().kin(o, me));
@@ -25,8 +31,9 @@
   // ------------------------------ the readings (pure) ------------------------------
   // who is looking: the awake people of twelve or more within six metres of the two (the shame and the pride of being seen)
   SV.olhos = function (o, me) {
-    let n = 0; const r2 = 1.5 * 1.5;
-    for (const p of S_().villagers.values()) { if (p === o || p === me || p.sleeping || p.inside || p.age < 12) continue; if (G.dist2(p.x, p.y, o.x, o.y) < r2) n++; }
+    let n = 0; const r2 = 1.5 * 1.5; const q = at(o);
+    // (in a room, the ones in it: the tavern's tables look on as the street does — L-2172)
+    for (const p of S_().villagers.values()) { if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside)) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) < r2) n++; }
     return n;
   };
   // how the other reads the body now: what they feel (the kin's base and what life did), the name the body has in their town, the
@@ -46,7 +53,7 @@
     if (!me || !o || !S_().villagers.has(o.id) || o.id === me.id) return { ok: false, why: 'Não está mais aqui.' };
     if (o.sleeping) return { ok: false, why: `${Who(me, o)} está dormindo.` };
     if (o.age < 4) return { ok: false, why: `${Who(me, o)} é pequen${oa(o)} demais.` };
-    if (o.inside || o.aboard || o.held || o.air || o.jail || o.ug || o.captive) return { ok: false, why: `Agora não dá com ${who(me, o)}.` };
+    if ((o.inside && !room(o, me)) || o.aboard || o.held || o.air || o.jail || o.ug || o.captive) return { ok: false, why: `Agora não dá com ${who(me, o)}.` };
     if (o.task && o.task.pri > 1.2 && !(o.task.type === 'resposta' && o.task.id === me.id)) return { ok: false, why: `${Who(me, o)} está ocupad${oa(o)} com algo que não pode esperar.` };
     if (!near(me, o, 1)) return { ok: false, why: 'Longe demais.' };
     return { ok: true };
@@ -57,8 +64,10 @@
   // the other turns to the body and answers: an act of the vocabulary, a word over the head
   function responde(o, me, act, fala, dur) {
     const a = G.SocAtos.has(act) ? act : 'talk';
-    G.faceTo(o, me.x - o.x, me.y - o.y);
-    if (!o.task || o.task.pri <= 1.2 || o.task.type === 'resposta') G.Vg.setTask(o, { type: 'resposta', id: me.id, act: a, pri: 1.15, wait: (dur || 3) * K, kind: 'talk' });
+    // (one in a room answers from their place, with the word only: the answer's errand walks one indoors out by the door first, and
+    // the one greeted at the tavern's table went home — L-2171)
+    if (!o.inside) { G.faceTo(o, me.x - o.x, me.y - o.y);
+      if (!o.task || o.task.pri <= 1.2 || o.task.type === 'resposta') G.Vg.setTask(o, { type: 'resposta', id: me.id, act: a, pri: 1.15, wait: (dur || 3) * K, kind: 'talk' }); }
     if (fala && G.Talk) G.Talk.say(o, fala, { dur: 3.5 });
   }
   const deed = k => G.Possess.deed(k);
@@ -92,7 +101,10 @@
     return true;
   };
   // (the one hit back: the other's blow at the body, by the society's door — a brawl, a crime of the world)
-  const hits = (o, me) => !!(G.Convivio && G.Convivio.agride && adult(o) && G.Convivio.agride(o, me, false));
+  // (in a room, the tavern's own brawl at the tables — the shove and the fists, the keeper who puts the starter out: act-taverna.js —, and
+  // no street fight: that one's errand put the one at the table out at the door, to fight the body inside — L-2173; in another room,
+  // none: the word stays a word)
+  const hits = (o, me) => (o.inside ? !!(room(o, me) && adult(o) && G.Taverna && G.Taverna.briga && G.Taverna.briga(o, me)) : !!(G.Convivio && G.Convivio.agride && adult(o) && G.Convivio.agride(o, me, false)));
 
   // ------------------------------ the verbs ------------------------------
   const GREET = ['Olá!', 'Bom te ver por aqui.', 'Que bom dia!'];
@@ -144,7 +156,7 @@
         L().ato(me, o, 'insulto'); L().marca(o, 'insultou', me.id, 40); deed('insulto');
         // (who saw it thinks less of the body: up to four of the ones looking)
         let k = 0; const r2 = 1.5 * 1.5;
-        for (const p of S_().villagers.values()) { if (k >= 4) break; if (p === o || p === me || p.sleeping || p.inside || p.age < 12 || G.dist2(p.x, p.y, o.x, o.y) >= r2) continue; L().ato(p, me, 'atrito'); k++; }
+        { const q = at(o); for (const p of S_().villagers.values()) { if (k >= 4) break; if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside)) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) >= r2) continue; L().ato(p, me, 'atrito'); k++; } } // (in a room, the ones in it: L-2172)
         const orgulho = R.ag * 0.7 + R.imp * 0.3 + Math.min(4, R.olhos) * 0.05 - R.neu * 0.3;
         const amigo = SV.defende(me, o);
         if (orgulho > 0.7 && !amigo && hits(o, me)) return { ok: true, say: `${Who(me, o)} não engole o insulto e parte para cima de você!` };
@@ -163,14 +175,19 @@
         o.fear = Math.min(100, (o.fear || 0) + 25); responde(o, me, 'cower', '', 3); G.Vg.emote(o, 'fear', 2);
         return { ok: true, say: `${Who(me, o)} se encolhe de medo.` };
       } },
-    { id: 'beber', anim: 'talk', label: (me, o) => (adult(o) && G.Taverna ? `Convidar ${who(me, o)} para beber` : ''),
+    // (at the tavern both are in, the invitation is a cup paid for them there — G.Taverna.convida, the house's: the keeper serves it,
+    // the body pays it as it is handed over —; sent off to «the tavern» from inside it, they walked out by the door to come back in, L-2174)
+    { id: 'beber', anim: 'talk', label: (me, o) => { if (!adult(o) || !G.Taverna) return ''; if (atTav(o, me)) { const c = G.Taverna.convidaCan(me, o); return c.ok || c.why ? `Pagar uma bebida ${ao(me, o)}${c.ok && c.price ? ` (${c.price})` : ''}` : ''; } return `Convidar ${who(me, o)} para beber`; },
       can(me, o) {
         const c = base(me, o); if (!c.ok) return c;
+        if (atTav(o, me)) return G.Taverna.convidaCan(me, o);
         const b = G.Taverna.pick(me); if (!b) return { ok: false, why: 'Não há taverna aberta por perto.' };
         if (G.Taverna.withCoin(b) && G.Eco.purse(me) + 1e-6 < G.Taverna.PRICE.drink) return { ok: false, why: 'Você não tem com que pagar a rodada.' };
         return OK;
       },
       faz(me, o, R) {
+        if (atTav(o, me)) { const r = G.Taverna.convida(me, o.id); if (!r.ok) return r; L().ato(me, o, 'convite'); L().marca(o, 'pagou', me.id, 30); deed('rodada');
+          responde(o, me, 'toast', pick(o, me, ['Saúde!', 'À sua!', `Obrigad${oa(o)}!`]), 2); return { ok: true, say: r.msg }; }
         const b = G.Taverna.pick(me); const op = b && G.Taverna.dia(b); if (!b || !op) return { ok: false, why: 'Não há taverna aberta por perto.' };
         const aceita = R.af >= 0 && (R.ext >= 0.3 || R.af >= 20) && !R.ferida && (o.hunger || 0) < 80 && !(o.task && o.task.pri > 0.7 && o.task.type !== 'resposta');
         if (!aceita) { responde(o, me, 'refuse', pick(o, me, ['Hoje não, obrigad' + oa(o) + '.', 'Fica para outro dia.']), 2); return { ok: true, say: `${Who(me, o)} agradece, mas não vai.` }; }
@@ -181,7 +198,7 @@
         G.Vg.setTask(o, { type: 'tavern', id: b.id, op: op.id, pri: 0.62, st: 0 });
         return { ok: true, say: `${Who(me, o)} aceita e vai para a taverna. A rodada é sua.` };
       } },
-    { id: 'ajuda', anim: 'talk', label: (me, o) => (adult(o) ? `Pedir ajuda a ${who(me, o)}` : ''), can: base,
+    { id: 'ajuda', anim: 'talk', label: (me, o) => (adult(o) ? `Pedir ajuda ${ao(me, o)}` : ''), can: base,
       faz(me, o, R) {
         L().ato(me, o, 'pedido'); deed('pedido');
         if (L().lembra(me, o.id).some(m => m[0] === 'deve')) { responde(o, me, 'refuse', 'Você ainda me deve.', 2); return { ok: true, say: `${Who(me, o)} lembra que você ainda lhe deve.` }; }
@@ -196,7 +213,7 @@
         responde(o, me, 'refuse', pick(o, me, ['Não posso agora.', 'Cada um com os seus problemas.']), 2);
         return { ok: true, say: `${Who(me, o)} não quer ajudar.` };
       } },
-    { id: 'novidades', anim: 'talk', label: (me, o) => `Perguntar o que se diz a ${who(me, o)}`, can: base,
+    { id: 'novidades', anim: 'talk', label: (me, o) => `Perguntar o que se diz ${ao(me, o)}`, can: base,
       faz(me, o, R) {
         const B = G.Boatos; L().ato(o, me, 'conversa'); deed('novidade');
         if (R.af <= -40) { responde(o, me, 'refuse', 'Não tenho nada para te contar.', 2); return { ok: true, say: `${Who(me, o)} não quer conversa.` }; }

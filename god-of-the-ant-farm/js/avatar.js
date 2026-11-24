@@ -903,7 +903,9 @@
   // holds its coming back —; and the weight of a blow that lands, the body's own time all but stopped for s seconds)
   Av.spend = function (n) { if (!b || !b.caps) return false; if (n > 0 && b.stamina < 1) return false; b.stamina = Math.max(0, b.stamina - Math.max(0, n || 0)); b.regenT = TUNE.regenDelay; return true; };
   Av.hitstop = s => { if (b) b.stopT = Math.max(b.stopT || 0, G.clamp(s || 0, 0, 0.2)); };
-  Av.cancelAct = () => { if (b && b.act) { cutAct(); b.loco = 'ground'; } };
+  // (at a place the act is cut and the body stays on it: a verb asked over a sip at the tavern's table put the seated body «on the ground» —
+  // the place's own step never ran again, and getting up never let the place go — L-2177)
+  Av.cancelAct = () => { if (b && b.act) { cutAct(); if (b.loco !== 'seat') b.loco = 'ground'; } };
   // (an act cut short: what it had asked of the world and the world has not yet done is let go — it never happens)
   function cutAct() { const a = b.act; if (a && a.asked && !a.asked.res) a.asked.cancel = true; b.act = null; b.faceTo = undefined; if (b.loco === 'busy') b.loco = 'ground'; if (a && a.cut && !a.res) a.cut(); }
 

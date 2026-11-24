@@ -5,7 +5,8 @@
 //   · as mãos movem as coisas pelas portas certas, no livro: o que se dá vai de uma mochila para outra (G.Inv.give, «dar»), o que
 //     se apanha do chão vai do chão para uma mochila («apanhou»), o que se guarda ou se tira de uma casa, uma prateleira, uma
 //     banca vai entre a mochila e esse lugar («guardou» / «pegar») — nunca para o estoque do povo como coisa (D-371);
-//   · os feitos das mãos do corpo (deu, pegou do chão, guardou, bateu à porta) são contas inteiras, nunca negativas.
+//   · os feitos das mãos do corpo (deu, pegou do chão, guardou, bateu à porta) são contas inteiras, nunca negativas;
+//   · quem está dentro de um prédio não tem uma tarefa de conversa nem de resposta com o corpo: as pessoas da sala respondem do lugar (I, L-2171).
 (function () {
   if (!window.QA || !QA.more) return;
   const fin = x => typeof x === 'number' && isFinite(x);
@@ -27,6 +28,9 @@
       if (code === 'apanhou' && (kind(de) !== 'g' || (kind(para) !== 'm' && kind(para) !== 'v'))) add('interacao', 1, `o livro: «apanhou» de ${de} para ${para} — o que se apanha vai do chão para uma mochila (G.Inv.pick) ou para as mãos de quem o leva ao armazém`);
       if ((code === 'guardou' || code === 'pegar') && kind(para) === 'f' && It.THINGS && It.THINGS.has(e[5])) add('interacao', 1, `o livro: uma coisa (${e[5]}) entrou no estoque do povo como coisa por «${code}» (D-371: conta como o seu bem)`);
     }
+    // ---- the people of the body's room answer from their place (the wave 4 I, L-2171): an errand of a word with the body — the talk,
+    // the answer of a social verb — given to one inside a building walks them out by its door; none such is ever had indoors
+    if (s.avatar) for (const o of s.villagers.values()) { const t = o.task; if (o.inside && t && (t.type === 'talk' || t.type === 'resposta') && t.id === s.avatar.id && o.id !== s.avatar.id) add('interacao', 2, `${o.name} (#${o.id}), dentro de um prédio, tem a tarefa «${t.type}» com o corpo — a palavra do corpo o tiraria do lugar (L-2171)`); }
     // ---- the body's deeds of the hands: whole counts
     const a = s.avatar; if (a && a.deeds) for (const k of ['dadiva', 'apanhou', 'guardou', 'porta']) { const n = a.deeds[k]; if (n !== undefined && (!fin(n) || n < 0 || Math.abs(n - Math.round(n)) > 1e-9)) add('interacao', 2, `o feito «${k}» do corpo é ${n}`); }
   });

@@ -626,6 +626,8 @@
   // how the person says another: alone — over a head, at the top of a card — and within a sentence
   K.name = (v, o) => (K.person(v, o) ? o.name : G.cap(K.looks(o, v).um));
   K.call = (v, o) => (K.person(v, o) ? o.name : K.looks(o, v).o);
+  // (and after «a» — «Dar algo ao mineiro», «Pagar uma bebida à oleira», «Pedir ajuda a Thyra»: the wave 4 I's lists said «a o mineiro»)
+  K.ao = (v, o) => (K.person(v, o) ? 'a ' + o.name : (o.g === 'f' ? 'à ' : 'ao ') + K.looks(o, v).w);
   // the coins and the stores of a house: one's own, and no other (what a stall shows — its goods, its prices — is the stall's
   // to show: G.Act.offers); the stock of a people: one's own people's
   K.house = (v, b) => god(v) || (!!b && !!v.home && v.home === b.id && G.S.buildings.get(b.id) === b);

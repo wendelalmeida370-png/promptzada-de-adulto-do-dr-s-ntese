@@ -560,6 +560,8 @@ erro de registro; nada arremessado na troca), `node qa/visual/maos.js` (a coisa 
   (Ctrl+W fecha a aba) nem de Alt (tira o foco). `outra`, `atacar`, `defender` e `guardar` não fazem nada até a onda 2 as escutar
   (`on`); `travar` sem quem a tome trava a pessoa ou o bicho mais perto à frente (`G.Modes.lockCandidate`) ou volta o olho para as
   costas; `defender` é também o mirar do arco (a onda 2 chama `G.Cam3D.aim(true)` enquanto ele está segurado com um arco na mão).
+- A quarta onda da taverna (I, D-915, D-924) trouxe `acoes` (Y; no controle o Guia, `pad16`: a lista de tudo o que se pode fazer
+  agora, §4.10) e `acao6`…`acao8` (6–8: o sexto ao oitavo lugar da barra da mesa e da lista; os cinco primeiros são os atalhos 1–5).
 - `G.Input3D.label(a)` diz as teclas de uma ação como a tela as mostra — as do controle quando é ele nas mãos (`G.Input3D.device`:
   `'kb'`, `'pad'`, `'touch'`); `keyLabel(a)` / `padLabel(a)` cada uma.
 - `G.Input3D.axes()` → `{ mx, mz, run, walk }` (analógico, de todos os aparelhos juntos); `G.Input3D.poll(rdt)` lê o controle (o
@@ -655,6 +657,36 @@ furto só no fantasma (`beyond.js`); o `qa/combate-inv.js` na lista do `qa/junta
   act(ctx, prédio, pl) })` — `st` é a pose do corpo ali (um clipe: só o desenho), `act` o que as mãos fazem depois de sentar.
 - **Os gestos** (`js/interacao-clips.js`, D-404): `apanhar`, `bater`, `abrir`, `dar`, `aquecer`, `ler` — pelo `G.ANIM_CLIPS`, tocados
   como o `anim` do `Avatar.act`.
+- **A interação clara** (a quarta onda da taverna, I — D-915 a D-926; `js/acoes-ui.js`, `G.AcoesUI`): tudo o que o corpo pode fazer
+  agora se vê e se alcança.
+  - *As portas de leitura* (`interact.js`, puras): `I.verbsOf(alvo, todos)` → `[{ k, id, label, ok, why, sub }]`, o E primeiro e depois
+    os verbos do provedor e do registro pela `ord` (com `todos`, também os sem palavras agora: nunca possíveis, com o porquê do `can`);
+    `I.here(provedor, olhar?)` → o alvo de um provedor em volta do corpo, seja o que for que ele tenha de frente (a mesa em que está
+    sentado), como o `I.run` o recebe. **A linha de baixo de um verbo** (D-920): o `can` devolve `sub` ou o verbo tem `sub` (texto ou
+    `(ctx, t) → texto`); a barra e a lista a mostram. A dos jogos vem das portas deles (`G.JogoDados.verbo`, `G.Cartas.podeCorpo`: `de`,
+    `aluguel`, `espera`, da frente J): o aluguel e de onde vem o jogo, ou «esperando um jogo livre»; comprar o seu (`jc-dados-compra`,
+    `jc-baralho-compra`) é uma linha da lista, e o lugar que espera abre a lista nela (D-926).
+  - *Onde alguém está numa sala* (`interiors.js`, puro): `G.Interiors.posOf(v)` → `[x, y, lv]` — o lugar do repartidor para quem está
+    dentro (o mundo guarda o ponto da porta em `v.x, v.y`), o corpo onde está. As pessoas da sala do corpo são alvos do provedor `pessoa`
+    (`t.room`, um pouco abaixo das coisas da sala: `I.ROOM_PREF`; de pé, a coisa da sala mais de frente vem antes, L-2181), e respondem do lugar — nenhum verbo dá tarefa a quem está dentro
+    (regra 447). A troca de alvos guarda até `I.CANDS` (8).
+  - *A barra da mesa*: sentado à mesa de uma taverna aberta, os lugares do `UI.ORDER` (o E da mesa, `tv-rodada`, `jd-dados`,
+    `tv-cartas`, `tv-jogo`, `tv-musica`, `tv-gorjeta-mesa`; cada id um verbo do provedor `taverna` no registro — regra 446), um verbo
+    que outra parte traga à mesa depois deles, e levantar (o pulo). No PC as teclas 1–5 (os atalhos: a barra toma o lugar da barra de
+    atalhos enquanto se está sentado, pelo `IncUI.cardKey`) e 6–8 (`acao6`…`acao8`); no toque, um toque. `UI.mesa()` (o modelo, só lê),
+    `UI.faz(i)` (o lugar i, como a tecla), `UI.mesaOn()`, `UI.alto()` (quão alto a barra fica: a dica do alvo e as palavras do momento
+    acima dela).
+  - *A lista de ações*: a ação `acoes` (Y; o Guia do controle, `pad16`; à mesa a cruz ↓) e o botão «Ações» do toque (`Input3D.button`,
+    sempre à vista) abrem `UI.open(escolha?)` — o alvo da tela, ou à mesa a mesa —, com os outros alvos ao alcance pelos nomes (os
+    `I.candidates`) e cada verbo uma linha (o E no alto, o que se pode, o que não se pode com o porquê). A porta e o prédio de que ela é
+    (`portaPlanta` e `porta`, de fora) numa lista só, abrir ou bater primeiro quando ela está fechada (T-2061). `UI.lista(alvo, par?)`
+    (o modelo), `UI.lado(i, alvo?, par?)`, `UI.par(alvo)`, `UI.close()`, `UI.isOpen()`; o painel `#acoes-panel`, a marca `'acoes'`.
+    Na lista: ↑ ↓ (ou a cruz) anda, E (ou X) faz, 1–8 faz a linha, Esc fecha.
+  - *A dica da primeira vez*: `.ac-dica`, sobre a barra; some ao primeiro uso dela ou no «Entendi», guardada em
+    `localStorage['gotaf-dica-mesa']` (sempre com try: regra 445).
+  - *Os verbos que esta parte traz* (pelo registro): `tv-gorjeta-mesa` (a moeda ao músico, da mesa) e `pe-dados` (os dados com alguém
+    da mesa: as palavras, o `can` e o `run` do `jd-dados`). E no mundo: `G.Taverna.convida(v, id)` / `convidaCan(v, o)` (uma bebida
+    paga a quem está às mesas — o «Convidar para beber» de dentro da taverna, D-921).
 
 ### 4.11 O trabalho das mãos — `G.Trabalho` (20g, `js/trabalho.js`; D-425 a D-435)
 - **A tabela** `Tr.WORKS` (`cortar`, `quebrar`, `minerar`, `cavar`, `esfolar`, `ceifar`, `colher`, `pescar`, `vender`): `{ nome, tools:

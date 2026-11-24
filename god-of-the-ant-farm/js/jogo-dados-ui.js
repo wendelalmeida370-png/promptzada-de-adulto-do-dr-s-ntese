@@ -559,7 +559,7 @@
     // (the body in a game, and it is its turn, or the game it called: open — once a turn; a game called at its table: a word)
     const k = `${s.op}:${s.rodada}:${s.vez}`;
     if (s.jogo && ((s.fase === 'palpite' && s.vez === s.eu) || (s.fase === 'convite' && s.euHost) || s.fase === 'sacode') && said.open !== k) { said.open = k; UI.open(false); }
-    if (!s.eu && s.fase === 'convite' && said.call !== s.op) { said.call = s.op; const x = vb(); if (x && x.k === 'entrar') toast(`Chamam a sua mesa para o jogo de copo${s.moeda ? ` (${s.price(s.aposta)})` : ''}. ${G.Input3D.label('outra')}: entrar.`, 3.4); }
+    if (!s.eu && s.fase === 'convite' && said.call !== s.op) { said.call = s.op; const x = vb(); if (x && x.k === 'entrar') { const how = G.AcoesUI && G.AcoesUI.how ? G.AcoesUI.how('jd-dados') : ''; toast(`Chamam a sua mesa para o jogo de copo${s.moeda ? ` (${s.price(s.aposta)})` : ''}. Para entrar: ${how || (G.Input3D.touch ? 'toque em «Ações»' : `«Ações» (${G.Input3D.label('acoes')})`)}.`, 3.4); } } // (the bar's own slot: the F is the table's first verb that can be done — the round —, and the phone has none: L-2183)
   };
   UI.render = (s, dt) => render(s, dt || 0); // (the photos' hand: a frame drawn from a view of their own, never the world's)
   UI.scene = () => scene;

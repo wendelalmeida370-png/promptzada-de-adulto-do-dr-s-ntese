@@ -1854,6 +1854,32 @@
     const op = T.dia(S.buildings.get(v.inside)); if (G.Lacos) G.Lacos.ato(v, o, 'dadiva'); if (G.Possess.dealt) G.Possess.dealt({ to: o.id }); say(o, 'gorjeta_obrigado', {}); if (op) tally(op.data, 'gorjeta', 'corpo');
     return { ok: true, msg: `Você joga ${c.price} para ${G.Possess.knows.call(v, o)}.` };
   };
+  // a cup paid for one at the tables (the body's hands — «Pagar uma bebida a …», the invitation to drink of two already at the tavern:
+  // the wave 4 I, D-921): a round of one, as the round of the table — the one between rounds orders now, the house's drink; whoever is
+  // at their cup or waiting has the next one paid —, the body paying it as it is handed over (serve: m.paga). Only read
+  T.convidaCan = function (v, o) {
+    const S = S_(); if (!v || !o || v === o || !A.isBody(v) || !v.inside) return { ok: false, why: '' };
+    const b = S.buildings.get(v.inside); const op = b && b.type === 'taverna' && b.built ? T.dia(b) : null; if (!op || !live(op) || !T.aberta(b)) return { ok: false, why: '' };
+    const d = op.data; const m = d.mesa[o.id]; const nm = G.Possess.knows.call(v, o);
+    if (!m || m.body || m.corpo || o.inside !== b.id) return { ok: false, why: `${G.cap(nm)} não está às mesas.` };
+    if (m.st === 1) return { ok: false, why: `${G.cap(nm)} ainda está chegando à mesa.` };
+    if (m.st === 6) return { ok: false, why: `${G.cap(nm)} está tocando.` };
+    if (m.st === 9) return { ok: false, why: `${G.cap(nm)} está dançando.` };
+    if (m.zz) return { ok: false, why: `${G.cap(nm)} cochila na mesa.` };
+    if (m.paga) return { ok: false, why: `A próxima de ${nm} já está paga.` };
+    const k = drinkOn(b); if (!k) return { ok: false, why: 'Não há o que beber agora.' };
+    if (!T.atHand(b) || keeperOf(b) === v) return { ok: false, why: 'Não há quem sirva agora.' };
+    if (D.free('b:' + b.id, k) + EPS < T.DOSE[k]) return { ok: false, why: 'Não há bebida na prateleira.' };
+    if (coin(b) && !canPay(v, T.PRICE.drink)) return { ok: false, why: `Falta dinheiro: ${drinkName(k)} custa ${money(b, T.PRICE.drink)}.` };
+    return { ok: true, k, p: coin(b) ? T.PRICE.drink : 0, price: coin(b) ? money(b, T.PRICE.drink) : '', op: op.id };
+  };
+  T.convida = function (v, oId) {
+    if (!G.inSim || !v || !A.isBody(v)) return { ok: false, why: '' }; const S = S_(); const o = S.villagers.get(oId); const c = T.convidaCan(v, o); if (!c.ok) return c;
+    const op = A.get(c.op); const b = S.buildings.get(op.at); const d = op.data; const m = d.mesa[o.id];
+    m.paga = v.id; const now = m.st === 5 && o.task && o.task.type === 'tavern' && o.task.st === 5; if (now) { order(o, o.task, b, op); m.want = 'drink'; }
+    if (G.Possess.dealt) G.Possess.dealt({ to: o.id }); tally(d, 'rodada', 'convite'); callKeeper(b, op); const nm = G.Possess.knows.call(v, o);
+    return { ok: true, now: now ? 1 : 0, msg: now ? `Você paga ${drinkName(c.k)} para ${nm}${c.price ? ` (${c.price})` : ''}.` : `A próxima de ${nm} é por sua conta${c.price ? ` (${c.price})` : ''}.`, k: c.k };
+  };
   // the game of bones at the body's table: in, and then a throw — against each of the others in turn, the four bones' faces by the hash
   // of the throw (the astragalus' 1, 3, 4, 6: never the world's chance), the stake from the loser's coins to the winner's at once
   const FACES = [1, 3, 4, 6];

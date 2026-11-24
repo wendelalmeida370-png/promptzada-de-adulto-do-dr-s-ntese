@@ -512,7 +512,8 @@
     if (kind === 'h' || kind === 'b') return nearB(v, S.buildings.get(id));
     if (kind === 'z') { const z = D.zOf(id); return !!z && nearB(v, S.buildings.get(z.b)); }
     if (kind === 'f') return !!Inv.storeNear(v) && G.Fac.idOfV(v) === id;
-    if (kind === 'm') { const o = S.villagers.get(id); return !!o && (o.id === v.id || G.dist(v.x, v.y, o.x, o.y) <= Inv.HAND_R); }
+    // (someone's bag where they are: in a room, at their place — the world keeps the door's point in o.x, o.y; G.Interiors.posOf, D-917)
+    if (kind === 'm') { const o = S.villagers.get(id); if (!o) return false; if (o.id === v.id) return true; const P = G.Interiors && G.Interiors.posOf; const a = P ? P(v) : [v.x, v.y], q = P ? P(o) : [o.x, o.y]; return G.dist(a[0], a[1], q[0], q[1]) <= Inv.HAND_R; }
     return true;
   };
   const FAR = { ok: false, why: 'Longe demais: chegue perto primeiro.' };
