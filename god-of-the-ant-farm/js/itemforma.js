@@ -82,11 +82,16 @@
     osso: { c: hex('#e3d8bc'), c2: hex('#c2b28c'), grain: 'pebble', g: 0.1 },
     palha: { c: hex('#d2b064'), c2: hex('#a4823c'), grain: 'wicker', g: 0.06 },
     la: { c: hex('#d9d0b9'), c2: hex('#b5a888'), grain: 'cloth', g: 0.05 },
+    // (T5, D-868: what a deck's tablets are of — the apiary's wax over a board, glossy; the amate's beaten bark; the papyrus' pressed
+    // strips of reed pith)
+    cera: { c: hex('#d6b056'), c2: hex('#b48c36'), grain: 'pebble', g: 0.42 },
+    amate: { c: hex('#a87a4c'), c2: hex('#86603a'), grain: 'cloth', g: 0.08 },
+    papiro: { c: hex('#e0cd94'), c2: hex('#c6ae70'), grain: 'wicker', g: 0.06 },
     // (T4, D-852: the pips of a die, drilled and darkened with soot)
     pinta: { c: hex('#2b1c12'), c2: hex('#1e140c'), grain: 'pebble', g: 0.05 },
   };
   // the material a thing is made in (the catalog's mats) → the palette of its working part; an unknown one reads as iron
-  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro', osso: 'osso', palha: 'palha', la: 'la' };
+  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro', osso: 'osso', palha: 'palha', la: 'la', cera: 'cera', amate: 'amate', papiro: 'papiro' };
   const metal = mat => PAL[F.MATS[mat] || 'ferro'] || PAL.ferro;
 
   // ------------------------------ the mesh being built ------------------------------
@@ -894,6 +899,19 @@
     at.forEach((o, i) => { const c = add(C, o); const h = [0.0085 - (i % 2) * 0.001, 0.0062, 0.0058]; box(M, c, h, q === 0 ? 0.0028 : 0, pal, { along: i % 2 ? 'x' : 'z', taper: 0.86, f: (k, t, j, u, v, p) => ({ ao: 0.8 + 0.2 * Math.abs(Math.cos((p[0] - c[0]) * 260)) }) });
       if (q === 0) ball(M, add(c, [0, 0.0058, 0]), [0.0045, 0.0018, 0.0035], 6, pal, { f: () => ({ ao: 0.86 }) }); });
     M.marks.centro = C.slice(); M.marks.ponta = add(C, [0.02, 0, 0]);
+  };
+  // the deck of the Tabuletas (T5, D-868): the tablets held upright in the closed fist (the origin: the palm; they stand toward +X, the
+  // palm's side, as the knucklebones), a little fanned — each a thin board of what the people paints on, its painted face toward +X,
+  // the people's colour (paint) on the outermost —, the stack's edges showing the layers
+  R.baralho = (M, mat) => {
+    const q = M.q; const pal = mat === 'barro' ? PAL.barro : mat === 'cera' ? PAL.cera : mat === 'amate' ? PAL.amate : mat === 'papiro' ? PAL.papiro : PAL.clara;
+    const n = [6, 3, 1][q]; const th = mat === 'barro' ? 0.0042 : mat === 'papiro' || mat === 'amate' ? 0.0022 : 0.0034;
+    part(M, 'cabeca');
+    for (let i = 0; i < n; i++) { const x = 0.012 + i * (th * 2 + 0.0012) * (q === 2 ? 3 : 1); const h = q === 2 ? [th * n * 1.6, 0.046, 0.033] : [th, 0.046 - i * 0.0006, 0.033];
+      box(M, [x, 0.028 + i * 0.0035, (i - (n - 1) / 2) * 0.0045], h, q === 0 ? 0.0012 : 0, pal, { along: 'x', f: (k, t, j, u, v, p) => ({ ao: 0.78 + 0.22 * Math.abs(Math.cos(p[1] * 90 + i)) }) }); }
+    // (the painted face of the outermost tablet: a panel of the people's colour, a little in from its edges)
+    if (q < 2) { const xo = 0.012 + (n - 1) * (th * 2 + 0.0012) + th + 0.0004; box(M, [xo, 0.028 + (n - 1) * 0.0035, ((n - 1) / 2) * 0.0045], [0.0005, 0.036, 0.024], 0, PAL.tinta, { along: 'x', n: 0, f: () => ({ ao: 0.95 }) }); }
+    M.marks.centro = [0.016, 0.028, 0]; M.marks.ponta = [0.016, 0.075, 0];
   };
   // the dice (T4, D-852): two of the set's little cubes in the closed fist, ready to be thrown — the origin the palm, the dice toward
   // +X, the palm's side, as the knucklebones —, each worn round at its edges, its pips drilled and darkened: three faces in sight (the

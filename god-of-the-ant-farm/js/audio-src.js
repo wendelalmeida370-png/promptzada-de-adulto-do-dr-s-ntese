@@ -187,6 +187,7 @@
     cozinhar: { s: 'cook', q: 'curso', cada: 1.7, v: 0.35, alc: 0.5 },
     'jogo-dados': { s: 'dados', q: 'curso', cada: 3, v: 0.5, alc: 0.6, fam: 'noite', mat: 1 },
     'jogo-cartas': { s: 'cartas', q: 'curso', cada: 3.6, v: 0.38, alc: 0.5, fam: 'noite', mat: 1 },
+    'jogo-cartas-ganha': { s: 'cartas', q: 'contato', em: 0.34, v: 0.55, alc: 0.6, fam: 'noite', mat: 1 }, // (o tapa na mesa de quem venceu as tabuletas: T5, o gesto da T6)
     // (the supervisor's, D-890: the arm wrestle — the strain, and the arm slammed on the table at its end —, the cheat — next to nothing:
     // a slide of the hand; caught, the uproar —, and the drinking match of a feast night — the draughts one after another, the last cup
     // slammed down —, the crowd that cheers it on growing with every one who joins)

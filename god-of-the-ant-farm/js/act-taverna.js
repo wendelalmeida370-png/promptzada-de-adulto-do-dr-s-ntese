@@ -593,7 +593,7 @@
     }
     // (the closing call: up and out by the door, each a moment after the other — the one dozing woken first —, D-807)
     if (d.fecha && t.st !== 6 && S.clock >= d.fecha + T.SAI * G.hash(Math.imul(v.id | 0, 89) + 7)) { if (m.zz) m.zz = 0; return leave(v, t, op, H); }
-    if ((sleepy(v) && !m.zz) || !inHours(b)) return leave(v, t, op, H);
+    if ((sleepy(v) && !m.zz && !(G.Cartas && G.Cartas.prende && G.Cartas.prende(v))) || !inHours(b)) return leave(v, t, op, H); // (the game of tablets keeps one past one's hour till it ends: T5)
     if (t.st === 6) return playing(v, t, b, op, dt, H);
     if (t.st === 7 || t.st === 8) return selfServe(v, t, b, op, dt, H);
     if (t.st === 9) { // dancing by the stage while the song is on (D-806); the song over, or worn out, back to one's seat — kept for one
@@ -610,6 +610,7 @@
       v.act = sit; t.pose = talk ? 'sittalk' : undefined; t.wt = (t.wt || 0) + dt;
       // (waiting for the round, the hands free: the bones of the table's game, the claps and the song of the music on — D-806)
       if (!brawls.has(v.id) && !(v.carry && v.carry.n > EPS)) { const j = d.jogo && m.g ? d.jogo[m.g] : null; const jd = G.JogoDados ? G.JogoDados.ato(v) : null; const a = j && j.quem.includes(v.id) ? 'jogo-ossos' : jd || (musicOn(op) && !d.fecha ? listen(v, m, d) : ''); if (a === 'jogo-ossos' || a === jd) v.act = a; else if (a && a !== 'danca') v.act = shown(d, m, a); }
+      if (G.Cartas && G.Cartas.ato && !brawls.has(v.id)) { const cj = G.Cartas.ato(v); if (cj) v.act = cj; } // (the tablets' game at the table: T5)
       // (nobody at the counter for a while — the keeper away —: one gets up, walks to the counter, serves oneself there and pays
       // as to the keeper, and walks back to one's seat, kept — L-1930; a tavern with no buyer's place at its counter, at the table)
       if (t.wt > T.SELF && !serving(b, op) && !m.vem) {
@@ -650,6 +651,7 @@
       // (what one does between the rounds, by its cause — the doze, the bones, the song, the coin to the musician: D-806)
       if (t.st === 5 && d.mus !== v.id && !brawls.has(v.id) && !(d.expulsa && d.expulsa.b === v.id) && !(v.carry && v.carry.n > EPS)) { const a = mood(v, t, b, op, m); if (a) { v.act = a; if (a === 'cochilo') t.pose = undefined; if (t.st === 9) return; } }
       if (m.zz) return; // (dozing: no round more, no going home at one's hour — till the closing, or one wakes)
+      if (G.Cartas && G.Cartas.prende && G.Cartas.prende(v)) return; // (in the middle of a game of tablets: the table holds one — T5)
       if (S.clock < (m.nx || 0)) return;
       m.nx = r1(S.clock + T.TALK);
       if (S.time < T.leaveOf(v, b) - T.MIN && again(v, b, m)) return order(v, t, b, op);
@@ -677,7 +679,7 @@
     if (night && !d.mus && S.clock >= (d.musT || 0) && t.st === 5) {
       // (once a look of the musician's own seat: the room of two or more, and the best of who would play there now)
       let n = 0, best = null, bs = T.MUSE;
-      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (m.body) continue; n++; const o = S.villagers.get(+id); if (!o || m.st !== 5 || !o.task || o.task.type !== 'tavern' || S.time < T.musHour(o)) continue; const s = muse(o); if (s > bs) { bs = s; best = o; } }
+      for (const id of Object.keys(d.mesa)) { const m = d.mesa[id]; if (m.body) continue; n++; const o = S.villagers.get(+id); if (!o || m.st !== 5 || !o.task || o.task.type !== 'tavern' || S.time < T.musHour(o)) continue; if (G.Cartas && G.Cartas.prende && G.Cartas.prende(o)) continue; const s = muse(o); if (s > bs) { bs = s; best = o; } } // (who plays the tablets stays at the game: T5)
       if (n >= 2 && best === v) startSet(v, t, b, op); // (two at the tables: someone to play to — the living tavern, D-806)
       else if (n >= 2 && !best) d.musT = r1(S.clock + T.TALK);
     }
@@ -1500,6 +1502,7 @@
     const S = S_(); const d = op.data;
     if (m.gt && S.clock - m.gt < T.GORJETA_T) return 'gorjeta';
     if (doze(v, m, d)) return 'cochilo';
+    { const cj = G.Cartas && G.Cartas.ato ? G.Cartas.ato(v) : ''; if (cj) return cj; } // (the tablets' game at the table: T5, cartas-mesa.js)
     const j = d.jogo && m.g ? d.jogo[m.g] : null; if (j && j.quem.includes(v.id)) return 'jogo-ossos';
     { const jd = G.JogoDados && G.JogoDados.ato(v); if (jd) return jd; } // (the dice game of the table: its own file — T4, D-850)
     if (musicOn(op) && !d.fecha) { const a = listen(v, m, d); if (a === 'danca') { toDance(v, t, b, op, m); return shown(d, m, 'danca'); } if (a) return shown(d, m, a); }

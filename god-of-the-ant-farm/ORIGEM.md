@@ -145,6 +145,9 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 | **osso** (P7, D-805) | nada do armazém: os **ossinhos** da taverna são os ossos do tornozelo da carcaça (`G.Itens.feitoDe` → nada; o armazém não os dá); os **dados de osso** do jogo de copo também (T4, D-852) | **só quem teve osso**: a carne feita de um abate, de uma caça ou de um sacrifício marca o osso (`D.make` da comida com a parte `carne`); e quem teve couro, que veio de uma carcaça |
 | **lã** (P7, D-805) | o **tecido** do armazém (o pano de limpar a mesa: 0,05) | **só quem teve pano tecido** (`O.MAT_OF.tecido`: o tear o fez, ou entrou no povo) |
 | **palha** (P7, D-805) | nada do armazém: o feixe de palha é dos talos secos que todo povo corta para os telhados e as camas | sempre (`O.PLAIN`) |
+| **cera** (T5, D-868) | a **cera** do armazém — a das colmeias (o apiário: o mel e a cera) — e a madeira (o **baralho** de cera: 0,1 de cera e 0,1 de madeira — as tábuas cobertas de cera e pintadas a quente) | **só quem teve a cera** (`O.MAT_OF.cera`: entrou no povo — tirada do favo, comprada, saqueada) |
+| **amate** (T5, D-868) | a madeira: o amate é a casca de dentro da figueira, batida até virar folha (o **baralho** de amate: 0,2) | sempre (`O.PLAIN`: a fibra da madeira, como o vime e a corda) |
+| **papiro** (T5, D-868) | nada do armazém: o papiro é o miolo do junco que se corta onde ele cresce (o **baralho** de papiro; o armazém não o dá) | **só o povo com uma cidade à beira da água doce** (um rio ou um lago a até `O.JUNCO` casas do centro: `O.junco`) |
 
 - **O armazém dá o que a divisão dele tem** (`G.Inv.offer` / `Inv.make`): o melhor material de que o armazém tem com que fazer a coisa
   — nunca «o melhor que o povo sabe». **A coisa que volta** (`Inv.unmake`, a casa esvaziada, o que alguém achou no chão) volta ao
@@ -190,6 +193,14 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   no lugar dele (`taverna-mesa`, das mãos do taverneiro), o resto de um prato deixado (`sobra-mesa`) —; daí às mãos do corpo,
   pago ali (`taverna`), de volta à prateleira quando esfria sem dono (`taverna-mesa-volta`, `taverna-volta`), ou o resto à lavagem
   (`sobra`); no fechamento, o pedido volta à prateleira e o resto vai fora. Nada some sem a sua linha.
+- **O baralho das Tabuletas** (T5, D-868): quem joga as Tabuletas à mesa da taverna (o ato `jogo-cartas`; e quem esconde uma na
+  manga, `trapaca`, ou é pego, `trapaca-pega`) tem nas mãos o **baralho** — as vinte tabuletas pintadas do povo —, pelo kit, do lugar
+  (`PLACE_TOOL`, como os ossinhos), no material **que o seu povo pinta, o primeiro que ele tem** (`G.Itens.dePovo`: o egípcio no
+  **papiro** — o junco da água doce —, o asteca no **amate**, o romano na **cera** das colmeias, o grego no **barro** da olaria, o nórdico
+  na **madeira**; sem o seu, a madeira de sempre). Só se joga onde há um baralho: o da casa (`G.Cartas.baralhoCasa`) ou o que o corpo
+  leva na mochila (`G.Cartas.baralhoDe`); o armazém dá o baralho do que tem (a madeira, a cerâmica, a cera e a madeira — o papiro não,
+  que não é de nada que ele guarde). As **apostas** vão pelo livro: o lugar `'u:'` (a urna) é o pote de uma partida ou de um torneio (`aposta`,
+  `pote`, `pote-volta`, `torneio`): o que entra nele sai para quem venceu, ou volta a quem pôs.
 - **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
   instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a
   **lira** (os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa) dos outros — do couro e da tripa do

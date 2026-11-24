@@ -537,6 +537,15 @@ if (on('i17')) {
     const r = Inv.kit(copy(o, { act: 'limpar-mesa' })); const want = O.matOK(fid, 'la', arts) ? 'la' : 'palha'; if (kindOf(r.mao) !== 'pano' || matOf(r.mao) !== want) bad.push(`quem limpa a mesa: ${r.mao} (o povo teria ${want})`);
     const c = Inv.kit(copy(o, { act: 'recolher-canecas' })), t = Inv.kit(copy(o, { act: 'brinde' })); if (kindOf(c.mao) !== 'caneca' || kindOf(t.mao) !== 'caneca') bad.push(`quem recolhe as canecas: ${c.mao}; quem brinda: ${t.mao}`);
     said.push(`os ossinhos: ${h.mao || 'nenhum (sem osso)'}; o pano: ${r.mao}`);
+    // (T5, D-868: the deck of the Tabuletas in the hand of who plays, who hides one up the sleeve and who is caught — of what the
+    // person's people paints its tablets on, the first of its own it has; the store never gives the papyrus, the reed of nothing it keeps)
+    // (fora de uma partida, quem trapaceia não tem nas mãos o baralho: a trapaça é a coisa do jogo em que se está — as tabuletas ou os
+    // dados da T4 —; o baralho de quem joga e do tapa de quem venceu, sim)
+    { const t = Inv.kit(copy(o, { act: 'trapaca' })).mao; if (kindOf(t) === 'baralho') bad.push(`quem trapaceia fora de uma partida de tabuletas com o baralho na mão (${t})`); }
+    for (const act of ['jogo-cartas', 'jogo-cartas-ganha']) { const k = Inv.kit(copy(o, { act })).mao; const civ = (G.Fac.get(fid) || {}).civ; const L = It.dePovo('baralho', civ) || []; const want = L.find(m => O.matOK(fid, m, arts)) || null;
+      if (kindOf(k) !== 'baralho' || matOf(k) !== want) bad.push(`quem ${act}: ${k} (o povo ${civ} pintaria em ${want})`); }
+    { const peoples = [...S.factions.values()].filter(f => f.alive !== false).sort(byId).slice(0, 6); said.push('o baralho de cada povo: ' + peoples.map(f => `${f.civ} ${(Inv.madeBy('baralho', f.id) || '—').split('.')[1]}`).join(', ')); }
+    { const st = atStore(x => !x.lost); if (st) { const pp = Inv.offer(st.v, 'baralho', 'papiro'); if (pp.can) bad.push('o armazém dá um baralho de papiro do nada'); } }
     // (the store gives neither: they are of nothing it keeps)
     const st = atStore(x => !x.lost); if (st) { const a = Inv.offer(st.v, 'ossinhos'), p2 = Inv.offer(st.v, 'pano', 'palha'); if (a.can || p2.can) bad.push(`o armazém dá ${a.can ? a.k : ''} ${p2.can ? p2.k : ''} do nada`); } }
   // (pure: asking changed nothing of the world)
@@ -558,7 +567,7 @@ if (on('i17')) {
       if (kindOf(hd.mao) !== 'caneca' || (kindOf(hc.mao) === 'machado' && !Object.keys(v.mochila || {}).some(k => It.parse(k)[0] === 'machado'))) bad.push(`o corpo bebendo: ${hd.mao}; cortando: ${hc.mao}`); said.push(`o corpo bebe da caneca da casa (${hd.mao})`);
       Po.release('deus'); M.viver(0.2); } }
   const nv = novas();
-  ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta, os ossinhos e o pano — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
+  ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta, os ossinhos, o pano e o baralho — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ the bad cases

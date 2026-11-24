@@ -89,6 +89,13 @@
     // —, as the cup (G.Inv's kit), none a weapon
     lira: { nome: 'lira', plural: 'liras', tipo: 'instrumento', maos: 1, slots: ['mao', 'costas'], pega: 'lira', peso: 0.9, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'Os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa: a música da taverna e da festa.' },
     tambor: { nome: 'tambor', plural: 'tambores', tipo: 'instrumento', maos: 1, slots: ['mao', 'costas'], pega: 'tambor', peso: 2.4, bem: null, vale: 0, tags: ['tocar'], mats: ['couro'], desc: 'O tronco escavado, com o couro esticado na boca: batido com as mãos, marca o passo da dança.' },
+    // the deck of the Tabuletas (T5, D-868): the twenty painted tablets of a people's game — its gods, its creatures, its heroes and its
+    // omens —, of what that people paints them on: there is no paper in these worlds. Each people its own way (povo: the materials in
+    // the order it would choose them, the first it has): the papyrus of Egypt (the pith of the reed of the river), the amate of the
+    // Aztecs (the inner bark of the fig, beaten flat), the wax of the Romans (boards coated with the apiary's wax, painted hot), the
+    // fired clay of the Greeks (the pinakes of the pottery), the wood of the North — or the wood every people has. Of the place — the
+    // tavern's —, as the knucklebones (G.Inv's kit); none a weapon
+    baralho: { nome: 'baralho', plural: 'baralhos', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.5, bem: null, vale: 0, tags: ['jogar'], mats: ['madeira', 'amate', 'papiro', 'barro', 'cera'], povo: { egipcio: ['papiro', 'madeira'], asteca: ['amate', 'madeira'], romano: ['cera', 'madeira'], grego: ['barro', 'madeira'], nordico: ['madeira'], classico: ['barro', 'madeira'] }, desc: 'As vinte tabuletas pintadas de um povo, com os seus deuses, criaturas, heróis e presságios: o jogo das Tabuletas.' },
   };
   // the materials: what they change in a thing (the weight, the bite of an edge) and how they are said
   // (ord: the plainest 0, bronze 1, iron 2 — the best a people knows is the highest it may make; cor: the material's colour,
@@ -107,6 +114,10 @@
     osso: { nome: 'de osso', peso: 1, dano: 0.8, ord: 0, cor: '#e6dcc2', trabalho: 0.6, bloqueio: 0.3, protecao: 0.3 },
     palha: { nome: 'de palha', peso: 0.8, dano: 0.5, ord: 0, cor: '#d4b56a', trabalho: 0.5, bloqueio: 0.2, protecao: 0.2 },
     la: { nome: 'de lã', peso: 1, dano: 0.5, ord: 0, cor: '#e8e0cc', trabalho: 0.5, bloqueio: 0.3, protecao: 0.4 },
+    // (T5, D-868: what the tablets of a deck are painted on — the apiary's wax over a board, the beaten bark of the fig, the reed's pith)
+    cera: { nome: 'de cera', peso: 0.9, dano: 0.4, ord: 0, cor: '#e7c766', trabalho: 0.4, bloqueio: 0.2, protecao: 0.2 },
+    amate: { nome: 'de amate', peso: 0.6, dano: 0.3, ord: 0, cor: '#b88b5a', trabalho: 0.4, bloqueio: 0.2, protecao: 0.2 },
+    papiro: { nome: 'de papiro', peso: 0.5, dano: 0.3, ord: 0, cor: '#e3d39c', trabalho: 0.4, bloqueio: 0.2, protecao: 0.2 },
   };
   // the equipment's places on a body, in the order the screen lists them
   It.SLOTS = ['mao', 'outra', 'costas', 'cinto', 'cabeca', 'corpo'];
@@ -201,17 +212,20 @@
     lanca: { stone: 0.25, wood: 0.75 }, clava: { wood: 1 }, arco: { wood: 1 }, flecha: { stone: 0.0125, wood: 0.0125 }, funda: { wood: 0.25 }, escudo: { wood: 1 },
     caneca: { wood: 0.1 }, bola: { wood: 0.1 }, grilhoes: { wood: 0.1 }, // (22c: a cup carved of wood; the withies of a ball, the cord of a binding)
     prato: { wood: 0.15 }, // (P7: a plate turned of wood)
+    baralho: { wood: 0.2 }, // (T5: twenty thin boards of wood, painted; the amate's bark is the wood's too)
     dados: { wood: 0.05 }, // (T4, D-852: eight little cubes whittled of wood)
   };
   const HIDE = { elmo: 1, couraca: 3, bola: 0.15 };
   // (a thing of the beast's hide and gut and of wood: the instruments — P7, D-764 — the hide of the store and its wood)
   const BEAST = { lira: { couro: 0.1, wood: 0.3 }, tambor: { couro: 0.3, wood: 0.6 } };
   // (the fired clay of a thing is the pottery's ware of the store — the good ceramica: 22c, D-612)
-  const CLAY = { caneca: 0.25, prato: 0.3 };
+  const CLAY = { caneca: 0.25, prato: 0.3, baralho: 0.2 };
+  // (the wax of a deck's boards is the store's wax — the apiary's — and the boards its wood: T5, D-868)
+  const WAX = { baralho: { cera: 0.1, wood: 0.1 } };
   // (the loom's wool of a rag is the store's cloth — tecido; the bones of a carcass and a twist of straw are no good of a store: what
   // they are made of is nothing it keeps — P7, D-805)
   const CLOTH = { pano: 0.05 };
-  const NOGOOD = { osso: 1, palha: 1 };
+  const NOGOOD = { osso: 1, palha: 1, papiro: 1 }; // (T5: the papyrus is the pith of the river's reed, cut where it grows — nothing a store keeps)
   It.METALS = { bronze: 1, ferro: 1 };
   const feitoCache = new Map();
   It.feitoDe = function (key) {
@@ -224,6 +238,7 @@
       else if (d.mat === 'couro' && HIDE[d.kind]) out = [{ k: 'couro', n: HIDE[d.kind], of: null }];
       else if (d.mat === 'barro' && CLAY[d.kind]) out = [{ k: 'ceramica', n: CLAY[d.kind], of: null }];
       else if (d.mat === 'la' && CLOTH[d.kind]) out = [{ k: 'tecido', n: CLOTH[d.kind], of: null }];
+      else if (d.mat === 'cera' && WAX[d.kind]) out = Object.keys(WAX[d.kind]).map(g => ({ k: g, n: WAX[d.kind][g], of: null }));
       else if (NOGOOD[d.mat]) out = [];
       else if (d.feito) out = Object.keys(d.feito).map(g => ({ k: g, n: d.feito[g], of: null }));
       else if (PLAIN[d.kind]) out = Object.keys(PLAIN[d.kind]).map(g => ({ k: g, n: PLAIN[d.kind][g], of: null }));
@@ -244,9 +259,12 @@
   It.guarda = key => { const d = It.def(key); return d ? d.guarda || null : null; };
   It.mao = key => { const d = It.def(key); return d ? d.maoSlot || null : null; };
   It.veste = key => { const d = It.def(key); return d ? d.veste || null : null; };
+  // the materials a people would make a kind in, in its own order (T5: a deck — the papyrus of Egypt, the amate of the Aztecs…), or
+  // null for a kind every people makes alike (its mats, the best it has)
+  It.dePovo = (kind, civ) => { const k = K[kind]; const P = k && k.povo; return P ? P[civ] || P.classico || null : null; };
 
   // (the table is read, never written: frozen, so a module that writes it fails loudly, at once — the guard's rule 130)
-  for (const kind in K) { Object.freeze(K[kind].slots); Object.freeze(K[kind].tags); Object.freeze(K[kind].mats); if (K[kind].feito) Object.freeze(K[kind].feito); Object.freeze(K[kind]); }
+  for (const kind in K) { Object.freeze(K[kind].slots); Object.freeze(K[kind].tags); Object.freeze(K[kind].mats); if (K[kind].feito) Object.freeze(K[kind].feito); if (K[kind].povo) { for (const c in K[kind].povo) Object.freeze(K[kind].povo[c]); Object.freeze(K[kind].povo); } Object.freeze(K[kind]); }
   Object.freeze(K); for (const m in M) Object.freeze(M[m]); Object.freeze(M);
   Object.freeze(It.SLOTS); Object.freeze(It.SLOT_NOME);
 })(window.G);
