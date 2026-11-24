@@ -82,6 +82,8 @@
     osso: { c: hex('#e3d8bc'), c2: hex('#c2b28c'), grain: 'pebble', g: 0.1 },
     palha: { c: hex('#d2b064'), c2: hex('#a4823c'), grain: 'wicker', g: 0.06 },
     la: { c: hex('#d9d0b9'), c2: hex('#b5a888'), grain: 'cloth', g: 0.05 },
+    // (T4, D-852: the pips of a die, drilled and darkened with soot)
+    pinta: { c: hex('#2b1c12'), c2: hex('#1e140c'), grain: 'pebble', g: 0.05 },
   };
   // the material a thing is made in (the catalog's mats) → the palette of its working part; an unknown one reads as iron
   F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro', osso: 'osso', palha: 'palha', la: 'la' };
@@ -892,6 +894,28 @@
     at.forEach((o, i) => { const c = add(C, o); const h = [0.0085 - (i % 2) * 0.001, 0.0062, 0.0058]; box(M, c, h, q === 0 ? 0.0028 : 0, pal, { along: i % 2 ? 'x' : 'z', taper: 0.86, f: (k, t, j, u, v, p) => ({ ao: 0.8 + 0.2 * Math.abs(Math.cos((p[0] - c[0]) * 260)) }) });
       if (q === 0) ball(M, add(c, [0, 0.0058, 0]), [0.0045, 0.0018, 0.0035], 6, pal, { f: () => ({ ao: 0.86 }) }); });
     M.marks.centro = C.slice(); M.marks.ponta = add(C, [0.02, 0, 0]);
+  };
+  // the dice (T4, D-852): two of the set's little cubes in the closed fist, ready to be thrown — the origin the palm, the dice toward
+  // +X, the palm's side, as the knucklebones —, each worn round at its edges, its pips drilled and darkened: three faces in sight (the
+  // top, the front, the side; two adjacent faces never opposite ones: the opposite faces of a die make seven). Of bone, ivory; of
+  // wood, the pale split wood
+  const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+  R.dados = (M, mat) => {
+    const q = M.q; const pal = mat === 'osso' ? PAL.osso : PAL.clara; const hh = 0.0072;
+    part(M, 'cabeca');
+    if (q === 2) { box(M, [0.026, 0.001, 0.003], [0.014, 0.0075, 0.009], 0, pal, {}); M.marks.centro = [0.026, 0, 0]; M.marks.ponta = [0.04, 0, 0]; return; } // (far: the two as one)
+    const dice = [{ c: [0.021, 0, -0.003], f: [5, 4, 1] }, { c: [0.031, 0.0018, 0.0072], f: [6, 2, 3] }];
+    for (const d of dice) {
+      box(M, d.c, [hh, hh, hh], q === 0 ? 0.0017 : 0, pal, { f: (k, t, j, u, v, p) => ({ ao: 0.82 + 0.18 * Math.min(1, Math.abs(p[1] - d.c[1]) / hh) }) });
+      // (the pips: on the top face (+Y), and near the front (+Z) and the side (+X); far from the eye, the top's only)
+      const faces = q === 0 ? [[1, 0], [2, 1], [0, 2]] : [[1, 0]];
+      for (const [axis, fi] of faces) for (const [a, b] of PIPS[d.f[fi]]) {
+        const o = [0, 0, 0]; const s = hh * 0.52; const at = axis === 1 ? [a * s, hh - 0.0003, b * s] : axis === 2 ? [a * s, b * s, hh - 0.0003] : [hh - 0.0003, a * s, b * s];
+        const r = axis === 1 ? [0.0017, 0.0006, 0.0017] : axis === 2 ? [0.0017, 0.0017, 0.0006] : [0.0006, 0.0017, 0.0017];
+        ball(M, add(add(d.c, at), o), r, q === 0 ? 6 : 4, PAL.pinta, { f: () => ({ ao: 0.7 }) });
+      }
+    }
+    M.marks.centro = [0.026, 0, 0]; M.marks.ponta = [0.04, 0, 0];
   };
   // the rag (P7, D-805): of wool — a wad of cloth in the fist, a fold of it hanging out of the hand toward +Z (what hangs goes to +Z,
   // D-386) —, or of straw: a twist of dry stalks bent double, bound round its middle with a stalk, the ends splayed

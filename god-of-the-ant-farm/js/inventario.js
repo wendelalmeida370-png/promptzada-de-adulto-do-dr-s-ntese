@@ -48,7 +48,9 @@
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
     drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
     // (the living tavern's acts, P7 D-806: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
-    brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca' };
+    brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca',
+    // (T4, D-852: the dice of the cup game — the real set on the table, the house's or one's own: G.JogoDados.dadosDe)
+    'jogo-dados': 'dados', trapaca: 'dados', 'trapaca-pega': 'dados' };
   // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
   // the people had, as the cup is of its clay or wood: P7, D-764)
   const instrumentOf = v => ((G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) === 'asteca' ? 'tambor' : 'lira');
@@ -177,6 +179,9 @@
     let key = null;
     for (const s of SLOTS) if (out[s] && It.def(out[s]).kind === t) { key = out[s]; if (s !== 'mao') out[s] = null; break; }
     if (!key && bag) for (const k in bag) if (bag[k] >= 1 && isThing(k) && It.def(k).kind === t) { key = k; break; }
+    // (the dice are the game's real set — of the bone or the wood it was made of —, never a set of the people's arts: none on the table, none
+    // in the hand; T4, D-852)
+    if (t === 'dados') { if (!key && G.JogoDados && G.JogoDados.dadosDe) key = G.JogoDados.dadosDe(v); if (!key) return; }
     // (the cup of the tavern and of the feast, the bonds of the one who leads the prisoner: the place's, never the person's own — given
     // to whoever has things of their own too, the god's body among them; in the material the people has: 22c, D-612)
     if (!key && own && PLACE_TOOL[t]) key = made(t, G.Fac.idOfV(v), artsOf(v));
