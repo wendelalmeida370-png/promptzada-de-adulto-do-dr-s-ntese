@@ -540,10 +540,11 @@ if (on('i17')) {
     // (T5, D-868: the deck of the Tabuletas in the hand of who plays, who hides one up the sleeve and who is caught — of what the
     // person's people paints its tablets on, the first of its own it has; the store never gives the papyrus, the reed of nothing it keeps)
     // (fora de uma partida, quem trapaceia não tem nas mãos o baralho: a trapaça é a coisa do jogo em que se está — as tabuletas ou os
-    // dados da T4 —; o baralho de quem joga e do tapa de quem venceu, sim)
+    // dados da T4 —; e, desde a frente J, nem quem joga nem o tapa de quem venceu, fora de uma partida)
     { const t = Inv.kit(copy(o, { act: 'trapaca' })).mao; if (kindOf(t) === 'baralho') bad.push(`quem trapaceia fora de uma partida de tabuletas com o baralho na mão (${t})`); }
-    for (const act of ['jogo-cartas', 'jogo-cartas-ganha']) { const k = Inv.kit(copy(o, { act })).mao; const civ = (G.Fac.get(fid) || {}).civ; const L = It.dePovo('baralho', civ) || []; const want = L.find(m => O.matOK(fid, m, arts)) || null;
-      if (kindOf(k) !== 'baralho' || matOf(k) !== want) bad.push(`quem ${act}: ${k} (o povo ${civ} pintaria em ${want})`); }
+    // (a frente J, D-935: o baralho é o de verdade da partida — o do lado de quem joga, o da casa emprestado ou o seu —, nunca um do lugar:
+    // fora de uma partida, ninguém tem um nas mãos, como os dados; o da partida, o qa/jogos-casa.js g2 e o qa/cartas.js c4 conferem)
+    for (const act of ['jogo-cartas', 'jogo-cartas-ganha']) { const k = Inv.kit(copy(o, { act })).mao; if (kindOf(k) === 'baralho') bad.push(`quem ${act} fora de uma partida com um baralho na mão (${k}): o baralho é o da mesa`); }
     { const peoples = [...S.factions.values()].filter(f => f.alive !== false).sort(byId).slice(0, 6); said.push('o baralho de cada povo: ' + peoples.map(f => `${f.civ} ${(Inv.madeBy('baralho', f.id) || '—').split('.')[1]}`).join(', ')); }
     { const st = atStore(x => !x.lost); if (st) { const pp = Inv.offer(st.v, 'baralho', 'papiro'); if (pp.can) bad.push('o armazém dá um baralho de papiro do nada'); } }
     // (the store gives neither: they are of nothing it keeps)

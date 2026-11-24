@@ -8,8 +8,9 @@
 //  a tela só mostra o que o mundo decidiu.
 //   - Os fregueses jogam entre si (o ato `jogo-cartas`): à mesa
 //     da taverna, quem é de jogar (a índole: o expansivo, o que
-//     arrisca, o ambicioso), com o baralho da casa — o do povo, no
-//     material que ele teve (G.Inv: o kit do lugar) —, e a aposta
+//     arrisca, o ambicioso), cada lado com o seu baralho de verdade —
+//     o dele, ou um da casa emprestado à mesa e devolvido no fim, do
+//     material do povo dela (a frente J, G.JogosCasa) —, e a aposta
 //     de cada um no pote (o lugar 'u:' do livro), pela bolsa da
 //     casa; quem vence leva o pote, pelo livro.
 //   - O corpo do deus pede pelas mãos (G.Possess.apply): desafia
@@ -90,17 +91,53 @@
     if (j.cofre > EPS) { const b = S.buildings.get(j.b); const fid = b ? G.Village.facOfSet(b.set) : 0; if (fid && G.Fac.get(fid)) D.move('u:' + j.id, 'f:' + fid, 'moedas', j.cofre, { code: 'pote-volta' }); }
   }
 
-  // ------------------------------ o baralho de verdade (D-868) ------------------------------
-  // o baralho da casa é o do povo dela, no material que ele teve (o kit do lugar, G.Inv: o papiro do Egito, o amate do asteca, a cera
-  // do romano, o barro grego, a madeira do norte — ou a madeira de sempre); o de quem joga, o que o corpo leva na mochila
-  const It = () => G.Itens;
-  C.baralhoCasa = function (b) { const fid = b ? G.Village.facOfSet(b.set) : 0; if (!fid || !G.Inv || !G.Inv.madeBy) return null; return G.Inv.madeBy('baralho', fid); };
+  // ------------------------------ o baralho de verdade (D-868; a frente J, D-931 a D-933) ------------------------------
+  // o baralho é uma coisa de verdade (G.Itens: `baralho`): a casa tem os seus na prateleira, quantos o degrau dela guarda (dois por
+  // partida — cada lado joga com o seu —, C.SETS), feitos pelo taverneiro no material do povo dela; quem joga leva o seu, ou pega um da
+  // casa emprestado (G.JogosCasa: a mesa, o aluguel, a espera, a compra)
+  const It = () => G.Itens; const JC = () => G.JogosCasa;
+  C.SETS = { taberna: 2, taverna: 4, hospedaria: 6 };
+  // (um baralho livre da casa agora — a chave —, ou null)
+  C.baralhoCasa = function (b) { const s = b && JC() ? JC().daCasa(b, 'baralho') : null; return s ? s.k : null; };
   C.baralhoDe = function (v) { if (!v || !G.Inv || !G.Inv.bag) return null; const bag = G.Inv.bag(v); for (const k of Object.keys(bag).sort()) if (bag[k] >= 1 && k.split('.')[0] === 'baralho') return k; return null; };
-  // (o baralho da partida em que a pessoa está — o do corpo, se ele leva o seu; senão o da casa —, para a mão de quem joga: o kit, G.Inv)
-  C.baralhoNaMesa = function (v) { const j = C.de(v); if (!j) return null; const S = S_(); const b = S.buildings.get(j.b); const c = j.corpo >= 0 ? S.villagers.get(j.quem[j.corpo]) : null; return (c && C.baralhoDe(c)) || (b ? C.baralhoCasa(b) : null); };
-  // (o povo das tabuletas de um baralho: o do povo de quem o fez — o da casa, o povo da taverna; o do corpo, o povo do corpo)
+  // (o baralho com que a pessoa joga a partida em que está — o do lado dela, na mesa: o seu, ou o da casa emprestado —, para a mão de
+  // quem joga: o kit, G.Inv; nenhum fora de uma partida, como os dados)
+  C.baralhoNaMesa = function (v) { const j = C.de(v); if (!j || !j.bar) return null; const i = j.quem.indexOf(v.id); return i >= 0 ? j.bar[i] || null : null; };
+  // (o povo das tabuletas de um baralho: o de quem o pintou — o da casa, o povo da taverna; o de alguém, o povo dele — D-933)
   const civDe = v => (G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) || 'classico';
   const civOk = c => (C.DECKS[c] ? c : 'classico');
+  const civDeck = (b, s, v) => civOk(s && s.daCasa ? (G.Fac.get(G.Village.facOfSet(b.set)) || {}).civ : civDe(v));
+  // os dois baralhos de uma partida (D-933): o de cada um, senão um livre da casa para cada lado → [o de a, o de o] | null
+  function decksFor(b, a, o) { const J = JC(); if (!J || !b) return null; const fa = J.fonte(b, 'baralho', a); if (!fa) return null; const fo = J.fonte(b, 'baralho', o, [fa]); return fo ? [fa, fo] : null; }
+  C.decksFor = (b, a, o) => decksFor(b, a, o);
+  // um baralho feito na prateleira pelas mãos do taverneiro — o da casa, e o que ele vende (G.JogosCasa.comprar) —: no material que o povo
+  // da taverna pinta, na ordem dele (G.Itens.dePovo: o papiro do Egito, o amate do asteca, a cera do romano, o barro grego, a madeira), o
+  // primeiro que o povo tem (G.Origem.matOK) e de que a prateleira tem o que ele pede (G.Itens.feitoDe: a madeira, a cerâmica da olaria, a
+  // cera com a madeira; o papiro é o junco do rio, nada da prateleira) → a chave, ou null
+  function qual(b, k0) {
+    const fid = G.Village.facOfSet(b.set); const f = G.Fac.get(fid); if (!f || !G.Origem) return null; const ref = 'b:' + b.id; const arts = G.Inv && G.Inv.artsOf && k0 ? G.Inv.artsOf(k0) : null;
+    for (const m of It().dePovo('baralho', f.civ) || ['madeira']) { if (!G.Origem.matOK(fid, m, arts)) continue; const key = It().keyOf('baralho', m);
+      if ((It().feitoDe(key) || []).every(o => D.free(ref, o.k) + EPS >= o.n)) return key; }
+    return null;
+  }
+  C.qual = b => { const k0 = b && T() && T().keeperOf ? T().keeperOf(b) : null; return k0 ? qual(b, k0) : null; };
+  function faz(b, k0) {
+    const key = qual(b, k0); if (!key) return null; const ref = 'b:' + b.id; const used = [];
+    const undo = () => { for (const x of used) D.make(ref, x.k, x.n, { code: 'desfeito', by: k0.id }); };
+    for (const o of It().feitoDe(key) || []) { const u = D.use(ref, o.k, o.n, { code: 'baralho', by: k0.id }); if (!u.ok) { undo(); return null; } used.push(o); }
+    const r = D.make(ref, key, 1, { code: 'baralho', by: k0.id }); if (!r.ok) { undo(); return null; }
+    return key;
+  }
+  C.faz = (b, k0) => (G.inSim && b && k0 ? faz(b, k0) : null);
+  // os baralhos da casa: o taverneiro faz os que faltam no primeiro dia com menos do que ela guarda (contando os que estão nas mesas — um
+  // emprestado ainda é da casa —), e de novo um minuto do mundo depois, se faltou o material
+  function houseDecks(b) {
+    const S = S_(); const J = JC(); if (!J) return; const want = J.guarda(b, 'baralho'); let have = J.casa(b, 'baralho').total; if (have >= want) return;
+    const day = G.mod('cartas.casa'); const rec = day && day.d === S.day ? day : G.mod('cartas.casa', { d: S.day, b: {} });
+    if (Number.isFinite(rec.b[b.id]) && S.clock - rec.b[b.id] < 60) return; rec.b[b.id] = r1(S.clock);
+    const k0 = T() && T().keeperOf ? T().keeperOf(b) : null; if (!k0) return;
+    while (have < want) { if (!faz(b, k0)) break; have++; }
+  }
 
   // ------------------------------ a índole de quem joga (D-864) ------------------------------
   // quem é de jogar: o expansivo, o que não se prende às regras, o ambicioso, o curioso; o ousado arrisca — gasta os deuses cedo, dobra,
@@ -113,21 +150,31 @@
   const indDe = v => ({ ousado: v ? C.ousado(v) : 0.5 });
 
   // ------------------------------ uma partida começa ------------------------------
+  // (os dois baralhos vão para a mesa — o de cada um, ou um da casa emprestado, pelo livro: G.JogosCasa.empresta — e voltam no fim, de
+  // qualquer fim: fecha; o aluguel dos da casa é de quem chama, o lado 0, D-934. Sem um baralho para cada lado, nenhuma partida: nova.why)
   function nova(b, op, g, a, o, aposta, corpo, tor) {
-    const S = S_(); const id = S.nextId++;
-    const civ = [civOk(corpo === 0 && C.baralhoDe(a) ? civDe(a) : civDe(a)), civOk(civDe(o))];
+    const S = S_(); nova.why = '';
+    const F = decksFor(b, a, o); if (!F) { nova.why = 'sem-baralho'; return null; }
+    const casa = F.filter(x => x.daCasa).length; const al = casa ? JC().aluguel(b, a) : { n: 0 }; const rent = r2(al.n * casa);
+    if (rent > EPS && !tem(a, rent + aposta)) { nova.why = 'sem-aluguel'; return null; }
+    const id = S.nextId++;
+    const civ = [civDeck(b, F[0], a), civDeck(b, F[1], o)];
     const s = C.nova({ id, seed: Math.imul(id, 2654435761 | 0) ^ Math.imul(op ? op.id : 1, 97), civ, quem: [a.id, o.id], aposta });
-    const j = { id, b: b.id, op: op ? op.id : 0, g: String(g), quem: [a.id, o.id], corpo, s, aposta, pago: [0, 0], cofre: 0, t0: r1(S.clock), prox: r1(S.clock + C.RODADA_T), fase: 'jogo', fimT: 0, trap: null, conf: null, tor: tor ? tor.id : 0 };
+    const j = { id, b: b.id, op: op ? op.id : 0, g: String(g), quem: [a.id, o.id], corpo, s, aposta, pago: [0, 0], cofre: 0, t0: r1(S.clock), prox: r1(S.clock + C.RODADA_T), fase: 'jogo', fimT: 0, trap: null, conf: null, tor: tor ? tor.id : 0, ns: [0, 0], bar: [F[0].k, F[1].k], casa: [F[0].daCasa ? 1 : 0, F[1].daCasa ? 1 : 0], alug: 0 };
     st().j[id] = j;
-    if (aposta > EPS && !(poe(j, 0, aposta) && poe(j, 1, aposta))) { j.s.fim = { w: -1, por: 'sem-moeda' }; fecha(j); return null; }
+    for (const i of [0, 1]) { const L = JC().empresta({ b, jogo: id, tipo: 'baralho', g, s: F[i], quem: j.quem[i], lado: i, civ: civ[i] }); if (!L) { j.s.fim = { w: -1, por: 'sem-baralho' }; fecha(j); nova.why = 'sem-baralho'; return null; } j.ns[i] = L.id; }
+    if (rent > EPS) { const r = JC().cobra(b, a, j.ns.filter((n, i) => F[i].daCasa), rent); if (!r.ok) { j.s.fim = { w: -1, por: 'sem-aluguel' }; fecha(j); nova.why = 'sem-aluguel'; return null; } j.alug = r.n; }
+    if (aposta > EPS && !(poe(j, 0, aposta) && poe(j, 1, aposta))) { j.s.fim = { w: -1, por: 'sem-moeda' }; fecha(j); nova.why = 'sem-moeda'; return null; }
     conta('jogos'); if (corpo >= 0) conta('corpo');
     if (tor) { for (const v of [a, o]) inscreve(tor, v); }
     return j;
   }
-  // (o fim: o pote pago, a mesa mostra o fim por uns segundos; o laço de quem jogou junto, a vitória no torneio)
+  // (o fim: o pote pago, os baralhos de volta de onde vieram — a prateleira da casa, a mochila ou a casa do dono —, a mesa mostra o fim por
+  // uns segundos; o laço de quem jogou junto, a vitória no torneio)
   function fecha(j) {
     if (j.fase === 'fim') return; const S = S_(); j.fase = 'fim'; j.fimT = r1(S.clock); if (!j.s.fim) j.s.fim = { w: -1, por: 'fechou' };
     paga(j);
+    if (JC()) for (const n of j.ns || []) if (n) JC().devolve(n, j.s.fim.por);
     const a = S.villagers.get(j.quem[0]), o = S.villagers.get(j.quem[1]);
     if (a && o && G.Lacos && j.s.fim.por !== 'trapaca' && j.s.hist.length >= 2) G.Lacos.ato(a, o, 'jogo');
     if (j.tor && j.s.fim.w >= 0) { const t = torPorId(j.tor); if (t) { const w = S.villagers.get(j.quem[j.s.fim.w]); if (w) { t.vit[w.id] = (t.vit[w.id] || 0) + 1; t.gl[w.id] = (t.gl[w.id] || 0) + j.s.p[j.s.fim.w].gl; } } }
@@ -192,7 +239,7 @@
   const gk = g => { const t = String(g); let h = 7; for (let i = 0; i < t.length; i++) h = (Math.imul(h, 31) + t.charCodeAt(i)) | 0; return h; };
   function mesas(op, b) {
     const S = S_(); const d = op.data; if (!d || !d.mesa || !T() || !T().aberta(b) || d.fecha) return;
-    if (!C.baralhoCasa(b)) return; // (sem baralho na casa, nenhuma tabuleta)
+    houseDecks(b); // (a casa faz os baralhos que lhe faltam; sem nenhum livre, só joga quem traz o seu — D-931)
     const vivos = jogos().filter(j => j.op === op.id && j.fase === 'jogo'); if (vivos.length >= C.MAX) return;
     const tor = torneioDe(b); const olha = tor ? C.OLHA * 0.6 : C.OLHA; const k = Math.floor(S.clock / olha);
     const grupos = new Map();
@@ -215,7 +262,11 @@
       // (a aposta: a de quem arrisca menos dos dois, entre uma e duas vezes a de sempre; sem moeda no povo, ou sem com que, a seco; no
       // torneio, a inscrição é a aposta)
       let ap = 0; if (moeda(b) && !tor) { ap = r2(C.APOSTA * (1 + Math.min(C.ousado(a), C.ousado(o)))); if (!tem(a, ap) || !tem(o, ap)) ap = tem(a, C.APOSTA) && tem(o, C.APOSTA) ? C.APOSTA : 0; }
-      const j = nova(b, op, g, a, o, ap, -1, tor); if (j) vivos.push(j);
+      // (os baralhos: o de cada um, senão os da casa; sem um para cada lado, quem é muito de jogo compra o seu do taverneiro — D-936 —, ou a
+      // mesa espera que um volte, e faz outra coisa — D-933)
+      if (!decksFor(b, a, o) && JC() && JC().querComprar(a, b, 'baralho', C.jogador(a)) && JC().comprar(a, 'baralho', b).ok) conta('compras');
+      if (!decksFor(b, a, o)) { conta('sem-baralho'); continue; }
+      const j = nova(b, op, g, a, o, ap, -1, tor); if (j) vivos.push(j); else conta(nova.why || 'nao');
       if (vivos.length >= C.MAX) break;
     }
     // (uma olhada esquecida de uma mesa de outro dia não pesa: a lista guarda só as das tavernas de hoje)
@@ -225,6 +276,8 @@
   function valida(j) {
     const S = S_(); const op = A.get(j.op); const b = S.buildings.get(j.b);
     if (!op || !A.live(op) || !b || !T() || !T().aberta(b)) return 'fechou';
+    // (um baralho que sumiu da mesa — a mão do deus —: sem ele, nenhuma partida; D-937)
+    for (const i of [0, 1]) { const n = j.ns && j.ns[i]; if (n && !(D.get('n:' + n, j.bar[i]) >= 1 - EPS)) return 'sumiu'; }
     const d = op.data;
     for (const i of [0, 1]) { const v = S.villagers.get(j.quem[i]); if (!v) return 'abandono';
       if (j.corpo === i) { if (!A.isBody(v) || v.inside !== b.id) return 'desiste-corpo'; continue; }
@@ -295,15 +348,21 @@
   // (o afeto de um pelo outro — o laço, G.Lacos.sente —, 0 sem laço)
   const afeto = (o, v) => { const t = G.Lacos && G.Lacos.sente ? G.Lacos.sente(o, v) : null; return t && Number.isFinite(t.afeto) ? t.afeto : 0; };
   function aceita(o, v, ap) { if (C.jogador(o) < C.JOGA - 0.18 && afeto(o, v) <= 20) return 'não é de jogo'; if (ap > EPS && !tem(o, ap)) return 'não tem com que apostar'; if (ap > C.APOSTA * (1.2 + 2 * C.ousado(o))) return 'acha a aposta alta demais'; return null; }
+  // (os baralhos de uma partida do corpo — o seu ou um da casa; o do outro, o dele ou outro da casa —, o aluguel dos da casa, que é do
+  // corpo, que chama, D-934; e de onde vem cada um, em palavras — «o seu baralho», «um baralho da casa, emprestado», «o dele»)
   C.podeCorpo = function (v, oId) {
     const s = sentado(v); if (!s) return { ok: false, why: 'Sente-se a uma mesa da taverna.' };
-    const b = S_().buildings.get(s.b); const casa = C.baralhoCasa(b), meu = C.baralhoDe(v);
-    if (!casa && !meu) return { ok: false, why: 'Não há baralho aqui.' };
+    const b = S_().buildings.get(s.b);
     const j = C.vivoDe(v); if (j) return { ok: true, jogo: j.id, b: s.b };
     const L = quemJoga(v, s, oId); if (!L.length) return { ok: false, why: oId ? 'Já está noutro jogo, ou não está à sua mesa.' : 'Ninguém à sua mesa para jogar.' };
+    const fs = L.map(o => decksFor(b, v, o)); const i = fs.findIndex(Boolean);
+    if (i < 0) { const meu = JC() && JC().proprio(v, 'baralho', b); return { ok: false, espera: 1, why: (JC() && JC().semJogo(v, b, 'baralho', meu ? 1 : 2)) || 'Não há baralho aqui.' }; }
+    const F = fs[i]; const casa = F.filter(x => x.daCasa).length; const al = casa ? JC().aluguel(b, v) : { n: 0, por: '' }; const rent = r2(al.n * casa);
     const moedas = moeda(b); const tenho = moedas ? D.get(E.coinRef(v), 'moedas') : 0;
-    const apostas = moedas ? [0, C.APOSTA, r2(C.APOSTA * 2), r2(C.APOSTA * 4)].filter(n => n <= tenho + EPS) : [0];
-    return { ok: true, o: L[0].id, todos: L.map(o => o.id), apostas, moeda: moedas, baralho: meu || casa, b: s.b };
+    const apostas = moedas ? [0, C.APOSTA, r2(C.APOSTA * 2), r2(C.APOSTA * 4)].filter(n => n + rent <= tenho + EPS) : [0];
+    if (!apostas.length) return { ok: false, why: `Falta dinheiro para o aluguel dos baralhos da casa (${dinheiro(b, rent)}).` };
+    const de = F[0].daCasa && F[1].daCasa ? 'dois baralhos da casa, emprestados' : !F[0].daCasa && !F[1].daCasa ? 'o seu baralho e o dele' : F[0].daCasa ? 'um baralho da casa, emprestado, e o dele' : 'o seu baralho e um da casa, emprestado';
+    return { ok: true, o: L[i].id, todos: L.filter((o, k) => fs[k]).map(o => o.id), apostas, moeda: moedas, baralho: F[0].k, b: s.b, decks: F.map(x => ({ k: x.k, casa: x.daCasa ? 1 : 0 })), aluguel: rent, alPor: al.por, de };
   };
   const bodyOk = v => !!G.inSim && !!v && A.isBody(v);
   C.desafia = function (v, oId, ap) {
@@ -315,9 +374,10 @@
     if (G.Possess.dealt) G.Possess.dealt({ to: o.id });
     if (nao) { if (G.Falas && G.Falas.say) G.Falas.say(o, 'cartas_nao', {}); return { ok: false, why: `${G.cap(nome)} ${nao}.` }; }
     const s = sentado(v); const op = A.get(s.op); const b = S.buildings.get(s.b); const me = op.data.mesa[v.id];
-    const j = nova(b, op, me.g, v, o, ap, 0, torneioDe(b)); if (!j) return { ok: false, why: 'Não deu: falta dinheiro.' };
+    const j = nova(b, op, me.g, v, o, ap, 0, torneioDe(b));
+    if (!j) return { ok: false, why: nova.why === 'sem-aluguel' ? 'Falta dinheiro para o aluguel dos baralhos da casa.' : nova.why === 'sem-baralho' ? (JC().semJogo(v, b, 'baralho', 2) || 'Não há baralho livre.') : 'Não deu: falta dinheiro.' };
     abreCorpo(j); if (G.Falas && G.Falas.say) G.Falas.say(o, 'cartas_sim', {});
-    return { ok: true, jogo: j.id, msg: `${G.cap(nome)} aceita${ap > EPS ? `: ${dinheiro(b, ap)} cada um no pote` : ', a seco'}.` };
+    return { ok: true, jogo: j.id, msg: `${G.cap(nome)} aceita${ap > EPS ? `: ${dinheiro(b, ap)} cada um no pote` : ', a seco'} (${c.de}${j.alug > EPS ? `; o aluguel, ${dinheiro(b, j.alug)}, ao taverneiro` : ''}).` };
   };
   // (a rodada abre para o corpo: a compra; quem joga com ele pode pedir para dobrar; e, se é ele quem mostra primeiro, já escolhe)
   function abreCorpo(j) {
@@ -392,7 +452,8 @@
     for (const k of Object.keys(s.j)) { const j = s.j[k]; if (j.b !== id || j.g !== String(mesa)) continue;
       const q = j.s; const last = q.hist.length ? q.hist[q.hist.length - 1] : null; const bb = S_().buildings.get(j.b);
       const postas = (q.lance[0] ? 1 : 0) + (q.lance[1] ? 1 : 0); const abertas = last && last.c ? last.c.slice() : [];
-      const v0 = j.corpo >= 0 ? S_().villagers.get(j.quem[j.corpo]) : null; const bar = (v0 && C.baralhoDe(v0)) || (bb ? C.baralhoCasa(bb) : null);
+      // (as tabuletas na mesa são as do baralho de verdade de quem chamou — o da casa, emprestado, ou o dele —: D-933)
+      const bar = (j.bar && (j.bar[0] || j.bar[1])) || null; void bb;
       return { mesa: postas || abertas.length, maos: (q.p[0].mao.length ? 1 : 0) + (q.p[1].mao.length ? 1 : 0), monte: q.p[0].monte.length + q.p[1].monte.length, mat: MAT_DE(bar),
         jogo: j.id, quem: j.quem.slice(), civ: q.civ.slice(), r: q.r, fase: j.fase, cartas: postas ? [] : abertas, postas: [!!q.lance[0], !!q.lance[1]], nMao: [q.p[0].mao.length, q.p[1].mao.length], nMonte: [q.p[0].monte.length, q.p[1].monte.length], gl: [q.p[0].gl, q.p[1].gl], pote: j.cofre || 0, vence: q.fim ? q.fim.w : -2, por: q.fim ? q.fim.por : '', baralho: bar, trapaca: !!(j.conf && S_().clock < j.conf.ate) };
     }
@@ -405,7 +466,9 @@
     return { jogo: j.id, me, ai, o: j.quem[ai], fase: j.fase, r: q.r, of: C.OF.slice(), pote: j.cofre || 0, aposta: j.aposta, x: q.x, mao: q.p[me].mao.slice(), monte: [q.p[me].monte.length, q.p[ai].monte.length], maoOutro: q.p[ai].mao.length,
       gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: q.vis === me && q.lance[ai] ? q.lance[ai] : null, posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
       podeDobrar: C.podeDobrar(q, me) && j.aposta > 0, hist: q.hist.slice(-8), fim: q.fim ? Object.assign({}, q.fim, { meu: q.fim.w === me ? 1 : q.fim.w === ai ? -1 : 0 }) : null, civ: [q.civ[me], q.civ[ai]], bonus: q.p[me].bonus, mal: q.p[me].mal, desc: [q.p[me].desc.length, q.p[ai].desc.length],
-      preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: C.baralhoDe(v) || (b ? C.baralhoCasa(b) : null), trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length };
+      preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: (j.bar && j.bar[me]) || null, trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length,
+      // (de onde vem cada baralho da mesa, o seu e o do outro — «o seu baralho», «baralho da casa, emprestado» —, e o aluguel pago: D-933)
+      fontes: [me, ai].map(i => { const n = j.ns && j.ns[i]; const r = n && JC() ? JC().mesa(n) : null; return r ? JC().fonteDe(r, v) : j.casa && j.casa[i] ? 'baralho da casa, emprestado' : ''; }), alug: j.alug || 0 };
   };
 
   // ------------------------------ o laço do jogo e o da trapaça (a sociedade) ------------------------------

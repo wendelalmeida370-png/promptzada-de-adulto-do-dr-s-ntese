@@ -861,6 +861,8 @@
     if (!T.aberta(b) && D.get(ref, 'wood') < T.LENHA_N && D.free('f:' + f.id, 'wood') >= 4) cands.push({ k: 'wood', n: T.LENHA_N + 1 - D.get(ref, 'wood') });
     if (!T.aberta(b) && D.get(ref, 'cera') < VELA() * 2 && D.free('f:' + f.id, 'cera') >= 1) cands.push({ k: 'cera', n: 1 });
     if (!T.aberta(b)) for (const k of OIL) if (D.get(ref, 'azeite') + D.get(ref, 'oleo') < T.OLEO * 2 && D.free('f:' + f.id, k) >= 1) { cands.push({ k, n: 1 }); break; }
+    // (and the stuff of the deck the house lacks — the pottery's clay of the Greek's, the apiary's wax of the Roman's: G.JogosCasa, the J front, D-931)
+    if (!T.aberta(b) && G.JogosCasa) for (const c of G.JogosCasa.falta(b, f)) if (!cands.some(x => x.k === c.k)) cands.push(c);
     // (T3, D-845: the house's cook buys and cooks the food, its brewer the grain or the honey of the vat — what the keeper still buys)
     for (const c of (G.TavernaOficios ? G.TavernaOficios.keeperBuys(b, cands) : cands)) {
       const n = Math.floor(Math.min(c.n, c.of ? OR().free('f:' + f.id, c.k, c.of) : D.free('f:' + f.id, c.k), D.room('v:' + v.id, c.k, { to: ref }), D.room(ref, c.k)) + EPS);

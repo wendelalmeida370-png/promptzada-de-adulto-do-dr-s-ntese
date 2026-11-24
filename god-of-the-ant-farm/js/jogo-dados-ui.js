@@ -44,9 +44,12 @@
   // (seated at a tavern's table: call the table to the dice, join a game being called there, see the game one plays in, watch the one
   // of the table — what can be done is the world's: G.JogoDados.verbo)
   const vb = () => (JD() && JD().verbo ? JD().verbo(P().body()) : null);
+  // (the label says where the dice of the game come from — the body's own, the house's lent and the rent, the wait for one free: the J
+  // front, D-933 to D-935; the why is the world's: G.JogoDados.verbo)
   I.verb('taverna', { id: 'jd-dados', k: 'outra', ord: 3.5,
     label: (ctx, t) => { if (t.bal) return ''; const x = vb(); if (!x || !x.k) return '';
-      if (x.k === 'chamar') return 'Chamar a mesa para os dados'; if (x.k === 'entrar') return `Entrar no jogo de dados${x.aposta ? ` (aposta de ${priceNow(x.aposta)})` : ''}`;
+      if (x.k === 'chamar') return x.ok ? `Chamar a mesa para os dados — ${x.de}${x.aluguel ? ` (aluguel ${priceNow(x.aluguel)})` : ''}` : x.espera ? 'Chamar a mesa para os dados — esperando um jogo livre' : 'Chamar a mesa para os dados';
+      if (x.k === 'entrar') return `Entrar no jogo de dados${x.aposta ? ` (aposta de ${priceNow(x.aposta)})` : ''}${x.de ? ` — ${x.de}` : ''}`;
       return x.k === 'jogo' ? 'Ver o jogo de dados' : 'Olhar o jogo de dados'; },
     can: () => { const x = vb(); return x && x.k ? { ok: x.ok, why: x.why } : { ok: false }; },
     run: () => {
@@ -58,6 +61,15 @@
     } });
   // (a price as the body's tavern says it, for the verb's label)
   function priceNow(n) { const v = P().body(); const b = v && v.inside ? G.S.buildings.get(v.inside) : null; return b && JD().money ? JD().money(b, n) : String(n); }
+  // (with no dice of its own, at a tavern: buy a set of the keeper — what is left over, or one he makes today of the house's stuff —, by
+  // the hands, G.Possess.apply → G.JogosCasa.comprar; D-936. Only shown while the keeper could sell one, or the coins are what is short)
+  const JCa = () => G.JogosCasa;
+  const compra = () => { const v = P().body(); return v && JCa() && JCa().podeComprar ? JCa().podeComprar(v, 'dados') : null; };
+  I.verb('taverna', { id: 'jc-dados-compra', k: 'outra', ord: 3.6,
+    label: (ctx, t) => { if (t.bal) return ''; const v = P().body(); if (!v || !JCa() || JCa().proprio(v, 'dados')) return ''; const c = compra(); if (!c || !c.k) return '';
+      return `Comprar um jogo de dados do taverneiro${c.preco ? ` (${priceNow(c.preco)})` : ''}`; },
+    can: () => { const c = compra(); return c ? { ok: c.ok, why: c.why } : { ok: false }; },
+    run: () => { G.IncUI.when(G.Possess.apply(w => G.JogosCasa.comprar(w, 'dados')), r => { snd('aposta', { n: 1 }); toast(r.msg, 2.4); }, deny); return { ok: true }; } });
 
   // ------------------------------ the looks of the peoples (only drawn here) ------------------------------
   // the table: its top and its rim; the money of the pot; the names of the game
@@ -432,7 +444,9 @@
     const st = JSON.stringify([s.fase, s.vez, s.eu, s.jogo, myTurn ? pick : 0, s.livres.length, s.armado, s.trapacaOk, busy, note, touch, s.aposta, s.convite.map(x => x.id + (x.sim ? 1 : 0) + x.por), pu.n, s.venc, help, s.jogadores.map(p => p.fora).join(), (s.hist || []).length]);
     if (st === sig) return; sig = st;
     const el = panel.querySelector('.jd-ctl'); const top = panel.querySelector('.jd-top'); const lk = LOOK[s.tema] || LOOK.classico;
-    top.querySelector('h3').textContent = lk.titulo; top.querySelector('.jd-tit small').textContent = s.torneio ? `torneio da noite · prêmio ${s.price(s.torneio.premio)}` : `${lk.sub}${s.set ? ` · dados ${s.set.mat === 'osso' ? 'de osso' : 'de madeira'}${s.set.meus ? ' (seus)' : ''}` : ''}`;
+    // (where the dice on the table come from — «dados da casa, emprestados», «os seus dados», «os dados de Orm» — and the rent paid: D-932)
+    const fonte = s.set ? ` · ${s.set.de} (${s.set.mat === 'osso' ? 'de osso' : 'de madeira'})${s.set.alug ? `, aluguel ${s.price(s.set.alug)}` : s.set.vem ? `, aluguel ${s.price(s.set.vem)} ao começar` : ''}` : '';
+    top.querySelector('h3').textContent = lk.titulo; top.querySelector('.jd-tit small').textContent = s.torneio ? `torneio da noite · prêmio ${s.price(s.torneio.premio)}${fonte}` : `${lk.sub}${fonte}`;
     top.querySelector('.jd-pote b').textContent = s.moeda ? String(Math.round((s.pote || 0) * 10) / 10).replace('.', ',') : '—'; top.querySelector('.jd-pote small').textContent = s.moeda ? `no pote` : 'sem moeda';
     const k = (n, t) => (touch ? '' : `<kbd>${t}</kbd>`);
     let h = '';

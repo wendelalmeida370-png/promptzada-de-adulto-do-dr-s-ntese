@@ -133,10 +133,14 @@ if (on('c4')) {
   const bad = []; const actSeen = new Set(); const held = {}; const decks = {}; let t = 0;
   const n0 = Object.assign({}, (S().cartas && S().cartas.n) || {});
   for (; t < 200; t++) { calm(); M.viver(1);
-    for (const v of S().villagers.values()) { if (v.act === 'jogo-cartas' || v.act === 'jogo-cartas-ganha' || ((v.act === 'trapaca' || v.act === 'trapaca-pega') && C.de(v))) { /* (a trapaça dos dados da T4 é a dela) */ actSeen.add(v.id); const h = G.Inv.held(v).mao; const k = h ? h.split('.')[0] : 'nada'; held[k] = (held[k] || 0) + 1; if (h) decks[(G.Fac.get(G.Fac.idOfV(v)) || {}).civ + ':' + h.split('.')[1]] = 1; } }
+    // (o baralho na mão é o do lado de quem joga, e as tabuletas dele são as do povo que o pintou — o da casa, o povo da taverna: a frente J,
+    // D-933 —; o ato um passo atrás do fim de uma partida não conta)
+    for (const v of S().villagers.values()) { const jv = C.de(v); if (jv && (v.act === 'jogo-cartas' || v.act === 'jogo-cartas-ganha' || v.act === 'trapaca' || v.act === 'trapaca-pega')) { /* (a trapaça dos dados da T4 é a dela) */ actSeen.add(v.id); const h = G.Inv.held(v).mao; const k = h ? h.split('.')[0] : 'nada'; held[k] = (held[k] || 0) + 1; if (h) decks[jv.s.civ[jv.quem.indexOf(v.id)] + ':' + h.split('.')[1]] = 1; } }
     if (!SNAP && S().cartas && Object.keys(S().cartas.j).some(k => S().cartas.j[k].fase === 'jogo' && S().cartas.j[k].s.r >= 2)) SNAP = G.Save.serialize(); }
   const n = (S().cartas && S().cartas.n) || {}; const jogos = (n.jogos || 0) - (n0.jogos || 0), rodadas = (n.rodadas || 0) - (n0.rodadas || 0);
-  if (jogos < 2) bad.push(`só ${jogos} partidas numa noite`); if (rodadas < 6) bad.push(`só ${rodadas} rodadas`); if (!actSeen.size) bad.push('ninguém mostrou o ato jogo-cartas');
+  // (desde a frente J os baralhos são de verdade — dois por partida, a taberna guarda dois, e a casa sem o material não tem nenhum —: uma
+  // partida por taberna de cada vez, T-2095)
+  if (jogos < 1) bad.push(`só ${jogos} partidas numa noite`); if (rodadas < 6) bad.push(`só ${rodadas} rodadas`); if (!actSeen.size) bad.push('ninguém mostrou o ato jogo-cartas');
   if (held.nada || !held.baralho) bad.push(`quem joga sem o baralho na mão: ${JSON.stringify(held)}`);
   // (o baralho de cada povo: o material que ele pinta, o primeiro que tem)
   for (const k of Object.keys(decks)) { const [civ, mat] = k.split(':'); const L = G.Itens.dePovo('baralho', civ); if (!L || !L.includes(mat)) bad.push(`o baralho ${mat} de um povo ${civ}`); }
@@ -196,7 +200,8 @@ if (on('c7')) {
   const bad = [], said = []; M.abrir(JSON.parse(SNAP || SNAP0)); G.Main.mode = 'game'; calm(); const Po = G.Possess, T = G.Taverna;
   // (uma taverna aberta com uma mesa de gente, e alguém do povo dela, com moedas, para o deus viver)
   let pick = null;
-  for (const op of A.all().filter(o => o.def === 'taverna' && A.live(o)).sort((a, b) => a.id - b.id)) { const b = S().buildings.get(op.at); if (!b || !T.aberta(b) || !G.Interiors.has(b)) continue; const fid = G.Village.facOfSet(b.set); const kp = T.keeperOf(b);
+  // (… e com os dois baralhos da casa livres — o do corpo e o do outro: a frente J, D-933; a casa sem o material não tem nenhum, T-2095)
+  for (const op of A.all().filter(o => o.def === 'taverna' && A.live(o)).sort((a, b) => a.id - b.id)) { const b = S().buildings.get(op.at); if (!b || !T.aberta(b) || !G.Interiors.has(b) || G.JogosCasa.casa(b, 'baralho').livres < 2) continue; const fid = G.Village.facOfSet(b.set); const kp = T.keeperOf(b);
     const gs = new Set(Object.keys(op.data.mesa).map(id => op.data.mesa[id]).filter(m => m.st >= 2 && m.g && !m.corpo).map(m => String(m.g))); if (!gs.size) continue;
     const v = [...S().villagers.values()].filter(o => o !== kp && o.age >= 18 && o.age < 55 && !o.sleeping && !o.inside && G.Fac.idOfV(o) === fid && Po.can(o).ok && D.get(G.Eco.coinRef(o), 'moedas') >= 1).sort((a, c) => G.dist(a.x, a.y, b.x, b.y) - G.dist(c.x, c.y, b.x, b.y) || a.id - c.id)[0];
     if (v) { pick = { b, v, gs }; break; } }

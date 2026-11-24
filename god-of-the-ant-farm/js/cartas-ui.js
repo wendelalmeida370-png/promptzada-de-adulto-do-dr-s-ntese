@@ -37,14 +37,26 @@
 
   // ------------------------------ os verbos do corpo à mesa (G.Interact.verb, regra 141) ------------------------------
   const pode = v => C.podeCorpo(v);
+  // (a etiqueta diz de onde vêm os baralhos da partida — o seu, os da casa emprestados e o aluguel, a espera por um livre: a frente J,
+  // D-933 a D-935; o porquê é do mundo: G.Cartas.podeCorpo)
+  const preco = (v, n) => { const b = v && v.inside ? G.S.buildings.get(v.inside) : null; return b ? C.preco(b, n) : String(n); };
+  const fonte = (v, c) => (c.de ? ` — ${c.de}${c.aluguel ? ` (aluguel ${preco(v, c.aluguel)})` : ''}` : '');
   I.verb('taverna', { id: 'tv-cartas', k: 'outra', ord: 5,
-    label: (ctx, t) => { if (t.bal) return ''; const c = pode(ctx.v); return c.ok ? (c.jogo ? 'Voltar à partida de tabuletas' : 'Jogar tabuletas') : c.why && c.why !== 'Sente-se a uma mesa da taverna.' ? 'Jogar tabuletas' : ''; },
+    label: (ctx, t) => { if (t.bal) return ''; const c = pode(ctx.v); return c.ok ? (c.jogo ? 'Voltar à partida de tabuletas' : `Jogar tabuletas${fonte(ctx.v, c)}`) : c.espera ? 'Jogar tabuletas — esperando um baralho livre' : c.why && c.why !== 'Sente-se a uma mesa da taverna.' ? 'Jogar tabuletas' : ''; },
     can: ctx => pode(ctx.v),
     run: ctx => { const c = pode(ctx.v); if (c.jogo) { UI.abrir(c.jogo); return { ok: true }; } UI.convite(null); return { ok: true }; } });
   I.verb('pessoa', { id: 'pe-cartas', k: 'outra', ord: 7,
-    label: (ctx, t) => { const c = C.podeCorpo(ctx.v, t.o && t.o.id); return c.ok && !c.jogo ? `Chamar ${P().knows.call(ctx.v, t.o)} para as tabuletas` : ''; },
+    label: (ctx, t) => { const c = C.podeCorpo(ctx.v, t.o && t.o.id); return c.ok && !c.jogo ? `Chamar ${P().knows.call(ctx.v, t.o)} para as tabuletas${fonte(ctx.v, c)}` : ''; },
     can: (ctx, t) => C.podeCorpo(ctx.v, t.o && t.o.id),
     run: (ctx, t) => { UI.convite(t.o.id); return { ok: true }; } });
+  // (sem baralho seu, na taverna: comprar um do taverneiro — o que sobra, ou um que ele faz hoje do material da casa —, pelas mãos
+  // (G.Possess.apply → G.JogosCasa.comprar; D-936); só aparece enquanto ele poderia vender, ou quando o que falta é o dinheiro)
+  const JCa = () => G.JogosCasa;
+  I.verb('taverna', { id: 'jc-baralho-compra', k: 'outra', ord: 5.5,
+    label: (ctx, t) => { if (t.bal || !JCa() || JCa().proprio(ctx.v, 'baralho')) return ''; const c = JCa().podeComprar(ctx.v, 'baralho'); if (!c || !c.k) return '';
+      return `Comprar um baralho do taverneiro${c.preco ? ` (${preco(ctx.v, c.preco)})` : ''}`; },
+    can: ctx => { const c = JCa() ? JCa().podeComprar(ctx.v, 'baralho') : null; return c ? { ok: c.ok, why: c.why } : { ok: false }; },
+    run: () => { G.IncUI.when(P().apply(w => G.JogosCasa.comprar(w, 'baralho')), r => { som('cartas-embaralhar'); toast(r.msg, 2.6); }, deny); return { ok: true }; } });
 
   // ------------------------------ o painel ------------------------------
   function build() {
@@ -95,9 +107,13 @@
     const ppl = c.todos.map(id => S.villagers.get(id)).filter(Boolean); let who = c.o, ap = c.apostas[Math.min(1, c.apostas.length - 1)];
     const draw = () => {
       const o = S.villagers.get(who);
+      // (os baralhos da partida com quem foi escolhido — o seu ou um da casa, e o dele —, e o aluguel dos da casa, que é de quem chama: D-933)
+      const cc = C.podeCorpo(v, who); const aps = cc.ok && cc.apostas ? cc.apostas : c.apostas; if (!aps.some(n => Math.abs(n - ap) < 1e-6)) ap = aps[Math.min(1, aps.length - 1)];
+      const bars = cc.ok && cc.de ? `<p class="tb-com">Os baralhos: ${esc(cc.de)}${cc.aluguel ? ` — o aluguel dos da casa, ${esc(C.preco(b, cc.aluguel))}, ao taverneiro` : ''}.</p>` : cc.why ? `<p class="tb-com">${esc(cc.why)}</p>` : '';
       panel.querySelector('.tb-over').innerHTML = `<div class="tb-sheet"><h3>${esc(C.NOME)}</h3><p class="tb-sub">O jogo das tábuas pintadas: os deuses e as criaturas de cada povo, em sete rodadas.</p>
         ${ppl.length > 1 ? `<div class="tb-sec">Com quem</div><div class="tb-ppl">${ppl.map(p => `<button class="tb-p${p.id === who ? ' sel' : ''}" data-o="${p.id}"><b>${esc(cap(P().knows.call(v, p)))}</b><small>${esc((G.CIVS[G.Fac.civOfV(p)] || {}).name || '')}</small></button>`).join('')}</div>` : `<p class="tb-com">Com <b>${esc(P().knows.call(v, o))}</b>${G.CIVS[G.Fac.civOfV(o)] ? `, que joga as tabuletas ${esc(G.CIVS[G.Fac.civOfV(o)].adj)}s` : ''}.</p>`}
-        ${c.moeda ? `<div class="tb-sec">A aposta de cada um</div><div class="tb-aps">${c.apostas.map(n => `<button class="tb-ap${Math.abs(n - ap) < 1e-6 ? ' sel' : ''}" data-ap="${n}">${n > 0 ? esc(C.preco(b, n)) : 'A seco'}</button>`).join('')}</div>` : '<p class="tb-com">O povo não usa moeda: joga-se pela glória.</p>'}
+        ${bars}
+        ${c.moeda ? `<div class="tb-sec">A aposta de cada um</div><div class="tb-aps">${aps.map(n => `<button class="tb-ap${Math.abs(n - ap) < 1e-6 ? ' sel' : ''}" data-ap="${n}">${n > 0 ? esc(C.preco(b, n)) : 'A seco'}</button>`).join('')}</div>` : '<p class="tb-com">O povo não usa moeda: joga-se pela glória.</p>'}
         <div class="tb-sbtns"><button class="tb-b tb-no" data-a="fecha">Agora não</button><button class="tb-b tb-go" data-a="desafia">Desafiar</button></div>
         <details class="tb-reg"><summary>As regras</summary>${regras()}</details></div>`;
       panel.querySelector('.tb-over').classList.remove('hidden');
@@ -136,7 +152,7 @@
     panel.querySelector('.tb-pote').innerHTML = v.moeda && v.pote > 0 ? `${moedas(v.pote / Math.max(1e-6, v.aposta || v.pote))}<span>${esc(v.preco(v.pote))}${v.x > 1 ? ` <em>×${v.x}</em>` : ''}</span>` : '<span class="seco">a seco</span>';
     // (as mesas: a tabuleta do outro, se ele mostrou primeiro; a minha, se já posta)
     if (full || !busy) { panel.querySelector('.tb-so').innerHTML = v.aberta ? flip(v.aberta, v.civ[1], true) : ''; panel.querySelector('.tb-sm').innerHTML = ''; }
-    panel.querySelector('.tb-info').innerHTML = `${v.bonus ? `<span class="tb-tag up">${Ar.icone('presagio')}+${v.bonus} na próxima</span>` : ''}${v.mal ? `<span class="tb-tag down">${Ar.icone('maldicao')}−${v.mal} na próxima</span>` : ''}${v.vis === 'eu' ? `<span class="tb-tag">${Ar.icone('visao')}Você mostra primeiro</span>` : v.vis === 'outro' ? `<span class="tb-tag up">${Ar.icone('visao')}Você vê a dele</span>` : ''}`;
+    panel.querySelector('.tb-info').innerHTML = `${v.fontes && v.fontes[0] ? `<span class="tb-tag" title="De onde vem o baralho com que você joga">${esc(cap(v.fontes[0]))}${v.alug ? ` · aluguel ${esc(v.preco(v.alug))}` : ''}</span>` : ''}${v.bonus ? `<span class="tb-tag up">${Ar.icone('presagio')}+${v.bonus} na próxima</span>` : ''}${v.mal ? `<span class="tb-tag down">${Ar.icone('maldicao')}−${v.mal} na próxima</span>` : ''}${v.vis === 'eu' ? `<span class="tb-tag">${Ar.icone('visao')}Você mostra primeiro</span>` : v.vis === 'outro' ? `<span class="tb-tag up">${Ar.icone('visao')}Você vê a dele</span>` : ''}`;
     panel.querySelector('.tb-monte').innerHTML = `${Ar.htmlVerso(v.civ[0], 'tb-mini')}<b>${v.monte[0]}</b>`;
     // (a minha mão em leque)
     const n = v.mao.length; if (sel >= n) sel = -1;
@@ -190,7 +206,7 @@
     ov.classList.remove('hidden'); som('aposta', { v: 0.6 });
   }
   function fimTela() {
-    const v = view; fimVisto = v.jogo; const m = v.fim.meu; const por = { gloria: '', recusa: m > 0 ? 'O outro desistiu do dobro.' : 'Você desistiu do dobro.', desiste: m > 0 ? 'O outro se levantou.' : 'Você se levantou da partida.', trapaca: m > 0 ? 'Pego na trapaça: o pote é seu.' : 'Pegaram a tabuleta na sua manga!', abandono: 'O outro foi embora: cada um leva o que pôs.', fechou: 'A taverna fechou: cada um leva o que pôs.', 'sem-moeda': 'Faltou dinheiro.' }[v.fim.por] || '';
+    const v = view; fimVisto = v.jogo; const m = v.fim.meu; const por = { gloria: '', recusa: m > 0 ? 'O outro desistiu do dobro.' : 'Você desistiu do dobro.', desiste: m > 0 ? 'O outro se levantou.' : 'Você se levantou da partida.', trapaca: m > 0 ? 'Pego na trapaça: o pote é seu.' : 'Pegaram a tabuleta na sua manga!', abandono: 'O outro foi embora: cada um leva o que pôs.', fechou: 'A taverna fechou: cada um leva o que pôs.', 'sem-moeda': 'Faltou dinheiro.', sumiu: 'Um baralho sumiu da mesa: cada um leva o que pôs.', 'sem-baralho': 'Não havia baralho para os dois.', 'sem-aluguel': 'Faltou o aluguel dos baralhos da casa.' }[v.fim.por] || '';
     const tit = m > 0 ? 'Vitória!' : m < 0 ? 'Derrota' : 'Empate';
     const ov = panel.querySelector('.tb-over'); ov.dataset.k = 'fim'; ov.innerHTML = `<div class="tb-sheet tb-end ${m > 0 ? 'win' : m < 0 ? 'lose' : 'tie'}"><h3>${tit}</h3><p class="tb-score"><b>${v.gl[0]}</b> × <b>${v.gl[1]}</b></p>${por ? `<p class="tb-com">${esc(por)}</p>` : ''}${v.moeda && v.pote === 0 && v.aposta > 0 && m !== 0 ? `<p class="tb-com">${m > 0 ? 'Você leva o pote.' : 'O pote vai para o outro.'}</p>` : ''}<div class="tb-sbtns"><button class="tb-b tb-no" data-a="fecha">Sair da mesa</button><button class="tb-b tb-go" data-a="denovo">Jogar de novo</button></div></div>`;
     ov.classList.remove('hidden'); som(m > 0 ? 'vitoria' : m < 0 ? 'derrota' : 'cartas-virar');
