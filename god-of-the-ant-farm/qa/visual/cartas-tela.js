@@ -16,7 +16,7 @@ const CIV = (process.argv[PC ? 4 : 3] || 'asteca,nordico').split(',');
   const page = await browser.newPage(PC ? { viewport: { width: W, height: H } } : { viewport: { width: W, height: H }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|WebGL|GL Driver/.test(t)) errs.push('console: ' + t.slice(0, 200)); });
-  await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); localStorage.setItem('gotaf-guia-tabuletas', '1'); localStorage.setItem('gotaf-guia-copo', '1'); } catch (e) { } }); // (o guia da primeira partida já visto: o guia tem a sua prova, qa/visual/ensina-fotos.js — D-947)
+  await page.addInitScript(() => { const r0 = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = cb => (cb && (cb.name === 'loop' || cb.name === 'frame') ? 0 : r0(cb)); try { localStorage.clear(); localStorage.setItem('gotaf-guia-tabuletas', '1'); localStorage.setItem('gotaf-guia-copo', '1'); } catch (e) { } }); // (o guia da primeira partida já visto: o guia tem a sua prova, qa/visual/ensina-fotos.js — D-947; só o laço do jogo parado, nunca o requestAnimationFrame inteiro: a festa das mesas conta pelos quadros da página, T-2103)
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(600);
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') });

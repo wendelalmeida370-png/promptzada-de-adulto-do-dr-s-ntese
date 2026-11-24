@@ -342,7 +342,7 @@
       case 'raio': return `O raio de ${c}: a outra perde ${e.n}!`;
       case 'troca': return `${c} troca as forças!`;
       case 'egide': return `A égide de ${c}: o poder da outra não vale.`;
-      case 'visao': return eu ? `${c} vê: na próxima, ${ele.toLowerCase()} mostra primeiro.` : `${c} vê: na próxima, você mostra primeiro.`;
+      case 'visao': return eu ? `${c} vê: na próxima, ${o ? P().knows.call(P().body(), o) : 'o outro'} mostra primeiro.` : `${c} vê: na próxima, você mostra primeiro.`;
       case 'mare': return 'A maré sobe: esta rodada vale o dobro!';
       case 'pesagem': return `${c} pesa: a rodada empata.`;
       case 'juiz': return `A justiça de ${c} decide o empate.`;
