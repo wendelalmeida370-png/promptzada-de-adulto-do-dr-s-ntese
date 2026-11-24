@@ -1,6 +1,6 @@
 # Os interiores 3 — todas as edificações no padrão da taverna (o plano, 24/11/2026)
 
-*Para o dono, a aprovar. O plano junta quatro levantamentos feitos em paralelo, medidos no próprio jogo ou tirados dos planos e
+*Para o dono. **Aprovado pelo dono em 24/11/2026**, com o mercado de escravos e a casa de prazer, que ele pediu (§2, §10). O plano junta quatro levantamentos feitos em paralelo, medidos no próprio jogo ou tirados dos planos e
 das fontes: **A**, o inventário dos 56 tipos de prédio; **B**, o que os ofícios futuros pedem a cada prédio; **C**, o padrão da
 taverna como receita; **D**, as referências históricas, prédio por prédio e povo por povo. Nada no jogo mudou ainda. O que não vem
 dos levantamentos está marcado como **proposta**.*
@@ -27,22 +27,25 @@ dos levantamentos está marcado como **proposta**.*
 | **B** | as casas do povo | o que o jogador mais vê; o Patch 23 (As Vidas) mora nelas |
 | **C** | a lei: a cadeia, o quartel, a torre, o cercado | o dono pediu a prisão; prepara os patches 33, 34 e 36 |
 | **D** | o porto: a doca e o cais, o armazém do porto, a alfândega e o estaleiro (novos) | o dono pediu o porto; prepara os patches 35 e 36 |
-| **E** | o comércio: o mercado, a feira, o armazém, o celeiro, o mercado clandestino | têm o espaço e não têm a vida |
+| **E** | o comércio: o mercado, a feira, o armazém, o celeiro, o mercado clandestino; o mercado de escravos e a casa de prazer (novos) | têm o espaço e não têm a vida |
 | **F** | as oficinas: a forja, a olaria, a tecelagem, a ourivesaria, o açougue, a oficina, a casa da seda, a salga | os piores interiores de hoje; preparam o Patch 32 |
 | **G** | a fé e o saber: o templo, a biblioteca, os banhos | têm a vida e não têm a cara |
 | **H** | o espetáculo: o teatro, as maravilhas, a escola de gladiadores (nova) | as multidões; preparam os patches 33 e 39 |
 | **I** | os que não têm dentro: a administração, a coletoria, o estábulo, a mina, a casa dos mergulhadores | um interior digno já; o fundo vem com o ofício |
 
-**O que o dono precisa decidir** (o §10 traz cada ponto com o porquê):
+**O que o dono decidiu** (24/11/2026; o §10 traz cada ponto com o porquê):
 
-1. **As dez decisões do supervisor**, D-970 a D-979: a ordem; a casa pronta para o ofício; as camas do pessoal no palácio; os degraus
-   maiores; a cela de espera; o tesouro do povo com lugar no palácio; a sala do banquete; os três tipos novos; a cara própria do povo
-   «clássico»; o linho e o algodão.
-2. **A alternativa de ordem:** as casas do povo antes do palácio.
-3. **O mercado de gente e a casa de prazer**, que os planos do pirata e do estivador citam: ficam fora, a não ser que o dono peça.
-4. **As perguntas que o levantamento achou:** quando chega o guarda (o «delegado» e o «policial» não têm patch no roteiro); quem senta
-   no paço de uma cidade que não é a capital; se as lojas de 4 m crescem; se os fiéis rezam dentro do templo ou no pátio, como era; se
-   os livros da biblioteca viram coisas do mundo; como ficam os afrescos sem a cal e sem os pigmentos.
+1. **As dez decisões do supervisor**, D-970 a D-979, aprovadas como recomendadas: a ordem; a casa pronta para o ofício; as camas do
+   pessoal no palácio; os degraus maiores; a cela de espera; o tesouro do povo com lugar no palácio; a sala do banquete; os três tipos
+   novos; a cara própria do povo «clássico»; o linho e o algodão.
+2. **A ordem:** o palácio primeiro.
+3. **O mercado de escravos e a casa de prazer entram**, a pedido do dono («hoje a gente quer um jogo imersivo e realista»), na onda E,
+   com as regras de conteúdo do D-980 e do D-981: nada explícito; só adultos, por uma regra do mundo com a sua prova; a escravidão como
+   foi, uma violência e uma perda, nunca um enfeite, e cada pessoa escravizada com a sua causa no mundo; o caminho da liberdade no
+   centro — o corpo pode libertar alguém.
+4. **As perguntas que o levantamento achou:** valem as propostas do plano (D-982) — o guarda no Patch 34, as lojas pequenas e
+   arrumadas, as paredes na cor de cada povo até o pintor e a cal do forno da olaria; e as outras, pela história de cada povo.
+5. **O padrão sobe:** «a taverna atualmente é nota 10, mas ela em breve vai ser nota 7» — a taverna de hoje é o mínimo de cada prédio.
 
 ## 2. O pedido do dono
 
@@ -74,6 +77,16 @@ Em 24/11/2026, depois de jogar a taverna nova:
 
 **E a ordem do roteiro muda.** «A gente ia entrar nas estações e depois nos NPCs, mas acabou que eu tenho que fazer essa reformulação
 dos interiores antes.» Este plano é esse patch, o **I-2** (§11): depois do piloto da taverna, antes do calendário e do Patch 23.
+
+**A aprovação** (24/11/2026, depois de ler este plano):
+
+> «Eu defiro todas as decisões que você recomendou… cama para quem trabalha no palácio, cadeia maior com a cela de espera para quem
+> aguarda julgamento, tesouro do povo guardado no palácio como coisa de verdade, o linho dos egípcios, o algodão dos astecas, o estilo
+> clássico com a cara das primeiras cidades. E eu quero sim que tenha um mercado de escravos e a casa de prazer… porque hoje a gente
+> quer um jogo imersivo e realista.»
+
+> «Vamos fazer todos ficarem no mínimo igual à taverna. A taverna atualmente é nota 10, mas ela em breve vai ser nota 7, porque
+> comparado com os outros, eu quero que ela seja o mínimo, entendeu? Esse é o padrão de qualidade.»
 
 ## 3. Como estão hoje
 
@@ -152,7 +165,7 @@ B achou uns 30. A saída mais barata pode ser um tipo novo, um degrau novo ou um
 | a carpintaria, a cordoaria, a vidraria, a alfaiataria | os ofícios da oficina (32) | onda F: a oficina pelo ofício de quem trabalha nela (a decidir) |
 | o banco | o banqueiro | onda E: a mesa do cambista na feira |
 | o templo da cura, o moinho, a padaria, a queijaria, o lagar, o curtume, a estalagem da estrada, o correio, o circo, o estádio, a casa do carrasco, o mosteiro, o abrigo do passo | 28, 32, 34, 37, 38, 39, 42 | fora: cada um com o seu patch |
-| o mercado de gente, a casa de prazer | o pirata, o estivador | fora, a não ser que o dono peça |
+| o mercado de escravos, a casa de prazer | o pirata, o estivador; o dono (24/11/2026) | **onda E**, tipos novos (D-980, D-981) |
 
 ## 4. O padrão da taverna
 
@@ -310,7 +323,7 @@ algo que depende de um patch futuro. O apêndice (§12.1) traz cada fundação e
 | **B** | a cabana, a casa, o sobrado, a ínsula, o quarteirão, o barraco | o que o jogador mais vê (60% dos prédios) | 23 (As Vidas), 25, 28, 34 (o ladrão), 38 | GG |
 | **C** | a cadeia, o quartel, a torre, o cercado | o dono citou a prisão; as três prisões | 34 (o preso, o juiz, o carrasco), 33, 36 — e o guarda, sem patch | G–GG |
 | **D** | a doca e o cais, o armazém do porto, a alfândega, o estaleiro | o dono citou o porto; a doca é nota 0 | 35 (o estivador, o marinheiro, o itinerário), 36 (o pirata), 34 | GG |
-| **E** | o mercado, a feira, o armazém, o celeiro, o mercado clandestino | o mundo usa outros lugares | 37 (o mercador), 34 (o fiscal, o ladrão), 28 | G |
+| **E** | o mercado, a feira, o armazém, o celeiro, o mercado clandestino; o mercado de escravos e a casa de prazer (novos) | o mundo usa outros lugares; o dono pediu os dois tipos novos | 37 (o mercador), 34 (o fiscal, o ladrão, o guarda), 35 (a noite do estivador), 36 (o pirata), 28 | GG |
 | **F** | as oito oficinas | os piores interiores do jogo | 32 (a oficina), 28, 25 | G–GG |
 | **G** | o templo, a biblioteca, os banhos | já têm a vida; faltam o espaço e a cara | 38 (a fé, o saber, o passado) | G–GG |
 | **H** | o teatro, as seis maravilhas, a escola de gladiadores | as multidões; um tipo, seis programas | 33 (a arena), 39 (a arte), 38 | GG |
@@ -849,7 +862,7 @@ lugares do desenho do deus, não nas bancas da planta** (A). **O novo:** o feira
 lugar); a mesa do cambista; o lugar das carroças e dos bichos na beira (o caravaneiro, 37); a banca das especiarias de longe; num povo
 sem moeda, a troca na banca. **Como era:** as bancas de vime gregas e as barracas de Birka e de Hedeby (D, no mercado). **A vida e o
 corpo:** a feira da manhã, cada feirante na sua banca; o corpo anda entre elas e compra; o sol da manhã e o vozerio. A feira seria o
-lugar natural do mercado de gente, que fica fora. Parte do **G** do mercado.
+lugar da venda de gente onde o povo não tem o mercado de escravos de pé (D-980). Parte do **G** do mercado.
 
 #### O armazém
 
@@ -889,6 +902,69 @@ dos soldados do próprio povo (B). **O novo:** a frente que disfarça (uma loja 
 a porta dos fundos, o lugar do vigia que avisa, a oficina escondida do falsificador. **A casa pronta:** o contrabandista, o receptador e
 o falsificador (34); o guarda na batida. **A vida:** o que foi furtado do armazém fica no depósito escondido, pelo livro. **Em aberto:**
 tirar o tipo da lista dos postos de guarda; o lote de 4 m. Tamanho: **M–G**.
+
+#### O mercado de escravos (novo, D-980)
+
+**Hoje.** Não existe. O mundo já tem os cativos da guerra (`v.captive`: levados no saque, trabalham à força na cidade de quem os
+levou, fogem, voltam para casa na paz — `js/war.js`), mas ninguém os vende: são do povo que os levou, não de uma casa.
+
+**Como era** (o supervisor, das fontes conhecidas; a conferir na sonda da onda). O romano: os mercadores de gente no fórum, junto ao
+templo de Castor; quem estava à venda subia ao **estrado** (a *catasta*) com **uma tabuleta ao pescoço** que dizia a origem, a saúde e
+os defeitos — o édito dos edis obrigava a dizê-los —, e quem chegava de além-mar tinha **os pés marcados de giz**; os cativos da guerra
+eram vendidos pelo Estado **«sob a coroa»**, com uma coroa na cabeça; o imposto sobre cada venda. A alforria: a varinha diante do
+magistrado e **o barrete de feltro** que o liberto passava a usar. O grego: a venda no «círculo» da ágora; **Delos**, o grande mercado de
+gente do mar; a alforria como venda ao deus, gravada na pedra de Delfos. O asteca: o mercado de Azcapotzalco; a escravidão quase sempre
+por dívida ou pelo jogo, e por um tempo; **a gola de madeira** só para quem fugia; os filhos nasciam livres; e **quem fugia do mercado e
+alcançava o palácio ficava livre** — e quem o segurasse no caminho, sem ser o dono, virava escravo no lugar dele. O nórdico: os cativos
+das razias vendidos em Hedeby, em Birka e em Dublin; o liberto fazia **a cerveja da liberdade** para o antigo senhor. O egípcio: os
+cativos dados aos templos e às casas grandes; a venda, um contrato diante do escriba, com testemunhas. O clássico: a venda escrita numa
+tabuinha de barro, com testemunhas e o preço em prata; o corte de cabelo que marcava o escravo; a lei que limitava a escravidão por dívida
+a três anos; e **o rei novo que perdoava as dívidas** e soltava os devedores.
+
+**O novo interior** (proposta). Um pátio com o estrado à vista de quem compra; o cercado coberto onde quem será vendido espera, com a
+água e a palha; a mesa do mercador com a balança da prata, as tabuletas e o contrato; o lugar do pregoeiro; a porta guardada. O jeito de
+cada povo: o pórtico romano, o círculo grego, o canto do mercado asteca, o cercado do porto do norte.
+
+**A casa pronta para o ofício.** O mercador de gente e o pregoeiro (37); o escriba do contrato e o fiscal do imposto da venda (34); o
+guarda; o pirata que vende quem tomou no mar (36); quem é vendido — a condição, como a do galeote (`condicao-escravo-gale.md`); a família
+que vem resgatar.
+
+**A vida e o corpo.** Os dias de venda; quem é vendido tem nome, laços e memória, e as pessoas lembram quem vendeu; o resgate da família;
+a alforria de cada povo. **O corpo pode libertar alguém** — pagar o preço e soltar —; o que mais o corpo pode fazer ali fica para o
+contrato da onda, e nada premia a crueldade.
+
+**As coisas, a luz e o som.** O estrado, a tabuleta, a corrente do metal que o povo tem (pela forja, regra 161), o banco, o jarro da água,
+a balança; o pátio ao sol e o cercado na sombra; o pregão e o silêncio de quem espera.
+
+**Tamanho: G** (um tipo novo inteiro: a forma de cada povo, a planta, a regra do planejador, a vida da venda e da liberdade, as regras de
+conteúdo com a sua prova).
+
+#### A casa de prazer (nova, D-981)
+
+**Hoje.** Não existe. O plano do estivador a pede para a noite do porto (`planos/oficio-estivador.md`, E4).
+
+**Como era** (o supervisor, das fontes conhecidas; a conferir na sonda da onda). O romano: **o lupanar de Pompeia**, uma casa pequena de
+esquina num beco a leste do fórum — no térreo, um corredor com cinco cubículos de cortina e cama de alvenaria, a latrina debaixo da
+escada, o andar de cima com outra entrada; o dono da casa (o lenão); mais de cem rabiscos de fregueses nas paredes; o imposto que Calígula
+pôs sobre o ofício; e muitas das que trabalhavam ali eram escravizadas. O grego: as casas do porto; as heteras dos banquetes, que tocavam,
+cantavam e conversavam, eram outra coisa. Nos outros povos, a sonda da onda procura nas fontes; onde não houver casa, a noite deles é a
+da taverna e das festas, e a ficha diz por quê.
+
+**O novo interior** (proposta). O salão, que é o que se vê e se joga: a bebida pelo livro, a música, os dados, a mesa da dona com **o
+livro das dívidas**; a lamparina acesa à porta da rua; o corredor dos quartos de **portas e cortinas sempre fechadas**; o quarto da dona;
+a porta dos fundos.
+
+**A casa pronta para o ofício.** A dona ou o dono da casa (a alcoviteira, o lenão); quem trabalha na casa (adulto livre, D-981); o
+porteiro; o músico; os fregueses da noite — o estivador e o marinheiro (35); o guarda da batida e o fiscal (34); o ladrão do bêbado (34).
+
+**A vida e o corpo.** A noite; a dívida que prende e a saída que existe (pagar, ser ajudado, ir embora); a batida da guarda; a fama do
+bairro, a fofoca e a família que sabe (os boatos, os laços). **O corpo fica no salão**: bebe, conversa, joga — e pode pagar a dívida de
+alguém e tirá-lo de lá; nunca entra num quarto.
+
+**As coisas, a luz e o som.** O banco, os copos, as cortinas, o livro da dona, a lamparina da porta; o salão à meia-luz; a música e o
+riso do salão; dos quartos, nada.
+
+**Tamanho: M–G.**
 
 ### Onda F — as oficinas
 
@@ -1231,6 +1307,9 @@ patch do ofício.
 
 ## 10. As decisões
 
+*Todas aprovadas pelo dono em 24/11/2026, como recomendadas. As três do fim (D-980 a D-982) são da aprovação: os dois tipos novos que
+o dono pediu, com as regras de conteúdo, e as respostas às perguntas.*
+
 **D-970 — A ordem.** *Recomendação:* as fundações (as Fases 0 e 1, e a 2 junto com o palácio) e as ondas A a I (§7). *Por quê:* o
 palácio é o que o dono mais cobra; as casas são o que o jogador mais encontra, e o Patch 23 mora nelas; a cadeia e o porto o dono citou,
 e eles preparam os patches 34 a 36; o resto segue a frequência e os patches de ofício. *A alternativa:* as casas antes do palácio.
@@ -1271,19 +1350,43 @@ com esse lugar da história, sem colidir com o grego nem com o romano (D).
 como lavouras do mundo, antes da onda B ou com ela. *Por quê:* sem eles esses dois povos não tecem — sem tapete, sem tapeçaria, sem a
 roupa nem a vela que são deles. Nada vem do nada.
 
-**As questões em aberto, para o dono.**
+**D-980 — O mercado de escravos** (o dono, 24/11/2026: «quero sim… porque hoje a gente quer um jogo imersivo e realista»). Um tipo
+novo, na onda E (a ficha está no §8). As regras de conteúdo, que valem para todo o jogo:
+- **Cada pessoa escravizada tem a sua causa no mundo:** o cativo da guerra (`v.captive`, que já existe); e, quando os seus patches
+  chegarem, a pena da justiça (34), a dívida onde a lei do povo o permite, o pirata que vende quem tomou no mar (36). **Nunca a cara, a
+  cor nem o povo de alguém** (as regras 194 e 210): a instituição de cada povo diz se ele vende gente, nunca a pessoa.
+- **Ninguém com menos de 18 anos vai ao estrado nem é vendido**; a criança fica com a família. É uma regra do mundo, com o seu
+  verificador e a sua prova.
+- **A escravidão aparece como foi — uma violência e uma perda —, nunca como enfeite nem como prêmio** (o cuidado do
+  `condicao-escravo-gale.md`): quem é vendido tem nome, laços e memória, e as pessoas lembram quem vendeu.
+- **O caminho da liberdade no centro:** o resgate, a alforria de cada povo, a paz que devolve os cativos (`G.War.homecoming`). **O corpo
+  pode libertar alguém.**
+- O dinheiro vai pelo livro (`G.Depot`), como tudo; **uma pessoa nunca é um bem no estoque de um povo** — o que muda de mãos é o direito
+  sobre ela, numa marca que só um arquivo escreve (a regra do guard vem com a onda).
 
-1. **O mercado de gente e a casa de prazer**: fora desta reforma, a não ser que o dono peça.
-2. **A alternativa de ordem**: as casas antes do palácio.
-3. **O guarda** — o «delegado» e o «policial» — não tem patch no roteiro, e o pedido do dono sobre a prisão cai nele. *Proposta:* o Patch
-   34 (a sombra e a lei), com o juiz e o carrasco; a estrutura física fica pronta na onda C.
-4. **Quem senta no paço de uma cidade que não é a capital?** Hoje ele fica vazio; o governador é do Patch 40.
-5. **As lojas de 4 m** (a ourivesaria, o açougue, o mercado clandestino, a casa dos mergulhadores, a boca da mina) crescem? *Proposta:*
-   ficam pequenas e arrumadas, como as casas, com o andar de cima onde couber; a coletoria cresce (D-973).
-6. **Os fiéis no templo**: dentro, como hoje, ou no pátio, diante do altar, como era?
-7. **Os livros da biblioteca como coisas do mundo**: o copista gasta o material e faz o livro, que fica na estante.
-8. **A cal e os pigmentos**: sem eles, os afrescos e o reboco branco não têm causa (a proposta está no §6.3).
-9. **A escola de gladiadores** só no romano?
+**D-981 — A casa de prazer** (o dono, 24/11/2026). Um tipo novo, na onda E, junto com a noite do porto da onda D. As regras de conteúdo:
+- **Nada explícito:** o que acontece nos quartos nunca se mostra nem se joga — portas e cortinas fechadas, nenhuma nudez, nenhum gesto,
+  nenhum som; o corpo do deus fica no salão, nunca entra num quarto.
+- **Só adultos:** ninguém com menos de 18 anos trabalha na casa nem entra nela. É uma regra do mundo, com o seu verificador e a sua prova.
+- **A realidade social, com causa:** a dona ou o dono da casa, a dívida que prende, o preço pelo livro, a batida da guarda (34), a fama, a
+  fofoca, a família que sabe. **Quem trabalha na casa é adulto livre**, com a sua causa no mundo (a viuvez, a fome da família, a dívida), e
+  tem a saída: pagar a dívida, ser ajudado, ir embora — e **o corpo pode pagar a dívida de alguém e tirá-lo de lá**. Ninguém escravizado
+  trabalha na casa de prazer: aqui o jogo se afasta da história de propósito (em Pompeia, muitas eram escravizadas), por cuidado.
+
+**D-982 — As respostas às perguntas** (o dono deferiu as recomendações):
+1. **A ordem:** o palácio primeiro (D-970).
+2. **O guarda** (o «delegado» e o «policial»): o Patch 34 (a sombra e a lei), com o juiz e o carrasco; a estrutura física fica pronta na
+   onda C.
+3. **O paço de uma cidade que não é a capital:** a estrutura fica pronta na onda A (a mesa, a cadeira, o arquivo); quem senta nela é o
+   governador do Patch 40.
+4. **As lojas de 4 m** ficam pequenas e arrumadas, como as casas, com o andar de cima onde couber; a coletoria cresce (D-973).
+5. **Os fiéis no templo:** pela história de cada povo — no grego e no romano, diante do altar no pátio, e só o sacerdote na cela do deus;
+   no egípcio, o povo no pátio e os sacerdotes no santuário; o contrato da onda G confere os outros pelas fontes.
+6. **Os livros da biblioteca viram coisas do mundo:** o copista gasta o material (o papiro, o pergaminho, a tabuinha, a tinta) e o livro
+   fica na estante, pelo livro (onda G).
+7. **A cal e os pigmentos:** as paredes ficam na cor de cada povo; os afrescos vêm com o pintor (Patch 39); a cal sai do forno da olaria,
+   na onda F.
+8. **A escola de gladiadores:** só no romano, como era; os outros povos lutam na arena pelo que têm (o contrato da onda H).
 
 ## 11. O roteiro atualizado
 
@@ -1292,11 +1395,11 @@ C**. A linha a acrescentar:
 
 | Patch | O quê | Depende de | Abre | Os planos |
 |-----|------------|-----|------|-----|
-| **I-2 — Os interiores de todas as edificações** (depois do piloto da taverna, antes do C e do 23; a aprovar, 24/11/2026) | **as fundações** (a Fase 0, as bases que não mudam o que se vê; a Fase 1, o mundo pela porta, com uma só geração dos mundos prontos; a Fase 2, os prédios grandes, junto com o palácio) e **nove ondas**: A, o palácio e a casa rica; B, as casas do povo; C, a lei (a cadeia, o quartel, a torre, o cercado); D, o porto (a doca e o cais, o armazém do porto, a alfândega e o estaleiro novos); E, o comércio; F, as oficinas; G, a fé e o saber; H, o espetáculo (com a escola de gladiadores nova); I, os que ainda não têm dentro; **todo interior com os lugares de ofício prontos** (D-971) | I (o piloto da taverna) | a corte, a casa, a cadeia, o porto, a oficina, o templo, a arena — a estrutura física dos patches 23 a 40 | [`interiores-3.md`](interiores-3.md) |
+| **I-2 — Os interiores de todas as edificações** (depois do piloto da taverna, antes do C e do 23; aprovado, 24/11/2026) | **as fundações** (a Fase 0, as bases que não mudam o que se vê; a Fase 1, o mundo pela porta, com uma só geração dos mundos prontos; a Fase 2, os prédios grandes, junto com o palácio) e **nove ondas**: A, o palácio e a casa rica; B, as casas do povo; C, a lei (a cadeia, o quartel, a torre, o cercado); D, o porto (a doca e o cais, o armazém do porto, a alfândega e o estaleiro novos); E, o comércio (com o mercado de escravos e a casa de prazer novos); F, as oficinas; G, a fé e o saber; H, o espetáculo (com a escola de gladiadores nova); I, os que ainda não têm dentro; **todo interior com os lugares de ofício prontos** (D-971) | I (o piloto da taverna) | a corte, a casa, a cadeia, o porto, a oficina, o templo, a arena — a estrutura física dos patches 23 a 40 | [`interiores-3.md`](interiores-3.md) |
 
 **E dois ajustes, para ficar coerente** (propostas): na linha do **I**, o trecho «Depois, por ondas: …» passa para o I-2, e o I fica só
 com o piloto da taverna, já feito; no índice do `planos/README.md`, a linha «antes de tudo» ganha a do I-2: «**Os interiores 3** —
-todas as edificações no padrão da taverna, por ondas (a aprovar, 24/11/2026)».
+todas as edificações no padrão da taverna, por ondas (aprovado, 24/11/2026)».
 
 ## 12. Apêndice técnico
 
@@ -1385,13 +1488,14 @@ todas as edificações no padrão da taverna, por ondas (a aprovar, 24/11/2026)�
 
 ### 12.4 Os números reservados
 
-- **As decisões deste plano:** D-970 a D-979.
-- **As frentes deste patch:** as decisões a partir da **D-980**, os defeitos a partir do **L-2230**, os limites de prova a partir do
+- **As decisões deste plano:** D-970 a D-979; as da aprovação, D-980 a D-982 (o bloco do supervisor vai até a D-989: o que ele decidir ao
+  juntar as frentes).
+- **As frentes deste patch:** as decisões a partir da **D-990**, os defeitos a partir do **L-2230**, os limites de prova a partir do
   **T-2130** e as regras do guard a partir da **480** (a frente N da taverna reservou até a D-969, o L-2229 e o T-2129; o guard vai até a
   479).
 - **A regra dos blocos** (C): cada frente recebe um bloco de 10 de cada, na ordem em que o contrato da onda a abre — a primeira frente da
-  Fase 0 fica com D-980 a D-989, L-2230 a L-2239, T-2130 a T-2139 e as regras 480 a 489; a segunda, com os dez seguintes; e assim por
-  diante. O `qa/AUDIT.md` ganha uma seção nova para este patch, com uma subseção por frente.
+  Fase 0 fica com D-990 a D-999, L-2230 a L-2239, T-2130 a T-2139 e as regras 480 a 489; a segunda, com os dez seguintes (D-1000…); e
+  assim por diante. O `qa/AUDIT.md` ganha uma seção nova para este patch, com uma subseção por frente.
 
 ### 12.5 Onde estão os scripts de medida
 
