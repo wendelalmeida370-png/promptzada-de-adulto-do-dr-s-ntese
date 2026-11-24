@@ -170,9 +170,41 @@
     gorjeta: { s: 'gorjeta', q: 'contato', em: 0.4, v: 0.5, alc: 0.5, fam: 'noite' },
     expulsar: { s: 'expulsa', q: 'curso', cada: 1.8, v: 0.65, alc: 1.1 },
     fechar: { s: 'fechar', q: 'contato', em: 0.5, v: 0.55, alc: 0.8 },
+    // (the fourth wave — T8, D-890 to D-899 —: the context, the drink, the trades, the games. fim: the sound when the act ends — the arm
+    // slammed on the table, the last cup put down; porta: the act is at a door, and the door's state goes with it — the crash when it yields)
+    trancar: { s: 'tranca', q: 'contato', em: 0.6, v: 0.6, alc: 0.8 },
+    abrigar: { s: 'chamado', q: 'curso', cada: 2.4, v: 0.6, alc: 1.2 },
+    esconder: { s: 'respiro', q: 'curso', cada: 3.2, v: 0.2, alc: 0.18 },
+    arrombar: { s: 'arrombar', q: 'curso', cada: 1.5, v: 0.9, alc: 1.3, porta: 1 },
+    discurso: { s: 'discurso', q: 'curso', cada: 2.8, v: 0.75, alc: 1.1 },
+    'jogar-bebida': { s: 'jogarBebida', q: 'contato', em: 0.45, v: 0.65, alc: 0.8, mat: 1 },
+    molhado: { s: 'molhado', q: 'contato', em: 0.25, v: 0.55, alc: 0.7 },
+    cantoria: { s: 'cantoria', q: 'curso', cada: 2.4, v: 0.65, alc: 1 },
+    desmaio: { s: 'desmaio', q: 'contato', em: 0.55, v: 0.7, alc: 0.8, piso: 1 },
+    arrastar: { s: 'arrastar', q: 'curso', cada: 1.3, v: 0.45, alc: 0.6, piso: 1 },
+    arrastado: still('o desmaiado vai calado: o chão é de quem arrasta'),
+    'mexer-cuba': { s: 'cuba', q: 'curso', cada: 1.5, v: 0.45, alc: 0.6, fam: 'oficio' },
+    cozinhar: { s: 'cook', q: 'curso', cada: 1.7, v: 0.35, alc: 0.5 },
+    'jogo-dados': { s: 'dados', q: 'curso', cada: 3, v: 0.5, alc: 0.6, fam: 'noite', mat: 1 },
+    'jogo-cartas': { s: 'cartas', q: 'curso', cada: 3.6, v: 0.38, alc: 0.5, fam: 'noite', mat: 1 },
+    // (the supervisor's, D-890: the arm wrestle — the strain, and the arm slammed on the table at its end —, the cheat — next to nothing:
+    // a slide of the hand; caught, the uproar —, and the drinking match of a feast night — the draughts one after another, the last cup
+    // slammed down —, the crowd that cheers it on growing with every one who joins)
+    'queda-de-braco': { s: 'bracoForca', q: 'curso', cada: 2.2, v: 0.55, alc: 0.8, fam: 'noite', fim: 'bracoBate' },
+    trapaca: { s: 'trapaca', q: 'curso', cada: 4, v: 0.12, alc: 0.15 },
+    'trapaca-pega': { s: 'confusao', q: 'contato', em: 0.2, v: 0.75, alc: 1.1 },
+    'concurso-bebida': { s: 'goles', q: 'curso', cada: 1.6, v: 0.55, alc: 0.8, mat: 1, fim: 'canecaBate' },
+    torcer: { s: 'torcida', q: 'curso', cada: 1.8, v: 0.5, alc: 1 },
   };
   A.TAVERNA_ATO = TAVERNA_ATO;
   for (const k in TAVERNA_ATO) if (!A.ATO[k]) A.ATO[k] = TAVERNA_ATO[k];
+  // the acts of the drunk (T2, D-839) the tables above lack: the spit of the quarrelsome drunk (the others — the drink thrown, the wet one,
+  // the song alone, the faint, the drag — are the sounds of P9's, T8, above); these only fill what is missing
+  const EBRIO_ATO = {
+    spit: still('o cuspe não se ouve de longe'),
+  };
+  A.EBRIO_ATO = EBRIO_ATO;
+  for (const k in EBRIO_ATO) if (!A.ATO[k]) A.ATO[k] = EBRIO_ATO[k];
   // a beast's voice (the moment of it is the ear's own chance: `cada` seconds between two, about); `dia` / `noite`: only then
   A.BICHO = {
     cao: { s: 'bark', cada: 9, v: 0.6, alc: 1.3 }, galinha: { s: 'cluck', cada: 7, v: 0.4, alc: 0.7, dia: 1 }, pombo: { s: 'coo', cada: 9, v: 0.25, alc: 0.5, dia: 1 },
@@ -442,11 +474,14 @@
   A.falando = v => !v.sleeping && (A.FALA.has(v.act) || !!(v.task && v.task.pose === 'sittalk'));
   // (the tongue is of who talks — the people most of them are of —, never the building's style: an Egyptian-built tavern in a town of
   // the north talks in the north's voice)
+  // (and, of the fourth wave: the mourners in the room — luto, the share of them —, and a feast in it — the hall fuller and louder:
+  // festa —, D-890, D-892)
   A.vozesDe = function (b, quem) {
-    let fala = 0, beb = 0; const At = G.Atmos; const civ = {}; let povo = null, pn = 0;
-    for (const v of quem || NADA) if (v.inside === b.id && A.falando(v)) { fala++; beb += At && At.drunk ? At.drunk(v) : 0; const c = (G.Fac && G.Fac.ofV ? (G.Fac.ofV(v) || NONE).civ : null) || 'classico'; civ[c] = (civ[c] || 0) + 1; if (civ[c] > pn || (civ[c] === pn && c < povo)) { pn = civ[c]; povo = c; } }
-    const bebado = fala ? r3(beb / fala) : 0;
-    return { fala, bebado, forca: r3(fala * (1 + 0.6 * bebado)), povo: povo || estilo(b) };
+    let fala = 0, beb = 0, dor = 0, n = 0; const civ = {}; let povo = null, pn = 0;
+    for (const v of quem || NADA) { if (v.inside !== b.id || v.sleeping) continue; n++; if (LUTO[v.act]) dor++;
+      if (A.falando(v)) { fala++; beb += Math.min(1, A.ebrioDe(v)); const c = (G.Fac && G.Fac.ofV ? (G.Fac.ofV(v) || NONE).civ : null) || 'classico'; civ[c] = (civ[c] || 0) + 1; if (civ[c] > pn || (civ[c] === pn && c < povo)) { pn = civ[c]; povo = c; } } }
+    const bebado = fala ? r3(beb / fala) : 0; const festa = A.festaDe(b) ? 1 : 0;
+    return { fala, bebado, forca: r3(fala * (1 + 0.6 * bebado) * (festa ? 1.25 : 1)), povo: povo || estilo(b), luto: n ? r3(dor / n) : 0, festa };
   };
   A.ROOM_R = 6; // (tiles: as far as a room's own sounds carry out of it — the tavern is heard near, from the street and from the god's eye)
   // the pulse of a people's music (the meter and the pace of its dances: the Greek's seven of the kalamatianós, the north's three, the
@@ -464,8 +499,33 @@
     const I = G.Inv, It = G.Itens; const k = I && I.held ? I.held(v).mao : null; const d = k && It && It.def ? It.def(k) : null;
     return d && (d.kind === 'lira' || d.kind === 'tambor') ? d.kind : null;
   };
-  // the material of the cup in the hand (the kit's: the clay of a people that had the potter's ware, else turned wood; a metal one)
-  const matDe = v => { const I = G.Inv, It = G.Itens; const k = I && I.held ? I.held(v).mao : null; const d = k && It && It.def ? It.def(k) : null; const m = d && d.mat ? d.mat : k ? String(k).split('.')[1] : null; return m === 'barro' || m === 'madeira' ? m : m ? 'metal' : 'madeira'; };
+  // the thing in the hand — { kind, mat } — and its material as it sounds: the cup's (the kit's: the clay of a people that had the potter's
+  // ware, else turned wood; a metal one), the dice's (bone of the slaughter or the hunt, or wood: T4), the tablets of a people's cards
+  // (papyrus, amate, wood, wax, clay: T5)
+  A.coisaDe = v => { const I = G.Inv, It = G.Itens; const k = I && I.held ? I.held(v).mao : null; const d = k && It && It.def ? It.def(k) : null; return k ? { kind: (d && d.kind) || String(k).split('.')[0], mat: (d && d.mat) || String(k).split('.')[1] || null } : null; };
+  const JOGO = { dados: { osso: 'osso', madeira: 'madeira' }, baralho: { papiro: 'papiro', amate: 'papiro', madeira: 'madeira', cera: 'cera', barro: 'barro' } };
+  const matDe = v => { const c = A.coisaDe(v); const m = c && c.mat; if (c && JOGO[c.kind]) return JOGO[c.kind][m] || 'madeira'; return m === 'barro' || m === 'madeira' ? m : m ? 'metal' : 'madeira'; };
+  // how drunk one is (0 to about 1,5): the drink the T2 counts (v.ebrio), or the tavern's own of before (G.Atmos.drunk) — the slurred
+  // voice from 0,5, the hiccup from 0,8 (D-891)
+  A.ebrioDe = v => Math.max(Number.isFinite(v && v.ebrio) ? v.ebrio : 0, G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
+  A.SOLUCO = 0.8;
+  // a feast in a building (T1's b.festa: the reason, the day it ends, the bards): on while it is there and its day not past (D-890)
+  A.festaDe = b => { const f = b && b.festa; return f && !(Number.isFinite(f.ate) && f.ate < G.S.day) ? f : null; };
+  // (the acts of a crowd: many in a room cheering are one cheer of the room, as loud as how many — the viva, the crowd at a match)
+  A.CORO = { cheer: 'viva', joy: 'viva', torcer: 'torcida' };
+  // (the mourners of a room: their grief hushes the talk and the laughter — «o luto calado», D-892)
+  const LUTO = { mourn: 1, weep: 1, weepk: 1, sad: 1 };
+  // the door an act at a door is at (the one forcing it): the building of its errand, else the plan's way in within a tile and a half
+  const portaDe = v => {
+    const In = G.Interiors, S = G.S; if (!In || !In.ready) return null; const t = v.task;
+    const cands = []; if (t && Number.isInteger(t.id) && S.buildings.has(t.id)) cands.push(S.buildings.get(t.id));
+    const X = Math.floor(v.x), Y = Math.floor(v.y); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const W = G.W; if (!W.inb(X + dx, Y + dy)) continue; const id = S.occ[W.idx(X + dx, Y + dy)]; const b = id ? S.buildings.get(id) : null; if (b && !cands.includes(b)) cands.push(b); }
+    // (the errand's door within three tiles; else the nearest way in within a tile and a half)
+    let best = null, bd = 1e9;
+    for (const b of cands) { if (!b.ip || !In.ready(b)) continue; const P = In.plan(b); const e = P && P.entrance; if (!e || !(e.door >= 0)) continue; const ex = b.x + e.x / TILE, ey = b.y + e.z / TILE; const d = Math.hypot(ex - v.x, ey - v.y);
+      const mine = !!(t && t.id === b.id && d < 3); if (mine || (d < 1.5 && d < bd)) { bd = mine ? -1 : d; best = { b, e, ex, ey }; if (mine) break; } }
+    if (!best) return null; const st = In.doorState(best.b, best.e.door); return { b: best.b.id, door: best.e.door, x: best.ex, y: best.ey, state: st ? st.state : 'fechada' };
+  };
   // the rain on a building's roof: the sky's, or a cloud's over it (as the ear has it: audio.js)
   const chuvaEm = (x, y) => { const S = G.S; const N = G.Nature; return r3(Math.max((S.weather && S.weather.rain) || 0, N && N.rainAt ? N.rainAt(x, y) * 0.8 : 0)); };
   // (how loud each fire of a plan crackles: the long fire of the north's hall, the hearth, a stove's covered fire)
@@ -493,15 +553,27 @@
     const push = (o, h, L) => { o.d = h.d; o.gain = r3(h.gain * L.v); o.pan = h.pan; o.muf = h.muf; if (h.sala) o.sala = h.sala; if (o.gain >= A.MIN) all.push(o); return o.gain >= A.MIN; };
     // (who is awake inside each building, and who is passing a way in: the rooms' own counts, P9)
     const dentro = new Map(), passam = []; const In = G.Interiors; const At = G.Atmos;
-    // (the musician a tavern has playing now: the pulse its claps, its dance and its song go to)
-    const musicoEm = bid => { const T = G.Taverna; const bb = T && T.dia ? S.buildings.get(bid) : null; const op = bb ? T.dia(bb) : null; const m = op && op.data && op.data.mus ? S.villagers.get(op.data.mus) : null; return m && m.act === 'play' && m.inside === bid ? m : null; };
+    // (who plays in each building now — the musician of the night, the bards of a feast — is one band (D-890): its order the feast's bards
+    // first, then the musician of the day, then by id; its leader the first, whose pulse the band and the room's claps, dance and song go to)
+    const banda = new Map();
+    for (const v of S.villagers.values()) if (v.act === 'play' && v.inside > 0 && !v.sleeping && !v.aboard) { let L0 = banda.get(v.inside); if (!L0) banda.set(v.inside, L0 = []); L0.push(v); }
+    for (const [bid, L0] of banda) { const bb = S.buildings.get(bid); const f = A.festaDe(bb); const B = (f && f.bardos) || NADA; const T = G.Taverna; const op = bb && T && T.dia ? T.dia(bb) : null; const md = op && op.data ? op.data.mus : 0;
+      const key = v => (B.includes(v.id) ? B.indexOf(v.id) : 1000 + (v.id === md ? 0 : 1)); L0.sort((a, c) => key(a) - key(c) || a.id - c.id); }
+    const musicoEm = bid => (banda.get(bid) || NADA)[0] || null;
+    // (the crowds of the rooms: who cheers there — the viva after a speech, the crowd at a match —, one cheer of each room, P9 D-893)
+    const coros = new Map();
     // ---- the people: a gesture, an act
     for (const v of S.villagers.values()) {
       if (v.aboard || v.held || v.air || v.sleeping || !!v.ug !== !!ear.ug) continue;
       if (v.inside > 0) { let L0 = dentro.get(v.inside); if (!L0) dentro.set(v.inside, L0 = []); L0.push(v); if (In && In.passage && In.passage(v)) passam.push(v); }
       const r = v.act ? A.linhaDe(v) : null; let L = r && r.linha && r.linha.s ? r.linha : null;
-      // (the drunk at a table talks louder, slurred, and laughs at his own jokes: the drink's — G.Atmos.drunk —, never the air's)
-      if (L && L.s === 'voz' && At && At.drunk && At.drunk(v) >= 0.5) L = Object.assign({}, L, { s: 'vozBebado', v: Math.min(1, L.v * 1.25) });
+      // (the drunk at a table talks louder, slurred, and laughs at his own jokes: the drink's — v.ebrio, G.Atmos.drunk: A.ebrioDe —, never
+      // the air's; and from 0,8 the hiccup, between his words, D-891)
+      const ebr = A.ebrioDe(v);
+      if (L && L.s === 'voz' && ebr >= 0.5) L = Object.assign({}, L, { s: 'vozBebado', v: Math.min(1, L.v * 1.25) });
+      if (ebr >= A.SOLUCO && !ear.ug) { const [hx, hy] = A.lugarDe(v, ear); const hs = shut(v.inside); const dd = (hx - ear.x) * (hx - ear.x) + (hy - ear.y) * (hy - ear.y);
+        if (dd < OCIO_R2 || (ear.dentro && hs === ear.dentro)) push({ k: 'h' + v.id, tipo: 'soluco', s: 'hiccup', g: null, ato: null, de: { v: v.id, op: 0, b: v.inside || 0 }, x: r3(hx), y: r3(hy), q: 'curso', cada: r3(3.5 + 4 * G.hash(Math.imul(v.id | 0, 37) + 11)), fase: 0, contato: 0, fam: null, notas: null, ebrio: r3(ebr),
+          tom: r3((v.g === 'f' ? 1.5 : 1) * (0.88 + 0.24 * G.hash(v.id))) }, ear.dentro && hs === ear.dentro ? A.perto(ear, hx, hy, 0.3) : A.hear(ear, hx, hy, hs, 0.3), { v: 0.35 }); }
       const fam = A.famDe(v, r); const mine = !!(fam && q && handsQ(v) === q);
       if (mine) count[fam] = (count[fam] || 0) + 1;
       const dx = v.x - ear.x, dy = v.y - ear.y;
@@ -519,16 +591,33 @@
       // (and from outside a shut building, one inside carries only as far as a room's own sounds do: A.ROOM_R — L-1963)
       const h = ear.dentro && sin === ear.dentro ? A.perto(ear, px, py, L.alc) : A.hear(ear, px, py, sin, sin ? Math.min(L.alc, A.ROOM_R / ear.r) : L.alc);
       const o = { k: 'v' + v.id, tipo: r.tipo, s: L.s, g: r.g, ato: r.ato, de: { v: v.id, op: (v.task && Number.isInteger(v.task.op) && v.task.op) || 0, b: v.inside || 0 }, x: r3(px), y: r3(py), q: L.q, cada: L.cada || 0,
-        fase: r3(v.actT || 0), contato: r.g ? G.Act.ANIM[r.g].contact : L.em || 0, fam, notas: L.s === 'lute' ? povo(v).notas : null, tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))),
+        fase: r3(v.actT || 0), contato: r.g ? G.Act.ANIM[r.g].contact : L.em || 0, fam, notas: L.s === 'lute' || L.s === 'cantoria' ? povo(v).notas : null, tom: r3((v.g === 'f' ? 1.5 : 1) * (v.age < 14 ? 1.4 : 1) * (0.88 + 0.24 * G.hash(v.id))),
         povo: (G.Fac && G.Fac.ofV ? (G.Fac.ofV(v) || NONE).civ : null) || 'classico' };
       // (P9: the cup's material in the hand; the floor under the feet; the music of who plays — the instrument in the hand, or the voice —
       // and its pulse; and the room's pulse for who claps, dances or sings along with it)
       if (L.mat) o.mat = matDe(v);
       if (L.piso && v.inside > 0) { const bb = S.buildings.get(v.inside); o.piso = bb && bb.ip ? A.PASSO[A.chaoDe(bb, plv)] || 'terra' : 'terra'; }
-      if (r.g === 'tocar') { const ins = A.instrumentoDe(v); o.s = ins || 'canto'; o.musica = A.compasso(v); }
+      // (the band: each player's part — the first the tune, the second its harmony, the third the low string —, on the leader's pulse)
+      if (r.g === 'tocar') { const ins = A.instrumentoDe(v); o.s = ins || 'canto'; const B = banda.get(v.inside) || [v]; o.musica = A.compasso(B[0] || v); o.banda = { n: B.length, papel: Math.max(0, B.indexOf(v)) }; }
       if (L.compasso && v.inside > 0) { const m = musicoEm(v.inside); if (m) o.ritmo = A.compasso(m); }
+      // (the fourth wave: the door being forced and its state — the crash when it yields; the vat boiling under the paddle; the sound at
+      // an act's end; how drunk the one is — the song out of tune, the throw)
+      if (L.porta) { const pd = portaDe(v); if (pd) { o.porta = pd.state; o.alvo = pd.b; } }
+      if (L.s === 'cuba' && v.inside > 0 && G.Oficio && G.Oficio.batches) { const bb = S.buildings.get(v.inside); o.ferve = bb && G.Oficio.batches(bb).some(op => { const st = G.Oficio.stage(op); return st && st.kind === 'fogo' && op.data && op.data.calor > 0; }) ? 1 : 0; }
+      if (L.fim) o.fim = L.fim;
+      if (ebr > 0) o.ebrio = r3(ebr);
+      // (one of a crowd in a room: kept for the room's cheer — counted below, the one alone as himself)
+      if (A.CORO[r.ato] && v.inside > 0) { const kc = v.inside + ':' + A.CORO[r.ato]; let C = coros.get(kc); if (!C) coros.set(kc, C = { b: v.inside, s: A.CORO[r.ato], quem: [] }); C.quem.push({ v, o, h, L, mine, fam }); continue; }
       // (too far to tell apart, but of this quarter's work: one of the bed's own far voices — the nearest three of each life)
       if (!push(o, h, L) && mine) { const F = far[fam] || (far[fam] = []); F.push(o); }
+    }
+    // ---- the crowds of the rooms (D-893): two or more cheering in a room are its viva — as loud as how many, from among them, with the cups
+    // of who holds one —; one alone is himself
+    for (const C of coros.values()) {
+      if (C.quem.length < 2) { const e = C.quem[0]; if (!push(e.o, e.h, e.L) && e.mine) { const F = far[e.fam] || (far[e.fam] = []); F.push(e.o); } continue; }
+      const Q = C.quem.slice().sort((a, c) => a.v.id - c.v.id); const n = Q.length; let x = 0, y = 0, cups = 0; for (const e of Q) { x += e.o.x; y += e.o.y; if (G.Inv && G.Inv.held) { const c = A.coisaDe(e.v); if (c && c.kind === 'caneca') cups++; } } x /= n; y /= n;
+      const e0 = Q[0]; const sin = shut(C.b); const hv = ear.dentro && sin === ear.dentro ? A.perto(ear, x, y, 1.2) : A.hear(ear, x, y, sin, sin ? A.ROOM_R / ear.r : 1.2);
+      push({ k: 'c' + C.b + ':' + C.s, tipo: 'coro', s: C.s, g: null, ato: e0.o.ato, de: { v: e0.v.id, b: C.b }, x: r3(x), y: r3(y), q: 'curso', cada: C.s === 'torcida' ? 1.6 : 2.2, fase: 0, contato: 0, fam: 'noite', n, canecas: cups, quem: Q.map(e => e.v.id), povo: e0.o.povo, tom: 1 }, hv, { v: Math.min(0.9, 0.35 + 0.08 * n) });
     }
     // ---- the buildings at work: a room of people at their tables, a kiln or a furnace alight
     const acts = G.Act && G.Act.all ? G.Act.all() : [];
@@ -538,11 +627,12 @@
       // (the talk of a tavern's room, P9 — D-780: who is awake in it and talking now, louder with the drink, in the timbre of its people;
       // nobody talking, nothing. n: who is at its tables)
       if (op.def === 'taverna') { n = Object.keys((op.data && op.data.mesa) || NONE).length; V = A.vozesDe(b, dentro.get(b.id)); if (V.fala >= 2) L = { s: 'murmur', q: 'leito', cada: Math.max(0.6, 2.4 - V.fala * 0.25), v: Math.min(0.75, 0.14 + 0.06 * V.forca), alc: A.ROOM_R / ear.r }; }
-      else if (op.def === 'oficio') { const s = G.Oficio && G.Oficio.stage ? G.Oficio.stage(op) : null; if (s && s.kind === 'fogo' && op.data.calor > 0) L = { s: 'fornalha', q: 'curso', cada: 1.1, v: 0.45, alc: 0.8 }; }
+      // (a batch at its fire: in a kiln, the roar; in a tavern, the vat on the fire boiling — the brew of the T3, D-894)
+      else if (op.def === 'oficio') { const s = G.Oficio && G.Oficio.stage ? G.Oficio.stage(op) : null; if (s && s.kind === 'fogo' && op.data.calor > 0) L = b.type === 'taverna' ? { s: 'fervura', q: 'curso', cada: 1.3, v: 0.4, alc: 0.5 } : { s: 'fornalha', q: 'curso', cada: 1.1, v: 0.45, alc: 0.8 }; }
       else if (op.def === 'termas') { if (op.data && op.data.calor > 0) L = { s: 'fornalha', q: 'curso', cada: 1.4, v: 0.3, alc: 0.6 }; }
       if (!L) continue;
       const o = { k: 'b' + b.id + ':' + op.def, tipo: 'predio', s: L.s, g: null, ato: null, de: { b: b.id, op: op.id }, x: r3(bx), y: r3(by), q: L.q, cada: L.cada, fase: 0, contato: 0, fam: FAM_DEF[op.def] || null, n };
-      if (V) { o.fala = V.fala; o.bebado = V.bebado; o.forca = V.forca; o.povo = V.povo; }
+      if (V) { o.fala = V.fala; o.bebado = V.bebado; o.forca = V.forca; o.povo = V.povo; o.luto = V.luto; o.festa = V.festa; }
       const hb = A.hear(ear, bx, by, shut(b.id), L.alc); if (ear.dentro && ear.dentro === shut(b.id)) hb.sala = ear.dentro;
       push(o, hb, L);
     }
@@ -569,7 +659,8 @@
           // (an old roof no one cares for lets the rain in: a drip — G.Atmos.wear, the years and the care of the quarter)
           const wr = At && At.wear ? At.wear(eb) : null; const got = !!(wr && wr.ageLv >= 3 && wr.care === 0 && rain > 0.4);
           sala.chuva = rain;
-          push({ k: 'c' + eb.id, tipo: 'chuva', s: 'chuvaTelhado', g: null, ato: null, de: { b: eb.id }, x: r3(ex), y: r3(ey), q: 'leito', cada: 0.3, fase: 0, contato: 0, fam: null, telhado: tel, chuva: rain, goteira: got ? 1 : 0, eco: E ? E.h : 3 }, { d: 0, gain: 1, pan: 0, muf: 0, sala: eb.id }, { v: G.clamp(0.25 + 0.6 * rain, 0, 0.85) });
+          push({ k: 'c' + eb.id, tipo: 'chuva', s: 'chuvaTelhado', g: null, ato: null, de: { b: eb.id }, x: r3(ex), y: r3(ey), q: 'leito', cada: 0.3, fase: 0, contato: 0, fam: null, telhado: tel, chuva: rain, goteira: got ? 1 : 0, eco: E ? E.h : 3,
+            tempestade: S.weather && S.weather.storm > 0 ? 1 : 0, vento: r3((S.weather && S.weather.windS) || 0) }, { d: 0, gain: 1, pan: 0, muf: 0, sala: eb.id }, { v: G.clamp(0.25 + 0.6 * rain, 0, 0.85) });
         }
       }
       // the doors someone passes (one source a door: who passes, how many), and the feet of who passes inside, on the plan's floor

@@ -51,6 +51,9 @@
     restock: MOVE, riot: 'ato-motim', riotguard: 'posto', ronda: 'posto', sair: MOVE, sell: MOVE, shelter: MOVE, shop: MOVE, slaughter: MOVE, social: MOVE,
     steal: MOVE, talk: MOVE, tavern: MOVE, tavoficio: MOVE, taxes: MOVE, teatro: MOVE, tell: MOVE, tend: MOVE, termas: MOVE, trade: MOVE, tribute: MOVE,
     vinho: MOVE, visit: MOVE, wander: MOVE, water: MOVE,
+    // (T2, the drink: out where one fell, limp in the hands of who drags one, dragging — the act the world gives says the pose: desmaio,
+    // arrastado, arrastar)
+    desmaio: MOVE, arrastado: MOVE, arrastar: MOVE,
   };
   // the errand's own pace on the move: the children's chase is a run, never a walk (the world's «run» is the act's: the flight)
   const RUN_OF = { play: t => t.st === 2 && !!t.chase };

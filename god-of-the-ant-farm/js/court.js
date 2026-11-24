@@ -328,7 +328,7 @@
     return oldRun(v, t, dt, H);
   };
   // the drunk weave home
-  Co.sway = v => (v.drunk > G.S.clock ? Math.sin(G.S.clock * 2.3 + v.id) * 0.22 : 0);
+  Co.sway = v => { const k = G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0; return k > 0 ? Math.sin(G.S.clock * 2.3 + v.id) * 0.22 * (0.4 + 0.6 * k) : 0; }; // (by how far the drink went: G.Ebrio)
   // a warm light and a sign at the tavern door at night — while it is open (only read: the tavern's day, G.Taverna)
   G.renderHooks = G.renderHooks || { ground: [], ents: [] };
   const lampEnt = new WeakMap();

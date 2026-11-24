@@ -28,7 +28,7 @@ const WALK_OK = [
 ];
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
-const LOOK = ['render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
+const LOOK = ['embriaguez-corpo.js', 'render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
   'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
@@ -2142,7 +2142,7 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   const inv = fs.existsSync(path.join(root, 'qa', 'dentro-inv.js')) ? fs.readFileSync(path.join(root, 'qa', 'dentro-inv.js'), 'utf8') : '';
   const i = inv.indexOf('const CAUSA = {'), j = inv.indexOf('\n  };', i); const causa = i < 0 ? '' : inv.slice(i, j);
   if (!causa) fails.push('coisa nova chega com a sua causa: o qa/dentro-inv.js sem a tabela CAUSA (D-744)');
-  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C2?\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
+  for (const m of py.matchAll(/\('([\w-]+)', [\d.]+, [\d.]+, [\d.]+, C\d?\./g)) { const k = m[1]; if (!new RegExp(`(^|[\\s,{])'?${k.replace(/-/g, '\\-')}'?: `).test(causa)) fails.push(`coisa nova chega com a sua causa: a coisa ${k} do deco.py sem a sua regra no CAUSA do qa/dentro-inv.js (D-744)`); } }
 // 297. "o material é o que o povo teve" (D-440, D-744): o within diz o barro, o metal e o pano pelas portas da origem e da roupa
 // (G.Origem.matOK, artsOf) — nunca pela arte sozinha —, e o dentro3d.js pinta o barro, o metal e o pano pelo que o within diz
 { const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('// ------------------------------ in words', i); const f = i < 0 ? '' : at.slice(i, j);
@@ -2164,6 +2164,28 @@ for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continu
   if (!/const L = T\.look\(b\); const items = T\.cartaOf\(b\);/.test(f)) fails.push('a lousa diz o que a cozinha tem: o within não lê a lousa do cardápio (G.Taverna.cartaOf, G.Taverna.look; D-749)');
   const dt = (src['dentro3d.js'] || []).join('\n');
   if (!/const lines = D\.words\(w\.t\.lousa\);/.test(dt) || !/lousa: \{ prato: L\.prato, bebidas: L\.bebidas \}/.test(dt) || /cartaOf|\.menu\(/.test(dt)) fails.push('a lousa diz o que a cozinha tem: o dentro3d.js escreve na lousa outra coisa que o W.lousa do within (D-749)'); }
+// === 23, a taverna, quarta onda — T7, o que se vê (planos/taverna-onda4.md) ===
+// 410. "o enfeite pelo material" (D-880, D-881): a festa que se vê é a do mundo (b.festa, da T1), e cada enfeite pelo que ele é feito —
+// as bandeirolas e o pano só onde o povo tece, o estandarte em pano ou no couro do abate —; o dentro3d.js põe os enfeites e o prato da
+// festa só pelo W.festa (nunca lendo o b.festa), e o prato só com as partes que a receita gastou (t.de)
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function festaOf(b, civ, weave, couro, why) {'), j = at.indexOf('\n  }', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!f || !/const S = G\.S, fe = b\.festa; if \(!festaNow\(S, fe\)\) return null;/.test(f) || !/else if \(k === 'fita' \|\| k === 'pano'\) \{ if \(!weave\) continue;/.test(f) || !/else if \(k === 'estandarte'\) \{ if \(!weave && !couro\) continue;/.test(f)) fails.push('o enfeite pelo material: o festaOf do atmos.js não lê a festa do mundo ou não pede o tear às bandeirolas e ao pano, o pano ou o couro ao estandarte (D-881)');
+  const dt = (src['dentro3d.js'] || []).map(l => l.replace(/(^|\s)\/\/\s.*$/, '')); dt.forEach((l, k) => { if (/\b\w+\.festa\b(?!\s*:)/.test(l) && /\bb\.festa\b/.test(l)) fails.push(`o enfeite pelo material: dentro3d.js:${k + 1} lê a festa do prédio por conta própria, fora do W.festa (D-880)`); });
+  if (!/if \(pt\.startsWith\('x-'\)\) return !t\.de \|\| t\.de\.includes\(pt\);/.test(dt.join('\n'))) fails.push('o enfeite pelo material: o prato da festa do dentro3d.js mostra partes que a receita não gastou (t.de, D-881)'); }
+// 411. "a porta é a do mundo" (D-882): a tranca e a porta arrombada saem do estado da porta do mundo (G.Interiors.doorState, lido no
+// portaOf do within); o dentro3d.js não pergunta à porta por conta própria; o build3d.js só esconde a folha da porta arrombada
+{ const at = (src['atmos.js'] || []).join('\n'); if (!/const st = In\.doorState\(b, p\.entrance\.door\); const e = st && st\.state; if \(e !== 'trancada' && e !== 'arrombada'\) return null;/.test(at)) fails.push('a porta é a do mundo: o portaOf do atmos.js não lê o estado da porta pelo G.Interiors.doorState (D-882)');
+  (src['dentro3d.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/doorState\(/.test(c)) fails.push(`a porta é a do mundo: dentro3d.js:${k + 1} pergunta à porta por conta própria, fora do W.porta (D-882)`); });
+  const b3 = (src['build3d.js'] || []).join('\n'); if (!/l\.m\.visible = !\(st && st\.state === 'arrombada'\);/.test(b3)) fails.push('a porta é a do mundo: o build3d.js não esconde a folha da porta arrombada (a folha caída é do G.Dentro3D, D-882)'); }
+// 412. "o lance é do mundo" (D-884, D-669): os dados mostram as faces que o jogo do mundo jogou (W.jogos, pela porta do jogo) — o
+// dentro3d.js não escolhe uma face: vira cada dado pela face do within; as cartas e o monte também só pelo W.jogos
+{ const dt = (src['dentro3d.js'] || []).join('\n'); if (!/j\.dados\.faces\.forEach\(\(f, i\) =>/.test(dt) || !/pre: faceUp\(f, dm\.h \/ 2\)/.test(dt)) fails.push('o lance é do mundo: o dentro3d.js não vira os dados pelas faces que o within diz (D-884)');
+  const at = (src['atmos.js'] || []).join('\n'); if (!/const d = JD && JD\.atMesa \? JD\.atMesa\(b, g\) : null, c = CA && CA\.atMesa \? CA\.atMesa\(b, g\) : null;/.test(at)) fails.push('o lance é do mundo: o jogosOf do atmos.js não pergunta às portas dos jogos (atMesa, D-884)'); }
+// 413. "seca pelo relógio do mundo" (D-883): a poça do chão e a roupa molhada secam pelo tempo do mundo desde que a bebida correu
+// (G.S.clock, At.SECA, At.SECA_ROUPA), nunca pelo relógio da tela
+{ const at = (src['atmos.js'] || []).join('\n');
+  if (!/const dry = k === 'poca' && Number\.isFinite\(q\.t\) \? G\.clamp\(1 - \(S\.clock - q\.t\) \/ At\.SECA, 0, 1\) : 1;/.test(at) || !/const n = G\.clamp\(1 - \(S\.clock - t\) \/ At\.SECA_ROUPA, 0, 1\);/.test(at)) fails.push('seca pelo relógio do mundo: a poça ou a roupa molhada do atmos.js não seca pelo G.S.clock (D-883)');
+  if (/performance\.now|Date\.now/.test(at)) fails.push('seca pelo relógio do mundo: o atmos.js pergunta ao relógio da tela (D-883)'); }
 // === 23, os interiores 2.0 — P7, a vida da taverna no mundo ===
 // 310. "o lugar tomado é do repartidor" (D-762): o lugar que uma pessoa toma e guarda (t.lugar: a peça e o lugar dela) só o
 // interiors.js escreve — In.hold, In.holdAt, In.unhold —; quem senta ou deita pede por essas portas, nunca escreve o lugar à mão
@@ -2412,5 +2434,105 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/A\.addAnim\('mexerCuba', \{ act: 'mexer-cuba',/.test(t) || !/\{ id: 'cozinhar', kind: 'mao', anim: 'cozinhar', use: 'cozinhar'/.test(t)) fails.push("os atos da cadeia: o cervejeiro sem o gesto 'mexer-cuba' ou o cozinheiro sem o 'cozinhar' (o contrato da onda 4)");
   if (!/\btavoficio: MOVE\b/.test(v3)) fails.push("os atos da cadeia: a tarefa 'tavoficio' sem a sua pose no TASK_OF do vida3d.js");
   if (!/^\s{4}mexerCuba: \{ s: '\w+'/m.test(as)) fails.push("os atos da cadeia: o gesto da cuba sem a sua linha de som (A.GESTO)"); }
+// 360. "o álcool no corpo é um só" (T2, D-830): o que alguém bebeu — v.ebrio (o sangue), v.ebrioG (o estômago), v.ebrioP (o pico da
+// noite), v.ebrioD (o relógio do desmaio), v.ressaca, v.molhado (a bebida jogada na roupa) — só o embriaguez.js escreve; ninguém escreve
+// nem lê mais o v.drunk de antes (o embriaguez.js o lê uma vez, num save de antes), e o G.Atmos.drunk é o G.Ebrio.k: uma verdade só
+{ const F = /\.(ebrio|ebrioG|ebrioP|ebrioD|ressaca|molhado)\s*(=(?!=|\s*function\b|\s*\(?\s*\w*\s*\)?\s*=>)|\+=|-=|\+\+|--)/;
+  for (const f of files) if (f !== 'embriaguez.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (F.test(c) && !LOOK.includes(f)) fails.push(`o álcool é do embriaguez.js (D-830): ${f}:${k + 1} escreve o que alguém bebeu: ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o|q|w|c|p|top|me|body)\.drunk\s*(=(?!=)|\+=|-=)/.test(c)) fails.push(`o álcool é do embriaguez.js (D-830): ${f}:${k + 1} escreve o v.drunk de antes — a dose vai pelo G.Ebrio.dose: ${l.trim().slice(0, 110)}`);
+    if (/\b\w+\.drunk\s*>\s*(S|G\.S|s|S_\(\))\.clock/.test(c)) fails.push(`o álcool é um só (D-830): ${f}:${k + 1} lê o v.drunk de antes — pergunte ao G.Ebrio (alegre, bebado, tonto, desmaiado): ${l.trim().slice(0, 110)}`); });
+  if (!/At\.drunk = function \(v\) \{ return G\.Ebrio && v \? G\.Ebrio\.k\(v\) : 0; \};/.test((src['atmos.js'] || []).join('\n'))) fails.push('o álcool é um só (D-830): o G.Atmos.drunk não é o G.Ebrio.k');
+  if (!/'ebrio', 'ebrioG', 'ebrioP', 'ebrioD', 'ressaca', 'molhado',/.test((src['villagers.js'] || []).join('\n'))) fails.push('o álcool é um só (D-830): os campos da bebida fora do molde da pessoa (SHAPE)'); }
+// 361. "o que só se vê do corpo bêbado" (T2, D-837): o embriaguez-corpo.js — o olho que balança, a vista turva e dobrada, o passo que puxa —
+// é do que só se vê (na lista LOOK: o G.VR, nunca o G.R) e não escreve no mundo; os ganchos dele no cam3d.js, no post3d.js e no avatar.js
+// só leem (G.EbrioCorpo.olho, vista, puxa), não sorteiam do mundo e não giram o olho nem o corpo do jogador de uma vez
+{ const ec = src['embriaguez-corpo.js'] || []; if (!ec.length) fails.push('o corpo bêbado: sem o js/embriaguez-corpo.js (D-837)'); if (!LOOK.includes('embriaguez-corpo.js')) fails.push('o corpo bêbado: o embriaguez-corpo.js fora da lista do que só se vê (LOOK, D-837)');
+  ec.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+    if (/\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random/.test(c)) fails.push(`o corpo bêbado: embriaguez-corpo.js:${k + 1} tira do acaso do mundo (D-837): ${l.trim().slice(0, 110)}`);
+    if (/\b(v|o)\.\w+\s*=(?!=)|G\.Depot\.|setTask|Possess\.(apply|desmaia|arrasta|acorda)|G\.Ebrio\.(dose|molha|arrasta|prova|aoChao)/.test(c)) fails.push(`o corpo bêbado: embriaguez-corpo.js:${k + 1} mexe no mundo (só se vê, D-837): ${l.trim().slice(0, 110)}`); });
+  const need = (f, re, what) => { if (!re.test((src[f] || []).join('\n'))) fails.push(`o corpo bêbado: o ${f} sem ${what} (D-837)`); };
+  need('cam3d.js', /const dk = G\.EbrioCorpo \? G\.EbrioCorpo\.olho\(rdt\) : null;/, 'o gancho do olho');
+  need('post3d.js', /uniform vec4 uEbrio;/, 'o uniforme da vista');
+  need('avatar.js', /G\.EbrioCorpo \? G\.EbrioCorpo\.puxa\(wx, wz, wl, h\) : null/, 'o gancho do passo');
+  for (const f of ['cam3d.js', 'post3d.js', 'avatar.js']) (src[f] || []).forEach((l, k) => { if (/EbrioCorpo/.test(l) && /\bG\.(R|rr|ri|pick|chance)\(|C3\.(yaw|pitch)\s*=|b\.yaw\s*=/.test(l)) fails.push(`o corpo bêbado: ${f}:${k + 1} o gancho da bebida sorteia do mundo ou gira o olho, o corpo (D-837): ${l.trim().slice(0, 110)}`); }); }
+// 362. "a aparência e o povo nunca decidem a bebedeira" (T2, D-834; regra 194): quanto cada um aguenta e o que faz bêbado saem do hábito,
+// da idade, da doença, da índole e de quem está em volta — o embriaguez.js nunca lê o genoma, a feição, a pele, o cabelo, a roupa, o
+// retrato do 3D nem o povo de ninguém
+(src['embriaguez.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bgenoma\b|G\.(Feicao|Genoma|Look3D|People3D|Art|Civ)\b|\.(skin|hair|kidCloth|civ|robe)\b|civOf|\bG\.CIVS\b/.test(c)) fails.push(`a aparência não decide (D-834): embriaguez.js:${k + 1} lê a aparência ou o povo de alguém: ${l.trim().slice(0, 110)}`); });
+// 363. "a bebedeira sem sorteio" (T2, D-834): no embriaguez.js nenhum acaso — nem o do mundo nem o do que só se vê —, e no bloco da
+// bebedeira do act-taverna.js também não: a índole, o quanto se bebeu, quem está em volta e o G.hash da pessoa e do momento
+{ const RX = /\bG\.(R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/;
+  (src['embriaguez.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (RX.test(c)) fails.push(`a bebedeira sem sorteio (D-834): embriaguez.js:${k + 1} sorteia: ${l.trim().slice(0, 110)}`); });
+  const tv = (src['act-taverna.js'] || []).join('\n'); const i = tv.indexOf('// ------------------------------ a bebedeira (T2'), j = tv.indexOf('// ------------------------------ the task machines', i);
+  if (i < 0 || j < 0) fails.push('a bebedeira sem sorteio: o act-taverna.js sem o bloco da bebedeira (T2, D-834)');
+  else if (RX.test(tv.slice(i, j).split('\n').map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'))) fails.push('a bebedeira sem sorteio (D-834): o bloco da bebedeira do act-taverna.js sorteia'); }
+// 364. "a dose pela bebida" (T2, D-831): toda bebida da taverna (as do G.Tavern.NAME e do G.Taverna.DOSE) tem o seu álcool no G.Ebrio.ALC;
+// a taverna dá a dose pelo G.Ebrio.dose — a rodada, e o gole do corpo um a um (T.bite) — e os poços de vinho também
+{ const eb = (src['embriaguez.js'] || []).join('\n'), tv = (src['act-taverna.js'] || []).join('\n'), cg = (src['citygifts.js'] || []).join('\n'), tn = (src['tavern.js'] || []).join('\n');
+  const alc = /E\.ALC = Object\.freeze\(\{([^}]*)\}\)/.exec(eb); const ks = alc ? [...alc[1].matchAll(/(\w+): /g)].map(m => m[1]) : [];
+  const dose = /T\.DOSE = \{([^}]*)\}/.exec(tv); const nm = /Tv\.NAME = \{(.*)\};/.exec(tn);
+  for (const k of new Set([...(dose ? [...dose[1].matchAll(/(\w+): /g)].map(m => m[1]) : []), ...(nm ? [...nm[1].matchAll(/(\w+): \[/g)].map(m => m[1]) : [])])) if (!ks.includes(k)) fails.push(`a dose pela bebida (D-831): a bebida «${k}» da taverna sem o seu álcool no G.Ebrio.ALC`);
+  if (!/if \(G\.Ebrio && n !== 0\) G\.Ebrio\.dose\(v, k, n\);/.test(tv) || !/else if \(G\.Ebrio\) G\.Ebrio\.dose\(v, k, r\.n\);/.test(tv)) fails.push('a dose pela bebida (D-831): a rodada da taverna ou o gole do corpo sem o G.Ebrio.dose');
+  if (!/G\.Ebrio\.dose\(v, 'vinho'/.test(cg)) fails.push('a dose pela bebida (D-831): o vinho dos poços sem o G.Ebrio.dose'); }
+// 365. "todo ato da bebedeira tem som e pose" (T2, D-839): os atos novos do bêbado (jogar-bebida, molhado, cantoria, desmaio, arrastar,
+// arrastado) têm a sua linha no G.Audio.ATO — a da frente do som (a T8, no TAVERNA_ATO), ou a tábua da bebedeira (EBRIO_ATO: o cuspe), que
+// só preenche o que falta —, e as
+// tarefas novas (desmaio, arrastar, arrastado) estão no TASK_OF do vida3d.js (a regra 214 também cobra)
+{ const au = (src['audio-src.js'] || []).join('\n'); const vr = (src['vida3d.js'] || []).join('\n');
+  if (!/for \(const k in EBRIO_ATO\) if \(!A\.ATO\[k\]\) A\.ATO\[k\] = EBRIO_ATO\[k\];/.test(au)) fails.push('o som da bebedeira: o audio-src.js sem a tábua dos atos do bêbado (EBRIO_ATO, D-839)');
+  for (const a of ['jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado']) { const q = a.includes('-') ? `'${a}'` : a; if (!new RegExp(`(^|[\\s{,])${q.replace(/[-']/g, m => '\\' + m)}:\\s*(\\{|still\\()`, 'm').test(au)) fails.push(`o som da bebedeira: o ato «${a}» sem a sua linha (D-839)`); }
+  for (const t of ['desmaio', 'arrastar', 'arrastado']) if (!new RegExp(`\\b${t}: (MOVE|')`).test(vr)) fails.push(`a pose da bebedeira: a tarefa «${t}» fora do TASK_OF (D-839)`); }
+// 366. "o corpo cai e é levado pelas portas" (T2, D-836): o embriaguez.js põe o corpo do deus no chão, o move e o devolve só pelo
+// possess.js (Possess.desmaia, Possess.arrasta, Possess.acorda); a mão do jogador não o acorda enquanto a bebida o tem (Po.wake), e só o
+// possess.js escreve a marca do desmaio do corpo (a.dz)
+{ const eb = (src['embriaguez.js'] || []).join('\n'), po = (src['possess.js'] || []).join('\n');
+  for (const d of ['Possess.desmaia(v)', 'Possess.arrasta(o', 'Possess.acorda(v']) if (!eb.includes(d)) fails.push(`o corpo cai pelas portas (D-836): o embriaguez.js sem o ${d.replace(/\(.*$/, '')}`);
+  if (!/Po\.wake = function \(v\) \{ if \(!v \|\| !v\.sleeping\) return; if \(G\.Ebrio && G\.Ebrio\.desmaiado\(v\)\) return;/.test(po)) fails.push('o corpo cai pelas portas (D-836): o Possess.wake acorda o corpo desmaiado');
+  for (const f of files) if (f !== 'possess.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bavatar\.dz\s*=(?!=)|\bavatar\(\)\.dz\s*=(?!=)/.test(c)) fails.push(`o corpo cai pelas portas (D-836): ${f}:${k + 1} escreve a marca do desmaio do corpo: ${l.trim().slice(0, 110)}`); }); }
+// 367. "a bebida jogada sai pelo livro; a ressaca pesa no needs" (T2, D-833, D-835): o que o bêbado joga no outro sai da caneca pelo livro
+// ('jogou'), cai no chão da taverna pela porta do act-taverna.js (d.chao: a poça) e molha a roupa pelo G.Ebrio.molha; a ressaca pesa só no
+// needs do villagers.js (a fome e o cansaço pelo G.Ebrio.FOME e CANSA) — o tavern.js não tira mais energia na manhã seguinte
+{ const tv = (src['act-taverna.js'] || []).join('\n'), vg = (src['villagers.js'] || []).join('\n'), tn = (src['tavern.js'] || []).join('\n');
+  if (!/D\.use\('v:' \+ v\.id, k, c\.n, \{ op: op\.id, code: 'jogou'/.test(tv) || !/G\.Ebrio\.molha\(o, k\)/.test(tv)) fails.push('a bebida jogada (D-835): sem o livro (\'jogou\') ou sem o G.Ebrio.molha');
+  if (!/const rk = G\.Ebrio \? G\.Ebrio\.passo\(v, dt\) : 0;/.test(vg) || !/1 \+ G\.Ebrio\.FOME \* rk/.test(vg) || !/1 \+ G\.Ebrio\.CANSA \* rk/.test(vg)) fails.push('a ressaca (D-833): o needs do villagers.js sem o passo da bebida ou sem o peso da ressaca');
+  if (/v\.energy = Math\.max\(8/.test(tn)) fails.push('a ressaca (D-833): o tavern.js ainda tira energia na manhã seguinte — a ressaca é do G.Ebrio'); }
+// 368. "só a prova põe a bebida à mão" (T2): o G.Ebrio.prova (o sangue posto de uma vez) e o G.Taverna.ebrioProva (o ato pedido) são das
+// provas — nenhum arquivo do jogo os chama
+for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bEbrio\.prova\(|\bebrioProva\(/.test(c) && !/E\.prova = function|T\.ebrioProva = function/.test(c)) fails.push(`só a prova põe a bebida à mão: ${f}:${k + 1} chama a porta das provas: ${l.trim().slice(0, 110)}`); });
+// 420. "a porta de som da tela" (T8, D-896): o som sem lugar das telas (os jogos do corpo) é o G.Audio.ui do audio.js, com a sua
+// tabela — os dados no copo, rolando e parando, as cartas embaralhadas, dadas, jogadas e viradas, a aposta, a vitória e a derrota —; e
+// só as telas o chamam (um arquivo *-ui.js ou do que só se vê): o mundo não toca som de tela, o som do mundo tem lugar e dono
+{ const au = (src['audio.js'] || []).join('\n'); const t0 = au.indexOf('  const UI = {'), ui = t0 < 0 ? '' : au.slice(t0, au.indexOf('\n  };', t0));
+  if (!ui || !/A\.ui = function \(nome, o\) \{/.test(au)) fails.push('a porta de som da tela: o audio.js sem o G.Audio.ui e a sua tabela (D-896)');
+  for (const n of ['dados-copo', 'dados-rolar', 'dados-parar', 'cartas-embaralhar', 'cartas-dar', 'cartas-jogar', 'cartas-virar', 'aposta', 'vitoria', 'derrota']) if (!new RegExp(`(?:^|\\s)'?${n}'?: \\(t, v, o\\) =>|(?:^|\\s)'?${n}'?: \\(t, v\\) =>`, 'm').test(ui)) fails.push(`a porta de som da tela: o som «${n}» não está na tabela do G.Audio.ui (D-896)`);
+  for (const f of files) { if (LOOK.includes(f) || /-ui\.js$/.test(f)) continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bAudio\.ui\s*\(/.test(c)) fails.push(`a porta de som da tela: ${f}:${k + 1} o mundo toca um som de tela — o som do mundo tem lugar (D-896): ${l.trim().slice(0, 110)}`); }); } }
+// 421. "os atos da quarta onda têm som" (T8, D-890 a D-895): os atos do contrato da quarta onda (taverna-onda4.md) e os do supervisor — a
+// tranca, o abrigo, o esconder, o arrombar, o discurso, a bebida jogada e quem a recebe, a cantoria, o desmaio, o arrastar, a cuba, o
+// cozinhar, os dados, as cartas, a queda de braço, a trapaça — têm a sua linha no A.ATO do audio-src.js (a da frente do mundo, ou a do
+// TAVERNA_ATO), e todo som que elas nomeiam está na biblioteca do audio.js
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  const lib = new Set(); for (const m of au.matchAll(/^\s{4}'?([A-Za-z][\w-]*)'?: \(t, v(?:, o)?\) =>/gm)) lib.add(m[1]); for (const m of au.matchAll(/\bLIB\.([A-Za-z]\w*) = /g)) lib.add(m[1]);
+  const t0 = as.indexOf('const TAVERNA_ATO = {'), tv = t0 < 0 ? '' : as.slice(t0, as.indexOf('\n  };', t0));
+  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado', 'mexer-cuba', 'cozinhar', 'jogo-dados', 'jogo-cartas', 'queda-de-braco', 'trapaca']) {
+    const re = new RegExp(`(?:^|[\\s,{])'?${a}'?: (?:\\{ s: '(\\w+)'|still\\()`, 'm'); const m = re.exec(tv) || re.exec(as);
+    if (!m) fails.push(`os atos da quarta onda: o ato «${a}» sem a sua linha de som (A.ATO, D-890)`); else if (m[1] && !lib.has(m[1])) fails.push(`os atos da quarta onda: o ato «${a}» nomeia o som «${m[1]}», que a biblioteca do audio.js não tem (D-890)`); } }
+// 422. "a festa toca em banda" (T8, D-890): quem toca numa sala — o músico da noite, os bardos da festa (b.festa) — é uma banda só: a cena
+// dá a cada um o compasso do primeiro e a sua parte (o.banda), e o tocador toca a banda num pulso e numa melodia, cada parte na escada
+// do povo (a harmonia dois degraus da escada acima da melodia, a corda grave uma oitava abaixo)
+{ const as = (src['audio-src.js'] || []).join('\n'), au = (src['audio.js'] || []).join('\n');
+  if (!/const B = banda\.get\(v\.inside\) \|\| \[v\]; o\.musica = A\.compasso\(B\[0\] \|\| v\); o\.banda = \{ n: B\.length, papel: Math\.max\(0, B\.indexOf\(v\)\) \};/.test(as)) fails.push('a festa toca em banda: a cena não dá a quem toca o compasso do primeiro da banda e a sua parte (D-890)');
+  if (!/const f = A\.festaDe\(bb\); const B = \(f && f\.bardos\) \|\| NADA;/.test(as)) fails.push('a festa toca em banda: a banda da sala sem os bardos da festa (b.festa, D-890)');
+  if (!/const key = 'v' \+ f\.musica\.de;/.test(au) || !/p === 1 \? N\[G\.clamp\(idx \+ \(idx \+ 2 <= top \? 2 : -2\), 0, top\)\]/.test(au)) fails.push('a festa toca em banda: o tocador não toca a banda num pulso só, com a harmonia na escada do povo (D-890)'); }
+// 423. "o bêbado pela bebida" (T8, D-891): a voz arrastada e o soluço só pela bebida de quem fala (A.ebrioDe: o v.ebrio da T2, o
+// G.Atmos.drunk) — nunca pelo ato, pela mesa ou pelo acaso; e nenhuma outra linha da cena dá a voz de bêbado
+{ const as = src['audio-src.js'] || []; const all = as.join('\n');
+  if (!/const ebr = A\.ebrioDe\(v\);\n\s*if \(L && L\.s === 'voz' && ebr >= 0\.5\) L = /.test(all) || !/if \(ebr >= A\.SOLUCO && !ear\.ug\)/.test(all)) fails.push('o bêbado pela bebida: a voz arrastada e o soluço da cena não vêm da bebida de quem fala (A.ebrioDe, D-891)');
+  as.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/s: 'vozBebado'/.test(c) && !/ebr >= 0\.5/.test(c)) fails.push(`o bêbado pela bebida: audio-src.js:${k + 1} dá a voz de bêbado sem a bebida (D-891): ${l.trim().slice(0, 110)}`); }); }
+// 424. "a porta cede pelo mundo" (T8, D-895): o estrondo da porta que cede só soa na hora em que o estado da porta, o do mundo (In.doorState
+// pela porta de quem a força), vira «arrombada» — nunca por golpe contado, por sorteio ou pelo ato sozinho
+{ const as = (src['audio-src.js'] || []).join('\n'), au = src['audio.js'] || [];
+  if (!/const st = In\.doorState\(best\.b, best\.e\.door\); return \{ b: best\.b\.id, door: best\.e\.door,/.test(as)) fails.push('a porta cede pelo mundo: a cena não lê o estado da porta forçada no In.doorState (D-895)');
+  au.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/'portaCede'/.test(c) && !/f\.porta === 'arrombada' && st\.porta !== undefined && st\.porta !== 'arrombada'/.test(c)) fails.push(`a porta cede pelo mundo: audio.js:${k + 1} toca a porta que cede fora da mudança do estado dela (D-895): ${l.trim().slice(0, 110)}`); }); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

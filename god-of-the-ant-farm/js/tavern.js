@@ -30,13 +30,14 @@
     return out;
   };
 
-  // the morning after: the drinks of the night are counted, and too many weigh on the day
+  // the morning after: the drinks of the night are counted — a heavy night kept in the person's tally; the hangover itself is the
+  // body's, G.Ebrio (the night's top of the drink in the blood weighs on the day's tiredness and hunger, villagers.js needs: T2, D-833)
   Tv.update = function () {
     const S = G.S; if (!S || S.day === G.mod('tavern.day')) return; G.mod('tavern.day', S.day); // (the world's, in the save: no second morning after on a load, L-694)
     for (const v of S.villagers.values()) {
       if (!v.drinks) continue;
       if (v.drinkDay !== S.day) {
-        if (v.drinks >= 3) { v.energy = Math.max(8, (v.energy || 50) - 6 * v.drinks); v.hang = S.day; v.heavyN = (v.heavyN || 0) + 1; }
+        if (v.drinks >= 3) { v.hang = S.day; v.heavyN = (v.heavyN || 0) + 1; }
         v.drinks = 0;
       }
     }

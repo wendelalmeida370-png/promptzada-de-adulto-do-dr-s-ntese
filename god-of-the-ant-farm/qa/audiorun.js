@@ -77,6 +77,10 @@ const [seed, secs] = [+(process.argv[2] || 7), +(process.argv[3] || 90)];
     const ens = await page.evaluate(async () => { const A = G.Audio; const o = { tom: 1, povo: 'grego', mat: 'barro', piso: 'tabua', nota: 293.66, dur: 0.5 }; const L = ['verter', 'gole', 'brinde', 'riso', 'vozBebado', 'voz', 'ossos', 'pano', 'canecas', 'gorjeta', 'expulsa', 'fechar', 'ronco', 'palmas', 'pe', 'canto', 'lira', 'tambor', 'passo', 'banco', 'porta', 'portaFecha', 'lareira', 'panela', 'chuvaTelhado'];
       const r = await A.ensaio(L, o); const ref = await A.ensaio(['cup', 'door', 'clap', 'lute', 'coin', 'fire', 'thud', 'hey', 'murmur', 'clang']);
       for (const p of ['terra', 'lajota', 'laje']) { const q = await A.ensaio(['passo', 'pe', 'banco'], Object.assign({}, o, { piso: p })); for (const k in q) r[k + '/' + p] = q[k]; }
+      // (the fourth wave, T8: the context, the drink, the trades, the games — and the screen's sounds, with the dice of bone and of wood)
+      const L4 = ['tranca', 'chamado', 'respiro', 'arrombar', 'portaCede', 'discurso', 'viva', 'torcida', 'roda', 'jogarBebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'cuba', 'fervura', 'cook', 'dados', 'cartas', 'bracoForca', 'bracoBate', 'trapaca', 'confusao', 'goles', 'canecaBate', 'hiccup'];
+      const q4 = await A.ensaio(L4, Object.assign({}, o, { n: 6, canecas: 4, golpes: 5, ferve: 1, notas: [261.63, 293.66, 329.63, 392, 440, 523.25, 587.33, 659.25, 783.99, 880] })); for (const k in q4) r[k] = q4[k];
+      for (const m of ['osso', 'madeira', 'papiro', 'barro']) { const qu = await A.ensaio(A.UI.slice(), { mat: m, n: 3 }); for (const k in qu) r['tela:' + k + '/' + m] = qu[k]; }
       for (const m of ['madeira', 'metal']) { const q = await A.ensaio(['brinde', 'gole', 'canecas'], Object.assign({}, o, { mat: m })); for (const k in q) r[k + '/' + m] = q[k]; }
       const q = await A.ensaio(['tambor', 'lira'], Object.assign({}, o, { forte: 1, baixo: 146.83 })); for (const k in q) r[k + '/forte'] = q[k];
       return { r, ref }; });

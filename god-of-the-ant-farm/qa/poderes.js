@@ -198,7 +198,7 @@ const key = process.argv[2] || 'cidade';
       const again = G.Powers.canCast('winewell', set.cx, set.cy); const why = G.Powers.why;
       let maxDrunk = 0, dancers = 0; const drank = new Set(); const foreign = [];
       H.run(90, () => {
-        let d = 0; for (const v of S.villagers.values()) { if (v.drunk > S.clock) d++; const t = v.task; if (t && t.type === 'vinho') { if (t.st === 3) dancers = Math.max(dancers, 1 + dancers * 0); const b = S.buildings.get(t.id); if (b && b.set !== v.set) foreign.push(v.name); if (t.st === 3) drank.add(v.id); } }
+        let d = 0; for (const v of S.villagers.values()) { if (G.Ebrio && G.Ebrio.alegre(v)) d++; const t = v.task; if (t && t.type === 'vinho') { if (t.st === 3) dancers = Math.max(dancers, 1 + dancers * 0); const b = S.buildings.get(t.id); if (b && b.set !== v.set) foreign.push(v.name); if (t.st === 3) drank.add(v.id); } }
         maxDrunk = Math.max(maxDrunk, d);
       });
       return { ok, again, why, set: set.name, wells: H.wells(set.id).length, maxDrunk, drank: drank.size, foreign: foreign.length, qa: H.qa() };

@@ -145,7 +145,7 @@
   C.rival = function (v, ids) {
     const S = S_(); let best = null, bs = Infinity; const quarrel = I.faceta(v, 'agressivo') >= 0.6;
     for (const id of ids) {
-      const q = S.villagers.get(+id); if (!q || q === v || !(q.drunk > S.clock) || isBody(q)) continue;
+      const q = S.villagers.get(+id); if (!q || q === v || !(G.Ebrio && G.Ebrio.bebado(q)) || isBody(q)) continue; // (drunk: G.Ebrio, T2)
       const s = L.sente(v, q); const af = s ? s.afeto : 0; if (s && s.kin) continue;
       if (af < bs) { bs = af; best = q; }
     }

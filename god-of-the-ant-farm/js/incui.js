@@ -57,7 +57,7 @@
       <div id="inc-hud" class="hidden">
         <canvas id="inc-air"></canvas>
         <div class="ih-who panel"><div class="ih-name"></div><div class="ih-sub"></div>
-          <div class="ih-bars">${bar('hp', 'Vida')}${bar('st', 'Fôlego')}${bar('fo', 'Fome')}${bar('en', 'Sono')}</div><div class="ih-carry"></div></div>
+          <div class="ih-bars">${bar('hp', 'Vida')}${bar('st', 'Fôlego')}${bar('fo', 'Fome')}${bar('en', 'Sono')}</div><div class="ih-carry"></div><div class="ih-ebrio"></div></div>
         <div class="ih-clock panel"><div class="ih-time"></div><div class="ih-place"></div></div>
         <div class="ih-compass"><div class="ih-strip"></div><i></i></div>
         <div class="ih-news"></div>
@@ -339,6 +339,11 @@
     const ce = $('.ih-calls', hud); if (ce._h !== ch) { ce._h = ch; ce.innerHTML = ch; }
     $('.ih-sleep', hud).classList.toggle('hidden', !v.sleeping);
     hud.classList.toggle('asleep', !!v.sleeping);
+    // (the drink in the body, as the person feels it — G.Possess.knows.ebrio —; out of it, the world has the body, and the screen says
+    // why: no key wakes it — T2, D-836, D-838)
+    { const dz = !!(v.sleeping && G.Possess.desmaio && G.Possess.desmaio()); const sl = $('.ih-sleep', hud); const k = dz ? 'dz' : 'zz';
+      if (sl._k !== k) { sl._k = k; sl.innerHTML = dz ? 'Desmaiado… <small>você bebeu demais · o tempo passa até o corpo acordar</small>' : 'Dormindo… <small>o tempo passa depressa · <kbd>E</kbd> para acordar</small>'; }
+      const w = G.Possess.knows.ebrio ? G.Possess.knows.ebrio(v) : ''; const el = $('.ih-ebrio', hud); if (el._w !== w) { el._w = w; el.textContent = w ? G.cap(w) : ''; } }
     const h = $('.ih-hint', hud); h.classList.toggle('hidden', hintT <= 0);
     if (hintT > 0) h.innerHTML = [['frente', 'trotar'], ['correr', 'disparar'], ['andar', 'andar devagar'], ['pular', 'pular'], ['esquivar', 'esquivar'], ['agachar', 'agachar'], ['interagir', 'interagir'], ['outra', 'outra ação'], ['travar', 'travar a mira'], ['vista', 'vista da sala'], ['ficha', 'quem sou eu'], ['diario', 'diário'], ['tela', 'esconder a tela'], ['deus', 'Modo Deus'], ['menu', 'menu']].map(([a, t]) => `<span><kbd>${esc(a === 'frente' ? (G.Input3D.device === 'pad' ? 'Bastão' : 'WASD') : G.Input3D.label(a))}</kbd> ${t}</span>`).join('') + `<span><kbd>${G.Input3D.device === 'pad' ? 'Bastão direito' : 'Mouse'}</kbd> olhar</span>`;
   };
