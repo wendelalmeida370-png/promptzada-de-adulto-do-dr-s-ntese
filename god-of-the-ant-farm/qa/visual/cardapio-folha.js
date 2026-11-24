@@ -19,7 +19,7 @@ const TEMAS = (process.env.TEMAS || 'romano,grego,egipcio,nordico,asteca,classic
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(600);
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', 'metropole.js') });
-  const r0 = await page.evaluate(([pc]) => {
+  const r0 = await page.evaluate(([pc, SEMPRE]) => {
     G.Save.apply(JSON.parse(G.Ready.data.metropole)); G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden');
     for (let t = 0; t < 400 && G.S.time < 0.6; t++) G.debug.step(0.5);
     G.IncUI.init(); if (!pc) G.Input3D.touch = true;
@@ -32,14 +32,16 @@ const TEMAS = (process.env.TEMAS || 'romano,grego,egipcio,nordico,asteca,classic
     const items = Ta.cartaOf(b).map(x => Object.assign({}, x)); const out = items.find(x => x.sort === 'beber' && items.filter(y => y.sort === 'beber').length > 1) || null; if (out) { out.ok = false; out.n = 0; }
     window.__F = { b, kp, v, items, ck: 1 };
     const fake = tema => ({ op: 1, b: b.id, open: true, cv: 'carta', ck: ++window.__F.ck, srv: kp.id, ola: G.Falas.line('carta_taverna', { v: kp, civ: tema, nome: (G.Falas.HELLO[tema] || G.Falas.HELLO.classico)[1], bem: items.filter(x => x.ok).slice(0, 2).map(x => x.nome).join(' e ') }), moeda: true, seat: true, price: n => G.Falas.price(tema, n), items: window.__F.items.map(x => Object.assign({}, x)) });
-    window.__F.fake = fake;
+    window.__F.fake = fake; window.__SEMPRE = !!SEMPRE;
     return { b: `${G.Village.buildName(b)} #${b.id}`, kp: kp.name, n: items.length };
-  }, [PC]);
+  }, [PC, !!process.env.SEMPRE]);
   console.log(`a taverna ${r0.b}, ${r0.kp}, ${r0.n} coisas no cardápio`);
   const shots = [];
   for (const porte of PORTES) for (const tema of TEMAS) {
     await page.evaluate(([tema, porte]) => {
       const F = window.__F; const s = F.fake(tema); G.Taverna.carta = () => s; G.Taverna.corpo = () => s;
+      // (SEMPRE=1: a regular of the house — «o de sempre» at the top, D-794)
+      if (window.__SEMPRE) { const it = F.items.find(x => x.ok && x.sort === 'beber') || F.items.find(x => x.ok); if (it) { s.sempre = { key: G.Taverna.keyOf(it), k: it.k, of: it.of, nome: it.nome }; s.ola = G.Falas.line('carta_sempre', { v: F.kp, civ: tema, nome: F.v.name, bem: G.cap(it.nome) }); } }
       G.CardapioUI.close(); G.CardapioUI.force = { tema, porte }; G.CardapioUI.open(true);
       // (a thing chosen: the second one that can be had)
       const rows = [...document.querySelectorAll('#menu-panel .mn-row:not(.off)')]; const r = rows[1] || rows[0]; if (r) r.click();

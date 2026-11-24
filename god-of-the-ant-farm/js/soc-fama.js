@@ -55,6 +55,8 @@
     cruel: { re: 8, es: -15, rot: 'cruel' }, pagou: { re: 1, es: 3 }, caloteiro: { re: 3, es: -8 },
     // (22b phase 3: the name that a rumour carries to another town; the one who spread a lie that was denied)
     nome: { re: 15, es: 0 }, mentiu: { re: 3, es: -10 },
+    // (P7, D-798: a round paid for the whole table of a tavern — the god's body's hands)
+    rodada: { re: 3, es: 4, rot: 'generoso' },
   };
   F.FEITOS = () => Object.keys(FEITO);
   F.feito = function (v, tipo, sid) {

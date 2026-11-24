@@ -69,6 +69,12 @@
     caneca: { nome: 'caneca', plural: 'canecas', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.3, bem: null, vale: 0, tags: ['beber'], mats: ['madeira', 'barro'], desc: 'Para a cerveja, o vinho e a água: na taverna, na festa, no brinde.' },
     // (P7, D-768: the plate the keeper carries to the table — one in a hand, held by its rim —, of the tavern's own, as the cup)
     prato: { nome: 'prato', plural: 'pratos', tipo: 'recipiente', maos: 1, slots: ['mao'], pega: 'copo', peso: 0.4, bem: null, vale: 0, tags: ['servir'], mats: ['madeira', 'barro'], desc: 'O prato da taverna: o taverneiro o traz à mesa com a comida da casa.' },
+    // (P7, D-795: the tavern's game and its cloth — the five knucklebones of a sheep's or a goat's ankle, of the beast's own bone: a
+    // people that never slaughtered, hunted nor offered a beast has none, and no game; thrown on the board from the fist. And the rag
+    // the keeper wipes a table with: of the loom's wool where the people has had woven cloth, else a twist of straw — the place's, as
+    // the cup; none a weapon)
+    ossinhos: { nome: 'ossinhos', plural: 'ossinhos', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.06, bem: null, vale: 0, tags: ['jogar'], mats: ['osso'], desc: 'Cinco ossinhos do tornozelo de um carneiro: lançados na mesa, o jogo da taverna.' },
+    pano: { nome: 'pano', plural: 'panos', tipo: 'ferramenta', maos: 1, slots: ['mao', 'cinto'], pega: 'bola', peso: 0.12, bem: null, vale: 0, tags: ['limpar'], mats: ['palha', 'la'], desc: 'Limpa a mesa da taverna: um pano de lã onde o povo tece, um feixe de palha onde não.' },
     bola: { nome: 'bola', plural: 'bolas', tipo: 'brinquedo', maos: 1, slots: ['mao'], pega: 'bola', peso: 0.25, bem: null, vale: 0, tags: ['brincar'], mats: ['vime', 'couro'], desc: 'O brinquedo das crianças: de vime trançado, ou de couro cosido e cheio.' },
     grilhoes: { nome: 'grilhões', plural: 'grilhões', tipo: 'ferramenta', maos: 2, slots: ['mao'], pega: 'algema', peso: 1.6, bem: 'ferramentas', vale: 0.5, tags: ['prender'], mats: ['corda', 'ferro'], desc: 'Prendem as mãos de quem é levado: corda trançada, ou duas argolas de ferro com a corrente.' },
     muleta: { nome: 'muleta', plural: 'muletas', tipo: 'ferramenta', maos: 1, slots: ['mao', 'outra'], pega: 'muleta', peso: 1.2, bem: null, vale: 0, tags: ['apoio'], mats: ['madeira'], desc: 'Debaixo do braço, faz as vezes da perna que falta.', feito: { wood: 0.5 } },
@@ -93,13 +99,17 @@
     ferro: { nome: 'de ferro', peso: 1.05, dano: 1.15, tech: 'ferro', ord: 2, cor: '#a4adb8', trabalho: 1.2, bloqueio: 1.1, protecao: 1.15 },
     // (the fired clay of the pottery: a cup — 22c, D-612; a people has it once its pottery made it or it came in, G.Origem)
     barro: { nome: 'de barro', peso: 1.4, dano: 0.7, ord: 0, cor: '#b0603a', trabalho: 0.6, bloqueio: 0.4, protecao: 0.3 },
+    // (P7, D-795: the carcass's bone; the field's and the meadow's straw; the loom's wool — G.Origem.matOK says who has each)
+    osso: { nome: 'de osso', peso: 1, dano: 0.8, ord: 0, cor: '#e6dcc2', trabalho: 0.6, bloqueio: 0.3, protecao: 0.3 },
+    palha: { nome: 'de palha', peso: 0.8, dano: 0.5, ord: 0, cor: '#d4b56a', trabalho: 0.5, bloqueio: 0.2, protecao: 0.2 },
+    la: { nome: 'de lã', peso: 1, dano: 0.5, ord: 0, cor: '#e8e0cc', trabalho: 0.5, bloqueio: 0.3, protecao: 0.4 },
   };
   // the equipment's places on a body, in the order the screen lists them
   It.SLOTS = ['mao', 'outra', 'costas', 'cinto', 'cabeca', 'corpo'];
   It.SLOT_NOME = { mao: 'mão', outra: 'outra mão', costas: 'costas', cinto: 'cinto', cabeca: 'cabeça', corpo: 'corpo' };
   // what each kind of thing is called as a kind, and what each tag says it is good for (the screen's card)
   It.TIPO_NOME = { ferramenta: 'Ferramenta', arma: 'Arma', escudo: 'Escudo', arco: 'Arma de tiro', municao: 'Munição', protecao: 'Proteção', luz: 'Luz', recipiente: 'Recipiente', brinquedo: 'Brinquedo', instrumento: 'Instrumento', bem: 'Bem' };
-  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', tocar: 'tocar música', servir: 'servir a comida', bem: 'um bem do armazém' };
+  It.TAG_NOME = { cortar: 'cortar', lenha: 'derrubar árvores', golpe: 'golpear', minerar: 'minerar', pedra: 'quebrar pedra', cavar: 'cavar', lavrar: 'lavrar a terra', colher: 'colher', construir: 'construir', forjar: 'forjar', esfolar: 'esfolar a caça', lutar: 'lutar', perfurar: 'perfurar', pescar: 'pescar', remar: 'remar', apoio: 'apoiar-se', luz: 'iluminar', fogo: 'acender fogo', levar: 'levar coisas', agua: 'buscar água', cacar: 'caçar', atirar: 'atirar de longe', municao: 'munição do arco', arco: 'atirar com o arco', bloquear: 'aparar golpes', proteger: 'proteger o corpo', beber: 'beber', brincar: 'brincar', prender: 'prender as mãos de alguém', tocar: 'tocar música', servir: 'servir a comida', jogar: 'jogar à mesa', limpar: 'limpar a mesa', bem: 'um bem do armazém' };
 
   // ------------------------------ reading a key ------------------------------
   // a key: 'machado' (its plainest material) or 'machado.ferro'
@@ -193,6 +203,10 @@
   const BEAST = { lira: { couro: 0.1, wood: 0.3 }, tambor: { couro: 0.3, wood: 0.6 } };
   // (the fired clay of a thing is the pottery's ware of the store — the good ceramica: 22c, D-612)
   const CLAY = { caneca: 0.25, prato: 0.3 };
+  // (the loom's wool of a rag is the store's cloth — tecido; the bones of a carcass and a twist of straw are no good of a store: what
+  // they are made of is nothing it keeps — P7, D-795)
+  const CLOTH = { pano: 0.05 };
+  const NOGOOD = { osso: 1, palha: 1 };
   It.METALS = { bronze: 1, ferro: 1 };
   const feitoCache = new Map();
   It.feitoDe = function (key) {
@@ -204,6 +218,8 @@
       else if (d.mat === 'couro' && BEAST[d.kind]) out = Object.keys(BEAST[d.kind]).map(g => ({ k: g, n: BEAST[d.kind][g], of: null }));
       else if (d.mat === 'couro' && HIDE[d.kind]) out = [{ k: 'couro', n: HIDE[d.kind], of: null }];
       else if (d.mat === 'barro' && CLAY[d.kind]) out = [{ k: 'ceramica', n: CLAY[d.kind], of: null }];
+      else if (d.mat === 'la' && CLOTH[d.kind]) out = [{ k: 'tecido', n: CLOTH[d.kind], of: null }];
+      else if (NOGOOD[d.mat]) out = [];
       else if (d.feito) out = Object.keys(d.feito).map(g => ({ k: g, n: d.feito[g], of: null }));
       else if (PLAIN[d.kind]) out = Object.keys(PLAIN[d.kind]).map(g => ({ k: g, n: PLAIN[d.kind][g], of: null }));
       if (out) { for (const o of out) Object.freeze(o); Object.freeze(out); }

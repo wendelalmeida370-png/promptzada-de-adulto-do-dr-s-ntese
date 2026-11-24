@@ -207,13 +207,20 @@ if (on('o5')) {
   }
   const ff = f || facs()[0]; const w = warrior(ff);
   const before = w ? G.Inv.made('elmo', w) : 'x'; const cb = w ? G.Inv.made('couraca', w) : 'x';
+  // (and the knucklebones of the tavern's game are the carcass's bone: none where no beast was ever slaughtered, hunted nor offered —
+  // P7, D-795)
+  const osB = w && !O.had(ff.id, 'osso') ? G.Inv.made('ossinhos', w) : null; if (osB) bad.push('ossinhos sem osso: ' + osB);
   if (before && matOf(before) === 'couro') bad.push('elmo de couro sem couro: ' + before);
   if (cb && matOf(cb) === 'couro') bad.push('couraça de couro sem couro: ' + cb);
   // (a hide comes from a hunt: the door of the hunt's spoils — G.Village.addStock, as Riches.unload does)
   god(() => V.addStock('couro', 2, ff.id));
-  const after = w ? G.Inv.made('elmo', w) : null;
+  const after = w ? G.Inv.made('elmo', w) : null; const osA = w ? G.Inv.made('ossinhos', w) : null;
   if (!after || (!O.had(ff.id, 'bronze') && matOf(after) !== 'couro')) bad.push('depois do couro: ' + after);
-  ok('o5 o couro só de quem caça ou abate: sem couro, nem elmo nem couraça de couro', !bad.length && !errs(), `${info}${ff.name}: antes elmo ${before || 'nenhum'}, couraça ${cb || 'nenhuma'}; com o couro da caça: elmo ${after}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
+  if (w && osA !== 'ossinhos') bad.push('depois do couro, os ossinhos: ' + osA);
+  // (the meat of a slaughter gives the bone too: another people with no hide nor bone, a beast slaughtered into its store)
+  const f2 = facs().find(q => q !== ff && !O.had(q.id, 'couro') && !O.had(q.id, 'osso')); let os2 = '';
+  if (f2) { god(() => D.make('f:' + f2.id, 'food', 1, { code: 'abate' })); os2 = `; ${f2.name}, depois de um abate: osso ${O.had(f2.id, 'osso') ? 'tido' : 'NÃO TIDO'}`; if (!O.had(f2.id, 'osso')) bad.push('o abate sem o osso'); }
+  ok('o5 o couro só de quem caça ou abate: sem couro, nem elmo nem couraça de couro — nem ossinhos sem osso', !bad.length && !errs(), `${info}${ff.name}: antes elmo ${before || 'nenhum'}, couraça ${cb || 'nenhuma'}, ossinhos ${osB || 'nenhum'}; com o couro da caça: elmo ${after}, ossinhos ${osA || 'nenhum'}${os2}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ o6, o7, o8: the beer, the fishing village, the dish

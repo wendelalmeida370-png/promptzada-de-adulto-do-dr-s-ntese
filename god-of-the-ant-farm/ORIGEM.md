@@ -130,6 +130,9 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
 | **couro** | o couro do armazém (o elmo: 1; a couraça: 3; a bola de couro: 0,15); os instrumentos (P7, D-764), o couro e a madeira (a lira: 0,1 de couro — a caixa coberta e as cordas de tripa — e 0,3 de madeira; o tambor: 0,3 de couro e 0,6 de madeira) | **só quem teve couro** (caçou ou abateu: o couro e a tripa são do mesmo bicho) |
 | **barro** (22c, D-612) | a **cerâmica** do armazém (a caneca de barro: ¼; o prato de barro: 0,3) | **só quem teve a cerâmica** da olaria (`O.MAT_OF.ceramica`: entrou no povo — feita, comprada, saqueada; e a que está no armazém, a cada olhada do passo) |
 | ouro | (a porta pronta: o ouro do armazém; o catálogo ainda não tem coisa de ouro) | quem teve ouro |
+| **osso** (P7, D-795) | nada do armazém: os **ossinhos** da taverna são os ossos do tornozelo da carcaça (`G.Itens.feitoDe` → nada; o armazém não os dá) | **só quem teve osso**: a carne feita de um abate, de uma caça ou de um sacrifício marca o osso (`D.make` da comida com a parte `carne`); e quem teve couro, que veio de uma carcaça |
+| **lã** (P7, D-795) | o **tecido** do armazém (o pano de limpar a mesa: 0,05) | **só quem teve pano tecido** (`O.MAT_OF.tecido`: o tear o fez, ou entrou no povo) |
+| **palha** (P7, D-795) | nada do armazém: o feixe de palha é dos talos secos que todo povo corta para os telhados e as camas | sempre (`O.PLAIN`) |
 
 - **O armazém dá o que a divisão dele tem** (`G.Inv.offer` / `Inv.make`): o melhor material de que o armazém tem com que fazer a coisa
   — nunca «o melhor que o povo sabe». **A coisa que volta** (`Inv.unmake`, a casa esvaziada, o que alguém achou no chão) volta ao
@@ -145,6 +148,24 @@ O que cada coisa gasta para ser feita, e o que ela devolve ao armazém, é **o m
   como a caneca; nunca entra no armazém como coisa. A comida que vai nele é a da prateleira da taverna, da parte que o corpo pediu
   (`of`: o arroz, o peixe — a origem da comida, 20h), e o corpo a come pelo livro (`T.bite`, «refeicao»): o que foi comido sai das
   mãos dele com as suas partes.
+- **Os ossinhos e o pano da taverna** (P7, D-795): quem joga à mesa (o ato `jogo-ossos`) tem nas mãos os **ossinhos** — os ossos do
+  tornozelo de um carneiro —, pelo kit, e só onde o povo teve osso (a carcaça de um abate, de uma caça, de um sacrifício: sem osso,
+  nenhum jogo de ossinhos na taverna); quem limpa a mesa (o ato `limpar-mesa`) tem o **pano**: de lã onde o povo teve pano tecido,
+  senão um feixe de palha. São **do lugar** (`PLACE_TOOL`), como a caneca; o armazém não dá nenhum dos dois do nada — o osso e a
+  palha não são de nada que ele guarda (`Inv.offer` recusa a coisa feita de nada).
+- **A cerveja diz o grão de que foi feita** (P7, D-792): o lote da cuba guarda as partes do grão que tomou (`op.data.de`: o `D.use` da
+  origem diz as partes que saíram, `r.parts`), e a taverna guarda o grão da cerveja da sua prateleira (`b.malte`: cada lote feito põe
+  o seu grão, cada caneca que sai leva a sua parte; a cerveja que veio do armazém é de grão não sabido) — a carta diz «cerveja de
+  cevada da casa» só pelo grão de verdade.
+- **O que o povo fez de cada comida** (P7, D-793; `O.madeBy`): a última vez que o povo fez cada parte da comida pelas mãos dele —
+  a pesca, a lavoura, o abate e a caça, o leite, os ovos, a horta, a fruta (um `D.make` da comida com a sua parte num lugar do
+  povo; nunca o que chegou de fora por uma mão: `O.carried`, `O.came`) —, em `S.orig.mk`, no save. A carta da taverna diz «arroz das
+  lavouras do povo» só onde o povo o fez, «que veio de fora» onde o registro cobre os dias e o povo não o fez, e, num save de antes
+  (o registro ainda curto), pelos meios que o povo tem agora (as fazendas daquele grão, os pescadores, os currais) ou só o que é.
+- **O pedido do corpo na mesa** (P7, D-790, D-791): o lugar `'t:'` do livro é a mesa de um dia da taverna — o pedido do corpo deixado
+  no lugar dele (`taverna-mesa`, das mãos do taverneiro), o resto de um prato deixado (`sobra-mesa`) —; daí às mãos do corpo,
+  pago ali (`taverna`), de volta à prateleira quando esfria sem dono (`taverna-mesa-volta`, `taverna-volta`), ou o resto à lavagem
+  (`sobra`); no fechamento, o pedido volta à prateleira e o resto vai fora. Nada some sem a sua linha.
 - **O instrumento do músico da noite** (P7, D-764): quem sobe ao estrado da taverna e toca (o ato `play`) tem nas mãos o
   instrumento do seu povo, pelo kit (`ACT_TOOL.play`): o **tambor** (o huehuetl, o tronco escavado com o couro na boca) do asteca, a
   **lira** (os braços e a travessa de madeira, a caixa coberta de couro, as cordas de tripa) dos outros — do couro e da tripa do

@@ -70,6 +70,23 @@
       carta_falta: ['{bem}: acabou, sinto muito. Quer outra coisa?', 'Não tem mais {bem}. Escolha outra coisa, que eu trago.'],
       pedido_ok: ['É pra já!', 'Um momento, já trago.', '{bem}, saindo!'],
       carta_depois: ['Quando quiser, é só chamar.', 'Fico no balcão. É só chamar.'],
+      // (P7, D-790 to D-800: the order kept on the table; the regulars and «o de sempre»; the brawler put out; the song asked and the coin
+      // to the musician; the round for the table; the talk of the tables — what they know of the world, and the jokes of who drank)
+      pedido_chegou: ['{nome}, sente-se — o seu pedido chegou.', '{nome}! O seu pedido está na mesa: sente-se.', '{nome}, deixei o seu pedido na sua mesa. Sente-se!'],
+      pedido_volta: ['Esfriou e ninguém veio... volta para o balcão.', 'Não voltou: levo de volta.'],
+      carta_sempre: ['{nome}! O de sempre? {bem}?', 'O de sempre, {nome}? {bem}?', 'Boa noite, {nome}! {bem}, como sempre?'],
+      carta_sempre_falta: ['{nome}, hoje acabou {bem}. Quer {outro}?', 'Hoje não tem {bem}, {nome}. Que tal {outro}?'],
+      servir_sempre: ['Aqui está, {nome}: o de sempre.', '{nome}! Aqui está {bem}, como sempre.', 'O de sempre, {nome}. Bom proveito.'],
+      sempre_acabou: ['{nome}, {bem} acabou hoje — vai {outro}.', 'Hoje não tem {bem}, {nome}. Trago {outro}.'],
+      expulsar: ['Fora daqui! Briga na minha casa, não!', 'Chega! Para a rua, e não volte hoje.', 'Aqui não se briga. Fora!'],
+      gorjeta_obrigado: ['Obrigado! Que os deuses lhe paguem.', 'Valeu a moeda!', 'Obrigado, amigo!'],
+      musica_sim: ['Uma canção {povo}! Lá vai.', 'Essa eu sei! Uma {povo}.', 'Uma {povo}, pois não!'],
+      musica_nao: ['Não sei as canções {povo}... desculpe.', 'Das canções {povo} não sei nenhuma.'],
+      rodada_mesa: ['Uma rodada para a mesa, por minha conta!', 'Taverneiro! Uma rodada para todos aqui!'],
+      mesa_festa: ['Hoje tem {bem}! A cidade inteira vai estar lá.', 'Você vai às festas de hoje? {bem}! Vai ser grande.', 'Dizem que nesta {bem} vai ter de tudo.'],
+      mesa_guerra: ['Essa guerra com {bem} não acaba nunca.', 'Meu primo foi para a guerra contra {bem}. Que volte inteiro.', 'Se {bem} vierem até aqui, quem segura?'],
+      mesa_colheita: ['O armazém está quase vazio. Se a colheita não vier, vamos passar fome.', 'Pouca comida no celeiro... o pão vai faltar.', 'Com o armazém assim, quem não plantou vai apertar o cinto.'],
+      mesa_bebida: ['Mais uma! A noite é uma criança!', 'Quem pagou esta? Eu é que não fui!', 'Eu? Bêbado? Só um pouquinho...', 'Ninguém canta como eu depois da terceira!', 'Amanhã eu trabalho dobrado. Hoje, não!'],
       // the baths (act-servicos.js)
       banho_quente: ['Ah, a água está quente hoje!', 'Que calor bom nesta água.', 'Isto sim é descanso.'],
       banho_frio: ['Brr! A água está fria hoje.', 'Sem fogo na fornalha... água gelada.', 'Fria, mas lava do mesmo jeito.'],
@@ -100,6 +117,8 @@
       pedir_taverna: ['Mais {bem}, taverneiro!', 'Enche o meu corno: {bem}!'],
       fechando: ['Fora, todos! O salão fecha.', 'Chega de hidromel por hoje. Para casa!'],
       carta_taverna: ['{nome} Senta aí. O que vai ser?', '{nome} Tem {bem} no salão. O que te trago?'],
+      carta_sempre: ['{nome}! O de sempre? {bem}?', 'Senta, {nome}. {bem}, como sempre?'],
+      expulsar: ['Fora do meu salão! Vai brigar lá fora!', 'Chega! Para a rua, e só volta sóbrio.'],
       pedir_ajuda: ['Ei! Uma mão nesta caixa de {bem}, que pesa como um touro.', 'Preciso de outro braço aqui!'],
       pregao: ['{bem}! Pesado na balança, honesto no preço!', 'Olha o {bem}, trazido pelo mar!'],
       preco: ['{bem}? {preco}, pesadas na balança.', '{preco}. Pode pesar.'],
@@ -125,7 +144,7 @@
     const own = F.PACK[civ] && F.PACK[civ][key]; const L = own || F.PACK.comum[key]; if (!L || !L.length) return null;
     const seed = (ctx.v ? ctx.v.id * 7 : 0) + (ctx.op ? (ctx.op.id || ctx.op) * 13 : 0) + key.length * 31 + Math.floor((G.S ? G.S.day : 0) * 3) + (ctx.n || 0);
     let t = L[Math.floor(G.hash(seed) * L.length) % L.length];
-    const fill = { bem: ctx.k ? E.name(ctx.k) : (ctx.bem || 'isto'), got: F.goodsText(ctx.got), lost: F.goodsText(ctx.lost), nome: ctx.nome || '',
+    const fill = { bem: ctx.k ? E.name(ctx.k) : (ctx.bem || 'isto'), got: F.goodsText(ctx.got), lost: F.goodsText(ctx.lost), nome: ctx.nome || '', outro: ctx.outro || 'outra coisa', povo: ctx.povo || '',
       preco: ctx.preco !== undefined ? (typeof ctx.preco === 'number' ? F.price(civ, ctx.preco) : ctx.preco) : '',
       oferta: ctx.oferta !== undefined ? (typeof ctx.oferta === 'number' ? F.price(civ, ctx.oferta) : ctx.oferta) : '',
       contra: ctx.contra !== undefined ? (typeof ctx.contra === 'number' ? F.price(civ, ctx.contra) : ctx.contra) : '' };

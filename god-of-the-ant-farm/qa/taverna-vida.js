@@ -8,6 +8,11 @@
 //  v3 a pessoa que morre sentada: sai da mesa e do livro do dia, ninguém fica no lugar dela por ela, a caneca não some sem linha
 //  v4 o deus tira a bebida do estoque: nada servido do nada; quem tem companhia fica à mesa, quem está só vai para casa
 //  v5 o taverneiro preso: ninguém mais servido pelas mãos dele; quem espera se serve no balcão; o dia fecha sem ele e ninguém fica
+//  v7 a taverna viva (D-796 a D-800), na mesma noite da v1: cada ato novo — o brinde, os ossinhos, a dança, as palmas, o canto, o
+//     cochilo, a mesa limpa, as canecas recolhidas, a gorjeta, a expulsão, o fechamento — contado com a sua causa no livro do dia e
+//     visto nas pessoas; a conversa das mesas: cada fala com a sua fonte (o boato que a pessoa sabe, a festa, a guerra, a colheita,
+//     a bebida) — nenhuma solta —, e as canecas e os pratos deixados nas mesas até o taverneiro recolher
+//  v8 a briga passada do primeiro sangue: o taverneiro, se é de pôr para fora, põe o brigão na rua — o ato de dois —, que não volta
 //  e nenhum erro de módulo nem aviso no console.
 //   node qa/taverna-vida.js [mundo]          (≈ 3 min; a noite inteira é a v1 — as outras partem de um retrato dela)
 const M = require('./nodemundo.js'); const G = M.load({ qa: true, extra: ['qa/oficio-inv.js', 'qa/taverna-vida-inv.js'] });
@@ -29,6 +34,20 @@ const taverns = () => [...S().buildings.values()].filter(b => b.type === 'tavern
 const god0 = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
 const calm = () => { const w = S().weather; w.rain = 0; if (w.storm) w.storm = 0; if (!(S().divinePeace > G.DAY_LEN * 0.5)) god0(() => G.Politics.divinePeace()); for (const s of S().settlements.values()) { if (s.alarmT > 0) s.alarmT = 0; s.festPlan = { day: S().day, key: null, done: true }; } };
 const atTables = op => Object.keys(op.data.mesa).length;
+// (v7: the acts of the living tavern as the people show them, and every word said at a table — with the source it came from: a rumour
+// the speaker knows, a line of the tables' talk, or another word of the tavern's own — checked as it is said)
+const ACTS = ['brinde', 'jogo-ossos', 'danca', 'palmas', 'cantar-junto', 'cochilo', 'limpar-mesa', 'recolher-canecas', 'gorjeta', 'expulsar', 'fechar'];
+const actSeen = {}; const said = [];
+const tpl = key => { const out = []; for (const c of Object.keys(G.Falas.PACK)) for (const t of G.Falas.PACK[c][key] || []) out.push(new RegExp('^' + t.replace(/[.*+?^$()|[\]\\]/g, '\\$&').replace(/\{\w+\}/g, '.+') + '$', 'i')); return out; };
+const TALK = ['mesa_festa', 'mesa_guerra', 'mesa_colheita', 'mesa_bebida'].map(k => [k, tpl(k)]);
+const OWN = ['pedir_taverna', 'sem_servico', 'sem_dinheiro', 'rodada_mesa', 'gorjeta_obrigado', 'musica_sim', 'musica_nao', 'acabou', 'cheia'].map(k => [k, tpl(k)]);
+{ const say0 = G.Talk.say; G.Talk.say = function (v, txt) {
+  if (v && v.task && v.task.type === 'tavern' && v.inside) { let why = null; const Bo = G.Boatos;
+    if (Bo) for (const r of Bo.list()) { const how = Bo.sabe(v, r); if (how && Bo.frase(r, Bo.deQuem(v, r), how) === txt) { why = 'boato'; break; } }
+    if (!why) for (const [k, L] of TALK) if (L.some(re => re.test(txt))) { why = k; break; }
+    if (!why) for (const [k, L] of OWN) if (L.some(re => re.test(txt))) { why = 'taverna:' + k; break; }
+    said.push({ id: v.id, txt, why, drunk: v.drunk > S().clock }); }
+  return say0.apply(this, arguments); }; }
 const SEATK = { banquinho: 1, banco: 1, cadeira: 1 };
 // (a place's key — the piece and its place —, and the errand's phase: a place that changes with the same phase is a push)
 const placeKey = pl => (pl ? (pl.it ? pl.item + ':' + pl.q : pl.use) : '-');
@@ -54,7 +73,7 @@ let SNAP = null; const shot = {}; // (the snapshot for the other cases: the tabl
       s.max = Math.max(s.max, ins.length);
       let seated = 0; const now = new Set();
       for (const v of ins) {
-        s.who.add(v.id); now.add(v.id); const t = v.task; const pl = In.placeOf(v);
+        s.who.add(v.id); now.add(v.id); const t = v.task; const pl = In.placeOf(v); if (ACTS.includes(v.act)) actSeen[v.act] = (actSeen[v.act] || 0) + 1;
         const sp = pl && pl.it ? pl.it.spots[pl.q] : null;
         if (t && t.type === 'tavern' && t.st >= 2 && t.st < 6 && !G.Vg.entering(v) && !G.Vg.leaving(v)) { if (sp && sp.on && SEATK[pl.it.kind]) seated++; else s.airs++; }
         const k = placeKey(pl), ph = phaseOf(v); const w = s.last.get(v.id);
@@ -103,6 +122,31 @@ let SNAP = null; const shot = {}; // (the snapshot for the other cases: the tabl
   ok('v1 o bebê no colo', bebesColo === bebes, `${bebesColo} de ${bebes} amostras de um bebê dentro de um prédio com quem o carrega, no colo dele`);
   ok('v1 o verificador', !bad.length, bad.join(' / ') || 'limpo');
   if (!SNAP) ok('v1 o retrato', false, 'nenhuma taverna com gente à mesa depois das 0,66 para as outras partes');
+  // ---------------- v7 the living tavern: each act with its cause, each word with its source ----------------
+  {
+    const atos = {}, falas = {}; let lav = 0, gorj = 0;
+    for (const op of ops) { const d = op.data; for (const a of Object.keys(d.atos || {})) { const e = atos[a] || (atos[a] = {}); for (const w of Object.keys(d.atos[a])) e[w] = (e[w] || 0) + d.atos[a][w]; }
+      for (const w of Object.keys(d.falas || {})) falas[w] = (falas[w] || 0) + d.falas[w]; lav += d.lavadas || 0; gorj += d.gorjetas || 0; }
+    const CAUSE = { brinde: ['rodada', 'chegada'], 'jogo-ossos': ['indole', 'corpo', 'aposta'], danca: ['indole', 'bebida'], palmas: ['musica'], 'cantar-junto': ['bebida', 'indole'], cochilo: ['cansaco', 'bebida'], 'limpar-mesa': ['mesa-deixada'], 'recolher-canecas': ['canecas-vazias'], gorjeta: ['musica', 'corpo'], expulsar: ['briga'], fechar: ['hora'] };
+    const odd = []; for (const a of Object.keys(atos)) if (CAUSE[a]) for (const w of Object.keys(atos[a])) if (!CAUSE[a].includes(w)) odd.push(`${a} por «${w}»`);
+    const count = a => Object.values(atos[a] || {}).reduce((x, y) => x + y, 0);
+    console.log(`   os atos da noite (no livro do dia, com a causa): ${ACTS.map(a => `${a} ${count(a)}${atos[a] ? ' (' + Object.keys(atos[a]).map(w => w + ' ' + atos[a][w]).join(', ') + ')' : ''}`).join('; ')}`);
+    console.log(`   vistos nas pessoas (amostras): ${ACTS.map(a => `${a} ${actSeen[a] || 0}`).join(', ')}; ${lav} canecas e pratos recolhidos, ${Math.round(gorj * 10) / 10} de gorjeta`);
+    // (the acts of the people seen without their count in the book: none — every one has its cause)
+    const unseen = ACTS.filter(a => (actSeen[a] || 0) > 0 && a !== 'expulsar' && !count(a));
+    // (the common ones every night of a full room has; the music's — the claps, the song, the dance, the coin — by the songs the night had)
+    const must = ['brinde', 'cochilo', 'fechar']; const lack = must.filter(a => !count(a)); const chores = count('limpar-mesa') + count('recolher-canecas'); const music = count('palmas') + count('cantar-junto') + count('danca');
+    const kinds = ACTS.filter(a => count(a) > 0).length;
+    ok('v7 a taverna viva: cada ato com a sua causa', !odd.length && !unseen.length && !lack.length && chores > 0 && music > 0 && kinds >= 7,
+      `${kinds} dos ${ACTS.length} atos na noite${lack.length ? '; FALTARAM ' + lack.join(', ') : ''}${chores ? '' : '; nenhuma mesa limpa'}${music ? '' : '; ninguém respondeu à música'}${odd.length ? '; CAUSA ESTRANHA: ' + odd.join(', ') : ''}${unseen.length ? '; VISTO SEM CAUSA: ' + unseen.join(', ') : ''} (a expulsão, a v8; a gorjeta e os ossinhos do corpo, a c15 da taverna-corpo)`);
+    const loose = said.filter(x => !x.why); const talk = said.filter(x => x.why === 'boato' || TALK.some(([k]) => k === x.why));
+    const jokes = said.filter(x => x.why === 'mesa_bebida'); const soberJ = jokes.filter(x => !x.drunk).length;
+    const by = {}; for (const x of said) by[x.why || '?'] = (by[x.why || '?'] || 0) + 1;
+    console.log(`   as falas das mesas: ${Object.keys(by).map(k => k + ' ' + by[k]).join(', ')}; no livro: ${JSON.stringify(falas)}${loose.length ? '; SOLTAS: ' + loose.slice(0, 3).map(x => '«' + x.txt + '»').join(' ') : ''}`);
+    if (talk.length) console.log(`   (por exemplo: ${talk.slice(0, 4).map(x => '«' + x.txt + '»').join(' ')})`);
+    ok('v7 a conversa das mesas fala do mundo: cada fala com a sua fonte', talk.length >= 5 && !loose.length && !soberJ && Object.keys(falas).every(w => G.Taverna.WHY_FALA.includes(w)),
+      `${talk.length} falas das mesas (${Object.keys(falas).map(w => w + ' ' + falas[w]).join(', ')}), ${loose.length} sem causa, ${soberJ} brincadeiras de bêbado ditas sóbrio`);
+  }
 }
 
 // ---------------- v6 the way from the door to each seat ----------------
@@ -155,15 +199,19 @@ if (SNAP) {
   {
     fresh(); const b = B(); const ref = 'b:' + b.id; const DR = ['vinho', 'mel', 'cerveja', 'pulque'];
     god(() => { for (const k of DR) { const n = D.get(ref, k); if (n > 0) D.use(ref, k, n, { code: 'deus', part: true }); } });
-    const op = T.dia(b); const led0 = seen.length; const at0 = op ? atTables(op) : 0; const bad = [];
+    const op = T.dia(b); const led0 = seen.length; const at0 = op ? atTables(op) : 0; const bad = []; const left0 = DR.map(k => D.get(ref, k)).reduce((x, y) => x + y, 0);
     // (what was already in the hands — the cups on their way to a table, the ones being drunk —: theirs still; nothing more)
     let inHands = 0; for (const v of S().villagers.values()) if (v.carry && op && v.carry.op === op.id && DR.includes(v.carry.k)) inHands += v.carry.n;
     for (let s = 0; s < 12; s++) { M.viver(1); if (s % 4 === 3) watch(bad); }
-    const L = seen.slice(led0).filter(e => e && e.c === 'taverna' && DR.includes(e.k)); const fromShelf = L.filter(e => String(e.from).startsWith('b:')).length; const handed = L.filter(e => String(e.from).startsWith('v:')).reduce((a, e) => a + e.n, 0);
+    // (this tavern's rounds: the others' shelves are untouched)
+    const L = seen.slice(led0).filter(e => e && e.c === 'taverna' && DR.includes(e.k) && op && e.op === op.id); const fromShelf = L.filter(e => String(e.from).startsWith('b:')).length; const handed = L.filter(e => String(e.from).startsWith('v:')).reduce((a, e) => a + e.n, 0);
+    // (what came onto the shelf since by a door of its own — the keeper's purchase at the store, the vat's batch —: no drink of nothing)
+    const restock = seen.slice(led0).filter(e => e && e.to === ref && DR.includes(e.k) && e.c !== 'taverna-volta').reduce((a, e) => a + e.n, 0);
     const o = T.dia(b); const at = o ? Object.keys(o.data.mesa).map(Number) : [];
     // (who stays at a table with nothing to drink stays for the company: someone else at the same table)
     const alone = at.filter(id => { const m = o.data.mesa[id]; const v = S().villagers.get(id); return m.dry && !at.some(q => q !== id && ((o.data.mesa[q].g && o.data.mesa[q].g === m.g) || T.fond(v, S().villagers.get(q)))); }).length;
-    ok('v4 o deus tira a bebida', fromShelf === 0 && handed <= inHands + 1e-6 && alone === 0 && !bad.length, `${fromShelf} rodadas da prateleira vazia (do nada), ${Math.round(handed * 100) / 100} de bebida passada de mão em mão (havia ${Math.round(inHands * 100) / 100} nas mãos); ${at0} à mesa antes, ${at.length} depois, ${alone} sem bebida e sem companhia; ${bad.join(' / ') || 'verificador limpo'}`);
+    if (!(handed <= inHands + restock + 1e-6)) console.log('   (v4: na prateleira depois da mão do deus ' + left0 + '; ' + JSON.stringify(seen.slice(led0).filter(e => e && DR.includes(e.k) && op && e.op === op.id)) + ')');
+    ok('v4 o deus tira a bebida', fromShelf === 0 && handed <= inHands + restock + 1e-6 && alone === 0 && !bad.length, `${fromShelf} rodadas da prateleira vazia (do nada), ${Math.round(handed * 100) / 100} de bebida passada de mão em mão (havia ${Math.round(inHands * 100) / 100} nas mãos, ${Math.round(restock * 100) / 100} chegou à prateleira pelo livro — comprada, da cuba); ${at0} à mesa antes, ${at.length} depois, ${alone} sem bebida e sem companhia; ${bad.join(' / ') || 'verificador limpo'}`);
   }
   // ---------------- v5 the keeper jailed ----------------
   {
@@ -178,6 +226,24 @@ if (SNAP) {
       const left = [...S().villagers.values()].filter(v => v.inside === b.id && v.task && v.task.type === 'tavern').length;
       ok('v5 o taverneiro preso', !T.keeperOf(b) && closed && byHim === 0 && left === 0 && !bad.length, `${k.name} na cadeia: ${byHim} rodadas pelas mãos dele depois, ${self} servidas no balcão por quem esperava, o dia ${closed ? 'fechou sem ele' : 'NÃO FECHOU'}, ${left} ainda à mesa; ${bad.join(' / ') || 'verificador limpo'}`);
     }
+  }
+}
+// ---------------- v8 the brawler put out ----------------
+if (SNAP) {
+  fresh(); const bad = [];
+  // (a tavern with two of the world at the same table and a keeper of the índole to put one out — else any: the keeper who would not)
+  let pick = null; for (const b of taverns()) { const op = T.dia(b); const k = T.keeperOf(b); if (!op || !k) continue; const at = Object.keys(op.data.mesa).map(Number).filter(id => { const v = S().villagers.get(id); return v && !op.data.mesa[id].body && v.task && v.task.type === 'tavern' && v.task.st >= 2 && v.task.st <= 5 && v.age >= 18; });
+    for (const a of at) { const o = at.find(q => q !== a && op.data.mesa[q].g === op.data.mesa[a].g); if (o) { const c = { b, a, o, brave: T.brave(k) }; if (!pick || (c.brave && !pick.brave)) pick = c; break; } } if (pick && pick.brave) break; }
+  if (!pick) ok('v8 a expulsão', false, 'nenhuma mesa com dois para brigar');
+  else {
+    const { b, a, o, brave } = pick; const A1 = S().villagers.get(a), O1 = S().villagers.get(o); const k = T.keeperOf(b);
+    god(() => { A1.drunk = S().clock + 80; A1.drinks = 3; O1.drunk = S().clock + 80; T.briga(A1, O1); });
+    let blood = false, outT = 0; const t0 = S().clock;
+    while (S().clock - t0 < 30) { M.viver(0.25); const op = T.dia(b); if (!op) break; if (op.data.briga) blood = true; if (!op.data.mesa[a] && !outT) outT = S().clock; if (outT && S().clock - outT > 4) break; watch(bad); }
+    const op = T.dia(b); const back = !!op && !!op.data.mesa[a]; const n = op ? (op.data.atos && op.data.atos.expulsar ? op.data.atos.expulsar.briga : 0) : 0;
+    const walked = A1.saiT > 0 || (A1.task && A1.task.type !== 'tavern');
+    ok('v8 a briga passada do primeiro sangue: o taverneiro de pôr para fora põe o brigão na rua, e ele não volta esta noite', brave ? blood && !!outT && !back && n === 1 && A1.tavDay === S().day && G.Taverna.urge(A1, null) === 0 && !bad.length : blood && n === 0 && !bad.length,
+      `${k.name} ${brave ? 'é de pôr para fora' : 'não é de pôr ninguém para fora'}; ${A1.name} começou contra ${O1.name}: primeiro sangue ${blood ? 'sim' : 'não'}; ${outT ? `posto para fora em ${(outT - t0).toFixed(1)} s, saindo pela porta ${walked ? 'sim' : 'não'}` : 'ninguém posto para fora'}; ${back ? 'VOLTOU à mesa' : 'não voltou'}; ${bad.join(' / ') || 'verificador limpo'}`);
   }
 }
 const er = M.erros(); const errs = Object.keys(er.mod).length + er.console.length;

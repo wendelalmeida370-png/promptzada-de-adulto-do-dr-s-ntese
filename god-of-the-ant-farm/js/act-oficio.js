@@ -265,6 +265,8 @@
       const r = D.use('b:' + b.id, R.in, taken, { op: op.id, code: s.id, by: v.id, key, mine: true, of: R.of }); // (R.of: the parts the recipe takes — the vat, the grain: 20h)
       if (!r.ok) return { ok: false, why: r.why === 'não há' || r.why === 'não há tanto' ? `Sumiu ${E.name(R.in)} separado para esta fornada.` : r.why };
       taken = r.n; d.usado = r2(d.usado + taken); setRsv(op, b, d.got - taken);
+      // (the parts of what it took — the grain of the vat's beer: the batch keeps them, and the tavern says the beer by them, D-792)
+      if (R.of && r.parts) { const de = d.de && typeof d.de === 'object' ? d.de : (d.de = {}); for (const t in r.parts) if (r.parts[t] > EPS) de[t] = r2((de[t] || 0) + r.parts[t]); }
     } else d[s.from] = r2(d[s.from] - taken);
     d.q++;
     const out = r2(taken * (s.give || s.take) / s.take);

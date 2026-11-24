@@ -29,8 +29,8 @@
   const toast = (txt, d) => { if (txt && G.IncUI && G.IncUI.toast) G.IncUI.toast(txt, d || 2.6); };
   const deny = r => { if (r && r.why) toast(r.why); if (G.Audio && G.Audio.play) G.Audio.play('deny'); };
   let panel = null, open = false, shown = { op: 0, ck: -1 }, sel = -1, sig = '', upT = 0, closer = false, items = [], busy = false, note = '';
-  let auto = null, said = { so: 0, sem: 0, mao: 0 };
-  G.worldHooks.push(() => { if (open) hide(true); shown = { op: 0, ck: -1 }; sel = -1; sig = ''; auto = null; said = { so: 0, sem: 0, mao: 0 }; });
+  let auto = null, said = { so: 0, sem: 0, mao: 0, ch: 0, cv: '' };
+  G.worldHooks.push(() => { if (open) hide(true); shown = { op: 0, ck: -1 }; sel = -1; sig = ''; auto = null; said = { so: 0, sem: 0, mao: 0, ch: 0, cv: '' }; });
   UI.isOpen = () => open;
 
   // ------------------------------ the hands at the table and at the counter ------------------------------
@@ -62,6 +62,7 @@
       if (s.hold) return s.hold.food ? `Comer ${def(s.hold.nome)}` : `Beber um gole de ${drinkWord(s.hold.k)}`;
       if (s.cv === 'carta') return 'Ver o cardápio';
       if (s.cv === 'pedido') return `Esperando ${def(s.pedido ? s.pedido.nome : 'o pedido')}`;
+      if (s.cv === 'mesa') return s.mesa && s.mesa.aqui ? `${cap(def(s.mesa.nome))} na mesa` : 'O seu pedido está na outra mesa'; // (D-790)
       if (s.cv === 'chama') return s.can && !s.so ? `Esperando ${kname(s.keeper)}` : 'Ninguém para servir';
       return s.can ? `Chamar ${kname(s.keeper)}` : 'Ninguém para servir';
     },
@@ -71,6 +72,7 @@
       if (s.hold) return s.hold.food && !s.seat ? { ok: false, why: 'Sente-se a uma mesa para comer.' } : { ok: true };
       if (s.cv === 'carta') return { ok: true };
       if (s.cv === 'pedido') return { ok: false, why: `${cap(kname(s.srv || s.keeper))} já vem.` };
+      if (s.cv === 'mesa') return { ok: false, why: s.mesa && s.mesa.aqui ? 'Já vai para as suas mãos.' : 'Sente-se onde está o seu pedido: o lugar é seu.' };
       if (s.cv === 'chama' && s.can && !s.so) return { ok: false, why: `${cap(kname(s.keeper))} já vem à sua mesa.` };
       if (!s.can || s.so) return { ok: false, why: 'Não há quem sirva agora: vá ao balcão e sirva-se.' };
       return { ok: true };
@@ -83,6 +85,31 @@
       G.IncUI.when(G.Possess.apply(w => T().call(w, s.op)), r => toast(r.msg, 2.2), deny); return { ok: true };
     },
   });
+
+  // ------------------------------ the body's verbs at the tavern (D-798) ------------------------------
+  // (F and the card's keys, seated at a table: a round for the table, a song asked of the night's musician, the game of bones at the
+  // table — each done by the world in its step, G.Possess.apply → G.Taverna, the answer told when it comes; the coin to the musician is
+  // a verb of the person. Only read here: what can be done is G.Taverna.verbos)
+  const vb = () => (T() && T().verbos ? T().verbos(P().body()) : null);
+  const asked = fn => { const ask = G.Possess.apply(fn); return { ok: true, ask, get msg() { return (ask.res && (ask.res.msg || ask.res.why)) || '…'; } }; };
+  const clip = id => !!(G.Anim3D && G.Anim3D.CLIPS && G.Anim3D.CLIPS[id]);
+  I.verb('taverna', { id: 'tv-rodada', k: 'outra', ord: 1,
+    label: (ctx, t) => { if (t.bal) return ''; const r = vb(); const x = r && r.rodada; return x && (x.ok || x.why !== 'Não há ninguém à sua mesa.') ? `Pagar uma rodada para a mesa${x.ok && x.p ? ` (${r.price(x.p)})` : ''}` : ''; },
+    can: () => { const r = vb(); return r ? r.rodada : { ok: false }; },
+    run: (ctx, t) => { if (G.Audio && G.Audio.play) G.Audio.play('coin', 0.5); return asked(w => T().rodada(w, t.s.op)); } });
+  I.verb('taverna', { id: 'tv-musica', k: 'outra', ord: 2,
+    label: (ctx, t) => { if (t.bal) return ''; const r = vb(); const x = r && r.musica; return x && (x.ok || x.why) ? `Pedir uma música${x.ok && x.p ? ` (${r.price(x.p)})` : ''}` : ''; },
+    can: () => { const r = vb(); return r ? r.musica : { ok: false }; },
+    run: (ctx, t) => asked(w => T().musica(w, t.s.op)) });
+  I.verb('taverna', { id: 'tv-jogo', k: 'outra', ord: 3,
+    label: (ctx, t) => { if (t.bal) return ''; const r = vb(); const x = r && r.jogo; if (!x || (!x.ok && !x.dentro && !x.j)) return ''; return x.dentro ? `Lançar os ossinhos${x.aposta ? ` (aposta de ${r.price(x.aposta)})` : ''}` : 'Entrar no jogo de ossinhos'; },
+    can: () => { const r = vb(); return r ? r.jogo : { ok: false }; },
+    run: (ctx, t) => { const r = vb(); if (r && r.jogo && r.jogo.dentro && clip('jogo-ossos') && !G.Avatar.busy()) G.Avatar.act({ anim: 'jogo-ossos', dur: 1.6, vact: 'jogo-ossos', free: true });
+      return asked(w => T().jogar(w, t.s.op)); } });
+  if (G.Interact.verb) G.Interact.verb('pessoa', { id: 'tv-gorjeta', k: 'outra', ord: 4,
+    label: (ctx, t) => { const c = T() && T().gorjetaCan ? T().gorjetaCan(ctx.v, t.o) : null; return c && (c.ok || c.why) ? `Dar uma gorjeta a ${P().knows.call(ctx.v, t.o)}${c.ok ? ` (${c.price})` : ''}` : ''; },
+    can: (ctx, t) => (T() && T().gorjetaCan ? T().gorjetaCan(ctx.v, t.o) : { ok: false }),
+    run: (ctx, t) => { if (G.Audio && G.Audio.play) G.Audio.play('coin', 0.5); return asked(w => T().gorjeta(w, t.o.id)); } });
 
   // ------------------------------ the menu ------------------------------
   // (the vessel of each drink, as its people says it — the cup, the goblet, the horn, the gourd —; the dish on its plate, by what it
@@ -172,7 +199,7 @@
     const b = G.S.buildings.get(s.b); look = Object.assign({}, T().look(b), UI.force || {});
     G.IncUI.closeAll(); G.Modes.setPanel('cardapio'); G.Input3D.free(); G.IncUI.root().classList.add('mn-on'); // (the cursor for the screen; the mouse back when it shuts — rule 122; the touch's sticks out of the way)
     panel.className = `mn t-${look.tema} p-${look.porte}`; // (a new class each time: the card unfolds again)
-    open = true; shown = { op: s.op, ck: s.ck }; sel = -1; hov = -1; note = ''; busy = false; sig = ''; faceOf = 0;
+    open = true; shown = { op: s.op, ck: s.ck }; sel = -1; hov = -1; note = ''; busy = false; sig = ''; faceOf = 0; UI._sempre = null;
     void panel.offsetWidth; render(s);
     play(look.porte === 'lousa' ? 'scratch' : 'rustle', 0.45); // (the slate's chalk, the paper of the menu — once, as it opens)
     return true;
@@ -201,7 +228,10 @@
       top.querySelector('small').textContent = kp ? (P().knows.person(v, kp) ? `${kp.name}, ${kp.g === 'f' ? 'a taverneira' : 'o taverneiro'}` : cap(P().knows.call(v, kp))) : 'No balcão';
       const cv = top.querySelector('canvas'); top.querySelector('.mn-face').classList.toggle('none', !kp); face(cv, kp);
     }
-    const st = JSON.stringify([items.map(x => [x.id, x.n, x.ok]), pu.n, sel, busy, note, touch]);
+    // (a regular of the house: «o de sempre» at the top — the line of the menu it is, chosen at once; out of it today, said so — D-794)
+    const sp = s.sempre && s.sempre.key ? s.sempre : null; const us = sp ? items.findIndex(x => T().keyOf(x) === sp.key || (sp.k === 'food' && x.k === 'food' && [].concat(x.of || []).includes(sp.of))) : -1;
+    if (sp && us >= 0 && items[us].ok && sel < 0 && !UI._sempre) { sel = us; UI._sempre = s.op + ':' + s.ck; }
+    const st = JSON.stringify([items.map(x => [x.id, x.n, x.ok]), pu.n, sel, busy, note, touch, us]);
     if (st === sig) return; sig = st;
     const row = (it, i) => {
       const can = it.ok && pu.n + 1e-6 >= it.p; const why = !it.ok ? 'acabou' : !can ? 'falta dinheiro' : '';
@@ -214,7 +244,9 @@
     const it = sel >= 0 ? items[sel] : null; const canIt = !!it && it.ok && pu.n + 1e-6 >= it.p;
     const sum = it ? `<div class="mn-sum"><span>Seu pedido</span><b>${esc(cap(it.nome))}</b>${s.moeda && it.ok ? `<em>${esc(s.price(it.p))}</em>` : ''}</div>` : `<div class="mn-sum none">${esc(W.none)}</div>`;
     const hint = touch ? '' : `<div class="mn-hint"><kbd>↑</kbd><kbd>↓</kbd> ou <kbd>1</kbd>–<kbd>5</kbd> escolhe · <kbd>${esc(G.Input3D.label('interagir'))}</kbd> pede · <kbd>Esc</kbd> fecha</div>`;
-    panel.querySelector('.mn-body').innerHTML = `<div class="mn-list">${items.length ? part('beber', W.beber) + part('comer', W.comer) : `<div class="mn-empty">${esc(W.vazio || 'Não há nada agora.')}</div>`}</div>
+    const usual = sp ? (us >= 0 && items[us].ok ? `<button class="mn-row mn-sempre${us === sel ? ' sel' : ''}" data-i="${us}"><span class="star">★</span><span class="nm"><b>O de sempre</b><small>${esc(cap(items[us].nome))}</small></span><span class="pr">${s.moeda ? priceOf(s, items[us].p) : ''}</span></button>`
+      : `<div class="mn-sempre out"><span class="star">★</span><span class="nm"><b>O de sempre</b><small>${esc(cap(sp.nome))}: acabou hoje</small></span></div>`) : '';
+    panel.querySelector('.mn-body').innerHTML = `${usual}<div class="mn-list">${items.length ? part('beber', W.beber) + part('comer', W.comer) : `<div class="mn-empty">${esc(W.vazio || 'Não há nada agora.')}</div>`}</div>
       ${note ? `<div class="mn-note">${esc(note)}</div>` : ''}
       <div class="mn-foot">${sum}<div class="mn-purse">${pu.txt}</div>
         <div class="mn-btns"><button class="mn-no" data-a="close">Agora não</button><button class="mn-go" data-a="go"${canIt && !busy ? '' : ' disabled'}>${busy ? 'Pedindo…' : esc(W.go)}</button></div>${hint}</div>`;
@@ -267,7 +299,11 @@
     // (the words of the moment, once each: nobody to come; no coin when it came; the hands full)
     if (s.so && s.so !== said.so) { said.so = s.so; toast('Ninguém vem atender: vá ao balcão e sirva-se.', 3.2); }
     if (s.sem && s.sem !== said.sem) { said.sem = s.sem; toast('Faltou dinheiro: o pedido voltou para o balcão.', 3); }
-    if (s.mao && s.mao !== said.mao) { said.mao = s.mao; toast('Com as mãos ocupadas, o pedido voltou para o balcão.', 3); }
+    if (s.mao && s.mao !== said.mao) { said.mao = s.mao; toast(s.cv === 'mesa' ? 'Com as mãos ocupadas: o pedido espera na mesa.' : 'Com as mãos ocupadas, o pedido voltou para o balcão.', 3); }
+    // (the order set down at the body's seat: the keeper's call, said on the screen too — D-790; and back in the hands at the seat)
+    if (s.ch && s.ch !== said.ch) { said.ch = s.ch; if (s.chegou) toast(`${cap(kname(s.keeper))}: «${s.chegou}»`, 3.6); }
+    if (said.cv === 'mesa' && s.cv === 'servido') toast(s.frio ? 'O seu pedido esfriou na mesa — mas está aí.' : 'O seu pedido, ainda quente.', 2.6);
+    said.cv = s.cv || '';
     // (just served at the table: the first sip or the first mouthful at once; the plate eaten to the end, a mouthful after another;
     // the cup a sip now and then — the hands the player's: a step, and it stops)
     if (s.hold && s.seat && s.cv === 'servido') {

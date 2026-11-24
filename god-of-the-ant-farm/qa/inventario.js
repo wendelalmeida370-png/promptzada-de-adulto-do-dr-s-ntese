@@ -531,6 +531,14 @@ if (on('i17')) {
     if (kindOf(c.mao) !== 'cajado' || kindOf(c.outra) !== 'muleta') bad.push(`o ancião sem perna: ${JSON.stringify({ mao: c.mao, outra: c.outra })}`);
     if ([w.mao, w.outra].some(x => kindOf(x) === 'muleta')) bad.push(`o guerreiro sem perna com a muleta no lugar da arma: ${JSON.stringify({ mao: w.mao, outra: w.outra })}`);
     said.push(`a muleta: ímpar na mão ${a.mao}, par na outra ${b.outra}, o ancião cajado e muleta`); }
+  // (P7, D-795: the tavern's knucklebones in the hand of who plays — of the carcass's bone, none where the people never had it —, and the
+  // keeper's rag in the hand of who wipes a table: of the loom's wool where the people has had woven cloth, else of straw)
+  { const h = Inv.kit(copy(o, { act: 'jogo-ossos' })); const bone = O.matOK(fid, 'osso', arts); if (bone ? kindOf(h.mao) !== 'ossinhos' : !!h.mao) bad.push(`quem joga ossinhos: ${h.mao} (o povo ${bone ? 'tem' : 'não tem'} osso)`);
+    const r = Inv.kit(copy(o, { act: 'limpar-mesa' })); const want = O.matOK(fid, 'la', arts) ? 'la' : 'palha'; if (kindOf(r.mao) !== 'pano' || matOf(r.mao) !== want) bad.push(`quem limpa a mesa: ${r.mao} (o povo teria ${want})`);
+    const c = Inv.kit(copy(o, { act: 'recolher-canecas' })), t = Inv.kit(copy(o, { act: 'brinde' })); if (kindOf(c.mao) !== 'caneca' || kindOf(t.mao) !== 'caneca') bad.push(`quem recolhe as canecas: ${c.mao}; quem brinda: ${t.mao}`);
+    said.push(`os ossinhos: ${h.mao || 'nenhum (sem osso)'}; o pano: ${r.mao}`);
+    // (the store gives neither: they are of nothing it keeps)
+    const st = atStore(x => !x.lost); if (st) { const a = Inv.offer(st.v, 'ossinhos'), p2 = Inv.offer(st.v, 'pano', 'palha'); if (a.can || p2.can) bad.push(`o armazém dá ${a.can ? a.k : ''} ${p2.can ? p2.k : ''} do nada`); } }
   // (pure: asking changed nothing of the world)
   const fp1 = fpOf(); if (fp0 !== fp1) bad.push('O MUNDO MUDOU com as perguntas');
   // (the clay had: the pottery's ware come into a people that never had it — the cup turns clay; never by the art)
@@ -550,7 +558,7 @@ if (on('i17')) {
       if (kindOf(hd.mao) !== 'caneca' || (kindOf(hc.mao) === 'machado' && !Object.keys(v.mochila || {}).some(k => It.parse(k)[0] === 'machado'))) bad.push(`o corpo bebendo: ${hd.mao}; cortando: ${hc.mao}`); said.push(`o corpo bebe da caneca da casa (${hd.mao})`);
       Po.release('deus'); M.viver(0.2); } }
   const nv = novas();
-  ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
+  ok('i17 as coisas do dia (22c): a caneca, os grilhões, a bola, a muleta, os ossinhos e o pano — do material que o povo tem, puras', !bad.length && !nv.length && !errs(), `${said.join('; ')}${bad.length ? ' — FALHOU: ' + bad.join(' | ') : ''}${nv.length ? ' — ' + nv.slice(0, 3).join(' | ') : ''} ${errs()}`);
 }
 
 // ================================================================ the bad cases

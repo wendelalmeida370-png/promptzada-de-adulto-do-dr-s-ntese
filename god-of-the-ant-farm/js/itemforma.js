@@ -78,9 +78,13 @@
     barro: { c: hex('#a35a37'), c2: hex('#8c4a2c'), grain: 'pebble', g: 0.18 },
     barroE: { c: hex('#5a3322'), c2: hex('#4a2a1c'), grain: 'pebble', g: 0.3 },
     ferroB: { c: hex('#47494d'), c2: hex('#3a3b3e'), edge: hex('#7d8288'), grain: 'metal', m: 0.85, g: 0.38 },
+    // (P7, D-795: the knucklebones' bone, worn smooth by the hands; a twist of dry straw; the loom's undyed wool, a rag)
+    osso: { c: hex('#e3d8bc'), c2: hex('#c2b28c'), grain: 'pebble', g: 0.1 },
+    palha: { c: hex('#d2b064'), c2: hex('#a4823c'), grain: 'wicker', g: 0.06 },
+    la: { c: hex('#d9d0b9'), c2: hex('#b5a888'), grain: 'cloth', g: 0.05 },
   };
   // the material a thing is made in (the catalog's mats) → the palette of its working part; an unknown one reads as iron
-  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro' };
+  F.MATS = { pedra: 'pedra', bronze: 'bronze', ferro: 'ferro', madeira: 'madeira', vime: 'vime', corda: 'corda', couro: 'couro', barro: 'barro', osso: 'osso', palha: 'palha', la: 'la' };
   const metal = mat => PAL[F.MATS[mat] || 'ferro'] || PAL.ferro;
 
   // ------------------------------ the mesh being built ------------------------------
@@ -877,6 +881,38 @@
       if (hide) { const seam = Math.pow(Math.max(0, Math.cos(lo * 3)), 40) + Math.pow(Math.max(0, Math.cos(la * 2)), 60); return { ao: 1 - 0.32 * Math.min(1, seam) }; }
       return { w: q === 0 ? ((Math.floor((lo + Math.PI) / TAU * 12) + Math.floor((la + 1.6) / 3.2 * 8)) % 2 ? 1 : -1) : 0, wrap: 0.02, ao: 0.85 + 0.15 * Math.cos(la * 6) }; } });
     M.marks.centro = C.slice(); M.marks.ponta = [C[0] + r, 0, 0];
+  };
+
+  // the knucklebones (P7, D-795): five little ankle bones in the closed fist (the origin: the palm; they sit toward +X, the palm's
+  // side, as the ball), each a knobbly block with its waist — the astragalus of a sheep —, one a little apart, ready to be thrown
+  R.ossinhos = (M, mat) => {
+    const q = M.q; const pal = PAL.osso; const C = [0.022, 0, 0];
+    part(M, 'cabeca');
+    const at = [[0, 0, 0], [0.012, 0.006, 0.008], [-0.01, 0.007, 0.006], [0.006, -0.008, -0.009], [0.016, -0.004, -0.006]].slice(0, q === 2 ? 3 : 5);
+    at.forEach((o, i) => { const c = add(C, o); const h = [0.0085 - (i % 2) * 0.001, 0.0062, 0.0058]; box(M, c, h, q === 0 ? 0.0028 : 0, pal, { along: i % 2 ? 'x' : 'z', taper: 0.86, f: (k, t, j, u, v, p) => ({ ao: 0.8 + 0.2 * Math.abs(Math.cos((p[0] - c[0]) * 260)) }) });
+      if (q === 0) ball(M, add(c, [0, 0.0058, 0]), [0.0045, 0.0018, 0.0035], 6, pal, { f: () => ({ ao: 0.86 }) }); });
+    M.marks.centro = C.slice(); M.marks.ponta = add(C, [0.02, 0, 0]);
+  };
+  // the rag (P7, D-795): of wool — a wad of cloth in the fist, a fold of it hanging out of the hand toward +Z (what hangs goes to +Z,
+  // D-386) —, or of straw: a twist of dry stalks bent double, bound round its middle with a stalk, the ends splayed
+  R.pano = (M, mat) => {
+    const q = M.q, straw = mat === 'palha'; const C = [0.024, 0, 0];
+    part(M, 'cabeca');
+    if (!straw) {
+      const pal = PAL.la;
+      // (the wad crumpled in the fist — its folds the light catches —, and the cloth's end hanging out of it, a flat strip with its hem)
+      ball(M, C, [0.032, 0.019, 0.03], seg(M, 12, 8, 5), pal, { f: (k, t, j, u, v, p) => ({ ao: 0.72 + 0.28 * Math.abs(Math.sin((p[1] - C[1]) * 260 + (p[0] - C[0]) * 170 + (p[2] - C[2]) * 90)) }) });
+      if (q < 2) { box(M, [C[0] + 0.004, -0.012, 0.05], [0.024, 0.0035, 0.032], q === 0 ? 0.002 : 0, pal, { along: 'z', taper: 0.85, f: (k, t, j, u, v, p) => ({ ao: 0.8 + 0.2 * Math.abs(Math.sin(p[0] * 300)) }) });
+        if (q === 0) box(M, [C[0] + 0.004, -0.012, 0.081], [0.021, 0.0045, 0.002], 0, PAL.la, { along: 'z', n: 0, f: () => ({ ao: 0.7 }) }); }
+      M.marks.centro = C.slice(); M.marks.ponta = [C[0], -0.02, 0.08]; return;
+    }
+    const pal = PAL.palha; const n = seg(M, 9, 6, 0);
+    if (q === 2) { tube(M, [[C[0], -0.05, 0], [C[0], 0.05, 0]], t => 0.007 + 0.006 * Math.abs(t - 0.5), 4, pal, { cap0: true, cap1: true }); M.marks.centro = C.slice(); M.marks.ponta = [C[0], 0.05, 0]; return; } // (far: the bundle as one)
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU, rr = 0.006 + 0.003 * (i % 3); const path = [];
+      for (let k = 0; k <= 4; k++) { const t = k / 4; const s0 = t - 0.5; path.push([C[0] + Math.cos(a) * rr * (1 + 1.4 * Math.abs(s0)), C[1] + s0 * 0.1, C[2] + Math.sin(a) * rr * (1 + 1.4 * Math.abs(s0))]); }
+      tube(M, path, 0.0016, 3, pal, { cap0: true, cap1: true, f: () => ({ ao: 0.85 }) }); }
+    if (q < 2) tube(M, [[C[0] - 0.013, 0, 0], [C[0], 0, 0.013], [C[0] + 0.013, 0, 0], [C[0], 0, -0.013], [C[0] - 0.013, 0, 0]], 0.0022, 3, PAL.vime, {});
+    M.marks.centro = C.slice(); M.marks.ponta = [C[0], 0.05, 0];
   };
 
   // the bonds of the hands joined: in the right fist's frame (the origin: the right palm; the forearm goes back toward −Z, the

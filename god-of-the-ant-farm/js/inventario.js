@@ -43,9 +43,12 @@
   // ------------------------------ the trade's kit ------------------------------
   // (the tool an act puts in the hand — the same table the 3D had, now the world's: who chops holds an axe, who fights a sword)
   // (22c, D-612: who drinks holds the cup — the tavern's, the feast's, the toast's —; who is led bound has the hands in the bonds)
-  const PLACE_TOOL = { caneca: 1, grilhoes: 1 };
+  // (P7, D-795: the knucklebones of the tavern's game and the keeper's rag — the place's too, the body's hands among them)
+  const PLACE_TOOL = { caneca: 1, grilhoes: 1, ossinhos: 1, pano: 1 };
   const ACT_TOOL = Inv.ACT_TOOL = { chop: 'machado', cut: 'machado', mine: 'picareta', dig: 'pa', hammer: 'martelo', build: 'martelo', forge: 'martelo', beat: 'martelo', rake: 'enxada', butcher: 'faca', skin: 'faca', stab: 'espada', fight: 'espada', brandish: 'espada', fish: 'vara', reel: 'vara', harvest: 'foice',
-    drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira' };
+    drink: 'caneca', toast: 'caneca', bound: 'grilhoes', play: 'lira',
+    // (the living tavern's acts, P7 D-796: the toast with the cup, the bones thrown at the table, the rag on the board, the cups taken up)
+    brinde: 'caneca', 'jogo-ossos': 'ossinhos', 'limpar-mesa': 'pano', 'recolher-canecas': 'caneca' };
   // (the musician of the night plays his people's instrument: the drum of the Aztec, the lyre of the others — of the hide and gut
   // the people had, as the cup is of its clay or wood: P7, D-764)
   const instrumentOf = v => ((G.Fac.civOfV ? G.Fac.civOfV(v) : v.civ) === 'asteca' ? 'tambor' : 'lira');
@@ -589,7 +592,8 @@
     const cnt = Math.max(1, Math.floor((n === undefined ? (kind === 'flecha' ? 20 : 1) : n) + EPS));
     const have = o => (o.of && Or() ? Or().free(F, o.k, o.of) : D.free(F, o.k));
     const art = m => !It.METALS[m] || !!(arts && arts[m] !== undefined);
-    const can = m => { const L = It.feitoDe(It.keyOf(kind, m)); return !!L && art(m) && L.every(o => have(o) + EPS >= r4(o.n * cnt)); };
+    // (a thing of no good of the store — the bones of a carcass, a twist of straw: P7, D-795 — never comes out of one)
+    const can = m => { const L = It.feitoDe(It.keyOf(kind, m)); return !!L && L.length > 0 && art(m) && L.every(o => have(o) + EPS >= r4(o.n * cnt)); };
     const need = key => (It.feitoDe(key) || []).map(o => ({ k: o.k, n: r4(o.n * cnt), of: o.of || null }));
     const m = mat || It.bestOf(kind, can);
     if (m && can(m)) { const key = It.keyOf(kind, m); return { k: key, can: true, need: need(key), n: cnt, why: '' }; }
@@ -597,6 +601,7 @@
     const m2 = mat || It.bestOf(kind, x => art(x) && matOK(fid, x, arts)) || K.mats[0]; const key = It.keyOf(kind, m2);
     const what = need(key).map(o => G.Eco.name(o.k) + (o.of && Or() && Or().METAL[o.of] ? ' ' + Or().METAL[o.of].nome : '')).join(' e ');
     if (!art(m2)) return { k: key, can: false, need: need(key), n: cnt, why: `O seu povo não sabe fazer ${It.nome(key, 2)}.` };
+    if (!need(key).length) return { k: key, can: false, need: [], n: cnt, why: `O armazém não guarda ${It.nome(key, 2)}: não são feitos do que ele tem.` };
     return { k: key, can: false, need: need(key), n: cnt, why: `Não há ${what} no armazém para ${It.nome(key, cnt)}.` };
   };
   // a store's good made a thing (D-371, D-442): at a store of one's own people (Inv.storeNear), what Inv.offer says — the goods

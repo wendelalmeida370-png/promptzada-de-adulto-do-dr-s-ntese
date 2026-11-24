@@ -2193,6 +2193,11 @@
   // asked by the step and by the drawing, for whoever the world has inside
   const RULES = {};
   In.placeRule = function (use, fn) { if (typeof fn === 'function') RULES[use] = fn; else delete RULES[use]; };
+  // the places a kind of building keeps for someone who is away from them now (D-790): fn(b) → [[item, q, who], …] — the seat of the
+  // god's body at a tavern's table while its order waits there (act-taverna.js). Nobody else is given them; the one they are kept
+  // for may take them back (the body's own probe, In.freeNear, leaves them out). Pure: the share-out asks it at every look
+  const KEEPS = {};
+  In.keepRule = function (use, fn) { if (typeof fn === 'function') KEEPS[use] = fn; else delete KEEPS[use]; };
   // the household's rule for its beds: fn(b, people, plan) → { order: [ids], pair: Map(id → id), with: Map(id → id),
   // crib: Set(ids), floor: Set(ids) } — who chooses first, who shares a double bed with whom, who sleeps with whom (a child in
   // its mother's bed), who wants the cradle, who sleeps on the floor by choice; the beds are given out here
@@ -2301,6 +2306,10 @@
       else if (!nobody && !body.sleeping) discs.push({ lv: Number.isFinite(A.lv) ? A.lv : t.entry ? t.entry.lv : 0, x: r2((body.x - b.x) * TILE), z: r2((body.y - b.y) * TILE), it: null, on: 0, body: 1 });
       if (!body.sleeping) mine.add(body.id);
     }
+    // (0c) the places kept for someone away from them (In.keepRule, D-790): taken for nobody — but the one they are kept for, in its
+    // own probe (nobody: the body's places)
+    { const kr = KEEPS[T.use]; const L = kr ? kr(b) : null;
+      if (L) for (const k of L) { if (nobody && body && k[2] === body.id) continue; const e = t.spots.find(s => s.it.id === k[0] && s.q === k[1] && s.ok); if (!e || used.has(e.k)) continue; used.add(e.k); discs.push({ lv: e.lv, x: e.x, z: e.z, it: e.it.id, on: e.on }); } }
     // (0b) who is walking out: from where they were to the way in — no place of the plan, nobody put off by them (D-765): In.placeOf
     // says the way in. The way in itself is no place given out: two going out at once are both there
     for (const v of people) if (!done(v) && leaving(v)) mine.add(v.id);
@@ -2346,11 +2355,17 @@
       // (no bed of one's own free there — the household has fewer, its own cannot be got to, the floor by choice —: lying on it)
       onFloor(v, true, v.sick > 0 ? 'sick' : 'sleep');
     }
-    // (3) who works: at the place the task names, else another of its use; at a station of the trade where one works
-    for (const v of people) {
+    // (3) who works: at the place the task names, else another of its use; at a station of the trade where one works — who stands at
+    // someone's side after everyone else of this step, the one they stand by placed first
+    const spotAt = a => (Array.isArray(a) ? t.spots.find(s => s.it.id === a[0] && s.q === a[1]) : null);
+    const third = people.filter(v => !(v.task && v.task.near)).concat(people.filter(v => v.task && v.task.near));
+    for (const v of third) {
       if (done(v) || v.sleeping) continue; const tk = v.task; let e = null;
-      // (at someone's side: the one who serves at the table stands on the floor nearest the one served — D-763)
-      if (tk && tk.near) { const o = by.get(tk.near); if (o && standBy(v, o, tk)) continue; }
+      // (at someone's side: the one who serves at the table stands on the floor nearest the one served — D-763; the one served gone from
+      // the place meanwhile — up, walking out —, by the seat they had, t.nearAt: never a jump back to the counter mid-walk)
+      // (or by a place of the plan — [the piece, its place]: the seat the body's order is set down at, the stage the dancers keep to —
+      // D-790)
+      if (tk && tk.near) { const o = Array.isArray(tk.near) ? spotAt(tk.near) : by.get(tk.near) || spotAt(tk.nearAt); if (o && standBy(v, o, tk)) continue; }
       if (tk && (tk.item || tk.use)) {
         if (tk.item) e = t.spots.find(s => s.it.id === tk.item && (!tk.use || s.use === tk.use) && !APPROACH[s.use] && free(s)) || null;
         if (!e && tk.use) e = firstFree([tk.use]);
