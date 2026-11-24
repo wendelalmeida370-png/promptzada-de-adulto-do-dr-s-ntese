@@ -1883,7 +1883,6 @@ canvas#game3d { touch-action: none; transition: none; }
   #dados-panel .jd-hint.keys, #dados-panel .jd-log { display: none; }
 }
 
-}
 
 /* === 20f: o combate === */
 /* the fight's own screen (combate-ui.js): the breath round the reticle while it is spent, the charge and the draw inside it, the
