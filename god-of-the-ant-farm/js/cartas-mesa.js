@@ -58,8 +58,13 @@
   const jogoDe = id => { const s = S_() && S_().cartas; if (!s) return null; return s.j[id] || null; };
   const torPorId = id => { const s = S_() && S_().cartas; if (!s) return null; for (const k of Object.keys(s.tor)) if (s.tor[k].id === id) return s.tor[k]; return null; };
   C.jogo = id => jogoDe(id);
-  // (onde está cada um: a partida viva de uma pessoa)
-  C.de = function (v) { if (!v) return null; for (const j of jogos()) if (j.quem.includes(v.id) && (j.fase === 'jogo' || (S_().clock - (j.fimT || 0) < C.FIM_T))) return j; return null; };
+  // (onde está cada um: a partida viva de uma pessoa — senão a que acabou há pouco, a mais recente, enquanto a mesa mostra o fim. A acabada
+  // vinha antes da viva, pelo id menor, e a revanche mostrava o fim da velha por 22 s de verdade: L-2204)
+  C.de = function (v) {
+    if (!v) return null; const w = C.vivoDe(v); if (w) return w; let best = null;
+    for (const j of jogos()) if (j.fase === 'fim' && j.quem.includes(v.id) && S_().clock - (j.fimT || 0) < C.FIM_T && (!best || j.fimT > best.fimT || (j.fimT === best.fimT && j.id > best.id))) best = j;
+    return best;
+  };
   C.vivoDe = function (v) { if (!v) return null; for (const j of jogos()) if (j.fase === 'jogo' && j.quem.includes(v.id)) return j; return null; };
 
   // ------------------------------ o pote: um lugar do livro ('u:', a urna do jogo ou do torneio) ------------------------------
@@ -480,7 +485,9 @@
   C.doCorpo = function (v) {
     const j = v && C.de(v); if (!j || j.corpo < 0 || j.quem[j.corpo] !== v.id) return null; const q = j.s; const me = j.corpo, ai = 1 - me; const S = S_(); const b = S.buildings.get(j.b);
     return { jogo: j.id, me, ai, o: j.quem[ai], fase: j.fase, r: q.r, of: C.OF.slice(), pote: j.cofre || 0, aposta: j.aposta, x: q.x, mao: q.p[me].mao.slice(), monte: [q.p[me].monte.length, q.p[ai].monte.length], maoOutro: q.p[ai].mao.length,
-      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: q.vis === me && q.lance[ai] ? q.lance[ai] : null, posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
+      // (a tabuleta do outro à vista: a do lado que mostra primeiro, já posta — a Visão manda o outro mostrar: a regra, C.vista; o «aberta»
+      // perguntava pelo lado do corpo e nunca mostrava nada, L-2202)
+      gl: [q.p[me].gl, q.p[ai].gl], potePedras: q.altar, vis: q.vis === me ? 'eu' : q.vis === ai ? 'outro' : '', aberta: C.vista(q, me), posta: !!q.lance[me], dobra: q.dobra ? (q.dobra.de === me ? 'eu' : 'outro') : '',
       podeDobrar: C.podeDobrar(q, me) && j.aposta > 0, hist: q.hist.slice(-8), fim: q.fim ? Object.assign({}, q.fim, { meu: q.fim.w === me ? 1 : q.fim.w === ai ? -1 : 0 }) : null, civ: [q.civ[me], q.civ[ai]], bonus: q.p[me].bonus, mal: q.p[me].mal, desc: [q.p[me].desc.length, q.p[ai].desc.length],
       preco: n => (b ? dinheiro(b, n) : String(n)), moeda: moeda(b), baralho: (j.bar && j.bar[me]) || null, trap: j.trap && j.trap.lado === me ? Object.assign({}, j.trap) : null, n: q.hist.length,
       // (de onde vem cada baralho da mesa, o seu e o do outro — «o seu baralho», «baralho da casa, emprestado» —, e o aluguel pago: D-933)

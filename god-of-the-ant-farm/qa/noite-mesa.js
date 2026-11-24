@@ -14,9 +14,12 @@
 //     desmaio da bebida —; no copo, quem sai perde os dados, e o dono dos dados que sai perde o que pôs
 //  n6 o save no meio da partida e no meio da espera do fechamento: o mesmo futuro duas vezes; a demora não vai no save
 //  n7 os casos ruins: o corpo que morre no meio, o deus que tira a bebida, a taverna que pega fogo, a guerra à porta
-//  n8 sem o corpo, o mundo igual ao de antes, numa cópia do jogo de antes: node qa/noite-mesa.js igual PASTA
+//  n8 sem o corpo, o mundo igual ao de antes, numa cópia do jogo de antes: node qa/noite-mesa.js igual PASTA (uma cópia de antes do
+//     L-2224 vive sem o comércio e as migrações: compare com ela consertada — a linha dos MODS do main.js)
+//  n9 a partida que a tela do corpo mostra: jogando de novo logo depois do fim, a viva, não a acabada (L-2204); a Visão do corpo mostra a
+//     tabuleta do outro, que mostra primeiro (L-2202) — os dois defeitos que a frente E achou
 //  e o verificador (QA.check: «noite», «dia», «taverna») e nenhum erro de módulo nem aviso no console.
-//   [ONLY=n1,…,n7] node qa/noite-mesa.js [mundo]       (≈ 8 min; a n3 é a mais longa)
+//   [ONLY=n1,…,n7,n9] node qa/noite-mesa.js [mundo]    (≈ 27 min inteira; cada parte de 2 a 6, a n3 ≈ 12)
 //   node qa/noite-mesa.js igual PASTA                  (≈ 3 min: as duas árvores, cada uma no seu processo)
 'use strict';
 const path = require('path');
@@ -67,8 +70,8 @@ function seatIn(b, v, pick) {
 }
 // (an open tavern with a table of people, someone of its people for the god to live, sat at that table; for a game, someone there who
 // plays the body's game — the tablets with the two decks of the house free and, for a stake, of another house than the body's (of the
-// same house one plays dry); the dice with its own set in the bag (o.dados: the proof's hand gives a set of wood) and someone free there.
-// findSeat.why: what was found where nothing was)
+// same house one plays dry); the dice with its own set in the bag (o.dados: the proof's hand gives a set of wood) and someone free there —
+// and, with o.aceita(b, op, body, verbo), someone at the table who takes the call. findSeat.why: what was found where nothing was)
 function findSeat(o) {
   o = o || {}; const Po = G.Possess; findSeat.why = [];
   const L = A.all().filter(x => x.def === 'taverna' && A.live(x)).sort((a, b) => Object.keys(b.data.mesa).length - Object.keys(a.data.mesa).length || a.id - b.id);
@@ -83,7 +86,7 @@ function findSeat(o) {
     for (const g of gs) {
       const r = seatIn(b, v, q => String(G.Interiors.groupOf(b, q.it.id)) === g); if (!r.ok) continue;
       if (o.cartas) { until(() => C.podeCorpo(v).ok, 3); const pc = C.podeCorpo(v); if (pc.ok && (!o.aposta || pc.apostas.length > 1)) return { b, body: v, op }; findSeat.why.push(`#${b.id} mesa ${g}: ${pc.why || 'sem aposta'}`); continue; }
-      if (o.dados) { if (!D.get('m:' + v.id, 'dados.madeira')) god(() => D.make('m:' + v.id, 'dados.madeira', 1, { code: 'teste', by: v.id })); until(() => JD.verbo(v).ok, 3); const vb = JD.verbo(v); if (vb.k === 'chamar' && vb.ok && (!o.aposta || (vb.apostas || []).some(x => x > 0))) return { b, body: v, op }; findSeat.why.push(`#${b.id} mesa ${g}: ${vb.k || '-'} ${vb.why || ''}`); continue; }
+      if (o.dados) { if (!D.get('m:' + v.id, 'dados.madeira')) god(() => D.make('m:' + v.id, 'dados.madeira', 1, { code: 'teste', by: v.id })); until(() => JD.verbo(v).ok, 3); const vb = JD.verbo(v); if (vb.k === 'chamar' && vb.ok && (!o.aposta || (vb.apostas || []).some(x => x > 0)) && (!o.aceita || o.aceita(b, op, v, vb))) return { b, body: v, op }; findSeat.why.push(`#${b.id} mesa ${g}: ${vb.k || '-'} ${vb.why || (o.aceita ? 'ninguém da mesa aceitou' : '')}`); continue; }
       return { b, body: v, op };
     }
     if (Po.body()) Po.release('teste'); fast();
@@ -91,6 +94,11 @@ function findSeat(o) {
   return null;
 }
 const ask = fn => { const it = G.Possess.apply(fn); until(() => !!it.res, 2); return it.res || { ok: false, why: 'sem resposta' }; };
+// (a table of the cup where someone takes the body's call at the stake it puts — the real call (JD.chamar: each one by his will, his purse,
+// his drink and his tiredness); where nobody takes it, the body withdraws it (JD.sair: the host's lobby shuts) and findSeat goes on. The
+// call taken is the proof's: f.op. Without it the first table found could have nobody to take it, and the case went unproven: T-2123)
+const chamaCopo = pick => { const f = (b, op, v, vb) => { f.op = null; const s = pick(vb); if (!(s >= 0)) return false; const r = ask(w => JD.chamar(w, s)); const q = r.ok ? A.get(r.op) : null;
+  if (q && A.live(q) && q.data.quem.length >= 2) { f.op = q; return true; } if (q && A.live(q)) ask(w => JD.sair(w, q.id)); return false; }; return f; };
 // (the body challenges the best one at its table, at a stake when the people has coin)
 function challenge(body) {
   const pc = C.podeCorpo(body); if (!pc.ok) return { why: pc.why };
@@ -162,12 +170,12 @@ if (on('n2')) {
     if (G.Possess.body()) G.Possess.release('teste'); fast();
   }
   // (the dice: the body calls its table to the cup, and bids in its turn, thinking as long)
-  open(NIGHT); const Q = findSeat({ dados: 1 });
-  if (!Q) info.push(`o copo: nenhuma mesa com quem jogue os dados com o corpo nesta noite (${findSeat.why.slice(0, 4).join('; ')})`);
+  const cc = chamaCopo(vb => (vb.apostas && vb.apostas.length ? vb.apostas[0] : 0));
+  open(NIGHT); const Q = findSeat({ dados: 1, aceita: cc });
+  if (!Q) bad.push(`o copo: nenhuma mesa com quem jogue os dados com o corpo nesta noite (${findSeat.why.slice(0, 4).join('; ')})`);
   else {
-    const body = Q.body; const vb = JD.verbo(body); const ap = vb.apostas && vb.apostas.length ? vb.apostas[0] : 0;
-    const r = ask(w => JD.chamar(w, ap)); const op = r.ok ? A.get(r.op) : null;
-    if (!op || op.data.quem.length < 2) info.push(`o copo: ninguém aceitou (${r.why || ''})`);
+    const body = Q.body; const op = cc.op;
+    if (!op || op.data.quem.length < 2) bad.push('o copo: ninguém aceitou');
     else {
       const st = ask(w => JD.comecar(w, op.id)); const t0 = S().time, c0 = S().clock; const paces = new Set(); const quem = op.data.quem.filter(id => id !== body.id);
       if (!st.ok) bad.push('o copo não começou: ' + st.why);
@@ -281,7 +289,10 @@ if (on('n4')) {
     info.push(`parado na partida: a casa fechou às ${S().time.toFixed(4)} (a paciência até ${ate}), a partida «${fim ? fim.por : '?'}», ${back} devoluções do pote, «${keys.filter(x => /ultima/.test(x)).join(', ')}»`);
     if (!(S().time >= ate - 1e-6)) bad.push(`a casa fechou antes da paciência (${S().time} < ${ate})`); if (!fim || fim.por !== 'fechou') bad.push('a partida parada não acabou com a casa fechando');
     if (j.aposta > 0 && back < 2) bad.push('o pote não voltou a cada um'); if (!keys.includes('ultima_tempo')) bad.push('sem a palavra da paciência acabada');
-    if (Math.abs(coins(body) - c0) > 1e-6 || Math.abs(coins(o) - co) > 1e-6) bad.push('as moedas de quem jogava mudaram com a casa fechando (cada um leva o que pôs)');
+    // (the coins of a house are its family's too, and the town lives meanwhile: what each one put comes back by the pot's ledger — «pote-volta»
+    // to each one's purse what he put, nothing won from it)
+    { const back = to => led.slice(L0).filter(l => l.c === 'pote-volta' && l.to === to).reduce((a, l) => a + l.n, 0); const won = led.slice(L0).filter(l => l.c === 'pote' && l.from === 'u:' + j.id).length;
+      if (Math.abs(back(G.Eco.coinRef(body)) - (j.pago[j.corpo] || 0)) > 1e-6 || Math.abs(back(G.Eco.coinRef(o)) - (j.pago[1 - j.corpo] || 0)) > 1e-6 || won) bad.push('o pote não voltou a cada um com a casa fechando (cada um leva o que pôs)'); void c0; void co; }
     if (G.Possess.body()) G.Possess.release('teste'); fast();
   }
   // (after the call, no game begins: the body gives up the one it plays — and the tablets say so)
@@ -333,19 +344,22 @@ if (on('n5')) {
   }
   // (the cup: the body's own set — given by the proof's hand to its bag —, a game with one more; the body leaves it in the middle: who
   // leaves loses — the stake stays, the dice go with their owner and the game with them: the other takes the pot)
-  open(NIGHT); const Q = findSeat({ dados: 1, aposta: 1 });
-  if (!Q) info.push(`o copo: nenhuma mesa para o dono dos dados que sai (${findSeat.why.slice(0, 4).join('; ')})`);
+  // (the lowest stake above nothing: a pot to lose)
+  const cc = chamaCopo(vb => (vb.apostas || []).filter(x => x > 0)[0] || -1);
+  open(NIGHT); const Q = findSeat({ dados: 1, aposta: 1, aceita: cc });
+  if (!Q) bad.push(`o copo: nenhuma mesa para o dono dos dados que sai (${findSeat.why.slice(0, 4).join('; ')})`);
   else {
-    const body = Q.body; // (its own set of wood in the bag: findSeat, the proof's hand)
-    const vb = JD.verbo(body); const ap = vb.apostas && vb.apostas.length ? vb.apostas[vb.apostas.length > 1 ? 1 : 0] : 0;
-    const r = vb.ok ? ask(w => JD.chamar(w, ap)) : { ok: false, why: vb.why }; const op = r.ok ? A.get(r.op) : null;
-    if (!op || op.data.quem.length < 2 || !op.data.set || op.data.set.dono !== body.id) info.push(`o copo: ${!op ? r.why : op.data.quem.length < 2 ? 'ninguém aceitou' : 'os dados não são os do corpo'}`);
+    const body = Q.body; const op = cc.op; // (its own set of wood in the bag: findSeat, the proof's hand)
+    if (!op || op.data.quem.length < 2 || !op.data.set || op.data.set.dono !== body.id) bad.push(`o copo: ${!op ? 'sem chamado' : op.data.quem.length < 2 ? 'ninguém aceitou' : 'os dados não são os do corpo'}`);
     else {
       ask(w => JD.comecar(w, op.id)); think(4); const L0 = led.length; const pote = op.data.pote; const others = op.data.quem.filter(id => id !== body.id);
       ask(w => JD.sair(w, op.id)); until(() => !A.live(op), 6);
       const got = led.slice(L0).filter(l => l.c === 'dados-premio').reduce((a, l) => a + l.n, 0), back = led.slice(L0).filter(l => l.c === 'dados-volta' && l.to === G.Eco.coinRef(body)).reduce((a, l) => a + l.n, 0);
-      info.push(`o copo do corpo com ${others.length}: o corpo, dono dos dados, sai — ${r2(got)} do pote de ${r2(pote)} a quem ficou, ${r2(back)} de volta ao corpo (o fim «${op.data.fim || op.end && op.end.why}»)`);
+      // (and what the screen of the cup reads a moment after, of the game gone from the table: G.JogoDados.parou — D-964)
+      const pr = JD.parou(body);
+      info.push(`o copo do corpo com ${others.length}: o corpo, dono dos dados, sai — ${r2(got)} do pote de ${r2(pote)} a quem ficou, ${r2(back)} de volta ao corpo (o fim «${op.data.fim || op.end && op.end.why}»); a tela lê ${JSON.stringify(pr && { por: pr.por, fim: pr.fim, venc: pr.venc })}`);
       if (pote > 0 && (Math.abs(got - pote) > 1e-6 || back > 1e-6)) bad.push('o dono dos dados que saiu levou a aposta de volta');
+      if (!pr || pr.op !== op.id || pr.fim !== 'sobrou' || pr.por !== 'o dono levou os dados' || !(pr.venc > 0) || !others.includes(pr.venc)) bad.push('o JD.parou não diz por que o copo do corpo parou');
     }
     if (G.Possess.body()) G.Possess.release('teste'); fast();
   }
@@ -421,11 +435,70 @@ if (on('n7')) {
     const j = C.jogo(j0.id); const fim = j && j.s.fim; const back = led.slice(L0).filter(l => l.c === 'pote-volta').length;
     info.push(`${caso === 'fogo' ? 'o fogo ao lado' : 'a guerra à porta'}: a casa ${T.dia(b) ? 'ABERTA' : 'fechou'}, a partida «${fim ? fim.por : 'apagada'}», ${back} devoluções; o passo ${G.pace}`);
     if (T.dia(b)) bad.push(`${caso}: a casa não fechou`); if (!fim || fim.por !== 'fechou') bad.push(`${caso}: a partida não acabou com a casa`);
-    if (Math.abs(coins(body) - c0) > 1e-6 || Math.abs(coins(o) - co) > 1e-6) bad.push(`${caso}: as moedas de quem jogava mudaram (cada um leva o que pôs)`);
+    { const back = to => led.slice(L0).filter(l => l.c === 'pote-volta' && l.to === to).reduce((a, l) => a + l.n, 0); const won = led.slice(L0).filter(l => l.c === 'pote' && l.from === 'u:' + j0.id).length;
+      if (Math.abs(back(G.Eco.coinRef(body)) - (j0.pago[j0.corpo] || 0)) > 1e-6 || Math.abs(back(G.Eco.coinRef(o)) - (j0.pago[1 - j0.corpo] || 0)) > 1e-6 || won) bad.push(`${caso}: o pote não voltou a cada um (cada um leva o que pôs)`); void c0; void co; }
     if (G.pace < T.PACE_SALA - 1e-9 || (G.pace === T.PACE_MESA)) bad.push(`${caso}: o sol ainda se demora pela partida (${G.pace})`);
     god(() => { S().fire[tile] = 0; set.alarmT = 0; }); if (G.Possess.body()) G.Possess.release('teste'); fast();
   }
   ok('n7 os casos ruins: o corpo que morre, o deus que tira a bebida, o fogo, a guerra', !bad.length && M.limpo() && !novas().length, `${info.join('; ')}${bad.length ? ' — ' + bad.join(' | ') : ''} ${novas().slice(0, 2).join(' | ')}`);
+}
+
+// ================================ n9: the game the body sees (the two defects the front E found, L-2204 and L-2202) ================================
+// (the screen asks the C.doCorpo, and it the C.de: the game again at once showed the end of the old one — the finished one, of the smaller
+// id, came before the live one —; and the Visão never showed the other's tablet — the «aberta» asked by the body's side, not by the rule's)
+if (on('n9')) {
+  const bad = [], info = [];
+  open(NIGHT); const P = findSeat({ cartas: 1 });
+  if (!P) bad.push(`nenhuma mesa com quem jogue as Tabuletas com o corpo (${findSeat.why.slice(0, 3).join('; ')})`);
+  else {
+    const body = P.body; const c1 = challenge(body);
+    if (!c1.j) bad.push('o primeiro desafio: ' + c1.why);
+    else {
+      // (the end shown: the body leaves the first game, and for C.FIM_T the table shows its end)
+      const r1 = ask(w => C.desisteCorpo(w, c1.j.id)); const j1 = C.jogo(c1.j.id); const v1 = C.doCorpo(body);
+      if (!r1.ok || !j1 || j1.fase !== 'fim') bad.push('o corpo não largou a primeira partida: ' + (r1.why || ''));
+      else if (!v1 || v1.jogo !== j1.id || !v1.fim) bad.push('sem outra partida, a tela não mostra o fim da que acabou');
+      // (the game again at once, with the finished one still on the table: the live one is the one shown, its deck the one on the table)
+      until(() => C.podeCorpo(body).ok, 3); const c2 = challenge(body); const j2 = c2.j; const dt = j1 ? S().clock - j1.fimT : Infinity;
+      if (!j2) bad.push('a revanche: ' + c2.why);
+      else if (!(dt < C.FIM_T) || !C.jogo(j1.id)) bad.push(`a revanche começou ${dt.toFixed(1)} s depois do fim, com a acabada fora da mesa: o caso não se deu`);
+      else {
+        const v2 = C.doCorpo(body), de = C.de(body);
+        info.push(`a revanche ${dt.toFixed(1)} s do mundo depois do fim, com a acabada (#${j1.id}) ainda na mesa: a tela mostra a #${v2 ? v2.jogo : '-'} (${v2 ? v2.fase : '-'}${v2 && v2.fim ? ', ' + v2.fim.por : ''}), a viva é a #${j2.id}`);
+        if (!de || de.id !== j2.id) bad.push(`o C.de deu a partida #${de ? de.id : '-'}, não a viva (L-2204)`);
+        if (!v2 || v2.jogo !== j2.id || v2.fase !== 'jogo' || v2.fim) bad.push('a tela da revanche mostra o fim da partida velha (L-2204)');
+        if (C.baralhoNaMesa(body) !== (j2.bar && j2.bar[j2.corpo]) || !C.baralhoNaMesa(body)) bad.push('o baralho do corpo na mesa não é o da partida viva');
+        // (the Visão, with the finished one gone from the table — each defect by itself —: the card of the body's own deck put in its hand
+        // by the proof's hand — swapped with one of the hand, the same deck —, and the other's out of his hand, so the two don't cancel; the
+        // body plays it: in the next round the other shows first — and the body sees what he showed, by the rule: C.vista)
+        until(() => !C.jogo(j1.id), C.FIM_T + 2); if (C.jogo(j1.id)) bad.push('a partida acabada não saiu da mesa');
+        let j = C.jogo(j2.id);
+        if (!j || j.fase !== 'jogo') bad.push(`a revanche acabou antes da Visão (${j ? j.s.fim && j.s.fim.por : 'apagada'})`);
+        else { const me = j.corpo, ai = 1 - me; const visOf = side => C.DECKS[j.s.civ[side]].find(x => x.p === 'visao').id; const vid = visOf(me);
+        god(() => { const q = j.s; const pm = q.p[me]; if (!pm.mao.includes(vid)) { const i = pm.monte.indexOf(vid); if (i >= 0) { const x = pm.mao[0]; pm.mao[0] = vid; pm.monte[i] = x; } }
+          const pa = q.p[ai]; const ia = visOf(ai); const k = pa.mao.indexOf(ia); if (k >= 0 && pa.monte.length) { const x = pa.monte[pa.monte.length - 1]; pa.monte[pa.monte.length - 1] = ia; pa.mao[k] = x; } });
+        const v0 = C.doCorpo(body);
+        if (!j.s.p[me].mao.includes(vid)) bad.push('a Visão não entrou na mão do corpo');
+        else if (j.s.r !== 0 || v0.aberta) bad.push(`antes da Visão já há uma tabuleta do outro à vista (rodada ${j.s.r})`);
+        else {
+          const rv = ask(w => C.lance(w, j.id, vid, false)); j = C.jogo(j2.id);
+          if (!rv.ok) bad.push('o lance da Visão: ' + rv.why);
+          else if (!j || j.fase !== 'jogo') bad.push('a partida acabou na rodada da Visão');
+          else {
+            if (C.doCorpo(body).dobra === 'outro') ask(w => C.respondeCorpo(w, j.id, true));
+            const q = j.s, v3 = C.doCorpo(body); const shown = q.lance[ai];
+            info.push(`a Visão do corpo (${C.card(vid).nome}) na rodada 1: na 2.ª o outro mostra primeiro (vis ${q.vis === ai ? 'do outro' : q.vis}), «${shown ? C.card(shown).nome : 'nada'}»; a tela: vis «${v3 && v3.vis}», aberta «${v3 && v3.aberta ? C.card(v3.aberta).nome : 'nada'}»`);
+            if (q.vis !== ai || !shown) bad.push('depois da Visão do corpo, o outro não mostrou primeiro');
+            else if (!v3 || v3.vis !== 'outro' || v3.aberta !== shown) bad.push('a Visão não mostra ao corpo a tabuleta do outro (L-2202)');
+            if (v3 && v3.posta) bad.push('o corpo já tinha a sua tabuleta posta');
+          }
+        } }
+        if (C.vivoDe(body)) ask(w => C.desisteCorpo(w, j2.id));
+      }
+    }
+    if (G.Possess.body()) G.Possess.release('teste'); fast();
+  }
+  ok('n9 a partida que a tela do corpo mostra: a viva antes da acabada; a tabuleta do outro pela Visão', !bad.length && M.limpo() && !novas().length, `${info.join('; ')}${bad.length ? ' — ' + bad.join(' | ') : ''} ${novas().slice(0, 2).join(' | ')}`);
 }
 
 { const e = M.erros(); ok('erros', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod).slice(0, 300) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'nenhum erro de módulo nem aviso no console'); }
