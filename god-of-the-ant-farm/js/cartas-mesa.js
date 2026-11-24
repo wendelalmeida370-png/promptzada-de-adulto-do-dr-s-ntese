@@ -105,8 +105,9 @@
   // aceita —; o honesto não trapaceia; o atento percebe a manga (e quem bebeu, menos)
   C.jogador = v => 0.38 * ax(v, 'ext') + 0.24 * (1 - ax(v, 'con')) + 0.22 * ax(v, 'amb') + 0.16 * ax(v, 'abe');
   C.ousado = v => Math.max(0, Math.min(1, 0.3 * (1 - ax(v, 'neu')) + 0.26 * ax(v, 'ext') + 0.24 * (1 - ax(v, 'con')) + 0.2 * ax(v, 'amb')));
-  const ebrio = v => Math.max(Number.isFinite(v && v.ebrio) ? v.ebrio : 0, v && v.drunk > S_().clock ? 0.6 : 0);
-  C.atento = v => Math.max(0, Math.min(1, 0.14 + 0.5 * ax(v, 'con') + 0.18 * ax(v, 'abe') - 0.45 * ebrio(v)));
+  // (a bebida no juízo: o grau do G.Ebrio — alegre, bêbado, tonto, desmaiado: 0 a 4 —, a T2)
+  const ebrio = v => (v && G.Ebrio && G.Ebrio.grau ? G.Ebrio.grau(v) / 4 : 0);
+  C.atento = v => Math.max(0, Math.min(1, 0.14 + 0.5 * ax(v, 'con') + 0.18 * ax(v, 'abe') - 0.55 * ebrio(v)));
   const indDe = v => ({ ousado: v ? C.ousado(v) : 0.5 });
 
   // ------------------------------ uma partida começa ------------------------------
