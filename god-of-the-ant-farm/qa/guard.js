@@ -2979,22 +2979,53 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   else { for (let k = a; k <= z; k++) { const i = L[k].indexOf('//'); if (i >= 0 && /\['\w+', /.test(L[k].slice(i))) fails.push(`todo módulo do mundo vive: main.js:${k + 1} — um módulo da lista MODS depois de um comentário, fora do passo do mundo (L-2224): ${L[k].slice(i, i + 100)}`); }
     const live = L.slice(a, z + 1).map(l => l.split('//')[0]).join('\n');
     for (const nm of ['Nature', 'Village', 'Villagers', 'Animals', 'Court', 'Tavern', 'JogoDados', 'Trade', 'Migrate', 'Polity', 'Scene', 'Possess']) if (!new RegExp(`\\['${nm}', `).test(live)) fails.push(`todo módulo do mundo vive: o módulo ${nm} fora da lista MODS do main.js (L-2224)`); } }
-// 476. "a demora do dia é um registro, e as causas só leem" (D-960): o sol se demora pelas causas registradas com G.linger — a cena
-// (world.js), o corpo na taverna aberta e o corpo numa partida à mesa (act-taverna.js, do corpo: o quarto argumento true) —, a mais lenta
-// vale. (a) só o world.js e o act-taverna.js registram causas; (b) as do act-taverna.js são do corpo; (c) as perguntas delas (salaCorpo,
-// corpoJoga, mesaCorpo, lastGame, segura) só leem: nenhuma escrita no mundo, nenhum sorteio; (d) o G.paceCorpo — a parte do passo que é do
-// corpo — só o act-taverna.js e o embriaguez.js leem, no passo do mundo (o que a noite gasta)
+// 476. "a demora do dia é um registro, e as causas só leem" (D-960; aberta a todo prédio pela F15, D-1035): o sol se demora pelas causas
+// registradas com G.linger — a cena (world.js, a do mundo), o corpo na taverna aberta e numa partida à mesa (act-taverna.js), o corpo na
+// audiência, no banquete, no rito que um módulo de prédio registre —, a mais lenta vale. (a) qualquer módulo registra uma causa, numa
+// linha, com o nome escrito; fora do world.js, só causas do corpo (o quarto argumento true): o mundo sem o corpo é o de antes; e nenhum
+// nome de causa em dois registros (o registro troca a causa pelo nome: a segunda apagaria a primeira em silêncio — o R1 do plano);
+// (b) a pergunta e o passo de toda causa só leem — a função nomeada ou a seta escrita no registro e, a partir delas, as funções do
+// mesmo arquivo que elas chamam pelo nome: nenhuma escrita no mundo, nenhum sorteio —; e as da taverna (salaCorpo, corpoJoga, mesaCorpo,
+// lastGame, segura) como sempre; (c) o registro (world.js) pergunta uma causa do corpo só enquanto o deus vive um corpo; (d) o
+// G.paceCorpo — a parte do passo que é do corpo — só leem o world.js, o main.js, o embriaguez.js e quem registra uma causa do corpo, no
+// passo do mundo (o que a demora gasta vai pelo relógio dela: a regra 477); (e) as duas causas da taverna seguem registradas
 { const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
+  // (the arguments of a call written on one line: split at the commas outside brackets and strings)
+  const argsOf = (s, at) => { const out = []; let d = 0, q = '', cur = ''; for (let i = at; i < s.length; i++) { const ch = s[i];
+    if (q) { cur += ch; if (ch === q && s[i - 1] !== '\\') q = ''; continue; } if (ch === "'" || ch === '"' || ch === '`') { q = ch; cur += ch; continue; }
+    if (ch === '(' || ch === '[' || ch === '{') d++; if (ch === ')' || ch === ']' || ch === '}') { if (d === 0) { out.push(cur.trim()); return out; } d--; }
+    if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; continue; } cur += ch; } return null; };
+  // (a function of a file by its name — «function NAME(» at any margin —: its lines, by the braces)
+  const fnLines = (L, name) => { const a = L.findIndex(l => new RegExp(`^\\s*function ${name.replace(/\$/g, '\\$')}\\(`).test(l)); if (a < 0) return null; let z = a, depth = 0; for (; z < L.length; z++) { for (const ch of L[z]) { if (ch === '{') depth++; else if (ch === '}') depth--; } if (depth <= 0 && z >= a) break; } return L.slice(a, z + 1).map((l, i) => [a + i, l]); };
+  const impure = l => { const c = l.replace(/'[^']*'/g, "''"); return /\b(G\.R|G\.rr|G\.ri|G\.pick|G\.chance|G\.shuffle|Math\.random)\s*\(/.test(c) || /(^|[^=!<>])=(?![=>])/.test(c.replace(/\b(const|let)\s+[^;]*;/g, '').replace(/^\s*function [^{]*\{/, '')) || /\.(push|splice|set|delete)\s*\(/.test(c); };
+  const names = {}; const body = new Set(); const regs = [];
+  for (const f of files) { const L = (src[f] || []).map(code); const fns = new Set(L.map(l => (/^\s*function ([A-Za-z_$][\w$]*)\(/.exec(l) || [])[1]).filter(Boolean));
+    L.forEach((c, k) => { if (f === 'world.js' && /^\s*G\.linger = function \(/.test(c)) return; // (the registry's own door)
+      for (const m of c.matchAll(/\bG\.linger\s*\(/g)) {
+        const a = argsOf(c, m.index + m[0].length); const id = a && /^'([\w-]+)'$/.exec(a[0] || ''); regs.push({ f, k });
+        if (!a || a.length < 3 || !id) { fails.push(`a demora do dia: ${f}:${k + 1} registra uma causa sem o nome escrito, ou fora de uma linha só (D-1035): ${c.trim().slice(0, 110)}`); continue; }
+        if (names[id[1]]) fails.push(`a demora do dia: ${f}:${k + 1} registra a causa «${id[1]}», que ${names[id[1]]} já registra — a segunda apagaria a primeira (D-1035)`); else names[id[1]] = `${f}:${k + 1}`;
+        if (a[3] === 'true') body.add(f); else if (f !== 'world.js') fails.push(`a demora do dia: ${f}:${k + 1} registra a causa «${id[1]}» que não é do corpo (o quarto argumento true): fora do world.js, só o corpo demora o sol — sem ele, o mundo de antes (D-961, D-1035)`);
+        // (b) the question and the pace, and what they call of their own file by name: only reading
+        const seen = new Set(); const todo = [];
+        for (const x of [a[1], a[2]]) { if (/^[A-Za-z_$][\w$]*$/.test(x)) todo.push(x); else { if (impure(x)) fails.push(`a demora do dia: ${f}:${k + 1} — a causa «${id[1]}» escreve no mundo ou sorteia na sua seta (D-960): ${x.slice(0, 110)}`); for (const q of x.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) if (fns.has(q[1])) todo.push(q[1]); } }
+        while (todo.length) { const nm = todo.shift(); if (seen.has(nm)) continue; seen.add(nm); const b = fnLines(L, nm);
+          if (!b) { if (!fns.has(nm)) fails.push(`a demora do dia: ${f}:${k + 1} — a causa «${id[1]}» pergunta pela função ${nm}, que o arquivo não declara (D-1035)`); continue; }
+          for (const [j, l] of b) { if (impure(l)) fails.push(`a demora do dia: ${f}:${j + 1} — ${nm}, da causa «${id[1]}», escreve no mundo ou sorteia (D-960): ${l.trim().slice(0, 110)}`); for (const q of l.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) if (fns.has(q[1]) && !seen.has(q[1])) todo.push(q[1]); } }
+      } }); }
+  // (c) the registry asks a cause of the body only with the body
+  { const w = (src['world.js'] || []).map(code).join('\n');
+    if (!/const isOn = \(c, body\) => \{ if \(c\.corpo && !body\) return false;/.test(w) || !/G\.dayPace = function \(\) \{ let p = 1, w = 1; const body = withBody\(\); for \(const c of LINGERS\) \{ if \(!isOn\(c, body\)\) continue;/.test(w)) fails.push('a demora do dia: o G.dayPace do world.js pergunta uma causa do corpo sem o corpo — sem ele, o mundo de antes (D-961, D-1035)'); }
+  // (d) the body's share of the pace: read by the clock's own files, the drink, and who lingers the sun for the body
   for (const f of files) (src[f] || []).forEach((l, k) => { const c = code(l);
-    if (/\bG\.linger\s*\(/.test(c) && f !== 'world.js' && f !== 'act-taverna.js') fails.push(`a demora do dia: ${f}:${k + 1} registra uma causa da demora fora do world.js e do act-taverna.js (D-960): ${l.trim().slice(0, 110)}`);
-    if (/\bG\.paceCorpo\b/.test(c) && !['world.js', 'main.js', 'act-taverna.js', 'embriaguez.js'].includes(f)) fails.push(`a demora do dia: ${f}:${k + 1} lê o G.paceCorpo — o que a noite gasta é da taverna e da bebida (D-961): ${l.trim().slice(0, 110)}`); });
-  const at = (src['act-taverna.js'] || []).map(code); const regs = at.filter(l => /\bG\.linger\s*\(/.test(l));
-  if (!regs.some(l => /G\.linger\('taverna', \(\) => T\.PACE_SALA, salaCorpo, true\);/.test(l)) || !regs.some(l => /G\.linger\('mesa', \(\) => T\.PACE_MESA, mesaCorpo, true\);/.test(l)) || regs.length !== 2) fails.push('a demora do dia: o act-taverna.js sem as suas duas causas do corpo — a taverna aberta e a partida à mesa (G.linger, D-960)');
+    if (/\bG\.paceCorpo\b/.test(c) && !['world.js', 'main.js', 'embriaguez.js'].includes(f) && !body.has(f)) fails.push(`a demora do dia: ${f}:${k + 1} lê o G.paceCorpo sem registrar uma causa do corpo — o que a demora gasta é de quem a registra (D-961, D-1035): ${l.trim().slice(0, 110)}`); });
+  // (e) the tavern's two causes of the body, and its questions, as ever
+  const at = (src['act-taverna.js'] || []).map(code); const tr = at.filter(l => /\bG\.linger\s*\(/.test(l));
+  if (!tr.some(l => /G\.linger\('taverna', \(\) => T\.PACE_SALA, salaCorpo, true\);/.test(l)) || !tr.some(l => /G\.linger\('mesa', \(\) => T\.PACE_MESA, mesaCorpo, true\);/.test(l)) || tr.length !== 2) fails.push('a demora do dia: o act-taverna.js sem as suas duas causas do corpo — a taverna aberta e a partida à mesa (G.linger, D-960)');
   for (const fn of ['salaCorpo', 'corpoJoga', 'mesaCorpo', 'lastGame', 'segura']) {
-    const a = at.findIndex(l => new RegExp(`^  function ${fn}\\(`).test(l)); if (a < 0) { fails.push(`a demora do dia: o act-taverna.js sem a pergunta ${fn} (D-960)`); continue; }
-    let z = a; let depth = 0; for (; z < at.length; z++) { for (const ch of at[z]) { if (ch === '{') depth++; else if (ch === '}') depth--; } if (depth <= 0 && z >= a) break; }
-    for (let k = a; k <= z; k++) { const c = at[k].replace(/'[^']*'/g, "''");
-      if (/\b(G\.R|G\.rr|G\.ri|G\.pick|G\.chance|G\.shuffle|Math\.random)\s*\(/.test(c) || /(^|[^=!<>])=(?![=>])/.test(c.replace(/\b(const|let)\s+[^;]*;/g, '').replace(/^\s*function [^{]*\{/, '')) || /\.(push|splice|set|delete)\s*\(/.test(c)) fails.push(`a demora do dia: act-taverna.js:${k + 1} — a pergunta ${fn} escreve no mundo ou sorteia (D-960): ${at[k].trim().slice(0, 110)}`); } } }
+    const b = fnLines(at, fn); if (!b) { fails.push(`a demora do dia: o act-taverna.js sem a pergunta ${fn} (D-960)`); continue; }
+    for (const [k, l] of b) if (impure(l)) fails.push(`a demora do dia: act-taverna.js:${k + 1} — a pergunta ${fn} escreve no mundo ou sorteia (D-960): ${l.trim().slice(0, 110)}`); }
+  if (!regs.some(r => r.f === 'world.js')) fails.push('a demora do dia: o world.js sem a causa da cena (G.linger, L-915)'); }
 // 477. "o que a noite gasta vai pelo relógio dela" (D-961): com o corpo demorando o sol, o copo, o prato e a conversa entre as rodadas dos
 // fregueses do mundo andam pelo G.paceCorpo — as marcas deslizam (noite: m.cup e m.nx), o gole na boca fica nos segundos do mundo
 // (AN.beber.dur × G.paceCorpo) —, e a bebida no sangue também (G.Ebrio.passo: o estômago, o fígado e a ressaca, menos o corpo, cujo gole é do

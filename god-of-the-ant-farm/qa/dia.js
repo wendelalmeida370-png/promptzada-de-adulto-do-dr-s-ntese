@@ -16,6 +16,10 @@
 //   c  as causas do corpo (D-960, D-961): c1 o registro (a cena, a taverna aberta, a partida à mesa); c2 o corpo sentado numa taverna
 //      aberta: o relógio a T.PACE_SALA, a fome e o cansaço com ele, a idade em segundos; c3 a mais lenta vale, e a parte do corpo é o
 //      que ele põe além da cena; c4 o corpo a dormir não demora o sol; c5 sem o corpo, o passo do mundo;
+//      e a causa de outro prédio (F15, D-1035), registrada pela prova como um módulo de prédio registra a sua — um rito num templo —:
+//      c6 com o corpo lá, o relógio, a fome e o cansaço no passo dela; c7 a mais lenta vale (com a cena e outra causa do prédio); c8 com o
+//      corpo, só ele: a pergunta que sempre diz sim não é perguntada sem o corpo; c9 os casos ruins (o save no meio, a mão do deus, o
+//      corpo que morre, o prédio que cai); c10 sem o corpo, o mundo igual com as causas ligadas e desligadas; c11 as causas só leem;
 //   v  o dia vivido (DIAS=3 contados, depois do primeiro; na paz do deus, ninguém mandado; SHIFT=k: outra história):
 //      v1 às 0,66 e às 0,70, quem dorme ou vai dormir pela energia (os pisos tirados de quatro histórias de antes e de
 //      quatro de depois); v2 o dia de trabalho não encolheu (com tempo bom, a parte dos acordados no trabalho); v3 ninguém cansa mais depressa do que o dia (a
@@ -248,6 +252,95 @@ function partC() {
   { const [c, info] = clean(); ok('c o verificador e os erros depois da mão da prova', c, info); }
 }
 
+// ================================================================ c6 to c11: a cause of another building (F15, D-1035)
+// Any module of a building registers its own cause of the body, as the tavern does — here the proof's own, as a module of a temple
+// would: the rite (0,21), with a second one in the same building (0,30); and one whose question says yes whenever the proof says so,
+// body or no body (0,05) — only the registry keeps it off without the body. Off unless a part turns them on (RITO)
+const RITO = { on: false, b: 0, dois: false, mente: false };
+function partCN() {
+  M.pronto(WORLD); rebase(); G.S.time = 0.4; calm(); M.viver(1); const TL = G.Space.TILE;
+  G.linger('prova-rito', () => 0.21, () => { if (!RITO.on) return false; const w = Po.body(); return !!w && !w.sleeping && w.inside === RITO.b; }, true);
+  G.linger('prova-rito2', () => 0.3, () => { if (!RITO.dois) return false; const w = Po.body(); return !!w && w.inside === RITO.b; }, true);
+  G.linger('prova-mente', () => 0.05, () => RITO.mente, true);
+  // (a temple first — the rite —, else the first building that is no tavern; with a plan and a free place to sit, kneel or warm oneself,
+  // and someone of its people the god may live, not of its house)
+  let tb = null, seat = null;
+  for (const q of [...G.S.buildings.values()].filter(q => q.built && q.type !== 'taverna' && In.has(q)).sort((a, c) => (a.type === 'temple' ? 0 : 1) - (c.type === 'temple' ? 0 : 1) || a.id - c.id)) {
+    const p = G.Space.planNow(q); if (!p) continue; let st = null;
+    for (const it of p.items) { for (const [k, sp] of it.spots.entries()) { if (!sp.ok || !['sentar', 'rezar', 'aquecer', 'comer', 'ler'].includes(sp.use)) continue; const f = In.freeFor(q, it.id, k); if (f && f.at) { st = { it, f }; break; } } if (st) break; }
+    if (st) { tb = q; seat = st; break; }
+  }
+  if (!tb) { ok('c6 uma causa de outro prédio', false, 'nenhum prédio com planta e um lugar livre que não seja uma taverna'); return; }
+  const fid = V.facOfSet(tb.set);
+  const people = () => [...G.S.villagers.values()].filter(o => o.age >= 18 && o.age < 60 && !o.sleeping && !o.inside && o.home !== tb.id && o.job !== tb.id && G.Fac.idOfV(o) === fid && Po.can(o).ok && !(G.Expe && G.Expe.ofV(o))).sort((a, c) => a.id - c.id);
+  let v = people()[0]; if (!v) { ok('c6 uma causa de outro prédio', false, `ninguém do povo do ${tb.type} #${tb.id} para o deus viver`); return; }
+  let x = pool().filter(o => o !== v && o.set !== tb.set)[0] || pool().filter(o => o !== v)[0];
+  const take = w => { god(() => { Vg.endTask(w); w.sleeping = false; const d = Vg.door(tb); w.x = d[0]; w.y = d[1]; w.inside = 0; }); god(() => Po.take(w)); M.viver(0.1); return Po.is(w); };
+  const sitIn = w => god(() => { w.inside = tb.id; w.x = tb.x + seat.f.at[0] / TL; w.y = tb.y + seat.f.at[1] / TL; w.path = null; w.moving = false; Po.setLevel(seat.it.lv); Po.use(w, tb, seat.f); });
+  const run = (sec, prep) => { if (prep) prep(); v.energy = 80; v.hunger = 10; x.energy = 80; x.hunger = 20; M.viver(0.1);
+    const t0 = dayNow(), a0 = x.age, e0 = x.energy, h0 = x.hunger; const P = new Set(), PC = new Set();
+    for (let k = 0; k < sec * 10; k++) { calm(); v.hunger = 10; M.viver(0.1); P.add(G.pace); PC.add(G.paceCorpo); }
+    return { dc: (dayNow() - t0) * 100, age: x.age - a0, dx: e0 - x.energy, hx: x.hunger - h0, P: [...P], PC: [...PC] }; };
+  const near = (p, q, tol) => Math.abs(p - q) <= (tol || 0.06); const glut = o => (o.traits.includes('Glutão') ? 1.2 : 1);
+  const nome = `${G.Village.buildName(tb)} #${tb.id}`;
+  const lg0 = G.Scene.lingers; let scene = false; G.Scene.lingers = function () { return scene || lg0.apply(this, arguments); };
+  try {
+    if (!take(v)) { ok('c6 uma causa de outro prédio', false, `${v.name}: o corpo não foi tomado`); return; }
+    hold(x, { type: 'idle', wait: 1e4 }); RITO.b = tb.id; RITO.on = true; sitIn(v); M.viver(0.2);
+    // ---- c6: the body at the rite: the clock of the day at the cause's pace, the hunger and the tiredness with it, the age in seconds
+    const a = run(10);
+    ok('c6 uma causa nova de outro prédio, registrada como um módulo de prédio registra a sua (do corpo): com o corpo lá, o relógio do dia anda a 0,21, a fome e o cansaço com ele, a idade em segundos',
+      a.P.length === 1 && a.P[0] === 0.21 && a.PC.length === 1 && a.PC[0] === 0.21 && near(a.dc, 10 / G.DAY_K * 0.21, 0.01) && near(a.dx, a.dc * WORK) && near(a.hx, a.dc * 0.95 * glut(x)) && near(a.age, 10 / G.DAY_LEN, 0.002),
+      `${v.name}, vivido pelo deus, no lugar «${seat.f.use}» do ${nome}: em 10 s do mundo o dia andou ${a.dc.toFixed(2)} centésimos (a conta ${(10 / G.DAY_K * 0.21).toFixed(2)}; o passo ${a.P.join('/')}, a parte do corpo ${a.PC.join('/')}); ${x.name}, de pé: energia −${a.dx.toFixed(2)} (a conta ${(a.dc * WORK).toFixed(2)}), fome +${a.hx.toFixed(2)}, idade +${a.age.toFixed(3)} ano (a conta ${(10 / G.DAY_LEN).toFixed(3)})`);
+    // ---- c7: the slowest goes: a scene (0,35) and a second cause of the same building (0,30) with the rite: the rite's, and the body's share
+    // what it puts beyond the scene
+    const b7 = run(4, () => { scene = true; RITO.dois = true; }); scene = false; RITO.dois = false;
+    ok('c7 a mais lenta vale: uma cena (0,35) e uma segunda causa do mesmo prédio (0,30) junto com o rito (0,21) — o passo é o do rito, e a parte do corpo o que ele põe além da cena',
+      b7.P.length === 1 && b7.P[0] === 0.21 && b7.PC.length === 1 && Math.abs(b7.PC[0] - 0.21 / G.LINGER) < 1e-12, `o passo ${b7.P.join('/')}, a parte do corpo ${b7.PC.map(p => p.toFixed(4)).join('/')} (a conta ${(0.21 / G.LINGER).toFixed(4)})`);
+    // ---- c8: with the body, only it: a question that always says yes lingers the sun while the god lives a body, and never without it — the
+    // registry does not ask it (G.lingers(true): off)
+    RITO.mente = true; const m1 = run(2); god(() => Po.release('teste')); M.viver(0.2); const m2 = run(2); const lm = G.lingers(true).find(c => c.id === 'prova-mente'); RITO.mente = false;
+    ok('c8 com o corpo, só ele: uma causa cuja pergunta sempre diz sim demora o sol com o corpo (0,05, a mais lenta) — e sem o corpo o registro nem a pergunta: o passo do mundo',
+      m1.P.length === 1 && m1.P[0] === 0.05 && m2.P.every(p => p === 1) && m2.PC.every(p => p === 1) && !!lm && lm.on === false, `com o corpo: o passo ${m1.P.join('/')}; sem ele: ${m2.P.join('/')}, a parte do corpo ${m2.PC.join('/')}; a causa, perguntada como o relógio pergunta: ${lm ? (lm.on ? 'LIGADA' : 'desligada') : 'NÃO REGISTRADA'}`);
+    // ---- c11: the causes only read: every cause registered, asked 300 times as the clock asks them — with a body at the rite and without one
+    // —, leaves the world, the chance and the next id as they were
+    { const look = () => [JSON.stringify(G.S.rng), JSON.stringify(QA.canon()), G.S.nextId].join('|'); const out = [];
+      for (const comCorpo of [true, false]) {
+        if (comCorpo) { if (!Po.is(v) && !take(v)) { out.push('sem corpo para o caso com corpo'); continue; } sitIn(v); } else if (Po.body()) god(() => Po.release('teste'));
+        RITO.on = true; RITO.dois = true; RITO.mente = true; M.viver(0.1); const l0 = look(); let n = 0; for (let k = 0; k < 300; k++) n += G.lingers(true).filter(c => c.on).length; const l1 = look(); RITO.dois = false; RITO.mente = false; // (the rite as it was: on, for the bad cases)
+        out.push(`${comCorpo ? 'com o corpo' : 'sem o corpo'}: ${l0 === l1 ? 'nada mudou' : 'O MUNDO MUDOU'} (${(n / 300).toFixed(0)} causa(s) ligada(s))`); if (l0 !== l1) out.push('!'); }
+      const lg = G.lingers();
+      ok('c11 as causas só leem: cada causa do registro, perguntada 300 vezes como o relógio pergunta, com o corpo e sem ele, deixa o mundo, o acaso e o próximo id como estavam; e cada passo registrado fica entre 0 e 1',
+        !out.includes('!') && !out.some(s => /sem corpo para/.test(s)) && lg.every(c => c.k > 0 && c.k < 1), `${out.filter(s => s !== '!').join('; ')}; as causas: ${lg.map(c => `${c.id} ${c.k}${c.corpo ? '' : ' (do mundo)'}`).join(', ')}`); }
+    // ---- c9: the bad cases — a save in the middle of the rite (nothing of it in the save; the pace from 1, asked again at the next step), the
+    // god's hand that takes the body out, the body that dies at the rite, the building that falls with the body in it
+    { if (!take(v)) { ok('c9 os casos ruins', false, 'o corpo não foi tomado de novo'); return; } sitIn(v); M.viver(0.3); const p9 = G.pace;
+      const snap = G.Save.serialize(); const nada = !/prova-rito|prova-mente|"pace"|"paceCorpo"|"lingers?"/.test(snap); G.Save.apply(JSON.parse(snap));
+      const p0 = G.pace; v = G.S.villagers.get(v.id); x = G.S.villagers.get(x.id); tb = G.S.buildings.get(tb.id) || tb; // (a load makes the world anew: the objects of before are not the world's)
+      hold(x, { type: 'idle', wait: 1e4 }); M.viver(0.1); const inT = Po.is(v) && v.inside === tb.id && !v.sleeping; const p1 = G.pace;
+      ok('c9 um save no meio do rito: nada da demora no save; aberto, o passo recomeça em 1 e é perguntado de novo ao mundo no passo seguinte', p9 === 0.21 && nada && p0 === 1 && p1 === (inT ? 0.21 : 1),
+        `antes do save ${p9}; ${nada ? 'nada da demora no save' : 'A DEMORA FOI NO SAVE'}; ao abrir ${p0}; no passo seguinte ${p1} (o corpo ${inT ? 'ainda no rito' : 'fora dele'})`);
+      if (!Po.is(v)) take(v); sitIn(v); M.viver(0.2); const q0 = G.pace;
+      god(() => { Po.unuse(v); const d = Vg.door(tb); v.inside = 0; v.x = d[0]; v.y = d[1]; }); M.viver(0.2); const q1 = G.pace;
+      ok('c9 a mão do deus tira o corpo do prédio: o passo do mundo no passo seguinte', q0 === 0.21 && q1 === 1, `no rito ${q0}; tirado ${q1}`);
+      sitIn(v); M.viver(0.2); const d0 = G.pace; god(() => V.kill(v, 'teste', true)); M.viver(0.3);
+      ok('c9 o corpo morre no rito: o passo do mundo, nenhum erro', d0 === 0.21 && !Po.body() && G.pace === 1 && M.limpo(), `no rito ${d0}; morto: ${Po.body() ? 'AINDA UM CORPO' : 'sem corpo'}, o passo ${G.pace}`);
+      const w = people().find(o => o !== v); if (!w || !take(w)) ok('c9 o prédio cai com o corpo dentro', false, 'ninguém mais para o deus viver');
+      else { v = w; sitIn(v); M.viver(0.2); const f0 = G.pace; god(() => V.damageBuilding(tb, 1e9, 'deus')); M.viver(1);
+        const caiu = !G.S.buildings.has(tb.id) || G.S.buildings.get(tb.id).type === 'ruin' || !G.S.buildings.get(tb.id).built;
+        ok('c9 o prédio cai com o corpo dentro: o corpo fora dele, o passo do mundo, nenhum erro', f0 === 0.21 && caiu && v.inside !== tb.id && G.pace === 1 && M.limpo(), `no rito ${f0}; o prédio ${caiu ? 'no chão (virou ruína)' : 'AINDA DE PÉ'}; o corpo ${v.inside === tb.id ? 'AINDA DENTRO' : 'fora'}, o passo ${G.pace}`); } }
+    // ---- c10: without the body, the world the one before: twice from the same moment, with the proof's causes on and off — the one that
+    // always says yes too —: the same world, the same chance, the pace 1 all along
+    { if (Po.body()) god(() => Po.release('teste')); M.viver(0.2); const snap = G.Save.serialize();
+      const life = lig => { G.Save.apply(JSON.parse(snap)); RITO.on = lig; RITO.mente = lig; const P = new Set(); for (let k = 0; k < 200; k++) { calm(); M.viver(0.1); P.add(G.pace); P.add(G.paceCorpo); } RITO.on = false; RITO.mente = false;
+        return { P: [...P], rng: JSON.stringify(G.S.rng), canon: JSON.stringify(QA.canon()) }; };
+      const A = life(true), B = life(false);
+      ok('c10 sem o corpo, o mundo é o de antes: 20 s do mesmo momento com as causas da prova ligadas (a que sempre diz sim também) e desligadas — o mesmo mundo, o mesmo acaso, o passo 1 do começo ao fim',
+        A.P.length === 1 && A.P[0] === 1 && B.P.length === 1 && A.rng === B.rng && A.canon === B.canon, `os passos ${A.P.join('/')} e ${B.P.join('/')}; o acaso ${A.rng === B.rng ? 'igual' : 'DIFERENTE'}; o mundo ${A.canon === B.canon ? 'igual' : 'DIFERENTE'}`); }
+  } finally { G.Scene.lingers = lg0; RITO.on = false; RITO.dois = false; RITO.mente = false; if (Po.body()) god(() => Po.release('teste')); if (x && G.S.villagers.has(x.id)) god(() => Vg.endTask(x)); }
+  { const [c, info] = clean(); ok('c6 o verificador e os erros depois da mão da prova', c, info); }
+}
+
 // ================================================================ v, n: the lived days, and a save in the middle of the night
 function partV() {
   M.pronto(WORLD); const S = G.S; for (let i = 0; i < SHIFT; i++) G.R(); rebase();
@@ -328,6 +421,7 @@ if (on('a')) partA();
 if (on('s')) partS();
 if (on('b')) partBody();
 if (on('c')) partC();
+if (on('cn')) partCN();
 if (on('v') || on('n')) partV();
 if (on('h')) partH();
 { const e = M.erros(); ok('erros', M.limpo(), Object.keys(e.mod).length ? JSON.stringify(e.mod).slice(0, 300) : e.console.length ? e.console.slice(0, 2).join(' · ') : 'nenhum erro de módulo, nenhum aviso no console'); }

@@ -3882,3 +3882,18 @@ padrão que sobe: «a taverna atualmente é nota 10, mas ela em breve vai ser no
 
 **Os números das frentes deste patch** (o `planos/interiores-3.md` §12.4): o bloco do supervisor vai até a D-989; as frentes, a partir
 da D-990, do L-2230, do T-2130 e da regra 480 do guard, em blocos de 10 na ordem em que o contrato abre cada uma.
+
+### I-2 — M (a barra do lugar e a demora)
+
+A frente M da Fase 0 (o contrato `planos/interiores-3-contrato.md`): a **F14**, a barra do lugar para qualquer prédio — a «Mesa» da
+taverna vira a primeira barra registrada, igual letra por letra, e um ofício que vem depois põe os seus verbos no posto de outro do
+seu próprio arquivo —, com o responder do lugar provado em todo prédio; e a **F15**, o `G.linger` aberto às causas de qualquer módulo
+de prédio (a audiência, o banquete, o rito), sempre do corpo e puras. Os arquivos: `js/acoes-ui.js`, o provedor `pessoa` do
+`js/interact.js`, o responder do lugar do `js/soc-verbos.js`, o `G.linger` do `js/world.js`; as provas `qa/acoes.js` (a10 a a12 e o
+`igual`), `qa/dia.js` (c6 a c11) e `qa/visual/acoes-fotos.js` (a parte 5 e o HTML ao lado de cada foto); as regras 446 e 476 do guard
+reescritas, e as novas 520 a 523.
+
+| ID | Tipo | Descrição |
+|---|---|---|
+| D-1035 | decisão (M; F15) | **A demora aberta a todo prédio.** Qualquer módulo de prédio registra a sua causa com o `G.linger(nome, passo, pergunta, true)` — numa linha, com o nome escrito, **sempre do corpo** fora do `world.js` —, e o registro pergunta uma causa do corpo **só enquanto o deus vive um corpo**: sem ele, nem a pergunta — o mundo sem o corpo é o de antes por construção, diga a pergunta o que disser. A mais lenta vale; só o tick pergunta (regra 62). Uma causa mal registrada (sem nome, o passo ou a pergunta que não é função) é recusada, dita no console; a pergunta ou o passo de um módulo que quebra é erro dele (`G.tryRun`: `G.modErr`, falha em toda prova), e o dia segue no passo das outras — um módulo nunca quebra o passo do relógio. `G.lingers(true)` diz também se cada uma está ligada agora, como o relógio perguntaria (para as provas e o verificador). A regra 476 reescrita: quem registra (do corpo fora do `world.js`; nenhum nome em dois registros), a pergunta e o passo puros (a seta ou a função nomeada e as funções do arquivo que ela chama), o registro que só pergunta com o corpo, e o `G.paceCorpo` lido também por quem registra uma causa do corpo (o que a demora gasta vai pelo relógio dela, como a regra 477 faz na taverna). Provas: `qa/dia.js` c6 a c11 (um rito num templo, registrado pela prova como um módulo registraria) e `node qa/noite-mesa.js igual PASTA` contra uma cópia de antes |
+| T-2170 | limite de prova (M) | **Uma prova que guarda o `G.S` antes de um load mexe num mundo que não é mais o do jogo.** O `G.Save.apply` faz o mundo de novo: o `G.S` e cada pessoa e prédio guardados antes dele são objetos velhos. A c9 do `qa/dia.js`, na primeira versão, guardava `const S = G.S` e, depois do save no meio do rito, punha na porta uma pessoa velha — o passo seguia 0,21, e parecia um defeito da demora. Correção: a parte lê o `G.S` de agora e busca de novo a pessoa e o prédio depois do load |
