@@ -68,7 +68,11 @@
     L.served = v.carry && v.carry.n > 1e-6 && G.Dentro3D && G.Dentro3D.served ? G.Dentro3D.served(v) : null;
     // (the keeper's cloth over his shoulder — a tavern of a people that weaves: G.Dentro3D.ombro, P5 —, and what he wipes a table with: the
     // cloth, or the straw its grain leaves — G.Vida3D.wipeOf)
-    L.ombro = v.job && G.Dentro3D && G.Dentro3D.ombro ? G.Dentro3D.ombro(v) : null; L.wipe = v.act === 'limpar-mesa' && G.Vida3D && G.Vida3D.wipeOf ? G.Vida3D.wipeOf(v, L) : null;
+    L.ombro = v.job && G.Dentro3D && G.Dentro3D.ombro ? G.Dentro3D.ombro(v) : null; L.dmood = L.drunk > 0 ? P3.drunkMood(v) : 0;
+    // (the keeper at his counter with nothing in hand dries a cup of the house's ware with his cloth: the cup of what his people has — Inv.made
+    // —, in the left hand, D-873)
+    L.polish = !!L.ombro && !!v.task && v.task.type === 'atender' && !(v.carry && v.carry.n > 1e-6) && (!v.act || v.act === 'wait' || v.act === 'idle') && !L.inv.outra;
+    if (L.polish) { const cup = G.Inv && G.Inv.made ? G.Inv.made('caneca', v) : null; if (cup) { const k = L._polOf; if (!k || k.src !== L.inv || k.cup !== cup) L._polOf = { src: L.inv, cup, inv: Object.assign({}, L.inv, { outra: cup }) }; L.inv = L._polOf.inv; } else L.polish = false; } L.wipe = v.act === 'limpar-mesa' && G.Vida3D && G.Vida3D.wipeOf ? G.Vida3D.wipeOf(v, L) : null;
     // (P6, D-754: the helmet the inventory puts on the head comes off under a roof and in bed — on, at one's post: the guard, the round)
     if (L.inv.cabeca && headOff(P3.dressOf(v))) { const k = L._headOf; if (!k || k.src !== L.inv) L._headOf = { src: L.inv, inv: Object.assign({}, L.inv, { cabeca: null }) }; L.inv = L._headOf.inv; }
     L.torch = torchOf(v) || (L.inv.outra === 'tocha' && !v.inside && !v.sleeping); L.cuir = cuirOf(L.inv.corpo);
@@ -90,7 +94,12 @@
     // (the inventory keeps the answer in the look's memo while what it reads is the same: it alone reads the bag and the places — rule 128, L-1114)
     return G.Inv.heldFor ? G.Inv.heldFor(v, L._inv || (L._inv = {})) : G.Inv.held(v);
   }
-  P3.drunkOf = v => (G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0);
+  // (how drunk, 0..~1,25: the world's drink of before — G.Atmos.drunk — or what one has drunk, T2's v.ebrio (0..~1,5), the stagger growing
+  // with it — D-872)
+  P3.drunkOf = v => Math.max(G.Atmos && G.Atmos.drunk ? G.Atmos.drunk(v) : 0, v && v.ebrio > 0.05 ? Math.min(1.25, v.ebrio / 1.2) : 0);
+  // (the drink's mood by who one is — the temperament, G.Indole: the kind and the outgoing loosen into a silly smile, the unkind and the
+  // anxious turn sour —: −1..1, D-872)
+  P3.drunkMood = v => { const I = G.Indole; if (!I || !I.ax) return 0; return G.clamp(((I.ax(v, 'ama') - 50) + 0.5 * (I.ax(v, 'ext') - 50) - 0.6 * (I.ax(v, 'neu') - 50)) / 45, -1, 1); };
   // (a cuirass worn: the height of its lower edge in the body as modelled — what the skin's shader takes from the hips to the
   // chest, D-351; 0 for none. The edge of a cuirass's solid part: its waist flaps, which hang free, kept out of it)
   const CUIR = new Map();

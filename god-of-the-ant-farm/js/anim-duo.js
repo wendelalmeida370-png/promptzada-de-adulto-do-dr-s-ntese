@@ -47,6 +47,12 @@
     // (the brawler put out of the tavern at its door — «expulsar»: the keeper's right hand round the other's left arm at the shoulder,
     // the left one fisted in their collar, pushing them back out; the one put out has no hand on the keeper, leaning back from him —
     // P6, D-797)
+    // (the fourth wave, D-871: the drink thrown in a face and the one who gets it — from a step away, no hand on the other —; the one on the
+    // floor dragged out by the wrists — each one's part, the world's distance —; the arm wrestle, the same for the two: the right hands
+    // locked between them over the board)
+    'jogar-bebida': { a: P('jogar-bebida'), b: P('molhado') }, molhado: { b: P('molhado') },
+    arrastar: { a: P('arrastar'), b: P('arrastado') }, arrastado: { b: P('arrastado') },
+    'queda-de-braco': { a: P('queda-de-braco', [null, ['m', 0, 0.41, 0]], [0, 1], 0.9, FWD), b: P('queda-de-braco', [null, ['m', 0, 0.41, 0]], [0, 1], 0.9, FWD) },
     expulsar: { a: P('expulsar-a', [['b', -0.07, 0.3, 0.12], ['b', 0.13, 0.3, 0.1]], [0.08, 0.92], 0.8, FWD), b: P('expulsar-b') },
     // (the conflict: the push on the chest, the one who parts two — the hands held on the other's chest)
     shove: { a: P('duo-empurrar', [['b', -0.1, 0.28, 0.12], ['b', 0.1, 0.28, 0.12]], [0.25, 0.5], 0.95, FWD) },

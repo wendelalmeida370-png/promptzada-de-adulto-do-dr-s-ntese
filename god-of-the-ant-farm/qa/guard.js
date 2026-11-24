@@ -2356,5 +2356,45 @@ for (const f of files) if (f !== 'act-taverna.js') src[f].forEach((line, k) => {
   if (!/if \(L\.compasso && v\.inside > 0\) \{ const m = musicoEm\(v\.inside\); if \(m\) o\.ritmo = A\.compasso\(m\); \}/.test(as)) fails.push('o compasso: a cena não dá a quem acompanha o compasso do músico da sala (D-785)');
   if (!/t0: t && Number\.isFinite\(t\.mw\) \? t\.mw : 0/.test(as)) fails.push('o compasso: o pulso da música não conta do começo da vez do músico (t.mw, D-785)');
   if (!/if \(!g\.ritmo \|\| g\.ritmo\.de !== C\.de/.test(au) || !/f\.ritmo && musics\.has\('v' \+ f\.ritmo\.de\)/.test(au)) fails.push('o compasso: o tocador não toca as palmas, a dança e o canto no pulso do músico (D-785)'); }
+// 400. "todo ato da quarta onda tem gesto" (T6, D-870, D-871): cada ato novo do contrato (planos/taverna-onda4.md — a tranca, o chamado,
+// o esconder, a porta forçada, o discurso, a bebida jogada e o molhado, a cantoria, o desmaio, o arrastar e o arrastado, a cuba, os dados,
+// as cartas, a trapaça, a queda de braço) tem o seu clipe (acts), e cada ato a dois as duas partes no Anim.DUO
+{ const clips = ['taverna-noite-clips.js', 'social-clips.js'].map(f => (src[f] || []).join('\n')).join('\n'), du = (src['anim-duo.js'] || []).join('\n');
+  for (const a of ['trancar', 'abrigar', 'esconder', 'arrombar', 'discurso', 'jogar-bebida', 'molhado', 'cantoria', 'desmaio', 'arrastar', 'arrastado', 'mexer-cuba', 'jogo-dados', 'jogo-cartas', 'trapaca', 'queda-de-braco'])
+    if (!new RegExp(`acts: \\[[^\\]]*'${a}'`).test(clips)) fails.push(`todo ato da quarta onda tem gesto: o ato «${a}» sem o seu clipe (acts) — D-870`);
+  for (const [k, a, b] of [["'jogar-bebida'", 'jogar-bebida', 'molhado'], ['arrastar', 'arrastar', 'arrastado'], ["'queda-de-braco'", 'queda-de-braco', 'queda-de-braco']])
+    if (!new RegExp(`${k.replace(/[-']/g, m => '\\' + m)}: \\{ a: P\\('${a}'[^}]*, b: P\\('${b}'`).test(du)) fails.push(`todo ato a dois da quarta onda tem as duas partes: «${a}» sem a parte a e a parte b («${b}») no Anim.DUO (D-871)`); }
+// 401. "o gesto da coisa só com a coisa" (T6, D-872, L-2080): a coisa de um gesto é desenhada na mão de sempre — a direita, a mão
+// (item: { hand: 'mao' }), ou a esquerda —, e o espelho do canhoto a gesticularia com a mão vazia: um clipe que segura uma coisa numa mão
+// não tem espelho (noMirror); e os jogos, a trapaça e a bebida jogada pedem a sua coisa pelo tipo (V3.NEEDS: os dados, o baralho, a
+// caneca), a porta forçada a arma e o discurso a caneca, ou o gesto sem ela (o ombro, a mão aberta) — nunca o gesto de mentira
+{ for (const f of ['taverna-noite-clips.js', 'taverna-clips.js', 'mesa-clips.js', 'social-clips.js', 'grupo-clips.js']) { const t = (src[f] || []).join('\n'); if (!/!def\.noMirror\) Q\.push\(\[id \+ '~m'/.test(t)) continue;
+    for (const m of t.matchAll(/\n {2}c\('([^']+)'/g)) { const i = m.index, j = t.indexOf("\n  c('", i + 4); const d = t.slice(i, j < 0 ? t.length : j); const it = /item: \{ hand: '(mao|outra)'( \}|,)/.exec(d);
+      if (it && !/two: true/.test(d.slice(it.index, it.index + 60)) && !/noMirror: true/.test(d)) fails.push(`o gesto da coisa só com a coisa: o clipe «${m[1]}» do ${f} segura uma coisa numa mão e tem espelho — o canhoto o faria com a mão vazia (noMirror; L-2080)`); } }
+  const v3 = (src['vida3d.js'] || []).join('\n');
+  if (!/V3\.NEEDS = \{ 'jogo-dados': 'dados', 'jogo-cartas': 'baralho', 'jogo-cartas-ganha': 'baralho', trapaca: \['dados', 'baralho'\], 'jogar-bebida': 'caneca' \};/.test(v3) || !/if \(V3\.NEEDS\[a\] && !V3\.handHas\(L, v, V3\.NEEDS\[a\]\)\) a = base;/.test(v3)) fails.push('o gesto da coisa só com a coisa: os jogos, a trapaça e a bebida jogada sem pedir a sua coisa pelo tipo (V3.NEEDS, D-872)');
+  if (!/if \(v\.act === 'arrombar' && !V3\.handHas\(L, v, 'arma'\)/.test(v3) || !/if \(v\.act === 'discurso' && !V3\.handHas\(L, v, 'caneca'\)/.test(v3)) fails.push('o gesto da coisa só com a coisa: a porta forçada sem a arma ou o discurso sem a caneca fazem o gesto de mentira (D-870)'); }
+// 402. "o corpo no chão fica deitado" (T6, D-871): o desmaiado e o arrastado (V3.LYING) ficam deitados seja qual for a velocidade com que
+// o mundo os move — o leitor pergunta antes da velocidade —, e a leitura dos estados passa o retrato adiante em quem a embrulha (o
+// combate: as escolhas pelo que as mãos seguram, L-2081)
+{ const v3 = (src['vida3d.js'] || []).join('\n'), cc = (src['combate-clips.js'] || []).join('\n');
+  const i = v3.indexOf('Anim.stateOf = function (v, sp, L) {'), l = v3.indexOf('if (V3.LYING.has(v.act))', i), s = v3.indexOf('if (sp > 0.25)', i);
+  if (i < 0 || l < 0 || s < 0 || l > s || !/V3\.LYING = new Set\(\['desmaio', 'arrastado'\]\);/.test(v3)) fails.push('o corpo no chão fica deitado: o leitor não pergunta pelo desmaio e pelo arrastado antes da velocidade (V3.LYING, D-871)');
+  if (/A\.stateOf = function/.test(cc) && !/A\.stateOf = function \(v, sp, L\) \{\n\s*const s = stateOf0\(v, sp, L\);/.test(cc)) fails.push('o retrato adiante: o combate-clips.js embrulha o Anim3D.stateOf sem passar o retrato (L) — as escolhas pelo que as mãos seguram caem (L-2081)'); }
+// 403. "a bebida no corpo é a do mundo e de quem se é" (T6, D-872): o quanto se bebeu é o do mundo — o G.Atmos.drunk e o v.ebrio da T2,
+// pelo P3.drunkOf —, para todos e para o corpo do jogador; o rosto da bebida (o sorriso solto ou a cara azeda) é da índole (G.Indole) e
+// nunca da aparência nem do povo
+{ const lk = (src['look3d.js'] || []).join('\n'), p3 = (src['people3d.js'] || []).join('\n');
+  const dm = (/P3\.drunkMood = v => \{([^\n]*)\};/.exec(lk) || [])[1];
+  if (!/P3\.drunkOf = v => Math\.max\(G\.Atmos && G\.Atmos\.drunk \? G\.Atmos\.drunk\(v\) : 0, v && v\.ebrio > 0\.05/.test(lk)) fails.push('a bebida no corpo: o P3.drunkOf não lê o v.ebrio da T2 (D-872)');
+  if (!dm || !/G\.Indole/.test(dm) || /genoma|skin|hair|civ|style|Feicao|\.g\b/.test(dm)) fails.push('a bebida no rosto: o humor da bebida não é só da índole (P3.drunkMood: G.Indole, nunca a aparência nem o povo — D-872)');
+  if (!/I\.drunk = P3\.drunkOf\(avv\); I\.drunkF = I\.drunk; I\.dmood = I\.drunk > 0 \? P3\.drunkMood\(avv\) : 0;/.test(p3) || !/INP\.drunkF = Lv\.drunk \|\| 0; INP\.dmood = Lv\.dmood \|\| 0;/.test(p3)) fails.push('a bebida no corpo: o corpo do jogador ou o rosto de quem está sentado sem a bebida do mundo (D-872)'); }
+// 404. "a vida do salão sem sorteio" (T6, D-873): o que cada um faz à toa no salão (o queixo na mão, o recosto, a cabeça pesada do bêbado), o
+// aplauso no fim da música (pelo relógio da taverna, d.musT) e as cabeças que viram para quem entra e para o músico vão pelo relógio do
+// mundo e pelo G.hash do id — nenhum acaso, do mundo nem do que só se vê — e só leem
+{ const v3 = (src['vida3d.js'] || []).join('\n'); const i = v3.indexOf('// ------------------------------ the life of the room (D-873)'), j = v3.indexOf('// ------------------------------ the music\'s compass (D-796)', i);
+  const blk = i < 0 || j < 0 ? '' : v3.slice(i, j); if (!blk) fails.push('a vida do salão: o bloco do salão não está no vida3d.js (D-873)');
+  else { if (/\bG\.(R|rr|ri|pick|chance|VR|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(blk)) fails.push('a vida do salão sem sorteio: o bloco do salão tira de um acaso (D-873)');
+    if (/\b(v|o|b|d|s|L|op)\.[\w.]+\s*(=(?![=>])|\+=|-=|\+\+|--)/.test(blk.replace(/\/\/[^\n]*/g, ''))) fails.push('a vida do salão só lê: o bloco do salão escreve numa pessoa, num prédio ou no dia da taverna (D-873)'); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
