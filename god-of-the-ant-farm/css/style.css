@@ -2242,3 +2242,19 @@ canvas#game3d { touch-action: none; transition: none; }
   #inc-hud .ac-dica::after { left: 38%; }
   .ac-dica p { font-size: 12.5px; line-height: 1.34; }
 }
+
+/* ------------------------------ a festa das mesas (js/jogo-fx.js, D-940): a camada das partículas, as moedas que voam, o pulo ------------------------------ */
+/* (as classes de pulo — jfx-pop, jfx-sobe, jfx-pega — põem um transform: num elemento que já tem o seu, ponha-as num invólucro) */
+.jfx-camada { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9990; }
+.jfx-moeda { position: fixed; z-index: 9991; width: 18px; height: 18px; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); background: radial-gradient(circle at 35% 30%, #fff6c8 0 18%, #ffd45c 30%, #e09a22 70%, #a8650e 100%); box-shadow: 0 0 0 1px rgba(110, 60, 6, .55), 0 2px 6px rgba(0, 0, 0, .45), 0 0 12px rgba(255, 210, 90, .55); }
+.jfx-clarao { position: fixed; inset: 0; z-index: 9989; pointer-events: none; }
+.jfx-pop { animation: jfx-pop .55s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes jfx-pop { 0% { transform: scale(1); } 35% { transform: scale(1.22); } 100% { transform: scale(1); } }
+.jfx-sobe { display: inline-block; animation: jfx-sobe .38s cubic-bezier(.2, 1.8, .4, 1); }
+@keyframes jfx-sobe { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.jfx-pega { animation: jfx-pega .42s ease-out; }
+@keyframes jfx-pega { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.15); filter: brightness(1.6); } 100% { transform: scale(1); filter: brightness(1); } }
+.jfx-raios { position: relative; isolation: isolate; }
+.jfx-raios::before { content: ''; position: absolute; left: 50%; top: 50%; width: 260%; aspect-ratio: 1; transform: translate(-50%, -50%); z-index: -1; pointer-events: none; background: repeating-conic-gradient(from 0deg, rgba(255, 215, 110, .32) 0deg 9deg, rgba(255, 215, 110, 0) 9deg 22deg); -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%); mask: radial-gradient(circle, #000 18%, transparent 68%); animation: jfx-gira 14s linear infinite; }
+@keyframes jfx-gira { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .jfx-pop, .jfx-sobe, .jfx-pega { animation: none; } .jfx-raios::before { animation: none; } }

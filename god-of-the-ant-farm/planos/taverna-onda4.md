@@ -96,3 +96,37 @@ Na seção 23 do `qa/AUDIT.md`, cada frente usa uma subseção «Onda 4 — Tn»
 - **D-667:** este contrato.
 - **D-668 — O contexto manda.** A taverna não abre para a festa nem para a bebida com a guerra à porta, o luto pelo governante, o fogo perto ou a doença na cidade. O que ela faz em cada caso é do mundo, com causa, e a índole de quem decide pesa.
 - **D-669 — Os jogos são do mundo.** O resultado de um lance de dados ou de uma mão de cartas é decidido no passo do mundo, pelo `G.hash` da partida, da rodada e de quem joga, nunca pelo acaso do que só se vê. A tela só mostra o que o mundo decidiu (o rolar dos dados é a vista do resultado) e as apostas vão pelo livro. Os fregueses do mundo jogam entre si pelas mesmas regras.
+
+## O retorno do dono depois da versão 25 (24/11/2026)
+
+O dono jogou as Tabuletas no celular — no app do Claude a tela do jogo tem ≈ **411 × 724** px de CSS (a barra do app em cima) — e disse:
+
+1. «As cartas estão lindas, mas o texto ficou um pouco amassado quando a carta tá ali sem ser maximizada»: na mão, a regra e a frase da
+   carta se sobrepõem; no alto da mesa, o nome do outro, a trilha das rodadas e a caixa da glória se atropelam; a etiqueta do baralho fica
+   por baixo da mão; a faixa «Você leva N de glória» cobre a etiqueta.
+2. «Não entendi como joga o jogo, não tem um tutorial ou algo do tipo.»
+3. «Deve ser dopaminérgico quando você ganha o jogo: efeitos de partículas, sons gostosos, feedback visual e sonoro pra pessoa querer
+   jogar mais e mais.»
+4. «Por que 10 × 8 é empate?» — o outro largou a mesa no meio (`abandono`), e a tela disse «Empate».
+5. «Joguei uma partida com o cara e, quando acabou, a taverna estava totalmente vazia» — pediu que a noite da taverna fosse pela madrugada
+   ou que o tempo parasse durante os jogos, e deixou a escolha ao supervisor («liberdade decisória e criativa total»).
+
+**A conta da noite** (o porquê do 5): o dia tem 200 s do mundo, o corpo vive o mundo a 0,27 (`Space.TIME`) — o dia do corpo dura 12,3 min —,
+e a noite de 11 horas (19 h às 6 h) é só 0,29 do dia (`incui.js` `hourOf`). A taverna abre às 15h40 e fecha à 0h40 (`T.horas`: 0,55 a 0,88):
+para o corpo, a tarde inteira na taverna são uns 4 minutos de verdade, e das 19 h ao fechamento, menos de 2. Uma partida de sete rodadas
+pensadas leva de 2 a 4 minutos: comia a noite inteira.
+
+**As decisões** (as frentes, com os números):
+- **A noite dura para quem a vive** (frente **N**): com o corpo numa taverna aberta, o relógio do dia se demora, como numa cena (pelo
+  `G.dayPace`), e com o corpo numa partida à mesa quase para; o que é do ritmo da noite vai com o relógio — a vontade de pedir outra rodada,
+  o cansaço, a fome —, para que a noite dos fregueses seja a mesma história, só mais longa de viver. Nunca parar o mundo: a sala continua
+  viva. A casa não fecha com uma partida do corpo na mesa (a última partida), e quem joga com o corpo não larga a mesa no meio, salvo uma
+  força do mundo — e quem larga a mesa perde: o pote é de quem fica (como o corpo que se levanta já perde).
+- **Os jogos se ensinam jogando** (frente **E**): a primeira partida de cada jogo é guiada, passo a passo, sobre a partida de verdade; um «?»
+  abre as regras a qualquer hora; a tabuleta na mão mostra o que cabe inteiro (o nome, o poder, a regra), e a grande, tudo.
+- **Ganhar dá gosto** (frente **F**): cada rodada ganha brilha, soa e conta a glória subindo; a vitória é uma festa — as partículas, as
+  moedas voando à bolsa, a fanfarra e a taverna que aplaude —; a derrota é curta e chama a revanche; o título do fim diz o que aconteceu
+  (nunca «Empate» numa partida interrompida). A base dos efeitos é uma só, para os dois jogos: `G.JogoFX` (`js/jogo-fx.js`, D-940).
+
+**Os números**: E — L-2200 a L-2209, T-2100 a T-2109, D-941 a D-949, regras 465 a 469; F — L-2210 a L-2219, T-2110 a T-2119, D-950 a
+D-959, regras 470 a 474; N — L-2220 a L-2229, T-2120 a T-2129, D-960 a D-969, regras 475 a 479. D-940 é a base dos efeitos.
