@@ -11,7 +11,7 @@
 #   VENV/bin/python arte/blender/deco.py --prev SAIDA.png coisa ...   → those things in their own colours, by Cycles (nothing written)
 # The shapes: arte/blender/deco_coisas.py and, what is served at the tables and the marks of the night, deco_comida.py (on the
 # furniture's moveis_forma.py). The dishes and the drinks are G.MESH3D 'comida-<prato>' and 'bebida-<bebida>' (the part of the food
-# they are made of, the drink — js/act-taverna.js), the others 'deco-<coisa>'. The budget (D-745, D-748): the file ≤ 2.5 MB, each
+# they are made of, the drink — js/act-taverna.js), the others 'deco-<coisa>'. The budget (D-745, D-748, D-889): the file ≤ 3.5 MB, each
 # thing ≤ 700 triangles at its near level (the rug, the hanging, the cauldron, the firewood ≤ 1,400; a dish or a drink, with its
 # bites, its levels and its steam, ≤ 1,600), its middle level ≤ 70 % of it (or ≤ 200). Nothing is drawn by chance: the same
 # script, the same file, byte for byte.
@@ -21,6 +21,7 @@ import moveis_forma as F
 import moveis as MV
 import deco_coisas as C
 import deco_comida as C2  # (its colours of each point hook the shapes: imported before any is made)
+import deco_festa as C3   # (the fourth wave's: the feast, the door, the games — T7)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, 'js', 'decomesh.js')
@@ -29,9 +30,12 @@ PARTS = ['louca', 'barro', 'tampa', 'madeira', 'madeira2', 'pano', 'pano2', 'cor
          # (what is served — its bites, its levels, its remains, a beer's head, the steam, what lies under it: deco_comida.py —, the
          # candle as much of it as is left, the marks of the night, the boards at the door)
          'b1', 'b2', 'b3', 'b4', 'f1', 'f2', 'f3', 'f4', 'n0', 'n1', 'n2', 'n3', 'nv', 'r1', 'r2', 'r3', 'r4', 'e0', 'e1', 'vapor', 'resto',
-         'cera0', 'cera1', 'cera2', 'cera3', 'osso', 'mancha', 'ardosia', 'escrita', 'giz', 'tinta', 'tinta2']
-BIG = {'tapete', 'tapecaria', 'caldeirao', 'lenha'}
-BUDGET = {'coisa': 700, 'grande': 1400, 'prato': 1600, 'meio': 0.7, 'meioMin': 200, 'arquivo': 2.5}
+         'cera0', 'cera1', 'cera2', 'cera3', 'osso', 'mancha', 'ardosia', 'escrita', 'giz', 'tinta', 'tinta2',
+         # (the fourth wave's — T7, D-880: a flower, a die and its pips, the dice's cup, a tablet's back, face and edge, the parts of a
+         # feast's platter by the part of the food each is)
+         'flor', 'dado', 'pinta', 'copo', 'verso', 'face', 'borda', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho']
+BIG = {'tapete', 'tapecaria', 'caldeirao', 'lenha', 'guirlanda-flores', 'guirlanda-horta', 'bandeirolas', 'pano-festa', 'porta-caida', 'cartas', 'monte'} | {'estandarte-' + c for c in ('classico', 'romano', 'grego', 'egipcio', 'nordico', 'asteca')}
+BUDGET = {'coisa': 700, 'grande': 1400, 'prato': 1600, 'meio': 0.7, 'meioMin': 200, 'arquivo': 3.5}
 SERVED = ('comida-', 'bebida-')  # (the dishes and the drinks: named as they are, their budget a dish's)
 # (kind, w, d, h, the builder, how it rests)
 TABLE = [
@@ -78,6 +82,22 @@ TABLE = [
     # ---- at the door: the slate, the board, the painted plaque (the words are the game's: what the kitchen has today); the keeper's cloth
     ('lousa', 0.40, 0.03, 0.55, C2.lousa, 'parede'), ('quadro', 0.56, 0.05, 0.45, C2.quadro, 'parede'), ('placa', 0.60, 0.03, 0.36, C2.placa, 'parede'),
     ('pano-ombro', 0.13, 0.17, 0.32, C2.pano_ombro, 'base'),
+    # ---- the feast (T7, D-880): the garlands of the wild's flowers and of the garden, the bunting, the drapes, the standard of each
+    # people, the petals; the feast's platter of each people (its parts what the recipe spent)
+    ('guirlanda-flores', 1.2, 0.12, 0.35, C3.guirlanda('flores'), 'parede'), ('guirlanda-horta', 1.2, 0.12, 0.35, C3.guirlanda('horta'), 'parede'),
+    ('bandeirolas', 1.6, 0.05, 0.30, C3.bandeirolas, 'parede'), ('pano-festa', 1.4, 0.08, 0.5, C3.pano_festa, 'parede'),
+    ('estandarte-classico', 0.5, 0.14, 1.3, C3.estandarte('classico'), 'parede'), ('estandarte-romano', 0.5, 0.14, 1.3, C3.estandarte('romano'), 'parede'),
+    ('estandarte-grego', 0.5, 0.14, 1.3, C3.estandarte('grego'), 'parede'), ('estandarte-egipcio', 0.5, 0.14, 1.3, C3.estandarte('egipcio'), 'parede'),
+    ('estandarte-nordico', 0.5, 0.14, 1.3, C3.estandarte('nordico'), 'parede'), ('estandarte-asteca', 0.5, 0.14, 1.3, C3.estandarte('asteca'), 'parede'),
+    ('petalas', 0.3, 0.2, 0.004, C3.petalas, 'base'),
+    ('comida-festa-classico', 0.5, 0.34, 0.16, C3.comida_festa('classico'), 'base'), ('comida-festa-romano', 0.5, 0.34, 0.16, C3.comida_festa('romano'), 'base'),
+    ('comida-festa-grego', 0.5, 0.34, 0.16, C3.comida_festa('grego'), 'base'), ('comida-festa-egipcio', 0.5, 0.34, 0.16, C3.comida_festa('egipcio'), 'base'),
+    ('comida-festa-nordico', 0.5, 0.34, 0.16, C3.comida_festa('nordico'), 'base'), ('comida-festa-asteca', 0.5, 0.34, 0.16, C3.comida_festa('asteca'), 'base'),
+    # ---- the door (T7, D-882): the bar across it locked, its leaf fallen and the splinters where it was broken in
+    ('tranca', 1.4, 0.12, 0.18, C3.tranca, 'parede'), ('porta-caida', 0.95, 1.95, 0.12, C3.porta_caida, 'base'), ('lascas', 0.6, 0.4, 0.03, C3.lascas, 'base'),
+    # ---- the games at the tables (T7, D-884): a die, the dice's cup, the tablets of a game of cards thrown, the deck
+    ('dado', 0.016, 0.016, 0.016, C3.dado, 'base'), ('copo-dados', 0.08, 0.08, 0.10, C3.copo_dados, 'base'),
+    ('cartas', 0.3, 0.26, 0.02, C3.cartas, 'base'), ('monte', 0.09, 0.1, 0.035, C3.monte, 'base'),
 ]
 # (the colours of the sheet's pictures — near what the game paints: js/dentro3d.js; linear, for Cycles)
 DCOR = {'louca': (0.46, 0.18, 0.08), 'barro': (0.46, 0.18, 0.08), 'tampa': (0.30, 0.20, 0.12), 'madeira': (0.30, 0.17, 0.085), 'madeira2': (0.17, 0.095, 0.05),
@@ -90,6 +110,8 @@ DCOR = {'louca': (0.46, 0.18, 0.08), 'barro': (0.46, 0.18, 0.08), 'tampa': (0.30
 for _k in ('b1', 'b2', 'b3', 'b4', 'n0', 'n1', 'n2', 'n3', 'nv', 'r1', 'r2', 'r3', 'r4', 'e0', 'e1', 'resto', 'vapor'): DCOR[_k] = (1, 1, 1)
 for _k in ('f1', 'f2', 'f3', 'f4'): DCOR[_k] = (0.45, 0.07, 0.05)
 for _k in ('cera0', 'cera1', 'cera2', 'cera3'): DCOR[_k] = DCOR['cera']
+for _k in ('flor', 'pinta', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho'): DCOR[_k] = (1, 1, 1)
+DCOR.update({'dado': (0.78, 0.72, 0.6), 'copo': (0.3, 0.17, 0.08), 'verso': (0.42, 0.12, 0.08), 'face': (0.8, 0.74, 0.58), 'borda': (0.6, 0.5, 0.36)})
 
 def nome(k): return k if k.startswith(SERVED) else 'deco-' + k
 
@@ -100,7 +122,7 @@ def spec(row):
 def build(s, lod):
     M = F.Modelo(s['nome'], lod); s['fn'](M, s['w'], s['d'], s['h'])
     # (the things of deco_comida.py lit part by part: what comes and goes seen only with what is always there)
-    if getattr(s['fn'], '__module__', '') == 'deco_comida': C2.bake(M, rays=16 if lod == 0 else 10, dist=0.2)
+    if getattr(s['fn'], '__module__', '') in ('deco_comida', 'deco_festa'): C2.bake(M, rays=16 if lod == 0 else 10, dist=0.2)
     else: F.bake_ao(M, rays=16 if lod == 0 else 10, dist=0.2, floor=s['pousa'] == 'base')
     return M
 
@@ -255,7 +277,7 @@ def prev(out, kinds, lod=0):
     x = 0.0; row = []
     for s in specs:
         M = build(s, lod)
-        for st in (0, 2, 4):
+        for st in ([int(os.environ['PREV_ST'])] if os.environ.get('PREV_ST') else (0, 2, 4)):
             cx = x + s['w'] / 2
             for pname, q in M.parts.items():
                 if not q.T or not shows(pname, st): continue
