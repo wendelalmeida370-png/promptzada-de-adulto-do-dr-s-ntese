@@ -1497,17 +1497,8 @@ todas as edificações no padrão da taverna, por ondas (aprovado, 24/11/2026)»
   Fase 0 fica com D-990 a D-999, L-2230 a L-2239, T-2130 a T-2139 e as regras 480 a 489; a segunda, com os dez seguintes (D-1000…); e
   assim por diante. O `qa/AUDIT.md` ganha uma seção nova para este patch, com uma subseção por frente.
 
-### 12.5 Onde estão os scripts de medida
+### 12.5 Onde estão os levantamentos e as sondas
 
-No scratchpad desta sessão, fora do repositório
-(`/tmp/claude-0/-home-user-promptzada-de-adulto-do-dr-s-ntese/474a40dc-2376-5786-aa24-770c3a52b5eb/scratchpad/`), que pode ser apagado
-— *proposta*: a Fase 0 passa ao `qa/` os que servem de «sonda do antes».
-
-- `interiores3/A-dados/`: `tipos.js`, `conta.js` (os prédios por tipo, povo e degrau nos mundos prontos), `plantas.js` e `resumo.js`,
-  `catalogo.js` (as 97 peças), `dentro.js` (um dia de quem entra em quê), `entra-degrau.js` (o corpo entrando), `deco.js` (a decoração e
-  as luzes de agora).
-- `interiores3/work/`: `medir.js` (o tempo da planta, os cômodos, as peças e a área por tipo), `desenho.js` (a casca e os móveis do 3D),
-  `tipos.js`, `itens.js`, `audit23-short.txt` (a seção 23 do `qa/AUDIT.md`).
-- `interiores3/B-trab/`: `bdef.js`, `salas.js` (as salas dos palácios), `comodos.js`, `celas.js`.
-- `interiores/A/fotos-int.js`: as fotos de antes e depois, com o corpo entrando.
-- No repositório: `node qa/matriz-predios.js <saída>` (a matriz por categoria).
+Os quatro levantamentos inteiros estão em `planos/levantamentos/` (`interiores3-A-inventario.md`, `interiores3-B-oficios.md`,
+`interiores3-C-padrao.md`, `interiores3-D-referencias.md`), e as sondas que mediram o A estão em `qa/sonda/` (só leem o jogo). O contrato
+das fundações é o [`interiores-3-contrato.md`](interiores-3-contrato.md).
