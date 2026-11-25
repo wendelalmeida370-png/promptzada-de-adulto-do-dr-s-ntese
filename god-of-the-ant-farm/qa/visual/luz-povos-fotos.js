@@ -7,6 +7,7 @@
 // cada povo onde a luz fica na parede (o banco de comer do romano, do grego, do nórdico; a cabana redonda, na face do anel: L-2254), o olho
 // no ponto do cômodo mais longe dela, olhando a luz.
 //   bash qa/navegador.sh node qa/visual/luz-povos-fotos.js PASTA [PASTA_DO_JOGO]     env: WORLD (metropole), Q (media), HOUR (21.5), TAG, CASA,
+//   FRAMES (160: os quadros de cada casa, no máximo — param quando a luz está assada, nunca menos de 24),
 //   CASOS (a linha «CASOS …» que outra rodada imprimiu: as mesmas casas e o mesmo olho — o «antes» de uma luz que não havia)
 // A pasta do jogo dá o «antes» (uma cópia do jogo de antes: as mesmas casas, a luz de antes). FALHA: um erro de página, um aviso ou um
 // erro no console, um erro de módulo
@@ -29,6 +30,10 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
   await page.waitForFunction(() => !(window.G && G.Movel3D && G.Movel3D.wantAll) || G.Movel3D.wantAll(), null, { polling: 200, timeout: 120000 });
   const W = process.env.WORLD || 'metropole'; const CL = !!process.env.CLASSICO;
   if (!CL) await page.addScriptTag({ path: path.join(ROOT, 'worlds', W + '.js') });
+  // (the descent into the body — 3.6 s of frames over the whole city — and each case's frames until its inside is open and its light
+  // baked are drawn in a small window: the world and what the 3D keeps are the same at any size, and the software GPU draws them in a
+  // fraction of the time; the photo itself in the big one)
+  const SMALL = { width: 320, height: 180 }, BIG = { width: 1280, height: 720 }; await page.setViewportSize(SMALL);
   const info = await page.evaluate(env => {
     G.Realm.setQuality(env.Q);
     if (env.CL) G.Main.newGame({ type: 'ilha', size: 64, tribes: 2, temper: 'normal', clima: 'variado', classic: 1, seed: env.SEED }); else G.Save.apply(JSON.parse(G.Ready.data[env.W]));
@@ -62,7 +67,9 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
   console.log('CASOS ' + JSON.stringify(await page.evaluate(() => window.__cases))); // (for the «before»: CASOS='…' the same houses and eye)
   const cases = await page.evaluate(() => window.__cases);
   for (const c of cases) {
-    const r = await page.evaluate(o => {
+    if (cases.indexOf(c) > 0) await page.setViewportSize(SMALL);
+    await page.evaluate(o => {
+      window.dispatchEvent(new Event('resize'));
       const S = G.S, In = G.Interiors, Sp = G.Space, TL = Sp.TILE; const b = S.buildings.get(o.id); const p = Sp.planNow(b); const t = o.luz || p.items.find(it => it.id === o.t); const body = S.villagers.get(window.__body);
       // (the body in the room of the table, in its corner farthest from the table: the eye there; the hour of the night — for the light on a
       // wall, the point of its room's floor farthest from it, the eye looking at the light)
@@ -72,13 +79,26 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
       if (o.luz) { let bd = -1; for (let z = r0[1] + 0.3; z <= r0[3] - 0.3; z += 0.25) for (let x = r0[0] + 0.3; x <= r0[2] - 0.3; x += 0.25) { if (In.cell(b, lv, x, z) !== C.FLOOR) continue; const d = Math.hypot(x - t.x, z - t.z); if (d > bd) { bd = d; eye = [x, z]; } } }
       G.inSim++; try { body.sleeping = false; body.inside = b.id; body.x = b.x + eye[0] / TL; body.y = b.y + eye[1] / TL; body.tx = body.x; body.ty = body.y; body.path = null; body.moving = false; } finally { G.inSim--; }
       G.Avatar.attach(body, 0); G.Cam3D.attach(G.Avatar.pos(), 0); S.time = o.hour / 24; if (G.Atmos.flush) G.Atmos.flush();
-      for (let k = 0; k < 160; k++) G.Main.frameFor(33); // (the inside opened, its things drawn, its light baked a piece at a time)
+      // (the inside opened, its things drawn, its light baked: frames until the volume of its light is done — the bake is pure, the same
+      // volume whatever slice a frame takes, so the proof gives it a longer slice a frame (restored after) and the software GPU draws a
+      // few dozen frames, not the 160 of a bake at its game's 3 ms a frame —, never fewer than the inside needs to open)
+      const LZ = G.Luz3D, b0 = LZ ? LZ.BUDGET : 0; if (LZ) LZ.BUDGET = 250; let nf = 0;
+      const baked = () => { const st = LZ && LZ.state ? LZ.state(b.id) : null; return !LZ || !!(st && st.sig && !st.jsig); };
+      try { while (nf < o.frames && (nf < 24 || !baked())) { G.Main.frameFor(33); nf++; } } finally { if (LZ) LZ.BUDGET = b0; }
+      window.__shot = { id: b.id, eye, t: { x: t.x, y: t.y, z: t.z }, lv, luz: !!o.luz, nf, baked: baked() };
+      return window.__shot;
+    }, Object.assign({ hour: +process.env.HOUR || 21.5, frames: +process.env.FRAMES || 160 }, c));
+    await page.setViewportSize(BIG);
+    const r = await page.evaluate(o => {
+      window.dispatchEvent(new Event('resize'));
+      const S = G.S, Sp = G.Space, TL = Sp.TILE; const sh = window.__shot; const b = S.buildings.get(sh.id); const p = Sp.planNow(b); const eye = sh.eye, t = sh.t, nf = sh.nf; const l = p.levels.find(q => q.lv === sh.lv);
+      const baked = () => sh.baked;
       const X0 = b.x * TL, Z0 = b.y * TL, Y0 = Sp.plinth(b).y0 + (l ? l.y : 0); const cam = G.Realm.camera();
-      cam.position.set(X0 + eye[0], Y0 + 1.55, Z0 + eye[1]); cam.lookAt(X0 + t.x, o.luz ? Sp.plinth(b).y0 + t.y + 0.1 : Y0 + 0.7, Z0 + t.z); cam.fov = 62; cam.updateProjectionMatrix();
+      cam.position.set(X0 + eye[0], Y0 + 1.55, Z0 + eye[1]); cam.lookAt(X0 + t.x, sh.luz ? Sp.plinth(b).y0 + t.y + 0.1 : Y0 + 0.7, Z0 + t.z); cam.fov = 62; cam.updateProjectionMatrix();
       G.Realm.renderer().render(G.Realm.scene(), cam);
       const W2 = G.Atmos.within(b); const D3 = G.Dentro3D ? G.Dentro3D.plan(b, p, true) : null;
-      return { civ: o.civ, luz: W2.luz ? (W2.luz.why || '').slice(0, 160) : 'nenhuma', coisas: D3 ? D3.list.filter(q => /lamp|vela|ocote|brase|lantern|suporte/.test(q.k)).map(q => q.k + (q.lit ? '*' : '')).join(' ') : '', fontes: D3 ? D3.fontes.length : 0 };
-    }, Object.assign({ hour: +process.env.HOUR || 21.5 }, c));
+      return { civ: o.civ, luz: W2.luz ? (W2.luz.why || '').slice(0, 160) : 'nenhuma', coisas: D3 ? D3.list.filter(q => /lamp|vela|ocote|brase|lantern|suporte/.test(q.k)).map(q => q.k + (q.lit ? '*' : '')).join(' ') : '', fontes: D3 ? D3.fontes.length : 0, quadros: nf, assada: baked() };
+    }, c);
     console.log(JSON.stringify(r));
     const f = path.join(OUT, `luz-${c.civ}${process.env.CASA === 'parede' ? '-parede' : ''}-${TAG}.png`); await page.screenshot({ path: f, timeout: 480000 }); console.log(`foto ${f}`);
   }
