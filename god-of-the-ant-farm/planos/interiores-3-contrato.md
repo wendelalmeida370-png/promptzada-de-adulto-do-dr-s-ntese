@@ -98,6 +98,8 @@ Cada frente usa **só os seus números**, para os ramos juntarem sem trombar.
 | Q | 530 a 539 | D-1040 a D-1049 | L-2280 a L-2289 | T-2180 a T-2189 |
 | S | 540 a 549 | D-1050 a D-1059 | L-2290 a L-2299 | T-2190 a T-2199 |
 | V | 550 a 559 | D-1060 a D-1069 | L-2300 a L-2309 | T-2200 a T-2209 |
+| B (a bolsa do corpo, o pedido do dono de 25/11) | 650 a 659 | D-1160 a D-1169 | L-2400 a L-2409 | T-2300 a T-2309 |
+| W (a moeda de cada povo, do material certo; Fase 1) | 660 a 669 | D-1170 a D-1179 | L-2410 a L-2419 | T-2310 a T-2319 |
 
 A subseção de cada frente no `qa/AUDIT.md`: `### I-2 — K (o motor da planta)`, e assim por diante, no fim da seção 24.
 
