@@ -362,6 +362,9 @@
   // and its other places (P.atAlong), the groups of a table and its seats (P.groups)
   // (a building's own draw k, [0, 1): the same in every attempt and every proof — the tavern's tavHash of before, D-722)
   const idHash = In.idHash = (id, k) => G.hash(Math.imul(id | 0, 7919) + Math.imul(k, 104729) + 977);
+  // (what a recipe's choices may read — the building, its lot, its record, its people's ways, its type, the family laid: the record
+  // alone, never the plan in the making — P.axes, In.axesOf, D-994)
+  const bare = P => ({ b: P.b, L: P.L, rec: P.rec, tr: P.tr, T: P.T, famId: P.famId });
   // ---- the corridor (D-721): the clearance of each point of a room on a raster of 10 cm — its distance to the nearest solid
   // (the pieces, a flight, the room's walls), counted up to TCAP —, and where a body a metre wide walks from the door ----
   const CR = 0.1, TCAP = 0.6, FCAP = 2.0;
@@ -972,6 +975,12 @@
     // world's): hashOf(k), the draw k of this building, [0, 1); choose(k, list), one of the list by it
     hashOf(k) { return idHash(this.b.id, k); },
     choose(k, list) { return list[Math.floor(this.hashOf(k) * list.length) % list.length]; },
+    // the record's choices in one place (D-994; the molde, the tavern's tavAxes): axes(fn) asks the recipe's fn — what it chooses of
+    // a building: the size of a thing, its side, the mirror — on the record alone (In.kitOn of the building, its lot, its record,
+    // its people's ways, its type and the family laid, with the kit's draws and frame), never on the plan in the making: a choice
+    // cannot read the attempt's dice nor what was laid (it throws: the recipe's error, said), and it is the same in every attempt,
+    // in the shell and in the inside, and in a proof that asks it with no plan (In.axesOf). Kept on the plan: asked again, the same
+    axes(fn) { const m = this._axes || (this._axes = new Map()); if (!m.has(fn)) m.set(fn, fn(In.kitOn(bare(this))) || null); return m.get(fn); },
     // the frame and its mirror (D-722): a layout written once — the door left of the middle, the fire on the left wall — laid on
     // the plan as it is, or mirrored across it (u → L − u): U(u), R(rectangle), F(fu) — the plan's of the frame's; v the same
     frame(flip) { const L = this.L; return { flip: flip ? 1 : 0, U: u => (flip ? r2(L - u) : r2(u)), R: r => (flip ? [r2(L - r[2]), r2(r[1]), r2(L - r[0]), r2(r[3])] : r.map(r2)), F: fu => (flip ? -fu : fu) }; },
@@ -1151,6 +1160,9 @@
   // (the kit's choices and frame on an object that is not a plan in the making — { b, L, rec, tr }: a proof asking a recipe's
   // choices with no plan made)
   In.kitOn = o => Object.assign({}, KIT, o);
+  // (a recipe's choices of a building — its record, its lot — or of a bare record ({ b, L, rec, tr }), by the same reckoning its
+  // plan asks them (P.axes): for the proofs, and for whoever counts a type's arrangements without making its plans — D-994)
+  In.axesOf = (fn, o) => fn(In.kitOn(bare(o && o.ip && !o.rec ? { b: o, L: o.w * TILE, rec: o.ip, tr: TRAD[o.ip.c] || TRAD.classico || {}, T: TYPES[o.ip.t], famId: o.ip.f } : o))) || null;
 
   // ------------------------------ making a plan ------------------------------
   // the family's recipe, tried a few times with its own dice; a family that cannot be laid out gives way to the next one

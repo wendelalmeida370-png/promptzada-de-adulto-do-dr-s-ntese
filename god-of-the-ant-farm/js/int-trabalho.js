@@ -522,7 +522,8 @@
   // the record's choices — the shell's and the inside's, the same in every attempt: the size, the owner's wealth, the bar, the
   // stage, the door on an open tile of the front (rec.o) and the mirror that puts it on the plan's left (the virtual frame:
   // the door left of the middle or on it, the fire on the left wall, the stair on the right) — each by the building's own draw
-  // (the kit's P.choose, its draws 1 to 4: F1, D-991)
+  // (the kit's P.choose, its draws 1 to 4: F1, D-991), asked by the kit's P.axes on the record alone: P here is the kit on the
+  // record, not the plan (D-994)
   function tavAxes(P) {
     const rec = P.rec, L = P.L, n = Math.round(L / 4); if (!TMIN[n]) return null;
     const c = TAVC[rec.c] || TAVC.classico; const q = Math.max(0, Math.min(2, rec.q | 0));
@@ -545,10 +546,10 @@
     const cellar = n === 2 && !K.cellarOK(rec, P.tr);
     return { n, L, c, q, bar, stage, yard, dw, du: flip ? r2(L - ur) : ur, flip, Y: yard ? YARD16 : 0, cellar };
   }
-  In.tavAxes = P => tavAxes(P.choose ? P : In.kitOn(P)); // (for the proofs: the choices of a bare record, by the kit's draws)
+  In.tavAxes = o => In.axesOf(tavAxes, o); // (for the proofs: the choices of a building or a bare record, as its plan asks them)
 
   function tavernBuild(P) {
-    const rec = P.rec, tr = P.tr, L = P.L; const X = tavAxes(P); if (!X) { P.errs.push('a taverna só tem os degraus de 8, 12 e 16 m'); return; }
+    const rec = P.rec, tr = P.tr, L = P.L; const X = P.axes(tavAxes); if (!X) { P.errs.push('a taverna só tem os degraus de 8, 12 e 16 m'); return; }
     const { n } = X; const V = P.frame(X.flip); // (the virtual frame on the plan's: the kit's mirror, u → L − u)
     const t = r2(Math.max(0.12, tr.t || 0.25)), ti = 0.15, m = MARG[n], c = t / 2;
     const sh = [m, m, r2(L - m), r2(L - m - X.Y)];

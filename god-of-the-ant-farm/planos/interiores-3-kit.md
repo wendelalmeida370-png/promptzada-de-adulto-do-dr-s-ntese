@@ -25,17 +25,29 @@ portas e janelas da casca, `P.entrance` — e chama `if (P.inside()) return;`; d
 - **A planta é função do registro** (`b.ip`, regra 16): nada de acaso do mundo, nada de ler o mundo de hoje (o registro guarda o que
   a planta pode ler: o povo, as artes, o clima, a densidade, a riqueza de agora — `rec.q`).
 
-## 1. As escolhas do registro — `P.hashOf(k)` e `P.choose(k, lista)`
+## 1. As escolhas do registro — `P.axes(fn)`, `P.hashOf(k)` e `P.choose(k, lista)`
 
 **O que faz.** `P.hashOf(k)` é o sorteio número `k` deste prédio, de 0 a 1: o `G.hash` do id e de k — o mesmo em toda tentativa, em
-toda prova e em todo computador. `P.choose(k, lista)` escolhe um da lista por ele.
+toda prova e em todo computador. `P.choose(k, lista)` escolhe um da lista por ele. **`P.axes(fn)`** (D-994) é a porta das escolhas
+de uma receita — os seus «eixos», o molde do `tavAxes`: chama a função de escolhas da receita **sobre o registro sozinho** (o prédio,
+o lote, o registro, os costumes do povo, o tipo e a família que se arma — o `In.kitOn`, com os sorteios e o quadro do kit), nunca sobre
+a planta em feitio, e guarda a resposta na planta (pedida de novo, a mesma). Assim uma escolha **não consegue** ler os dados da
+tentativa nem o que a planta já pôs: `K.rnd()`, `K.pick(…)` ou `K.room(…)` dentro dela quebram na hora — o erro da receita, que a
+prova vê —, e ela é a mesma em toda tentativa, na casca e no dentro. **`In.axesOf(fn, o)`** faz a mesma conta sem planta, de um prédio
+(o registro e o lote dele) ou de um registro solto (`{ b, L, rec, tr }`): é como uma prova (ou quem conta os arranjos de um tipo, a
+prova padrão da frente O) pergunta as escolhas sem fazer a planta.
 
-**Exemplo** (a taverna, `tavAxes`):
+**Exemplo** (a taverna: o `tavAxes`, pedido pelo `tavernBuild`):
 
 ```js
-const bar = P.choose(1, ['centro', 'canto', 'rua']);   // o tipo do bar
-const stage = P.choose(3, ['frente', 'fundo']);         // onde fica o estrado do músico
-const side = P.choose(2, [1, -1]);                      // para que lado a porta desempata
+function tavAxes(K) {                                  // K: o kit sobre o registro sozinho
+  const bar = K.choose(1, ['centro', 'canto', 'rua']);  // o tipo do bar
+  const stage = K.choose(3, ['frente', 'fundo']);        // onde fica o estrado do músico
+  const side = K.choose(2, [1, -1]);                     // para que lado a porta desempata
+  return { bar, stage, side /* … */ };
+}
+const X = P.axes(tavAxes);                              // no build: a casca e o dentro leem o mesmo X
+In.tavAxes = o => In.axesOf(tavAxes, o);                // para as provas: as escolhas de um registro, sem planta
 ```
 
 **Cuidados.**
@@ -43,9 +55,10 @@ const side = P.choose(2, [1, -1]);                      // para que lado a porta
   *e* o estrado no fundo). A taverna usa 1 a 4 nas escolhas do registro; **31, 37, 41 e de 500 para cima são do empacotador dos grupos
   de mesa** (`P.groups`, §6) — uma receita que arma grupos usa outros números nas suas escolhas. Uma receita nova pode usar os mesmos
   números da taverna (é outro tipo de prédio), mas não dois iguais na mesma receita.
-- **Junte as escolhas numa função só** (o molde é o `tavAxes`): chamada uma vez no começo do `build`, devolvendo um objeto `X` que a
-  casca e o dentro leem. As provas pedem essas escolhas sem fazer a planta (`In.tavAxes`, com `In.kitOn({ b, L, rec, tr })` — o kit
-  sobre um registro solto).
+- **Junte as escolhas numa função só** (o molde é o `tavAxes`) e peça-a pelo `P.axes` no começo do `build`: ela devolve um objeto `X`
+  que a casca e o dentro leem. Dentro dela, só o kit que ela recebe (`K.choose`, `K.hashOf`, `K.frame`, o `K.rec`, o `K.L`, o `K.tr`, o
+  `K.b`): ela não vê a planta. As provas pedem essas escolhas sem fazer a planta pelo `In.axesOf(fn, prédio)` ou
+  `In.axesOf(fn, { b, L, rec, tr })` (o `In.tavAxes` é isso); o `In.kitOn` sozinho dá o kit sobre um registro solto.
 - A riqueza (`rec.q`) entra nas escolhas como qualquer campo do registro: o rico com as mesas redondas e a cadeira do dono.
 - Três arranjos ou mais por povo e degrau, nenhum par igual (o padrão, plano §4.3): as escolhas do registro dão os arranjos; o
   `taverna-padrao` t2 mede 24 ids e acusa quando um povo e degrau tem menos de três.

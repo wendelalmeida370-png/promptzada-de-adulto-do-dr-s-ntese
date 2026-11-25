@@ -17,8 +17,8 @@
 //      lateral, os lugares de atuar de pé); os lugares sem peça (P.marks: lutar na areia)
 //   5. a base maciça (shell.base 'macica', baseH, os degraus da base na casca), a colunata (P.colonnade: as colunas parede, os
 //      intercolúnios passagens, o do meio a entrada) e a escada larga de fora (1,20 m ao menos; mais estreita é recusada)
-//   6. o kit da taverna no motor (F1, D-991, D-993; o manual planos/interiores-3-kit.md): as escolhas do registro (P.choose,
-//      P.hashOf, In.kitOn) e o quadro com espelho (P.frame); a zona de caminho (nenhuma peça nela) e a de um posto (na planta,
+//   6. o kit da taverna no motor (F1, D-991, D-993, D-994; o manual planos/interiores-3-kit.md): as escolhas do registro (P.choose,
+//      P.hashOf, In.kitOn; pelo P.axes, sobre o registro sozinho, e o In.axesOf) e o quadro com espelho (P.frame); a zona de caminho (nenhuma peça nela) e a de um posto (na planta,
 //      girada com o lote); o corredor (P.aisle: o tronco, os ramos, a recusa sem guardar nada); a peça fixa e a sua reserva
 //      (P.atAlong); os grupos de mesa (P.groups: os assentos sobre as peças, o papel de quem senta ali na planta, o reset); a
 //      marca e a peça de um posto; o modelo com um assento que não é peça de sentar, recusado
@@ -271,13 +271,18 @@ In.addTypes({ 'teste-templo': { use: 'teste', fams: ['teste.templo', 'teste.estr
 G.BDEF['teste-kit'] = { name: 'Kit de teste', w: 3, h: 3, blocks: true };
 const KITM = { redonda: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [[0, -0.68], [0, 0.68], [-0.68, 0], [0.68, 0]].map(([a, b]) => ['banquinho', a, b, 0.4, 0.4]) } };
 const KITAR = { arcas: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [['arca', 0, -0.75, 0.9, 0.5], ['banquinho', 0, 0.68, 0.4, 0.4]] } };
+// (the test recipe's choices, of the record alone — its axes, as the tavern's tavAxes: P.axes, In.axesOf, D-994)
+const KAX = K => ({ bar: K.choose(1, ['a', 'b', 'c']), lado: K.choose(2, [0, 1]), h: K.hashOf(7) });
 const kitBuild = models => P => {
   const L = P.L; P.shell = { kind: 'rect', r: [0.2, 0.2, L - 0.2, L - 0.2], t: 0.25, mat: 'pedra', base: 'pedra', floors: 1, eave: 4 }; P.roof = { kind: 'plano', h: 0, over: 0 }; P.roofGeo = null;
   const I = P.inner(); P.level(0, 0, 4, 'piso', I); P.entryLv = 0; P.outer = P.walls4(0, [0.325, 0.325, L - 0.325, L - 0.325], 0.25, 4, 1, 'parede');
-  // (the record's choices — the kit's draws — and the frame they mirror: the door at 3 m from the frame's left)
-  const X = { bar: P.choose(1, ['a', 'b', 'c']), lado: P.choose(2, [0, 1]), h: P.hashOf(7) }; const V = P.frame(X.lado);
+  // (the record's choices — the kit's draws, asked by P.axes on the record alone — and the frame they mirror: the door at 3 m from
+  // the frame's left)
+  const X = P.axes(KAX); const V = P.frame(X.lado);
   const du = V.U(3.0); const fw = P.outer.frente; const d = P.door(fw, P.atOf(fw, [du, P.walls[fw].a[1]]), 1.2, 2.4, -1, 'rua', 1, 'porta'); P.entrance = { door: d, u: du, v: L - 0.2, w: 1.2, lv: 0 };
-  P.test = { X, V, I };
+  // (asked again, the same object; a choice that reads the attempt's dice or lays a piece cannot be made: it throws — D-994)
+  const thr = f => { try { P.axes(f); return 0; } catch (e) { return 1; } };
+  P.test = { X, V, I, again: P.axes(KAX) === X, dice: thr(K => K.rnd()), pick: thr(K => K.pick([1, 2])), lay: thr(K => K.room(0, 'x', [0, 0, 1, 1])) };
   if (P.inside()) return;
   const hall = P.room(0, 'salao', I); P.test.hall = hall;
   // (the counter at the back, in the frame; a way kept where the stage's first place is and all along its steps: its other place)
@@ -312,8 +317,11 @@ In.addTypes({ 'teste-kit': { use: 'teste-kit', fams: ['teste.kit', 'teste.kit-ar
   // 6a: the choices
   const bare = In.kitOn({ b: { id: 7101 }, L, rec: krec('S'), tr: {} }); const X2 = { bar: bare.choose(1, ['a', 'b', 'c']), lado: bare.choose(2, [0, 1]), h: bare.hashOf(7) };
   const others = new Set(); for (let k = 0; k < 24; k++) { const o = In.kitOn({ b: { id: 9001 + k * 7919 }, L }); others.add(o.choose(1, ['a', 'b', 'c']) + o.choose(2, [0, 1])); }
-  ok('6a as escolhas do registro: as mesmas em toda planta e fora dela (In.kitOn), outras entre os ids', A.p.ok && JSON.stringify(T.X) === JSON.stringify(B.P.test.X) && JSON.stringify(T.X) === JSON.stringify(X2) && T.X.h === In.idHash(7101, 7) && others.size >= 4,
-    A.p.ok ? `${JSON.stringify(T.X)}; 24 ids dão ${others.size} pares (bar, lado)` : A.p.errs.slice(0, 3).join(' | '));
+  // (and by the axes' door, of a bare record and of a building — its record, its lot —, as the plan asks them)
+  const X3 = In.axesOf(KAX, { b: { id: 7101 }, L, rec: krec('S'), tr: {} }), X4 = In.axesOf(KAX, { id: 7101, type: 'teste-kit', w: 3, h: 3, ip: krec('S') });
+  const same = [T.X, B.P.test.X, X2, X3, X4].every(x => JSON.stringify(x) === JSON.stringify(T.X));
+  ok('6a as escolhas do registro: as mesmas em toda planta e fora dela (In.kitOn, In.axesOf), outras entre os ids; pelo P.axes, sobre o registro sozinho — a mesma resposta pedida de novo, e uma escolha que lê os dados da tentativa ou põe uma peça não se faz', A.p.ok && same && T.X.h === In.idHash(7101, 7) && others.size >= 4 && T.again && T.dice && T.pick && T.lay,
+    A.p.ok ? `${JSON.stringify(T.X)}; 24 ids dão ${others.size} pares (bar, lado); a mesma de novo: ${T.again}; ler os dados: ${T.dice ? 'não se faz' : 'FEITO'}, sortear da lista: ${T.pick ? 'não se faz' : 'FEITO'}, pôr um cômodo: ${T.lay ? 'não se faz' : 'FEITO'}` : A.p.errs.slice(0, 3).join(' | '));
   // 6b: the frame and its mirror
   const F1 = A.P.frame(1), F0 = A.P.frame(0);
   ok('6b o quadro com espelho: u → L − u, o retângulo e a direção; sem espelho, o mesmo', JSON.stringify(F1.R([1, 2, 3, 4])) === JSON.stringify([L - 3, 2, L - 1, 4]) && F1.U(1) === L - 1 && F1.F(1) === -1 && JSON.stringify(F0.R([1, 2, 3, 4])) === '[1,2,3,4]' && F0.F(1) === 1 && T.V.flip === T.X.lado,
