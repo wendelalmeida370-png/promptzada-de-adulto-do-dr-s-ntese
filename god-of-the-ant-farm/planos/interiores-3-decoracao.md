@@ -139,7 +139,9 @@ levantamento D (§1.4, §19.2):
 **Uma onda que traz uma lâmpada nova** (o candelabro do palácio, a lucerna pendurada, o poço de luz do templo):
 
 1. O modelo: uma linha na `TABLE` do `arte/blender/deco.py` com a âncora `chama` (`M.anchor('chama', …)`) e as partes do vocabulário
-   (`lampada` pinta-se pelo `lmat` da coisa: barro, bronze, ferro, pedra, pedra-sabão; `castical`, `cera`, `chifre`, `brasa`).
+   (`lampada` pinta-se pelo `lmat` da coisa: barro, bronze, ferro, pedra, pedra-sabão; `castical`, `cera`, `chifre`, `brasa`), e a sua
+   família no `DECO` do `arte/blender/pacotes.py` (a luz de todo interior é a «comum»; a de um ofício só, a família do ofício): o `deco.py`
+   a escreve no pacote da família, em 16 bits, e o `--confere` diz que os arquivos são o que ele faz.
 2. A luz dela: uma linha no `G.Luz3D.LAMPS` (sem `peca`), com `forca`, `raio`, `cor`, `tremor`, `chama` (o tamanho da chama: o
    `fx3d.js` a desenha assim), `kind` e, se o óleo acaba, `oleo: 1`.
 3. A causa: o campo da regra do uso no within (`G.Atmos.withinRule`) — o que ela queima, pelo livro, com o porquê —, e o construtor a põe
