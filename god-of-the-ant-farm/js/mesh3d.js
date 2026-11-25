@@ -5,9 +5,13 @@
 //  (js/mesh-<name>.js → G.MESH3D[name]: base64 arrays, so the
 //  game still opens from the disk with nothing to fetch) — read
 //  back into three.js geometry, once, when first asked.
-//  Metres, Y up, the front toward +Z. Each material of the model
-//  is a part (one run of the index), so a builder can paint each
-//  its own colour and pattern:
+//  Metres, Y up, the front toward +Z. Two forms: the floats (v 1,
+//  the exporter's) and the 16 bits (v 2: the interiors' libraries,
+//  arte/blender/pacotes.py — the points and the uv as whole numbers
+//  over their boxes, the normals octahedral in two bytes, the light
+//  a point gives itself one grey byte; D-1021). Each material of
+//  the model is a part (one run of the index), so a builder can
+//  paint each its own colour and pattern:
 //    g.put(G.Mesh3D.part('dragao', 'madeira'), R3.mat(...), cor)
 //  Only seen: nothing here touches the world.
 // ============================================================
@@ -28,21 +32,39 @@
   M3.list = () => Object.keys(G.MESH3D);
   M3.info = function (name) {
     const d = G.MESH3D[name]; if (!d) return null;
-    return { n: d.n, t: d.t, box: d.box.slice(), parts: d.parts.map(p => p[0]), uv: !!d.uv, col: !!d.col, skin: !!d.skin };
+    return { n: d.n, t: d.t, box: d.box.slice(), parts: d.parts.map(p => p[0]), uv: !!(d.uv || d.u16), col: !!(d.col || d.cg), skin: !!d.skin };
   };
   M3.box = name => { const d = G.MESH3D[name]; return d ? { lo: d.box.slice(0, 3), hi: d.box.slice(3) } : null; };
+  // (the 16-bit form — v 2, the interiors' libraries of models, D-1021 (arte/blender/pacotes.py writes it) —: whole numbers of 16
+  // bits over a box back to the metres they stand for; a normal's two bytes (octahedral) back to the unit vector — the fauna's own)
+  const over = (q, b, k, s) => { const out = new Float32Array(q.length); const sc = []; for (let a = 0; a < k; a++) sc.push((b[a + s] - b[a]) / 65535);
+    for (let i = 0; i < q.length; i += k) for (let a = 0; a < k; a++) out[i + a] = b[a] + q[i + a] * sc[a]; return out; };
+  function unoct(o) {
+    const nf = new Float32Array(o.length / 2 * 3);
+    for (let i = 0, j = 0; i < o.length; i += 2, j += 3) { let x = o[i] / 127, y = o[i + 1] / 127; const z = 1 - Math.abs(x) - Math.abs(y);
+      if (z < 0) { const ax = Math.abs(x), ay = Math.abs(y); x = (1 - ay) * (x >= 0 ? 1 : -1); y = (1 - ax) * (y >= 0 ? 1 : -1); }
+      const l = Math.hypot(x, y, z) || 1; nf[j] = x / l; nf[j + 1] = y / l; nf[j + 2] = z / l; }
+    return nf;
+  }
   // the whole model as one geometry (position, normal, index; uv, color, skinIndex/skinWeight when it has them; a
   // group for each part) — shared: do not dispose it, clone it to change it
   M3.geo = function (name) {
     let g = geos.get(name); if (g) return g;
     const d = G.MESH3D[name]; const THREE = T(); if (!d || !THREE) return null;
     g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(arr(d.pos, Float32Array), 3));
-    const n8 = arr(d.nor, Int8Array), nf = new Float32Array(n8.length);
-    for (let i = 0; i < n8.length; i += 3) { const x = n8[i], y = n8[i + 1], z = n8[i + 2], l = Math.hypot(x, y, z) || 1; nf[i] = x / l; nf[i + 1] = y / l; nf[i + 2] = z / l; }
-    g.setAttribute('normal', new THREE.BufferAttribute(nf, 3));
+    if (d.v === 2) {
+      g.setAttribute('position', new THREE.BufferAttribute(over(arr(d.p16, Uint16Array), d.box, 3, 3), 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(unoct(arr(d.n8, Int8Array)), 3));
+      if (d.u16) g.setAttribute('uv', new THREE.BufferAttribute(over(arr(d.u16, Uint16Array), d.ub, 2, 2), 2));
+      if (d.cg) { const c8 = arr(d.cg, Uint8Array), cf = new Float32Array(c8.length * 3); for (let i = 0; i < c8.length; i++) cf[i * 3] = cf[i * 3 + 1] = cf[i * 3 + 2] = lin(c8[i]); g.setAttribute('color', new THREE.BufferAttribute(cf, 3)); }
+    } else {
+      g.setAttribute('position', new THREE.BufferAttribute(arr(d.pos, Float32Array), 3));
+      const n8 = arr(d.nor, Int8Array), nf = new Float32Array(n8.length);
+      for (let i = 0; i < n8.length; i += 3) { const x = n8[i], y = n8[i + 1], z = n8[i + 2], l = Math.hypot(x, y, z) || 1; nf[i] = x / l; nf[i + 1] = y / l; nf[i + 2] = z / l; }
+      g.setAttribute('normal', new THREE.BufferAttribute(nf, 3));
+      if (d.uv) g.setAttribute('uv', new THREE.BufferAttribute(arr(d.uv, Float32Array), 2));
+    }
     g.setIndex(new THREE.BufferAttribute(arr(d.idx, d.i32 ? Uint32Array : Uint16Array), 1));
-    if (d.uv) g.setAttribute('uv', new THREE.BufferAttribute(arr(d.uv, Float32Array), 2));
     if (d.col) { const c8 = arr(d.col, Uint8Array), cf = new Float32Array(c8.length); for (let i = 0; i < c8.length; i++) cf[i] = lin(c8[i]); g.setAttribute('color', new THREE.BufferAttribute(cf, 3)); }
     if (d.skin) { g.setAttribute('skinIndex', new THREE.BufferAttribute(arr(d.skin.j, Uint8Array), 4)); g.setAttribute('skinWeight', new THREE.BufferAttribute(arr(d.skin.w, Uint8Array), 4, true)); }
     d.parts.forEach((p, k) => g.addGroup(p[1], p[2], k));

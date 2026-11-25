@@ -4198,6 +4198,8 @@ float m3scale(float p) {
     for (let i = 0; i < k.length; i++) h = (Math.imul(h, 31) + k.charCodeAt(i)) | 0;
     // (an open shell shows its plan's pieces: drawn again once they are there)
     const S = B3.shellOf(b); if (S && S.shell.kind === 'aberta' && S.p) h = (Math.imul(h, 31) + 1) | 0;
+    // (and its yard's pieces drawn by their packs: the number of the packs in, so the chunk is drawn again when one comes — D-1027)
+    if (S && S.yard && G.Movel3D && G.Movel3D.yardSig) h = (Math.imul(h, 31) + G.Movel3D.yardSig(S.yard)) | 0;
     return h || 1;
   };
   // (a side of a rectangle: its line, the way out of it, its run — u from its west or north end — and a point on it: u along,

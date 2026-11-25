@@ -37,8 +37,17 @@
   const FLOOR_UP = 0.012; // (the floor a hair over the plinth's top — Build3D's: what stands on it stands on that)
   // (a thing's model: the dishes and the drinks by their own names — 'comida-<prato>', 'bebida-<bebida>', D-748 —, the rest 'deco-<coisa>')
   const NAME = k => (k.startsWith('comida-') || k.startsWith('bebida-') ? k : 'deco-' + k);
-  const MESH = k => (G.MESH3D ? G.MESH3D[NAME(k)] : null);
+  // ---- the models of the things, in packs by family (the front X: F8, D-1020, D-1022): the index — js/decomesh.js, G.DECO.of — says
+  // which pack holds each; a thing whose pack is not in yet is not there (the inside drawn without it), its pack asked for by the
+  // loader of the furniture's (G.Movel3D.pacote), and when it comes the look's signature tells and the inside is drawn again
+  const MESH = k => { const m = G.MESH3D ? G.MESH3D[NAME(k)] : null; if (m || !G.DECO || !G.DECO.of || !G.Movel3D || !G.Movel3D.pacote) return m || null;
+    G.Movel3D.pacote('deco', G.DECO.of[k]); return null; };
   D.has = k => !!MESH(k);
+  // ask for a pack of the things — a family of the index —: true when it is in; and is it in
+  D.want = fam => !!(G.Movel3D && G.Movel3D.pacote && G.Movel3D.pacote('deco', fam));
+  D.ready = fam => !!(G.Movel3D && G.Movel3D.ready && G.Movel3D.ready('deco', fam));
+  // (the early ones — every inside's: cedo in the index — a few seconds after the page opens)
+  if (typeof setTimeout === 'function') setTimeout(() => { if (G.Movel3D && G.Movel3D.early) G.Movel3D.early('deco'); }, 2500);
   // (a number of the building, the same at every look: which of the true ways)
   const hv = (b, k) => G.hash(Math.imul((b.id | 0) + 101, 7919) + (k | 0) * 131 + 17);
   const r3 = x => Math.round(x * 1000) / 1000;
@@ -1099,7 +1108,7 @@
     const s = G.Atmos && G.Atmos.serving ? G.Atmos.serving(v) : null; if (!s) return null; const b = G.S.buildings.get(s.b); if (!b) return null;
     const W = G.Atmos.within(b); const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
     const name = s.k === 'food' ? dishOf(s.prato) : vesselName(W, s.k); const t = { k: name, key: 'mao/' + v.id, x: 0, z: 0, st: s.st, fresco: s.fresco, c: null };
-    const parts = (G.Mesh3D ? G.Mesh3D.parts(name) : []).filter(pt => shows(pt, t));
+    const parts = (MESH(name) && G.Mesh3D ? G.Mesh3D.parts(name) : []).filter(pt => shows(pt, t)); // (by the loader: its pack asked for, L-2262)
     return { name, parts, paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, level: pt => (pt === 'nv' ? D.levelAt(name, s.st) : null), st: s.st, fresco: s.fresco, quente: s.quente, t0: s.t0, why: s.why };
   };
   // the keeper's cloth over his shoulder, for the drawing of the body (the front P6): { name, parts, paint(part), why } for the keeper of
@@ -1108,6 +1117,6 @@
     const b = v && v.job ? G.S.buildings.get(v.job) : null; if (!b || b.type !== 'taverna' || !G.Atmos || !G.Atmos.within) return null;
     const W = G.Atmos.within(b); if (!W.ombro || W.ombro.id !== v.id) return null; const look = G.Movel3D && G.Movel3D.look ? G.Movel3D.look(b) : null;
     const name = NAME('pano-ombro'); const t = { k: 'pano-ombro', key: 'ombro/' + v.id, x: 0, z: 0, c: null };
-    return { name, parts: G.Mesh3D ? G.Mesh3D.parts(name) : [], paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, why: W.ombro.why };
+    return { name, parts: MESH('pano-ombro') && G.Mesh3D ? G.Mesh3D.parts(name) : [], paint: pt => { const pp = paintOf(pt, t, W, look); return pp ? [pp[0], (PAT()[pp[1]] || 0)] : null; }, why: W.ombro.why };
   };
 })(window.G = window.G || {});

@@ -72,6 +72,10 @@ M.load = function (o) {
   const marked = (mk, end) => { const i = html.indexOf(mk); if (i < 0) return []; const j = html.indexOf(end, i + mk.length); return [...html.slice(i, j < 0 ? undefined : j).matchAll(/<script src="(js\/[^"]+)"><\/script>/g)].map(m => m[1]); };
   const after3d = marked('<!-- 22a: os personagens — os arquivos do 3D', '<!-- 22c:').concat(marked('<!-- 22c: a vida que se vê — os arquivos do 3D aqui', 'js/fx3d.js'));
   for (const f of o.extra || []) if (!ran.has(f)) { M.run(f); ran.add(f); if (f === 'js/people3d.js') for (const g of after3d) if (!ran.has(g) && !(o.extra || []).includes(g)) { M.run(g); ran.add(g); } }
+  // (the libraries of the interiors' models in packs — js/movelmesh.js and js/decomesh.js are their indexes, F8, D-1024 —: the page asks
+  // for a pack when it draws a piece of its family; a proof runs them all here, after the files, and sees every model as the page does
+  // once they are in — nothing is asked later. o.pacotes === false: the indexes alone, the packs by the proof's own hand)
+  if (o.pacotes !== false) for (const P of [G.MOVEIS, G.DECO]) if (P && P.packs) for (const k of Object.keys(P.packs).sort()) { const f = P.packs[k].f; if (!ran.has(f)) { M.run(f); ran.add(f); } }
   // (the body's work of the hands — the tree, the rock, the bush, the fish, 20g D-430 — lives in js/trabalho.js, which the page
   // runs with the interactions: a proof that runs these runs it too, after its own extras, or the body there has none of them)
   if ((o.extra || []).includes('js/interact.js') && !(o.extra || []).includes('js/trabalho.js') && fs.existsSync(path.join(root, 'js/trabalho.js'))) M.run('js/trabalho.js');

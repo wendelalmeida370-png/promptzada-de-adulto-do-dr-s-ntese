@@ -15,6 +15,11 @@ As fundações não mudam o que se vê (a Fase 0) ou mudam o mundo uma vez só (
 chegar acima da taverna. **A taverna sai igual** de toda mudança no motor, e o mundo sem o corpo é o mesmo, a não ser onde a frente diz
 que muda e prova por quê.
 
+**E o lembrete do dono** (24/11/2026): «sempre a regra do nada vem do nada, e tudo com muita qualidade, dando suporte e infraestrutura
+para os próximos ofícios». Toda coisa que uma fundação mostra, gasta ou faz vem de uma fonte de verdade do povo, pelo livro (um material
+sem fonte no mundo é um erro, não um detalhe — D-440); e cada porta nova é feita para os ofícios que vêm plugarem a jogabilidade sem
+mexer no arquivo de outro.
+
 ## 1. As frentes
 
 | Fase | Frente | O que entrega |
