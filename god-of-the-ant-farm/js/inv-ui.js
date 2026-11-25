@@ -285,7 +285,7 @@
     upT -= rdt || 0; if (upT > 0) return; upT = 0.15;
     // (the first time a life is lived with things: what the body carries, and how to open the bag — once a body)
     if (v.id !== lastBody) { lastBody = v.id; sig = ''; barSig = ''; }
-    if (!told.has(v.id) && Inv().real(v)) { told.add(v.id); const L = Inv().list(v); if (L.length) G.IncUI.toast(`Você leva ${L.slice(0, 3).map(x => It().nome(x.k, x.n)).join(', ')}${L.length > 3 ? '…' : ''} — ${G.Input3D.label('inventario')} abre a mochila.`, 5); }
+    if (!told.has(v.id) && Inv().real(v)) { told.add(v.id); const L = Inv().list(v); if (L.length) G.IncUI.toast(`Você leva ${L.slice(0, 3).map(x => It().nome(x.k, x.n)).join(', ')}${L.length > 3 ? '…' : ''} — ${G.Input3D.touch ? 'toque na mochila, no fim da barra de baixo, para abri-la' : G.Input3D.label('inventario') + ' abre a mochila'}.`, 5); } // (the phone has no keys: its bag is the button at the end of the quick bar, L-2272)
     renderBar(); if (open) render();
     // (the keys' hint of the first seconds of a life sits where the bar does: the bar comes in as it goes)
     const hint = G.IncUI.hud().querySelector('.ih-hint'); if (bar) bar.classList.toggle('later', !!hint && !hint.classList.contains('hidden') && hint.offsetParent !== null && !open);
