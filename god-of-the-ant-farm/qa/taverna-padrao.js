@@ -18,10 +18,12 @@
 //   N=12 ONLY=t1,t2,t3,t4,t5 node qa/taverna-padrao.js   a inteira (doze por povo e tamanho, o mundo e o save antigo), antes da versão
 const M = require('./nodemundo.js');
 const fs = require('fs'), path = require('path');
-const G = M.load({});
+const ONLY = (process.env.ONLY || 't1,t2,t3').split(','); const on = k => ONLY.includes(k);
+// (the checker with the world's case: the t4 counts what QA.check says before and after — the plans alone need none; loaded
+// with the game, as the page does, or the t4 never ran: T-2131)
+const G = M.load({ qa: on('t4') });
 const In = G.Interiors;
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | taverna-padrao ${name} | ${info}`); if (!c) fails.push(name); };
-const ONLY = (process.env.ONLY || 't1,t2,t3').split(','); const on = k => ONLY.includes(k);
 const NK = Math.max(4, +(process.env.N || 4)); // (the taverns of each people and size: the sides, the fronts and the wealths go round)
 const POVOS = ['classico', 'romano', 'grego', 'egipcio', 'nordico', 'asteca'];
 const SIZES = [2, 3, 4]; const MIN = { 2: { hall: 30, seats: 8 }, 3: { hall: 60, seats: 16 }, 4: { hall: 110, seats: 30 } };
@@ -173,9 +175,16 @@ if (on('t3')) {
 }
 // ================================================================ t4: in the world
 if (on('t4')) {
-  const qaS = () => globalThis.QA.check().filter(q => q.sev <= 2);
-  M.novo({ seed: 103, type: 'continente', size: 128, tribes: 6, temper: 'normal' }); const out = [], said = [];
-  const q0 = qaS().length;
+  // (what the checker says that it did not say before the case — by the verdict, not by the count —, but the age of a story: the
+  // proof moves the day on by its hand, the turn of the day of the plans alone (In.onNewDay), and the stories the world's step
+  // would have closed as their days ran out stay open — the rule of their age reads the day counter, not the case: T-2131)
+  const ageOfStory = q => q.sys === 'story' && /: ativa há \d+ anos \(máx\. \d+\)$/.test(q.msg);
+  const qaS = () => globalThis.QA.check().filter(q => q.sev <= 2 && !ageOfStory(q)); const vk = q => q.sys + '|' + q.msg;
+  // (a world whose households have their houses — the keeper's coins are his house's, by the ledger: in a new world, on its first
+  // day, nobody has a house yet and no keeper is found, T-2131 —, the one asked for and not another: R12)
+  M.pronto('cidade'); const out = [], said = [];
+  if (G.S.villagers.size < 100) out.push(`o mundo pronto «cidade» não abriu (${G.S.villagers.size} pessoas)`);
+  const q0 = new Set(qaS().map(vk));
   const set = [...G.S.settlements.values()].filter(s => G.Fac.get(s.fac) && G.Eco.coinage && G.Eco.coinage(s.fac)).sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0]
     || [...G.S.settlements.values()].sort((a, b) => G.Village.pop(b.id) - G.Village.pop(a.id))[0];
   let b; G.inSim++; try { b = G.Village.handFound(set, 'taverna', 'taberna', { built: true, R: 40 }); } finally { G.inSim--; }
@@ -217,7 +226,7 @@ if (on('t4')) {
     const r = G.S.buildings.get(id); const pr = r && In.plan(r); if (!r || r.type !== 'ruin' || !pr || !pr.ok) out.push(`a ruína: ${r ? r.type : 'sumiu'}, ${pr && pr.ok ? 'planta ok' : 'planta NÃO'}`);
     M.salvarCarregar(); said.push('a taberna derrubada pelo deus: a ruína com a planta, salva e carregada');
   }
-  const bad = qaS(); if (bad.length > q0) out.push(`o verificador: ${some(bad, 2).map(q => q.msg.slice(0, 120)).join('; ')}`);
+  const bad = qaS().filter(q => !q0.has(vk(q))); if (bad.length) out.push(`o verificador: ${some(bad, 2).map(q => q.msg.slice(0, 120)).join('; ')}`);
   ok('t4 no mundo: a riqueza do taverneiro na virada do dia, a faixa, a paciência, o save no meio, o taverneiro morto, a ruína; o verificador limpo', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; ') + (M.limpo() ? '' : '; ERROS: ' + JSON.stringify(M.erros()).slice(0, 200)));
 }
 // ================================================================ t5: an old save
