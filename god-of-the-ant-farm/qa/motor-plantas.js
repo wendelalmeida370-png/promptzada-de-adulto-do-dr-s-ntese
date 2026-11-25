@@ -17,6 +17,13 @@
 //      lateral, os lugares de atuar de pé); os lugares sem peça (P.marks: lutar na areia)
 //   5. a base maciça (shell.base 'macica', baseH, os degraus da base na casca), a colunata (P.colonnade: as colunas parede, os
 //      intercolúnios passagens, o do meio a entrada) e a escada larga de fora (1,20 m ao menos; mais estreita é recusada)
+//   6. o kit da taverna no motor (F1, D-991, D-993, D-994; o manual planos/interiores-3-kit.md): as escolhas do registro (P.choose,
+//      P.hashOf, In.kitOn; pelo P.axes, sobre o registro sozinho, e o In.axesOf) e o quadro com espelho (P.frame); a zona de caminho (nenhuma peça nela) e a de um posto (na planta,
+//      girada com o lote); o corredor (P.aisle: o tronco, os ramos, a recusa sem guardar nada); a peça fixa e a sua reserva
+//      (P.atAlong); os grupos de mesa (P.groups: os assentos sobre as peças, o papel de quem senta ali na planta, o reset); a
+//      marca e a peça de um posto; o modelo com um assento que não é peça de sentar, recusado
+//   7. a riqueza de agora de qualquer tipo (F6, D-992: In.wealthRule) no mundo pronto «cidade»: a regra de teste num prédio de pé
+//      pelas moedas do dono, a faixa, a paciência, o save no meio, a leitura que não muda o mundo; sem a regra, nada
 //   node qa/motor-plantas.js
 const M = require('./nodemundo.js');
 const G = M.load({});
@@ -256,6 +263,131 @@ In.addTypes({ 'teste-templo': { use: 'teste', fams: ['teste.templo', 'teste.estr
   }
   const np = In.makeFam({ id: 6402, type: 'teste-templo', x: 10, y: 10, w: 3, h: 3 }, Object.assign({}, trec, { f: 'teste.estreito' }), 'teste.estreito');
   ok('5d a escada larga estreita é recusada', !np.ok && np.errs.some(e => /escada larga com 1.00/.test(e)), np.ok ? 'valeu' : np.errs.slice(0, 2).join(' | '));
+}
+// ---- 6. the kit of the tavern, for every recipe (F1, D-991, D-993): the record's choices and the frame with its mirror, a zone
+// of a way and one of a post, the corridor with its trunk (and the one refused), the fixed piece's other place, the groups of a
+// table with their seats on the pieces and who works at them in the plan, the mark and the piece of a post, a model of seats in
+// the air refused — on a hall of 12 m, its door by the record's own choice
+G.BDEF['teste-kit'] = { name: 'Kit de teste', w: 3, h: 3, blocks: true };
+const KITM = { redonda: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [[0, -0.68], [0, 0.68], [-0.68, 0], [0.68, 0]].map(([a, b]) => ['banquinho', a, b, 0.4, 0.4]) } };
+const KITAR = { arcas: { t: 'mesa-redonda', w: 0.9, d: 0.9, seats: [['arca', 0, -0.75, 0.9, 0.5], ['banquinho', 0, 0.68, 0.4, 0.4]] } };
+// (the test recipe's choices, of the record alone — its axes, as the tavern's tavAxes: P.axes, In.axesOf, D-994)
+const KAX = K => ({ bar: K.choose(1, ['a', 'b', 'c']), lado: K.choose(2, [0, 1]), h: K.hashOf(7) });
+const kitBuild = models => P => {
+  const L = P.L; P.shell = { kind: 'rect', r: [0.2, 0.2, L - 0.2, L - 0.2], t: 0.25, mat: 'pedra', base: 'pedra', floors: 1, eave: 4 }; P.roof = { kind: 'plano', h: 0, over: 0 }; P.roofGeo = null;
+  const I = P.inner(); P.level(0, 0, 4, 'piso', I); P.entryLv = 0; P.outer = P.walls4(0, [0.325, 0.325, L - 0.325, L - 0.325], 0.25, 4, 1, 'parede');
+  // (the record's choices — the kit's draws, asked by P.axes on the record alone — and the frame they mirror: the door at 3 m from
+  // the frame's left)
+  const X = P.axes(KAX); const V = P.frame(X.lado);
+  const du = V.U(3.0); const fw = P.outer.frente; const d = P.door(fw, P.atOf(fw, [du, P.walls[fw].a[1]]), 1.2, 2.4, -1, 'rua', 1, 'porta'); P.entrance = { door: d, u: du, v: L - 0.2, w: 1.2, lv: 0 };
+  // (asked again, the same object; a choice that reads the attempt's dice or lays a piece cannot be made: it throws — D-994)
+  const thr = f => { try { P.axes(f); return 0; } catch (e) { return 1; } };
+  P.test = { X, V, I, again: P.axes(KAX) === X, dice: thr(K => K.rnd()), pick: thr(K => K.pick([1, 2])), lay: thr(K => K.room(0, 'x', [0, 0, 1, 1])) };
+  if (P.inside()) return;
+  const hall = P.room(0, 'salao', I); P.test.hall = hall;
+  // (the counter at the back, in the frame; a way kept where the stage's first place is and all along its steps: its other place)
+  const bal = P.atAlong('balcao', 0, hall, [I[0] + 1.0, I[1] + 1.4, I[0] + 2.8, I[1] + 2.0], 0, 1, { frame: V });
+  const zK = P.zone(0, V.R([I[2] - 1.4, I[1], I[2], I[1] + 3.2]), { aisle: 1 });
+  const st = P.atAlong('estrado-musico', 0, hall, [I[2] - 1.2, I[1] + 0.2, I[2], I[1] + 1.8], -1, 0, { frame: V, alt: [[I[2] - 1.2, I[1] + 3.6, I[2], I[1] + 5.2]] });
+  const no = P.atAlong('estrado-musico', 0, hall, [I[2] - 1.2, I[1] + 0.2, I[2], I[1] + 1.8], -1, 0, { frame: V, fixed: 1 });
+  // (a post of the guard by the door — a zone and a mark —, and a chest of the scribe's, each saying who works there)
+  const zp = V.R([3.8, L - 1.6, 4.6, L - 0.8]); P.zone(0, zp, { papel: 'guarda', faz: 'vigiar' });
+  P.marks(0, hall, 'vigiar', [[V.U(I[0] + 0.6), L - 1.0, 0]], { st: 'stand', papel: 'guarda' });
+  P.place('arca', 0, hall, { sides: ['esquerda', 'direita'], extra: { papel: 'escriba', faz: 'guardar' } });
+  // (the corridor: the trunk from the door to the counter's line, then the counter and the stage; and one to nowhere, refused)
+  const K = P.clearance(0, hall, true); const start = [du, I[3] - 0.6];
+  const use = (got, u) => (got ? P.spotsOf(got.it).filter(q => !q.on && q.use === u).map(q => [q.u, q.v]) : []);
+  const zb = P.zones.length; const nowhere = P.aisle(0, hall, start, [{ why: 'longe', pts: [[-5, -5]] }], { K: P.clearance(0, hall, true) }); const z0 = P.zones.length - zb;
+  const way = P.aisle(0, hall, start, [{ why: 'balcão', pts: use(bal, 'comprar') }, { why: 'estrado', pts: use(st, 'acesso') }], { K, w: 1.0, trunk: [start[0], I[1] + 3.0] });
+  // (the groups: round tables of stools for a council, laid; taken back; laid again)
+  const n0 = P.items.length; const G1 = P.groups(0, hall, { models, K, start, fixed: [{ pts: use(bal, 'comprar') }], cap: 12, papel: 'conselheiro', faz: 'aconselhar' });
+  G1.pack(Object.keys(models), false, 1); const first = { seats: G1.seats, n: G1.groups.length, gl: P.groupList.length };
+  G1.reset(); const back = { items: P.items.length - n0, gl: P.groupList.length, seats: G1.seats };
+  G1.pack(Object.keys(models), false, 1);
+  Object.assign(P.test, { bal, st, no, zK, zp, nowhere, z0, way, first, back, n0, seats: G1.seats, n: G1.groups.length });
+};
+let kitP = null; const KITB = models => P => { kitP = P; return kitBuild(models)(P); };
+In.addFamilies([{ id: 'teste.kit', H: 'teste', V: 'kit', S: 'teste.kit', name: 'Kit de teste', can: () => null, build: KITB(KITM) },
+  { id: 'teste.kit-ar', H: 'teste', V: 'kit-ar', S: 'teste.kit-ar', name: 'Kit de teste, assentos no ar', can: () => null, build: KITB(KITAR) }]);
+In.addTypes({ 'teste-kit': { use: 'teste-kit', fams: ['teste.kit', 'teste.kit-ar'] } });
+{
+  const krec = s => Object.assign({}, rec, { t: 'teste-kit', u: 'teste-kit', f: 'teste.kit', s });
+  const kp = (id, s, f) => { const p = In.makeFam({ id, type: 'teste-kit', x: 10, y: 10, w: 3, h: 3 }, Object.assign(krec(s), { f: f || 'teste.kit' }), f || 'teste.kit'); return { p, P: kitP }; };
+  const A = kp(7101, 'S'), B = kp(7101, 'S'), E = kp(7101, 'E'); const T = A.P.test; const L = A.P.L;
+  // 6a: the choices
+  const bare = In.kitOn({ b: { id: 7101 }, L, rec: krec('S'), tr: {} }); const X2 = { bar: bare.choose(1, ['a', 'b', 'c']), lado: bare.choose(2, [0, 1]), h: bare.hashOf(7) };
+  const others = new Set(); for (let k = 0; k < 24; k++) { const o = In.kitOn({ b: { id: 9001 + k * 7919 }, L }); others.add(o.choose(1, ['a', 'b', 'c']) + o.choose(2, [0, 1])); }
+  // (and by the axes' door, of a bare record and of a building — its record, its lot —, as the plan asks them)
+  const X3 = In.axesOf(KAX, { b: { id: 7101 }, L, rec: krec('S'), tr: {} }), X4 = In.axesOf(KAX, { id: 7101, type: 'teste-kit', w: 3, h: 3, ip: krec('S') });
+  const same = [T.X, B.P.test.X, X2, X3, X4].every(x => JSON.stringify(x) === JSON.stringify(T.X));
+  ok('6a as escolhas do registro: as mesmas em toda planta e fora dela (In.kitOn, In.axesOf), outras entre os ids; pelo P.axes, sobre o registro sozinho — a mesma resposta pedida de novo, e uma escolha que lê os dados da tentativa ou põe uma peça não se faz', A.p.ok && same && T.X.h === In.idHash(7101, 7) && others.size >= 4 && T.again && T.dice && T.pick && T.lay,
+    A.p.ok ? `${JSON.stringify(T.X)}; 24 ids dão ${others.size} pares (bar, lado); a mesma de novo: ${T.again}; ler os dados: ${T.dice ? 'não se faz' : 'FEITO'}, sortear da lista: ${T.pick ? 'não se faz' : 'FEITO'}, pôr um cômodo: ${T.lay ? 'não se faz' : 'FEITO'}` : A.p.errs.slice(0, 3).join(' | '));
+  // 6b: the frame and its mirror
+  const F1 = A.P.frame(1), F0 = A.P.frame(0);
+  ok('6b o quadro com espelho: u → L − u, o retângulo e a direção; sem espelho, o mesmo', JSON.stringify(F1.R([1, 2, 3, 4])) === JSON.stringify([L - 3, 2, L - 1, 4]) && F1.U(1) === L - 1 && F1.F(1) === -1 && JSON.stringify(F0.R([1, 2, 3, 4])) === '[1,2,3,4]' && F0.F(1) === 1 && T.V.flip === T.X.lado,
+    `espelhado: ${JSON.stringify(F1.R([1, 2, 3, 4]))}, U(1) ${F1.U(1)}, F(1) ${F1.F(1)}; a porta do registro a u ${T.V.U(3.0)}`);
+  // 6c: the way kept and the post's zone: no piece in a way; the plan has the post's zone alone, in the lot, in its room
+  const p = A.p; const ovl = (a, b) => a[0] < b[2] - 1e-6 && b[0] < a[2] - 1e-6 && a[1] < b[3] - 1e-6 && b[1] < a[3] - 1e-6;
+  const aisles = A.P.zones.filter(z => z.aisle); const inWay = A.P.items.slice(T.n0).filter(it => aisles.some(z => ovl(it.r, z.r))); // (the groups, laid after the ways)
+  const pz = p.zones || []; const locR = (s, r) => { const a = In.toLoc(s, L, r[0], r[1]), b = In.toLoc(s, L, r[2], r[3]); return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])].map(r2); };
+  const ze = (E.p.zones || [])[0];
+  ok('6c as zonas: nenhuma peça posta depois num caminho guardado; na planta só a do posto (o papel, o que se faz, o cômodo), no lote — girado com ele', p.ok && !inWay.length && pz.length === 1 && pz[0].papel === 'guarda' && pz[0].faz === 'vigiar' && pz[0].room === T.hall && JSON.stringify(pz[0].r) === JSON.stringify(locR('S', T.zp)) && E.p.ok && ze && JSON.stringify(ze.r) === JSON.stringify(locR('E', E.P.test.zp)),
+    `${aisles.length} zonas de caminho, ${inWay.length} peças nelas; na planta ${pz.length} zona: ${pz[0] ? JSON.stringify(pz[0]) : '-'}; girada (E): ${ze ? JSON.stringify(ze.r) : '-'}`);
+  // 6d: the corridor
+  ok('6d o corredor: o tronco e os ramos até o balcão e o estrado, guardados como caminho; a um alvo que nenhum caminho alcança, recusado sem guardar nada', T.way.ok && T.way.path.some(Boolean) && aisles.length > 0 && !T.nowhere.ok && T.nowhere.why === 'longe' && T.z0 === 0,
+    `o corredor ${T.way.ok ? 'chega' : 'NÃO chega (' + T.way.why + ')'}, ${T.way.path.filter(Boolean).length} casas de 10 cm, ${aisles.length} faixas; o de lugar nenhum: ${T.nowhere.ok ? 'ACEITO' : 'recusado (' + T.nowhere.why + ')'}`);
+  // 6e: the fixed piece's other place
+  ok('6e a peça fixa e a sua reserva: o estrado no outro lugar quando o caminho guardado toma o primeiro e os passos; só no lugar dele, nenhum', !!T.st && JSON.stringify(T.st.r) === JSON.stringify([T.I[2] - 1.2, T.I[1] + 3.6, T.I[2], T.I[1] + 5.2].map(r2)) && T.no === null && !!T.bal,
+    `o estrado em ${T.st ? T.st.r.join(', ') : 'nenhum lugar'}; fixo: ${T.no ? 'POSTO' : 'nenhum'}`);
+  // 6f: the groups
+  const seatsOn = p.items.filter(it => it.kind === 'banquinho').every(it => it.spots.some(sp => sp.use === 'sentar' && sp.on));
+  const gs = p.groups || []; const ids = new Set(p.items.map(it => it.id)); const gOK = gs.length === T.n && gs.every(g => g.papel === 'conselheiro' && g.faz === 'aconselhar' && g.room === T.hall && g.items.length >= 3 && g.items.every(id => ids.has(id)) && g.items.some(id => p.items.find(it => it.id === id).kind === 'mesa-redonda'));
+  ok('6f os grupos de mesa: os assentos sobre as peças, o caminho aberto; na planta cada grupo com quem senta ali e as suas peças; o reset tira tudo', p.ok && T.seats >= 4 && seatsOn && gOK && T.back.items === 0 && T.back.gl === 0 && T.back.seats === 0 && T.first.seats === T.seats && T.first.gl === T.n,
+    `${T.n} grupos, ${T.seats} lugares; na planta ${gs.length} grupos (${gs.map(g => g.items.length + ' peças').join(', ')}); depois do reset: ${T.back.items} peças, ${T.back.gl} grupos`);
+  // 6g: the mark and the piece of a post
+  const mk = (p.marks || [])[0], ar = p.items.find(it => it.kind === 'arca'); const plain = p.items.filter(it => it.kind !== 'arca' && it.papel !== undefined);
+  ok('6g a marca e a peça de um posto dizem quem trabalha ali na planta; as outras peças sem papel', !!mk && mk.papel === 'guarda' && mk.st === 'stand' && !!ar && ar.papel === 'escriba' && ar.faz === 'guardar' && !plain.length, `a marca: ${mk ? mk.use + '/' + mk.papel : '-'}; a arca: ${ar ? ar.papel + '/' + ar.faz : '-'}; ${plain.length} outras com papel`);
+  // 6h: seats in the air refused
+  const N = kp(7103, 'S', 'teste.kit-ar');
+  ok('6h um modelo de grupo com um assento que não é peça de sentar é recusado, dito — ninguém sentado no ar', !N.p.ok && N.p.errs.some(e => /o grupo arcas: arca não é peça de sentar/.test(e)) && !(N.p.groups || []).length, N.p.errs.slice(0, 2).join(' | '));
+}
+// ---- 7. the wealth of now for any type (F6, D-992): a rule of a test on the use of a world's building — the first that stands of a
+// type with no rule of its own, its owner one of the town, his coins by the ledger —: the step up at the turn of the day with its
+// fact, the band, the patience, the save in the middle, the rule only reading; taken off, nothing more
+{
+  M.pronto('cidade'); const out = [], said = [];
+  const sim = f => { G.inSim++; try { return f(); } finally { G.inSim--; } };
+  const b0 = [...G.S.buildings.values()].filter(b => b.built && b.ip && b.type === b.ip.t && b.type !== 'ruin' && !In.wealthDays(b)).sort((a, b) => a.id - b.id)[0];
+  const k = b0 && [...G.S.villagers.values()].filter(v => v.set === b0.set && v.age >= 20 && v.age < 55 && !v.captive && G.Eco.homeOf(v)).sort((a, c) => a.id - c.id)[0];
+  if (!b0 || !k) out.push(`sem prédio ou sem dono no mundo (${b0 ? b0.type + ' #' + b0.id : 'sem prédio'})`);
+  else {
+    const id = b0.id, kid = k.id; const use = In.TYPES[b0.ip.t].use; const Q = [10, 30];
+    // (the rule reads the owner's coins by the economy's door, and the merchant house's banner; it writes nothing)
+    In.wealthRule(use, b => { const v = b.id === id ? G.S.villagers.get(kid) : null; if (!v) return null; const c = G.Eco.purse(v) || 0; const h = G.Eco.homeOf(v); const el = !!(h && h.elite); return { up: el || c >= Q[1] ? 2 : c >= Q[0] ? 1 : 0, keep: el ? 2 : c >= Q[1] * 0.6 ? 2 : c >= Q[0] * 0.5 ? 1 : 0, coins: c, elite: el }; }, { days: 5 });
+    const coins = n => { const v = G.S.villagers.get(kid); const r = 'h:' + v.home; const have = G.Depot.get(r, 'moedas'); const f = 'f:' + G.Fac.ofV(v).id; G.Fac.ofV(v).stock.moedas = Math.max(G.Fac.ofV(v).stock.moedas || 0, 500); sim(() => { if (n > have) G.Depot.move(f, r, 'moedas', n - have, { code: 'prova', by: v.id }); else if (n < have) G.Depot.move(r, f, 'moedas', have - n, { code: 'prova', by: v.id }); }); };
+    const day = () => { G.S.day++; sim(() => In.onNewDay()); return G.S.buildings.get(id); };
+    const facts = () => G.S.buildings.get(id).ip.h.filter(f => f[1] === 'riqueza');
+    coins(40); const s0 = G.Save.serialize(); for (let q = 0; q < 30; q++) In.wealthOf(G.S.buildings.get(id)); if (G.Save.serialize() !== s0) out.push('a leitura da riqueza mudou o mundo');
+    let b = day(); if ((b.ip.q | 0) !== 2 || facts().length !== 1 || facts()[0][2] !== '2') out.push(`com 40 moedas: o degrau ${b.ip.q}, ${facts().length} fatos`);
+    coins(20); b = day(); if ((b.ip.q | 0) !== 2) out.push(`a faixa: 20 moedas tiraram o degrau (${b.ip.q})`);
+    coins(4); b = day(); if ((b.ip.q | 0) !== 2) out.push(`a paciência: o degrau mudou no dia seguinte (${b.ip.q})`);
+    M.salvarCarregar(); b = G.S.buildings.get(id); if ((b.ip.q | 0) !== 2) out.push('o save no meio da paciência: outro degrau');
+    for (let q = 0; q < 5; q++) b = day(); if ((b.ip.q | 0) !== 0 || facts().length !== 2) out.push(`depois da paciência, com 4 moedas: o degrau ${b.ip.q}, ${facts().length} fatos`);
+    said.push(`${b0.type} #${id} (o uso ${use}): 40 moedas, o degrau 2 com o fato; 20, fica (a faixa); 4, fica até a paciência de 5 dias, salvo e carregado no meio; depois, 0, com o fato`);
+    // (the rule taken off: no reading, no change)
+    In.wealthRule(use, null); coins(80); const r0 = b.ip.r; b = day(); b = day();
+    if (In.wealthOf(b) !== null || b.ip.r !== r0 || (b.ip.q | 0) !== 0) out.push(`sem a regra: a leitura ${JSON.stringify(In.wealthOf(b))}, o degrau ${b.ip.q}`);
+    else said.push('sem a regra, nada');
+    // (the tavern's rule, the one registered with its recipe: the same reading as the engine's door gives)
+    const tv = [...G.S.buildings.values()].find(q => q.type === 'taverna' && q.ip); if (tv && In.tavernStep(tv) !== null && JSON.stringify(In.tavernStep(tv)) !== JSON.stringify(In.wealthOf(tv))) out.push('a leitura da taverna não é a da regra dela');
+  }
+  ok('7 a riqueza de agora de qualquer tipo (In.wealthRule): o degrau pelo dono na virada do dia, com o fato; a faixa; a paciência; o save no meio; a regra só lê; sem ela, nada', !out.length && M.limpo(), out.length ? out.join(' / ') : said.join('; '));
+  // 7b: the engine's band (In.wealthBand) is the tavern's of before (D-724) amount by amount — up at the marks, kept down to 0.6 of
+  // the upper and half the lower, the banner the rich step —, for the tavern's marks and another's
+  const bandWas = (c, Q, el) => ({ up: el || c >= Q[1] ? 2 : c >= Q[0] ? 1 : 0, keep: el ? 2 : c >= Q[1] * 0.6 ? 2 : c >= Q[0] * 0.5 ? 1 : 0 });
+  const diffB = []; let nB = 0;
+  for (const Q of [In.TAV_Q, [10, 30], [5, 200]]) for (const el of [false, true]) for (let c = 0; c <= 2 * Q[1] + 3; c += 0.5) { nB++; const a = In.wealthBand(c, Q, el), w = bandWas(c, Q, el); if (a.up !== w.up || a.keep !== w.keep) diffB.push(`${c}/${Q}/${el}: ${JSON.stringify(a)} ≠ ${JSON.stringify(w)}`); }
+  ok('7b a faixa do motor (In.wealthBand) é a da taverna de antes, moeda a moeda', !diffB.length, diffB.length ? diffB.slice(0, 3).join(' · ') : `${nB} somas (as marcas ${JSON.stringify(In.TAV_Q)} da taverna, [10,30] e [5,200]; com e sem a bandeira), iguais`);
 }
 const err = M.erros(); if (Object.keys(err.mod).length || err.console.length) ok('sem erros de módulo', false, JSON.stringify(err).slice(0, 300));
 console.log(fails.length ? `FALHAS: ${fails.join(', ')}` : 'TUDO PASSOU');

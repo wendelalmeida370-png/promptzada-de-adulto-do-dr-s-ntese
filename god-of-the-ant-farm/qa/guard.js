@@ -554,13 +554,14 @@ for (const f of files) if (f !== 'act-casa.js') src[f].forEach((l, k) => { const
 for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
   if (f !== 'act-lazer.js' && /\bBiblioteca\.MAX\b/.test(c)) fails.push(`biblioteca: ${f}:${k + 1} lê o teto do dia da biblioteca clássica (pergunte G.Biblioteca.maxOf(b) — D-192): ${l.trim().slice(0, 110)}`);
   if (f === 'act-lazer.js' && /\bBi\.MAX\b/.test(c) && !/\bBi\.(MAX|maxOf|maxCopias) =/.test(c)) fails.push(`biblioteca: ${f}:${k + 1} lê Bi.MAX fora de onde ele se define e de onde o degrau o multiplica (use Bi.maxOf(b), Bi.maxCopias(b) — D-192): ${l.trim().slice(0, 110)}`); });
-// 67. "a gramática das plantas no save é do interiors.js" (D-198): o save diz a gramática que fez as suas plantas (intG), e só
-// o interiors.js o escreve e o lê — num save de antes, todo registro é julgado ao abrir; e a chave da planta leva a gramática
-// (':g' + In.VERSION), ou um lugar da planta de antes ficaria nas mãos do corpo depois de uma mudança de gramática. (A regra
-// 68 está livre)
+// 67. "a gramática das plantas no save é do interiors.js" (D-198, D-990): o save diz a gramática que fez as suas plantas — a do
+// motor (intG) e a de cada tipo sobre ela (intGT) —, e só o interiors.js as escreve e as lê — num save de antes, todo registro
+// do tipo cuja gramática subiu é julgado ao abrir; e a chave da planta leva a gramática do tipo do registro (':g' +
+// In.versionOf(rec.t)), ou um lugar da planta de antes ficaria nas mãos do corpo depois de uma mudança de gramática. (Mudada
+// pela frente K dos interiores 3: a gramática por tipo, F13. A regra 68 está livre)
 for (const f of files) if (f !== 'interiors.js') src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
-  if (/\bintG\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG é do interiors.js — D-198): ${l.trim().slice(0, 110)}`); });
-if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.VERSION"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática (':g' + In.VERSION): D-198");
+  if (/\bintGT?\b/.test(c)) fails.push(`plantas: ${f}:${k + 1} mexe na gramática das plantas do save (intG e intGT são do interiors.js — D-198, D-990): ${l.trim().slice(0, 110)}`); });
+if (!(src['interiors.js'] || []).some(l => /const planKey = /.test(l) && l.includes("':g' + In.versionOf(rec.t)"))) fails.push("plantas: interiors.js — a chave da planta (planKey) não leva a gramática do tipo (':g' + In.versionOf(rec.t)): D-198, D-990");
 // 69. "a vontade do banho e da leitura não sorteia" (D-200, D-201): no js/act-servicos.js, do bloco «the wish for a bath» até
 // o Te.go, e no js/act-lazer.js, do «the wish to read» até o Bi.go, nenhuma chamada ao acaso do mundo nem ao do que só se vê:
 // a sorte do dia de cada um é o G.hash da pessoa e do dia — a mesma dentro e fora do passo, com ou sem gente olhando
@@ -2018,12 +2019,13 @@ for (const f of files) { if (f === 'movel3d.js' || MOVELIB.test(f)) continue; (s
   const w = b3.indexOf('function inWall(K, plan, w, l) {'), w2 = b3.indexOf('\n  }\n', w); const fw = w < 0 ? '' : b3.slice(w, w2);
   if (!/innerMat\(K, wm\)/.test(fw) || /\binMat\(/.test(fw)) fails.push('o chão de dentro não é o de fora: a parede de dentro não é a do innerMat (D-703)'); }
 // 270. "a escolha da taverna é do registro" (D-720, D-722): as escolhas da taverna dos interiores 2.0 — o tamanho, a riqueza, o bar,
-// o estrado, a porta, o espelho, a adega — saem do registro e do id (tavHash, o G.hash), as mesmas em toda tentativa; o dado das
-// tentativas (P.rnd) só desempata as mesas (tavTables) — nunca o acaso do mundo nem o do que só se vê
+// o estrado, a porta, o espelho, a adega — saem do registro e do id (os sorteios do prédio no kit, P.choose — o G.hash do id; F1,
+// D-991), as mesmas em toda tentativa; o dado das tentativas (P.rnd) só desempata as mesas (os grupos do kit, P.groups) — nunca o
+// acaso do mundo nem o do que só se vê. (Mudada pela frente K dos interiores 3: as escolhas pelo kit)
 { const tw = (src['int-trabalho.js'] || []).join('\n'); const body = (a, b) => { const i = tw.indexOf(a), j = b ? tw.indexOf(b, i + 1) : -1; return i < 0 ? null : tw.slice(i, j < 0 ? undefined : j); };
   const ax = body('function tavAxes(P)', 'In.tavAxes = '), lay = body('function tavLayout(', 'function tavWindows('), ins = body('function tavInside(', 'const TPL = {'), bld = body('function tavernBuild(P)', 'In.tavernBuild = ');
   if (!ax || !lay || !ins || !bld) fails.push('a escolha da taverna é do registro: o int-trabalho.js sem o tavAxes, o tavLayout, o tavInside ou o tavernBuild (D-720)');
-  else { if (!/const H = k => tavHash\(id, k\);/.test(ax)) fails.push('a escolha da taverna é do registro: o tavAxes não tira as escolhas do id (tavHash, D-722)');
+  else { if (!/const bar = P\.choose\(1, bars\);/.test(ax) || !/const stage = P\.choose\(3, \['frente', 'fundo'\]\);/.test(ax) || /\btavHash\b|\bG\.hash\(/.test(ax)) fails.push('a escolha da taverna é do registro: o tavAxes não tira as escolhas dos sorteios do prédio (P.choose, D-722, F1)');
     for (const [n, f] of [['tavAxes', ax], ['tavLayout', lay], ['tavInside', ins], ['tavernBuild', bld]]) if (/\bP\.rnd\(|\bG\.(?:R|VR|rr|ri|pick|chance|vrr|vri|vpick|vchance|shuffle|vshuffle)\(|Math\.random/.test(f)) fails.push(`a escolha da taverna é do registro: o ${n} sorteia (só as mesas desempatam pelo dado das tentativas: D-722)`); } }
 // 271. "ninguém sentado no ar" (D-722): os lugares de sentar das mesas da taverna são de peças de sentar — o banquinho, o banco, a
 // cadeira, cada lugar sobre a peça (on: 1: o In.rootY o põe no assento) — e a cozinha da taverna não tem a mesa de comer de pé
@@ -2035,19 +2037,34 @@ for (const f of files) { if (f === 'movel3d.js' || MOVELIB.test(f)) continue; (s
   if (!/out\.push\(\{ use: 'sentar', a, n: 0, on: 1 \}/.test(mv)) fails.push('ninguém sentado no ar: o banco comprido sem os seus lugares sobre a peça (on: 1, D-725)');
   const ins = tw.slice(tw.indexOf('function tavInside('), tw.indexOf('const TPL = {')); if (/P\.place\('mesa',/.test(ins)) fails.push('ninguém sentado no ar: a cozinha da taverna com a mesa de comer de pé (o freguês sentaria no ar: D-722)'); }
 // 272. "o corredor de 1 m" (D-721): o corredor da taverna, da porta ao balcão, ao fogo, ao estrado, à escada e às mesas, tem 1 m de
-// largura ao menos (AISLE, TAISLE), e as faixas dele, a roda do fogo comprido e as saídas do taverneiro são zonas de passagem (aisle)
-{ const tw = (src['int-trabalho.js'] || []).join('\n'); const m = /AISLE = ([\d.]+), TAISLE = ([\d.]+);/.exec(tw);
+// largura ao menos (AISLE, TAISLE), e as faixas dele, a roda do fogo comprido e as saídas do taverneiro são zonas de passagem (aisle).
+// Desde a F1 (D-991) o corredor é do kit — P.aisle, nunca mais estreito que 1 m, as faixas zonas de caminho pelo P.zone —, e a
+// taverna o pede na largura de AISLE, e os grupos com o caminho de AISLE aos alvos e de TAISLE às mesas. (Mudada pela frente K)
+{ const tw = (src['int-trabalho.js'] || []).join('\n'), ir = (src['interiors.js'] || []).join('\n'); const m = /AISLE = ([\d.]+), TAISLE = ([\d.]+);/.exec(tw);
   if (!m || +m[1] < 1.0 || +m[2] < 1.0) fails.push(`o corredor de 1 m: a largura do corredor da taverna ${m ? m[1] + ' / ' + m[2] : 'sumiu'} (D-721)`);
-  if (!/r\.aisle = 1; P\.zones\.push\(\{ lv: K\.lv, r, aisle: 1 \}\);/.test(tw)) fails.push('o corredor de 1 m: as faixas do corredor da taverna não são zonas de passagem (D-721)');
-  if (!/tavBand\(P, K, path, AISLE \/ 2\);/.test(tw)) fails.push('o corredor de 1 m: o corredor não é guardado na largura de AISLE (D-721)'); }
-// 273. "a riqueza da taverna é a do dono agora, e só se lê" (D-661, D-724): o degrau da taverna (rec.q) é julgado na virada do dia
-// pelas portas de quem tem as moedas (G.Taverna.keeperOf, G.Eco.purse, G.Eco.homeOf) — a conta nunca escreve no mundo —, e só o
-// interiors.js o escreve (tavernWealth, com o fato 'riqueza')
-{ const ir = (src['interiors.js'] || []).join('\n'); const i = ir.indexOf('In.tavernStep = function (b) {'), j = ir.indexOf('\n  };', i); const f = i < 0 ? '' : ir.slice(i, j);
-  if (!f || !/T\.keeperOf\(b\)/.test(f) || !/G\.Eco\.purse\(k\)/.test(f)) fails.push('a riqueza da taverna: o In.tavernStep não lê o taverneiro e as moedas pelas portas (D-724)');
-  if (/\b(?:k|h|b|T|G)\.[\w.]+\s*=[^=]|\bG\.Depot\.move\(/.test(f)) fails.push('a riqueza da taverna: o In.tavernStep escreve no mundo (D-724)');
-  if (!/rec\.q = w\.to; rec\.r\+\+; fact\(b, 'riqueza', String\(w\.to\)\);/.test(ir)) fails.push('a riqueza da taverna: o degrau muda sem a reforma do registro e o fato (D-724)');
-  for (const f2 of files) if (f2 !== 'interiors.js' && /^(int-|act-)/.test(f2)) (src[f2] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\b(?:rec|ip|b\.ip)\.q\s*=[^=]/.test(c)) fails.push(`a riqueza da taverna: ${f2}:${k + 1} escreve o degrau do registro (só o interiors.js: D-724)`); }); }
+  if (!/if \(o\.aisle\) \{ r\.aisle = 1; z = \{ lv, r, aisle: 1 \}; \}/.test(ir) || !/P\.zone\(K\.lv, \[[^\n]*\], \{ aisle: 1 \}\);/.test(ir)) fails.push('o corredor de 1 m: as faixas do corredor do kit não são zonas de passagem (P.zone, aisle — D-721)');
+  if (!/const half = Math\.max\(1\.0, o\.w \|\| 1\.0\) \/ 2/.test(ir)) fails.push('o corredor de 1 m: o corredor do kit (P.aisle) aceita uma largura abaixo de 1 m (D-721)');
+  if (!/P\.aisle\(0, hall, start, targets, \{ K, w: AISLE,/.test(tw) || !/half: AISLE \/ 2, thalf: TAISLE \/ 2 \}/.test(tw)) fails.push('o corredor de 1 m: a taverna não pede o corredor e os grupos na largura de AISLE e TAISLE (D-721)'); }
+// 273. "a riqueza de agora é a do dono, e só se lê" (D-661, D-724; de todo tipo desde a F6, D-992 — mudada pela frente K dos
+// interiores 3): (a) o degrau de um registro (rec.q) só o interiors.js o escreve — o wealthStep, na virada do dia, com a reforma do
+// registro e o fato 'riqueza' —, em nenhum outro arquivo; (b) cada regra registrada (In.wealthRule) é pura — não escreve no mundo,
+// não sorteia — e lê pelas portas de quem tem (as moedas pelo livro, G.Eco.purse / G.Depot; a casa, G.Eco.homeOf; a bandeira da
+// casa mercante, elite; o tesouro do povo): uma regra que não lê nenhuma é um número inventado — e o Object.assign de uma regra só
+// sobre um objeto novo (um literal, a faixa); (c) a da taverna lê o taverneiro e as moedas dele (G.Taverna.keeperOf, G.Eco.purse);
+// (d) a faixa do motor (In.wealthBand) é pura: a soma e as marcas, nada do mundo
+{ const ir = (src['interiors.js'] || []).join('\n'); const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
+  const wb = (src['interiors.js'] || []).map(code).find(l => /^\s*In\.wealthBand = /.test(l));
+  if (!wb || /\bG\.|\bS\.|\bthis\b|Math\.random|\bIn\.(?!wealthBand\b)/.test(wb.replace(/^\s*In\.wealthBand = /, ''))) fails.push('a riqueza de agora: a faixa do motor (In.wealthBand) sumiu ou lê o mundo (pura: a soma e as marcas — F6, D-992)');
+  if (!/rec\.q = w\.to; rec\.r\+\+; fact\(b, 'riqueza', String\(w\.to\)\);/.test(ir) || !/function wealthStep\(b\) \{/.test(ir) || !/\n      wealthStep\(b\);/.test(ir)) fails.push('a riqueza de agora: o degrau muda sem o wealthStep da virada do dia, a reforma do registro e o fato (D-724, F6)');
+  for (const f2 of files) if (f2 !== 'interiors.js') (src[f2] || []).forEach((l, k) => { const c = code(l); if (/\b(?:rec|ip|b\.ip)\.q\s*=[^=]/.test(c)) fails.push(`a riqueza de agora: ${f2}:${k + 1} escreve o degrau do registro (só o interiors.js: D-724, F6)`); });
+  // (each rule's body: from its call to the paren that closes it)
+  const bodies = []; for (const f2 of files) { const t = (src[f2] || []).map(code).join('\n'); let i = 0; for (;;) { i = t.indexOf('In.wealthRule(', i); if (i < 0) break; if (/In\.wealthRule = function/.test(t.slice(i - 2, i + 30))) { i += 14; continue; }
+    let d = 0, j = i + 'In.wealthRule'.length; for (; j < t.length; j++) { const ch = t[j]; if (ch === '(') d++; else if (ch === ')') { d--; if (!d) break; } } bodies.push([f2, t.slice(i, j + 1)]); i = j; } }
+  if (!bodies.some(([f2, x]) => f2 === 'int-trabalho.js' && /^In\.wealthRule\('taverna',/.test(x) && /T\.keeperOf\(b\)/.test(x) && /G\.Eco\.purse\(k\)/.test(x))) fails.push('a riqueza de agora: a taverna sem a sua regra pelo taverneiro e as moedas dele (G.Taverna.keeperOf, G.Eco.purse — D-724, F6)');
+  for (const [f2, x] of bodies) {
+    const w = x.replace(/'[^']*'/g, "''").replace(/\b(const|let)\s+[^;]*;/g, ';');
+    if (/\b[\w.]+\.[\w.]+\s*=[^=>]/.test(w) || /\.(push|splice|set|delete)\s*\(|\bG\.Depot\.move\(|\bdelete\b/.test(w) || /\bObject\.assign\(\s*(?!\{|In\.wealthBand\()/.test(w) || /\b(G\.R|G\.rr|G\.ri|G\.pick|G\.chance|G\.shuffle|G\.VR|Math\.random)\s*\(/.test(w)) fails.push(`a riqueza de agora: ${f2} — uma regra (In.wealthRule) escreve no mundo ou sorteia (pura: só lê, F6): ${x.slice(0, 90)}`);
+    if (!/\bG\.Eco\.(purse|homeOf)\(|\bG\.Depot\.(get|free)\(|\.elite\b|\bG\.Fac\.get\(/.test(x)) fails.push(`a riqueza de agora: ${f2} — uma regra (In.wealthRule) que não lê o que o dono tem (as moedas pelo livro, a casa, a casa mercante, o tesouro): um número inventado (D-440, F6): ${x.slice(0, 90)}`); } }
 // === os interiores 2.0, P6: as pessoas dentro, no desenho (300–309) ===
 // 300. "dentro, anda-se pela planta" (D-750, D-753): quem o mundo tem dentro de um prédio aberto é desenhado chegando, saindo e
 // trocando de lugar pelo caminho da planta — o caminho da porta (Interiors.pathIn) e o das células pela regra do corpo
@@ -3227,5 +3244,46 @@ const barIds = arr => { const out = []; let d = 0, q = '', cur = ''; for (let i 
   if (a < 0) fails.push('quem registra na barra carrega depois dela: o index.html sem o js/acoes-ui.js (D-1030)');
   for (const f of files) { if (f === 'acoes-ui.js') continue; const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); if (!/\bAcoesUI\.(bar|slot|icone)\(/.test(s)) continue;
     const i = at(f); if (i < 0 || i < a) fails.push(`quem registra na barra carrega depois dela: ${f} registra no G.AcoesUI ${i < 0 ? 'e não está no index.html' : 'e carrega antes do acoes-ui.js no index.html'} — registre de um arquivo da tela que carrega depois dele (D-1030)`); } }
+// === os interiores 3, a frente K: o motor da planta (480–489) ===
+// 480. "a gramática é de cada tipo" (F13, D-990): sobre a gramática do motor (In.VERSION) cada tipo tem a sua (In.VERSION_T: o
+// número de cada tipo cujas plantas mudaram, um inteiro de 1 para cima; quem não está, 0), e tudo o que diz de que gramática é uma
+// planta a lê por tipo — (a) a tabela só com números inteiros positivos; (b) o In.versionOf a faz do motor e da do tipo; (c) o
+// In.addProbed lê as linhas de um tipo do catálogo só se a versão dele no arquivo (vers) for a de agora; (d) o load passa ao
+// In.migrate a gramática do motor e a dos tipos do save (intG, intGT), e o In.migrate julga só os registros do tipo cuja gramática
+// subiu; (e) o qa/catalogo.js grava a versão de cada tipo e só lê de volta as linhas da gramática de agora
+{ const ir = (src['interiors.js'] || []).join('\n'); const code = s => s.replace(/(^|\s)\/\/\s.*$/gm, '');
+  const t0 = ir.indexOf('In.VERSION_T = {'), t1 = ir.indexOf('};', t0); const tab = t0 < 0 || t1 < 0 ? null : code(ir.slice(t0 + 'In.VERSION_T = {'.length, t1));
+  if (tab === null) fails.push('a gramática é de cada tipo: o interiors.js sem a tabela In.VERSION_T (F13, D-990)');
+  else for (const e of tab.split(',').map(s => s.trim()).filter(Boolean)) { const m = /^(?:'([\w-]+)'|"([\w-]+)"|([A-Za-z_]\w*))\s*:\s*(\d+)$/.exec(e); if (!m || !(+m[4] >= 1)) fails.push(`a gramática é de cada tipo: na tabela In.VERSION_T, «${e.slice(0, 60)}» não é um tipo com um número inteiro de 1 para cima (F13, D-990)`); }
+  if (!/In\.versionOf = t => \{ const n = In\.VERSION_T\[t\] \| 0; return n > 0 \? In\.VERSION \+ '\.' \+ n : String\(In\.VERSION\); \};/.test(ir)) fails.push('a gramática é de cada tipo: o In.versionOf não é a gramática do motor e a do tipo sobre ela (F13, D-990)');
+  if (!/\(\(o\.vers && o\.vers\[t\]\) \| 0\) !== \(In\.VERSION_T\[t\] \| 0\)\) continue;/.test(ir)) fails.push('a gramática é de cada tipo: o In.addProbed lê as linhas de um tipo sem conferir a versão dele no catálogo (vers, F13)');
+  if (!/load\(o\) \{ cache\.clear\(\); In\.migrate\(\(o && o\.intG\) \|\| 0, o && o\.intGT\); \}/.test(ir) || !/const olderG = \(g, gt, t\) =>/.test(ir) || !/if \(!r \|\| \(!oldG\(r\.t\) && \(r\.v \| 0\) >= REC_V\)\) continue;/.test(ir)) fails.push('a gramática é de cada tipo: o load e o In.migrate não julgam os registros pela gramática do tipo (intG, intGT — F13, D-990)');
+  const cat = fs.existsSync(path.join(__dirname, 'catalogo.js')) ? fs.readFileSync(path.join(__dirname, 'catalogo.js'), 'utf8') : '';
+  if (!/vers\[t\] = In\.VERSION_T\[t\] \| 0;/.test(cat) || !/"vers": \$\{JSON\.stringify\(vers\)\}/.test(cat) || !/!fresh\(R, t\)\) continue;/.test(cat)) fails.push('a gramática é de cada tipo: o qa/catalogo.js não grava a versão de cada tipo (vers) ou lê de volta linhas de uma gramática que não é a de agora (F13, D-990)'); }
+// 481. "o kit da planta é do motor" (F1, D-991, D-993): as ferramentas da taverna dos interiores 2.0 são do KIT do interiors.js e
+// toda receita as usa — (a) nenhuma receita (int-*.js) guarda à mão uma zona de caminho ou de um posto (um P.zones.push com aisle,
+// papel, oficio ou faz no que ela empurra — lido inteiro, com os parênteses de dentro: T-2132 —, ou um retângulo marcado de caminho
+// à mão, .aisle = 1): só o P.zone; (b)
+// os nomes de antes, fechados no int-trabalho.js (tavClear, tavStamp, tavFlood, tavGrow, tavReach, tavBand, tavHash, tavFrame,
+// tavAcc), não existem mais — o corredor, os sorteios, o quadro e os acessos são do kit; (c) as escolhas e o quadro do kit (hashOf,
+// choose, frame) não tiram dos dados da tentativa nem de acaso nenhum; (d) os grupos do kit recusam um assento que não é peça de
+// sentar (seatPiece: ninguém sentado no ar, regra 271); (e) a planta leva só as zonas e os grupos de um posto — os que têm papel —,
+// e as plantas sem papel saem como antes
+{ const ir = (src['interiors.js'] || []).join('\n'); const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
+  // (what a push of a line pushes: from its paren to the one that closes it — the calls inside it too —, or the rest of the line)
+  const pushed = c => { const out = []; let i = 0; for (;;) { i = c.indexOf('.zones.push(', i); if (i < 0) return out; let d = 0, j = i + '.zones.push'.length; for (; j < c.length; j++) { if (c[j] === '(') d++; else if (c[j] === ')' && !--d) break; } out.push(c.slice(i, j + 1)); i = j; } };
+  for (const f of files) if (/^int-/.test(f)) (src[f] || []).forEach((l, k) => { const c = code(l); if (pushed(c).some(x => /\b(aisle|papel|oficio|faz)\b/.test(x)) || /\.aisle\s*=\s*1\b/.test(c)) fails.push(`o kit da planta: ${f}:${k + 1} guarda à mão uma zona de caminho ou de um posto (P.zone(lv, r, { aisle: 1 }) ou P.zone(lv, r, { papel }) — F1, D-991): ${l.trim().slice(0, 110)}`);
+    if (/\b(tavClear|tavStamp|tavFlood|tavGrow|tavReach|tavBand|tavHash|tavFrame|tavAcc)\b/.test(c)) fails.push(`o kit da planta: ${f}:${k + 1} usa uma ferramenta de antes da taverna, que é do kit agora (F1, D-991): ${l.trim().slice(0, 110)}`); });
+  const a = ir.indexOf('    hashOf(k) {'), z = ir.indexOf('    zone(lv, r, o) {'); const ch = a < 0 || z < a ? '' : ir.slice(a, z);
+  if (!ch || /\b(?:this|P)\.(rnd|rr|pick|chance|shuffle)\(|\bG\.(R|rr|ri|pick|chance|shuffle|VR|vrr)\(|Math\.random/.test(ch) || !/return idHash\(this\.b\.id, k\);/.test(ch)) fails.push('o kit da planta: as escolhas do kit (hashOf, choose, frame) não são os sorteios do prédio, ou tiram de outro acaso (F1, D-722)');
+  if (!/const bad = T\.seats\.filter\(\(\[k, , , w, d\]\) => !seatPiece\(k, w, d\)\)/.test(ir)) fails.push('o kit da planta: os grupos do kit aceitam um assento que não é peça de sentar (seatPiece — regra 271, F1)');
+  if (!/const zp = P\.zones\.filter\(z => z\.papel\); if \(zp\.length\) plan\.zones = /.test(ir) || !/const gp = P\.groupList\.filter\(g => g\.papel\); if \(gp\.length\) plan\.groups = /.test(ir)) fails.push('o kit da planta: a planta leva zonas ou grupos sem o papel de um posto (D-993)'); }
+// 482. "as escolhas do registro, sobre o registro sozinho" (F1, D-994): o P.axes do kit pede as escolhas de uma receita (o molde do
+// tavAxes) sobre o registro e o prédio — o In.kitOn com o id, o lote, o registro, os costumes do povo, o tipo e a família —, nunca
+// sobre a planta em feitio: uma escolha não lê os dados da tentativa nem o que a planta já pôs (quebraria na hora), e é a mesma em
+// toda tentativa e na prova que a pede sem planta (In.axesOf, pela mesma conta); e a taverna pede as suas por ele (P.axes(tavAxes))
+{ const ir = (src['interiors.js'] || []).join('\n'), tw = (src['int-trabalho.js'] || []).join('\n');
+  if (!/    axes\(fn\) \{ const m = this\._axes \|\| \(this\._axes = new Map\(\)\); if \(!m\.has\(fn\)\) m\.set\(fn, fn\(In\.kitOn\(bare\(this\)\)\) \|\| null\); return m\.get\(fn\); \},/.test(ir) || !/const bare = P => \(\{ b: P\.b, L: P\.L, rec: P\.rec, tr: P\.tr, T: P\.T, famId: P\.famId \}\);/.test(ir) || !/In\.axesOf = \(fn, o\) => fn\(In\.kitOn\(bare\(o && o\.ip && !o\.rec \? \{ b: o, L: o\.w \* TILE, rec: o\.ip, tr: TRAD\[o\.ip\.c\] \|\| TRAD\.classico \|\| \{\}, T: TYPES\[o\.ip\.t\], famId: o\.ip\.f \} : o\)\)\) \|\| null;/.test(ir)) fails.push('as escolhas do registro: o P.axes do kit não pede as escolhas sobre o registro sozinho (In.kitOn: o id, o lote, o registro, os costumes, o tipo, a família), ou o In.axesOf não faz a mesma conta (F1, D-994)');
+  if (!/const X = P\.axes\(tavAxes\);/.test(tw) || !/In\.tavAxes = o => In\.axesOf\(tavAxes, o\);/.test(tw)) fails.push('as escolhas do registro: a taverna não pede as suas pelo P.axes (o tavAxes sobre o registro sozinho), ou a prova não as lê pelo In.axesOf (F1, D-994)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
