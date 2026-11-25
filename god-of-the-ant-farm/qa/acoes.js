@@ -24,13 +24,17 @@
 //     e o apagado com o porquê; cada lugar chega ao mundo pela porta do verbo (a oferta pelo livro, uma vez); a lista do lugar; levantar; a
 //     figura com o nome de outra recusada e o lugar trazido de um verbo que a barra tem, o dela (D-1036); a pergunta de uma barra que quebra,
 //     erro do módulo dela, e a tela segue; e os casos ruins: o save no meio, a mão do deus, o corpo que morre, o prédio que cai
+//  a11 o responder do lugar em todo prédio (L-2171, L-2271), na manhã de tempestade da metrópole, com todos abrigados onde estão: ninguém
+//     do outro lado de uma parede da planta é da sala (de onde cada um está, nenhuma pessoa oferecida através de uma parede); e num prédio que
+//     não é a taverna — o palácio primeiro, depois um templo, depois os outros —, quem está num lugar ao lado do corpo responde do lugar (a
+//     conversa, o cumprimento; o insulto fica palavra — em outro prédio não há briga das mesas)
 //  a12 a palavra da primeira vez é da sua barra (L-2270): uma linha da lista feita longe de qualquer barra não esconde a palavra da mesa
 //  a6 o verificador limpo em tudo (as regras «interacao» e as da taverna), nenhum erro de módulo
 //   node qa/acoes.js [mundo]          (≈ 4 min; ONLY=a1,a2 para algumas)
 //   node qa/acoes.js igual PASTA      a «Mesa» igual à de antes (F14): a mesma mão — o corpo senta à mesa, a barra, a lista da mesa e a de uma
 //                                     pessoa, a rodada pela barra, levantar — sobre o jogo daqui e sobre o da PASTA (uma cópia do jogo de
 //                                     antes), cada um no seu processo; a barra e as listas iguais letra por letra (≈ 3 min)
-//   RAIZ=PASTA node qa/acoes.js       a prova sobre o jogo da PASTA (ONLY=a12 sobre uma cópia de antes do L-2270 o reproduz)
+//   RAIZ=PASTA node qa/acoes.js       a prova sobre o jogo da PASTA (sobre uma cópia de antes, ONLY=a12 reproduz o L-2270 e ONLY=a11 o L-2271)
 const path = require('path');
 if (process.argv[2] === 'igual') { igual(process.argv[3]); return; }
 const M = require('./nodemundo.js');
@@ -52,7 +56,7 @@ const SEATK = { banquinho: 1, banco: 1, cadeira: 1 };
 const nameOf = o => Po.knows.call(Po.body(), o);
 
 // ---------------- the evening: the taverns open, people at the tables ----------------
-M.pronto(world); calm();
+M.pronto(world); const PRONTO = on('a11') ? G.Save.serialize() : null; calm(); // (the ready world as it opens — its stormy morning, everyone sheltering at home: the a11)
 while (S().time < 0.68) { calm(); M.viver(1); }
 const SNAP = G.Save.serialize();
 const fresh = () => { seen.length = 0; if (Po.body()) Po.release('deus'); G.Avatar.detach(); M.reseed(4242); G.Save.apply(JSON.parse(SNAP)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); calm(); };
@@ -505,6 +509,82 @@ if (on('a10')) {
     PL.b = 0; I.list = I.list.filter(p => p.id !== 'prova-trono'); if (Po.body()) god(() => Po.release('teste'));
     watch(); ok('a10 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
   }
+}
+// ---------------- a11 the answer from one's place in every building, and the wall (L-2171, L-2271) ----------------
+// (a wall of the plan between two points of a storey — metres of the lot —, sampled on the grid as the plan's own reach is: the proof's own
+// reading, not the game's)
+const wallOwn = (b, lv, ax, az, bx, bz) => { const p = G.Space.planNow(b); const g = p && p.grid && p.grid.lv[lv]; if (!g) return false; const n = p.grid.n, cs = p.grid.cs; const k = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.06));
+  for (let q = 0; q <= k; q++) { const x = Math.floor((ax + (bx - ax) * q / k) / cs), z = Math.floor((az + (bz - az) * q / k) / cs); if (x >= 0 && z >= 0 && x < n && z < n && g[z * n + x] === In.CELL.WALL) return true; } return false; };
+if (on('a11')) {
+  // (the ready world on its stormy morning: everyone sheltering where they are — at home, in the palace —, and whoever is at a place stays at
+  // it: in the evening of the other parts the houses go to their supper, and the free seat beside one was taken by the family before the
+  // body sat — T-2171. The proof's world loaded again for each case, the same every time)
+  M.reseed(4242); G.Save.apply(JSON.parse(PRONTO)); G.Main.mode = 'game'; M.viver(0.5); { let g = 0; while (!(S().time > 0.08 && S().time < 0.1) && g++ < 4000) M.viver(1); }
+  const STORM = G.Save.serialize();
+  const storm = () => { seen.length = 0; if (Po.body()) Po.release('deus'); G.Avatar.detach(); M.reseed(4242); G.Save.apply(JSON.parse(STORM)); G.Main.mode = 'game'; if (G.UI && G.UI.setSpeed) G.UI.setSpeed(0); };
+  // ---- a11b: the wall — from where each one stands, the people the body would be offered there (the provider «pessoa», asked as the body
+  // standing at that place), none of them beyond a wall of the plan
+  { storm();
+    const pv = I.list.find(p => p.id === 'pessoa'); const ind0 = G.Avatar.indoors; let asked = 0, offered = 0, walled = 0, pairs = 0, thru = 0; const ex = [];
+    const byB = new Map(); for (const o of S().villagers.values()) { if (!o.inside || o.sleeping || o.age < 2 || (In.passage && In.passage(o)) || !In.placeOf(o)) continue; (byB.get(o.inside) || byB.set(o.inside, []).get(o.inside)).push(o); }
+    try {
+      for (const [bid, Lb] of byB) { const b = S().buildings.get(bid); if (!b || Lb.length < 2 || !G.Space.planNow(b)) continue;
+        for (const a of Lb) { const pa = In.posOf(a); const X = pa[0] * TL, Z = pa[1] * TL; const mx = x => x - b.x * TL, mz = z => z - b.y * TL;
+          // (the pairs there are — of the same storey, within the reach of a person —, and how many have a wall between them)
+          for (const o of Lb) { if (o === a) continue; const po = In.posOf(o); if (po[2] !== pa[2] || Math.hypot(po[0] - pa[0], po[1] - pa[1]) * TL > 3.2) continue; pairs++; if (wallOwn(b, pa[2], mx(X), mz(Z), mx(po[0] * TL), mz(po[1] * TL))) walled++; }
+          // (the people the provider offers the body standing there — its own look, the proof's hand on where the body is, as in the a8)
+          G.Avatar.indoors = () => ({ b, lv: pa[2] }); asked++;
+          for (const t of pv.find({ v: { id: -1, inside: b.id }, X, Y: 0, Z, yaw: 0, x: pa[0], y: pa[1] })) { if (!t.room || t.o === a || Math.hypot(t.X - X, t.Z - Z) > 3.2) continue; offered++;
+            if (wallOwn(b, pa[2], mx(X), mz(Z), mx(t.X), mz(t.Z))) { thru++; if (ex.length < 3) ex.push(`${b.type}#${b.id}: de onde ${a.name} está, ${t.o.name} através da parede`); } } } }
+    } finally { G.Avatar.indoors = ind0; }
+    ok('a11 ninguém do outro lado de uma parede é da sala: na manhã de tempestade da metrópole, com todos abrigados, de onde cada um está, nenhuma pessoa oferecida ao corpo através de uma parede da planta (L-2271)',
+      walled > 0 && thru === 0, `às ${S().time.toFixed(3)} do dia ${S().day}: ${asked} lugares olhados, ${offered} pessoas oferecidas a até 3,2 m; ${pairs} pares no mesmo andar a até 3,2 m, ${walled} deles com uma parede no meio — oferecidos através dela: ${thru}${ex.length ? ' (' + ex.join(' | ') + ')' : ''}`);
+  }
+  // ---- a11a: in a building that is no tavern — the palace first, then a temple, then the others —, the one at a place beside the body answers
+  // from it. The cases in order — someone awake at a place, a free seat beside them on this side of the walls —, the same after every load;
+  // one tried after another until the body sits (with no one of that people to live, or the seat not reached, the next)
+  const order = t => (/palac/.test(t) ? 0 : t === 'temple' ? 1 : 2);
+  const cases = () => { const out = [];
+    for (const b of [...S().buildings.values()].filter(q => q.built && q.type !== 'taverna' && In.has(q)).sort((a, c) => order(a.type) - order(c.type) || a.id - c.id)) {
+      const p = G.Space.planNow(b); if (!p || !p.entrance) continue;
+      for (const o of [...S().villagers.values()].filter(x => x.inside === b.id && !x.sleeping && x.age >= 16 && !(In.passage && In.passage(x)) && In.placeOf(x) && In.placeOf(x).item).sort((a, c) => a.id - c.id)) {
+        const pl = In.placeOf(o); const seats = In.freeNear(b, pl.lv || 0, pl.x, pl.z, 2.6, ['sentar', 'comer', 'rezar', 'aquecer', 'ler']).filter(q => usable(q) && In.walkIn(b, q) < Infinity && !wallOwn(b, pl.lv || 0, q.x, q.z, pl.x, pl.z) && Math.hypot(q.x - pl.x, q.z - pl.z) > 0.5);
+        if (seats.length) out.push({ b, o, seat: seats[0] }); if (out.length >= 8) return out; } }
+    return out; };
+  let A = null, r = { why: 'nenhum caso' }; const tries = [];
+  for (let n = 0; n < 6 && !A; n++) {
+    storm(); bad.length = 0; const C = cases()[n]; if (!C) break; const v = bodyFor(C.b, null);
+    if (!v) { tries.push(`${C.b.type}#${C.b.id}: ninguém do povo para o deus viver`); continue; }
+    // (sat down as the player would: the seat faced — and, with someone of the room in line with it, the seat chosen among the targets in
+    // reach, as the wheel or the list does: D-397)
+    const { b } = C; const pl = Object.assign({}, C.seat, In.freeFor(b, C.seat.it.id, C.seat.q, C.seat.x, C.seat.z) || {}); r = seatIn(b, v, pl);
+    if (!r.ok && Po.is(v)) { const c = I.candidates().find(q => q.id === 'lugar' && q.t.pl && q.t.pl.item === pl.item); if (c) { I.run(I.asChoice(c)); for (let k = 0; k < 150 && !(G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1); k++) frame(); const u = Po.useOf(); r = { ok: !!u && u.b === b.id, why: r.why + ' (e pela troca de alvo, não sentou)' }; } }
+    if (r.ok) A = C; else tries.push(`${b.type}#${b.id}: ${r.why || 'não sentou'}`);
+  }
+  if (!A) ok('a11 o responder do lugar em outro prédio: o corpo senta ao lado de alguém', false, tries.join('; ') || 'nenhum prédio que não seja a taverna com alguém acordado num lugar e um lugar livre ao lado');
+  else {
+    const { b, o } = A;
+    {
+      for (let k = 0; k < 10; k++) frame(); const sn = I.scan(); const tgt = sn && sn.all.find(q => q.p.id === 'pessoa' && q.t.o === o);
+      const task0 = o.task && o.task.type; const pl0 = In.placeOf(o); const t2 = S().clock; const c = personOf(o);
+      if (c) { U.lado(0, c); for (let k = 0; k < 30; k++) frame(); until(() => S().clock - t2 > 3, 4); }
+      const said = G.Talk && G.Talk.list.some(x => x.id === o.id && x.t0 >= t2 - 0.01); const pl1 = In.placeOf(o); const keptP = !!pl0 && !!pl1 && pl0.item === pl1.item && pl0.q === pl1.q;
+      ok('a11 num prédio que não é a taverna, quem está num lugar ao lado do corpo é uma pessoa para ele, e responde do lugar: a tarefa e o lugar seguem',
+        !!tgt && !!tgt.t.room && !!c && said && o.inside === b.id && !!o.task && o.task.type === task0 && keptP, `${G.Village.buildName(b)} #${b.id} (${b.type})${tries.length ? ` (depois de ${tries.length} caso(s): ${tries.join('; ')})` : ''}: ${nameOf(o)} (${task0}) ${tgt ? 'é alvo' : 'NÃO É ALVO'}; disse ${said ? 'sim' : 'não'}; ${o.task ? o.task.type : 'sem tarefa'}; o lugar ${keptP ? 'o mesmo' : 'OUTRO'}`);
+      // (the greeting, a word only; the insult of a quarrelsome one stays a word — no brawl of the tables in another building; the hug and the
+      // duel greyed, with why)
+      const c2 = personOf(o); const ig = c2 ? rowOf(c2, 'soc-cumprimentar') : -1; const d0 = (S().avatar.deeds || {}).cumprimento || 0; if (ig >= 0) { U.lado(ig, c2); for (let k = 0; k < 20; k++) frame(); until(() => ((S().avatar.deeds || {}).cumprimento || 0) > d0, 4); }
+      const c4 = personOf(o); const ii = c4 ? rowOf(c4, 'soc-insultar') : -1; let brawl = null;
+      if (ii >= 0) { const keep = G.Indole.faceta, keepN = G.Indole.ax; G.Indole.faceta = (w, k) => (w === o && (k === 'agressivo' || k === 'impulsivo') ? 1 : keep(w, k)); G.Indole.ax = (w, k) => (w === o && k === 'neu' ? 0 : keepN(w, k));
+        try { U.lado(ii, c4); for (let k = 0; k < 12; k++) frame(); } finally { G.Indole.faceta = keep; G.Indole.ax = keepN; } brawl = !!(o.task && o.task.type === 'combat') || !!(G.Taverna && G.Taverna.brawling && G.Taverna.brawling(o)); }
+      const lm = personOf(o) ? U.lista(personOf(o)) : null; const hug = lm && lm.verbs.find(q => q.id === 'abraco'); const duel = lm && lm.verbs.find(q => q.id === 'desafiar');
+      ok('a11 o cumprimento fica palavra e conta; o insulto de um brigão fica palavra (em outro prédio não há a briga das mesas) e ele não sai; o duelo apagado, com o porquê',
+        ((S().avatar.deeds || {}).cumprimento || 0) > d0 && ii >= 0 && brawl === false && o.inside === b.id && (!hug || (!hug.ok && /dentro/.test(hug.why))) && !!duel && !duel.ok && /dentro/.test(duel.why),
+        `cumprimentou: ${((S().avatar.deeds || {}).cumprimento || 0) > d0 ? 'sim' : 'NÃO'}; o insulto: ${brawl === null ? 'SEM O VERBO' : brawl ? 'UMA BRIGA' : 'só palavra'}; ${o.inside === b.id ? 'na sala' : 'FORA'}; o abraço ${hug ? `«${hug.why}»` : '(não é da família)'}; o duelo «${duel ? duel.why : '-'}»`);
+    }
+    if (Po.body()) god(() => Po.release('teste'));
+  }
+  watch(); ok('a11 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
 }
 // ---------------- a6 the errors ----------------
 { const e = M.erros(); ok('a6 nenhum erro de módulo nem do console', !Object.keys(e.mod || {}).length && !e.console.length, JSON.stringify(e).slice(0, 300)); }
