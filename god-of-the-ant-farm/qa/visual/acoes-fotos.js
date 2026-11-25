@@ -119,17 +119,29 @@ const ATE = +(process.env.ATE || 5); // (ATE=1: só a barra; 2: e a lista; 3: e 
   // (what the screen shows: the bar, the word of the first time, the list — measured: whole on the screen, no scroll to the side, the
   // buttons to tap 44 px or more, the greyed ones with their why written)
   // (the buttons to tap: 44 px or more on the phone — the finger —; on the PC, 24 — the mouse)
-  const measure = () => E(pc => {
-    const T = window.__T; T.ui(3); const A = G.AcoesUI.shown(); const MIN = pc ? 24 : 44;
+  // (the bar rises from below as it comes — acRise, 0,45 s, 18 px —: it is measured standing, once the rise is over; on the PC it stands 12 px
+  // over the bottom, and in the rise's first frames its foot is out of the screen — T-2175. And a bar that went away and came back since the
+  // last measure is told, with what the screen had as it went — a panel or the menu, a fight near, the bar —: a «FORA» says why)
+  const watchBar = () => E(() => { const bar = document.querySelector('.ac-mesa'); if (!bar || window.__BARW) return; window.__BARW = [];
+    const PAINEIS = ['acoes', 'card', 'cardapio', 'cartas', 'dados', 'diario', 'guardados', 'mochila', 'self'];
+    const why = () => { const v = G.Possess.body(); return G.Modes.panel() ? (PAINEIS.find(p => G.Modes.panelIs(p)) ? 'o painel ' + PAINEIS.find(p => G.Modes.panelIs(p)) : 'o menu') : v && G.IncUI.fightNear(v) ? 'uma luta perto' : G.AcoesUI.shown().barra || 'nenhuma barra'; };
+    new MutationObserver(L => L.forEach((r, i) => { const a = /\bhidden\b/.test(r.oldValue || ''), b = /\bhidden\b/.test(i + 1 < L.length ? L[i + 1].oldValue || '' : bar.className);
+      if (a !== b) window.__BARW.push(`${b ? 'saiu' : 'voltou'} (${why()})`); })).observe(bar, { attributes: true, attributeFilter: ['class'], attributeOldValue: true }); });
+  const settle = () => E(() => new Promise(done => { const bar = document.querySelector('.ac-mesa'), t0 = performance.now();
+    const go = () => (!bar || !bar.getAnimations().some(a => a.playState === 'running') || performance.now() - t0 > 3000 ? done() : setTimeout(go, 50)); go(); }));
+  const measure = async () => { await watchBar(); await E(() => window.__T.ui(3)); await settle(); return E(pc => {
+    const A = G.AcoesUI.shown(); const MIN = pc ? 24 : 44;
     const box = el => { if (!el || el.classList.contains('hidden') || !el.offsetParent) return null; const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: Math.round(r.width), h: Math.round(r.height) }; };
     const inside = b => !!b && b.l >= -0.5 && b.t >= -0.5 && b.r <= innerWidth + 0.5 && b.b <= innerHeight + 0.5;
     const bar = document.querySelector('.ac-mesa'), dica = document.querySelector('.ac-dica'), sheet = document.querySelector('#acoes-panel');
     const small = root => (root ? [...root.querySelectorAll('button')].filter(b => b.offsetParent && !b.classList.contains('x') && (b.getBoundingClientRect().height < MIN - 0.5 || b.getBoundingClientRect().width < MIN - 0.5)).map(b => b.textContent.trim().slice(0, 20)) : []);
     const offWhy = root => (root ? [...root.querySelectorAll('.ac-b.off, .ac-r.off')].filter(b => !((b.querySelector('small, em') || {}).textContent || '').trim()).length : 0);
     return { A, bar: box(bar), dica: box(dica), sheet: box(sheet), inBar: inside(box(bar)), inDica: !box(dica) || inside(box(dica)), inSheet: !box(sheet) || inside(box(sheet)), side: document.documentElement.scrollWidth > innerWidth + 1,
-      small: small(bar).concat(small(sheet), small(dica)), offWhy: offWhy(bar) + offWhy(sheet), items: A.itens.map(q => `${q.nome}${q.ok ? '' : ' — ' + q.why}`), rows: A.rows.map(q => `${q.label}${q.ok ? '' : ' — ' + q.why}`), touchBtns: G.IncUI.touchButtons() };
-  }, PC);
-  const flags = m => `barra ${m.inBar ? 'na tela' : 'FORA'}${m.side ? ', ROLAGEM DE LADO' : ''}${m.small.length ? `, botões pequenos: ${m.small.join(', ')}` : ''}${m.offWhy ? `, ${m.offWhy} apagado(s) sem porquê` : ''}`;
+      small: small(bar).concat(small(sheet), small(dica)), offWhy: offWhy(bar) + offWhy(sheet), items: A.itens.map(q => `${q.nome}${q.ok ? '' : ' — ' + q.why}`), rows: A.rows.map(q => `${q.label}${q.ok ? '' : ' — ' + q.why}`), touchBtns: G.IncUI.touchButtons(),
+      W: innerWidth, H: innerHeight, flick: window.__BARW ? window.__BARW.splice(0) : [] };
+  }, PC); };
+  const where = m => (m.bar ? `de ${Math.round(m.bar.l)},${Math.round(m.bar.t)} a ${Math.round(m.bar.r)},${Math.round(m.bar.b)} numa tela de ${m.W} × ${m.H}` : 'escondida');
+  const flags = m => `barra ${m.inBar ? 'na tela' : `FORA (${where(m)})`}${m.flick.length ? `; desde a medida de antes, a barra ${m.flick.join(', ')}` : ''}${m.side ? ', ROLAGEM DE LADO' : ''}${m.small.length ? `, botões pequenos: ${m.small.join(', ')}` : ''}${m.offWhy ? `, ${m.offWhy} apagado(s) sem porquê` : ''}`;
   // ================================ 1: the bar of the table, and the word of the first time
   // (the keeper comes with the menu by himself — the house's: P7 —, and the hands say «agora não»; then the bar is there, with the word)
   const c1 = await E(() => { const T = window.__T; T.run(() => G.CardapioUI.isOpen() || G.AcoesUI.shown().mesa, 40); T.ui(4); return { menu: G.CardapioUI.isOpen() }; });
@@ -266,6 +278,7 @@ const ATE = +(process.env.ATE || 5); // (ATE=1: só a barra; 2: e a lista; 3: e 
   });
   if (p5.none) ok('5 a barra de um lugar que não é a taverna', false, p5.none);
   else {
+    await E(() => { if (window.__BARW) window.__BARW.length = 0; }); // (what the bar did before the body sat here is the tavern's: from here on, this place's)
     await E(() => { const T = window.__T; T.ui(4); T.f(3); }); await wait(700); const m5 = await measure();
     const ids5 = m5.A.itens.map(q => q.id); const want5 = ['', p5.coin ? 'pt-oferta' : null, 'pt-arauto', 'pt-decreto', 'levantar'].filter(x => x !== null);
     const tit = await E(() => { const el = document.querySelector('.ac-mesa .ac-tit'); return el ? el.textContent : ''; });
