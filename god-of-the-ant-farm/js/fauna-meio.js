@@ -256,7 +256,7 @@
   // ------------------------------ the world now: the sun, the night, the wind (D-301) ------------------------------
   const ENV = { sun: 0, night: false, day: true, rain: 0, storm: false, dry: false, wx: 1, wy: 0, ws: 0.6, t: 0 };
   function env() {
-    const S = G.S; const w = S.weather || {}; const t = S.time;
+    const S = G.S; const w = S.weather || {}; const t = S.time; ENV.of = S; // (the world it was read from: the wind's door asks it, T-2135)
     ENV.t = t; ENV.sun = t > 0.02 && t < 0.73 ? Math.sin(Math.PI * (t - 0.02) / 0.71) : 0; ENV.night = G.isNight(); ENV.day = !ENV.night;
     ENV.rain = w.rain || 0; ENV.storm = (w.storm || 0) > 0 && ENV.rain > 0.3; ENV.dry = (w.drought || 0) > 0;
     const wa = w.windA || 0; ENV.wx = Math.cos(wa); ENV.wy = Math.sin(wa); ENV.ws = Math.max(0.35, Math.min(1.4, (w.windS || 0.3) * 2));
@@ -270,7 +270,9 @@
     if (o.kind === undefined) k = 1 + (k - 1) * 1.15; // (people smell strong)
     return 1 + (k - 1) * (1 - 0.6 * ENV.rain);
   }
-  Mi.wind = () => ({ a: Math.atan2(ENV.wy, ENV.wx), s: ENV.ws, x: ENV.wx, y: ENV.wy });
+  // (asked before the meio's first tick of a world just made or opened, the memory is the world before's: it is read again from the
+  // world — env() only reads it, and inside the step the tick has read it first, so the world goes as it went: T-2135)
+  Mi.wind = () => { if (ENV.of !== G.S) env(); return { a: Math.atan2(ENV.wy, ENV.wx), s: ENV.ws, x: ENV.wx, y: ENV.wy }; };
   Mi.scent = (a, o) => scent(a, o);
 
   // ------------------------------ people: fear where they hunt (D-305) ------------------------------

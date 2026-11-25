@@ -5,7 +5,7 @@ const seed = +(process.argv[2] || 7);
 (async () => {
   const browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
   let errs = []; page.on('pageerror', e => errs.push('pageerror: ' + e.message + ' ' + (e.stack || '').split('\n').slice(1, 3).join(' | ')));
-  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts/.test(t)) errs.push('console: ' + t.slice(0, 260)); });
+  page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver Message|GroupMarkerNotSet|software WebGL/.test(t)) errs.push('console: ' + t.slice(0, 260)); }); // (the software 3D driver's notes are not the game's: as the det3.js, T-2134)
   await page.addInitScript(s => { let a = s; Math.random = () => ((a = (a * 16807) % 2147483647) - 1) / 2147483646; try { localStorage.clear(); } catch (e) { } }, seed);
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto(process.env.GAME || 'file://' + require('path').resolve(__dirname, '..', 'index.html')); await page.waitForTimeout(1200);

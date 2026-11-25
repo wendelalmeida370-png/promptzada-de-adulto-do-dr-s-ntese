@@ -1020,7 +1020,10 @@
   // four of 28, the Aztec's three of 37 for the 110), a body's room before each mouth; the way in the ground's front, where the
   // form's flight comes up to it, else along it all
   function granaryForm(P) {
-    const F = G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); const U = G.Forma.uses(F).filter(u => u.uso === 'tulha'); if (!U.length) { P.errs.push('o celeiro sem tulhas'); return; }
+    // (the granary by its form is the Egyptian's and the Aztec's — the people with no granary form say why, and the recipe does not
+    // break on a form that is not there: L-2230)
+    const F = G.Forma.of(P.rec.t, P.rec.c, In.nOf(P.rec)); if (!F) { P.errs.push('o celeiro deste povo não tem forma'); return; }
+    const U = G.Forma.uses(F).filter(u => u.uso === 'tulha'); if (!U.length) { P.errs.push('o celeiro sem tulhas'); return; }
     // (its ground: the widest piece of the form's floor under the middle of the lot — the base, the floor —, at its top)
     const L = P.L, c = L / 2, area = r => (r[2] - r[0]) * (r[3] - r[1]); let fl = null;
     for (const e of F.els) if (e.k === 'bloco' && !e.degrau && !e.uso && e.y0 < 0.01 && e.r[0] < c && e.r[2] > c && e.r[1] < c && e.r[3] > c && (!fl || area(e.r) > area(fl.r))) fl = e;
