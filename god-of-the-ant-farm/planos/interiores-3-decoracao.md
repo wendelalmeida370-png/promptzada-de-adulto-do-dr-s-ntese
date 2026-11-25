@@ -1,4 +1,4 @@
-# A decoração por uso e por ofício — o manual de uma onda (os interiores 3, F7; D-1010 a D-1013, L-2250 a L-2252)
+# A decoração por uso e por ofício — o manual de uma onda (os interiores 3, F7; D-1010 a D-1014, L-2250 a L-2257)
 
 Para quem vai pôr a decoração de um prédio — a forja, o templo, o palácio, a cadeia — numa onda dos interiores 3. A regra magna do
 dono (D-651): **a decoração tem causa, nunca sorteio** — e nada vem do nada (D-440): o que se vê dentro de um prédio está lá porque o
@@ -51,8 +51,9 @@ Um arquivo da onda, `js/dentro-<uso>.js`, posto no `index.html` **depois do `js/
   ponto livre mais perto do seu), `beside` / `near` / `byWall` (no chão ao lado de uma peça, ou encostado numa parede perto dela),
   `pendura` (nas cavilhas das paredes perto de umas peças, ou nas vigas; cada item com os seus campos em `o`), `hangFood`, `riscos` (as
   marcas dos anos nas paredes por uma conta do mundo que a regra do uso diz — o carvão das rodadas da taverna; os dias de quem está na
-  cela, as marcas do quartel, numa onda —: `K.riscos(ctx, n, { perto, lv, y0, dy, kinds, tag, why })`), `wallSpots` / `onWall` (os pontos
-  das paredes para uma luz acima das cabeças, e uma coisa que sai da parede num deles: o ocote), `runs` (os trechos livres das paredes entre
+  cela, as marcas do quartel, numa onda —: `K.riscos(ctx, n, { perto, lv, y0, dy, kinds, tag, why })`), `wallSpots` / `ringSpots` /
+  `onWall` (os pontos das paredes para uma luz acima das cabeças — o `ringSpots` na face do anel da cabana redonda, que a planta guarda como
+  casca e não como parede —, e uma coisa que sai da parede num deles: o ocote), `runs` (os trechos livres das paredes entre
   duas alturas), `ceilAt`, `floorFree`, `frame`, `lvOf`, `cellAt`, `hv`; as louças, os vasos e os pratos de cada povo (`cupOf`, `vesselOf`,
   `vesselName`, `dishOf`); os construtores da taverna e da casa (`K.taverna`, `K.casa`).
 
@@ -111,17 +112,23 @@ levantamento D (§1.4, §19.2):
 
 - **O que o within diz** — `W.luz`: `k` (a lamparina do povo, ou nada), `oleo`, `luz` (a luz dela no `G.Luz3D.LAMPS`: `lamparina`,
   `lamparina-foca`, `lamparina-sal`), `sal`, `cera`, `mat`, `tocha`, `braseira`, `lanterna` (cada um com o porquê), `acesa`, `de` (o que se
-  queima é da casa ou do armazém do povo), e o porquê em palavras. Só com o que há para queimar (a casa, senão o armazém do povo; a conta da
+  queima é da casa ou do armazém do povo), `noite` (o que a conta da noite do uso guarda: `v` a vela, `a` a lamparina), e o porquê em
+  palavras (os bens pelo nome, `G.Atmos.COMB_NOME`). Só com o que há para queimar (a casa, senão o armazém do povo; a conta da
   noite da taverna) e do material que o povo teve; acesa só com alguém acordado dentro no escuro. **As palavras só dizem o que a
-  assinatura carrega** (o que arde e onde se guarda, o quarto da vela e da lamparina, acesa ou não): quantos estão acordados é o campo
-  `awake`, não o texto — o desenho guardado enquanto a assinatura é a mesma nunca diz o que era verdade quando foi feito.
+  assinatura carrega** (o que arde e onde se guarda, o quarto da vela e da lamparina, o que a conta guarda, acesa ou não — apagada é
+  «ninguém acordado dentro no escuro», nunca o porquê de agora): quantos estão acordados é o campo `awake`, não o texto — o desenho
+  guardado enquanto a assinatura é a mesma nunca diz o que era verdade quando foi feito (L-2253). Campo novo que o porquê diga entra na
+  assinatura.
 - **Onde cada luz fica** (`G.Dentro3D`): a lamparina nas mesas com gente da taverna e no balcão, na mesa da família, na bancada; na casa
-  sem mesa (o banco de comer do romano, do grego, do nórdico) ou com a mesa cheia, no seu suporte na parede junto de onde a família come;
-  o salão da taverna nas paredes (uma luz a cada 18 m², quatro no máximo: a lamparina no suporte, ou o ocote); o ocote na parede junto de
+  sem mesa (o banco de comer do romano, do grego, do nórdico) ou com a mesa cheia, no seu suporte na parede junto de onde a família come —
+  na cabana redonda, na face do anel (`K.ringSpots`) —;
+  o salão da taverna nas paredes (uma luz a cada 18 m², quatro no máximo: a lamparina no suporte, ou o ocote); o ocote na parede (ou no anel) junto de
   onde a família senta; o braseiro no chão ao lado; a lanterna pendurada numa cavilha junto da porta.
 - **A luz de cada coisa acesa** é a linha dela no `G.Luz3D.LAMPS` (`js/luz3d.js`): a força, o alcance, a cor, o tremor, o tamanho da
   chama (`chama`) e a chama que o 3D desenha (`kind`: a da vela, a da lamparina, a da tocha, a do braseiro). O `dentro3d.js` não escreve
-  cor de chama nenhuma (a regra 503).
+  cor de chama nenhuma (a regra 503); o `fx3d.js` desenha cada chama de dentro no tamanho da sua fonte, com a cor e o tremor dela (a
+  regra 506), e o volume da luz de dentro se assa de novo quando qualquer coisa de uma fonte muda — o lugar, a força, o alcance, a cor, o
+  tremor (a regra 505).
 - **A peça de luz da planta** (o lampadário de cada povo) acende só com alguém acordado e com o que o seu povo queima nela
   (`G.Atmos.luzPeca`: o óleo do candelabro e do suporte de papiro, a vela do poste do norte, as brasas da coluna do lago; a regra 504).
 
@@ -129,14 +136,14 @@ levantamento D (§1.4, §19.2):
 
 1. O modelo: uma linha na `TABLE` do `arte/blender/deco.py` com a âncora `chama` (`M.anchor('chama', …)`) e as partes do vocabulário
    (`lampada` pinta-se pelo `lmat` da coisa: barro, bronze, ferro, pedra, pedra-sabão; `castical`, `cera`, `chifre`, `brasa`).
-2. A luz dela: uma linha no `G.Luz3D.LAMPS` (sem `peca`), com `forca`, `raio`, `cor`, `tremor`, `chama`, `kind` e, se o óleo acaba,
-   `oleo: 1`.
+2. A luz dela: uma linha no `G.Luz3D.LAMPS` (sem `peca`), com `forca`, `raio`, `cor`, `tremor`, `chama` (o tamanho da chama: o
+   `fx3d.js` a desenha assim), `kind` e, se o óleo acaba, `oleo: 1`.
 3. A causa: o campo da regra do uso no within (`G.Atmos.withinRule`) — o que ela queima, pelo livro, com o porquê —, e o construtor a põe
    com `lit`, `lmat` e `luz` (a chave da linha do `LAMPS`) na coisa; a luz sai sozinha pelo `G.Dentro3D.fontes`.
 4. A sua linha no `CAUSA` do `qa/dentro-inv.js` (a regra 296) e a parte da onda na prova, com a luz acesa e apagada, o combustível tirado
    pela mão do deus e o save no meio.
-5. Uma peça de luz da planta nova (um lampadário de outro jeito): a linha no `LAMPS` com `peca: 1` e o combustível do seu povo no `PECA`
-   do `G.Atmos.luzPeca`.
+5. Uma peça de luz da planta nova (um lampadário de outro jeito): a linha no `LAMPS` com `peca: 1`, o seu `chama` e o seu `kind`, e o
+   combustível do seu povo no `PECA` do `G.Atmos.luzPeca`.
 
 ## 7. As provas
 
@@ -149,5 +156,5 @@ levantamento D (§1.4, §19.2):
 - `ONLY=l1,l2,l3 node qa/luz.js` quando a onda acende alguma coisa (a l3 cobra a causa de cada fonte, o lampadário com o que queimar).
 - As regras do guard: 290 a 299 e 410 a 413 (o within e o dentro3d.js), 500 (toda regra e todo construtor, em qualquer arquivo, só leem e
   só desenham: a regra lê o livro pelo `c` — `c.D`, `c.O`, `c.ler` —, o construtor só o `W`), 501 (o enchimento das peças é o do livro),
-  502 (o pano tem dono), 503 (a luz de cada povo: o `G.Atmos.LUZ`, o `G.Luz3D.LAMPS`, cada modelo na `TABLE`) e 504 (o lampadário com o que
-  o seu povo queima).
+  502 (o pano tem dono), 503 (a luz de cada povo: o `G.Atmos.LUZ`, o `G.Luz3D.LAMPS`, cada modelo na `TABLE`), 504 (o lampadário com o que
+  o seu povo queima), 505 (o volume segue toda fonte) e 506 (a chama de dentro do tamanho da peça).

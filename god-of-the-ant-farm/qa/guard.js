@@ -3093,5 +3093,18 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
 { const lz = (src['luz3d.js'] || []).join('\n'), at = (src['atmos.js'] || []).join('\n'); const i = lz.indexOf('L.sources = function'), j = lz.indexOf('\n  };', i); const f = i < 0 ? '' : lz.slice(i, j);
   if (!/At\.luzPeca\(b, it\.kind\)/.test(f) || !/if \(q === null\) continue;/.test(f)) fails.push('o lampadário queima o que o seu povo tem: o G.Luz3D.sources acende a peça de luz sem perguntar ao G.Atmos.luzPeca (L-2252)');
   if (!/At\.luzPeca = function \(b, kind\) \{/.test(at) || !/lampadario: Object\.freeze\(\{ romano: 'oleo', grego: 'oleo', classico: 'oleo', egipcio: 'oleo', nordico: 'vela', asteca: 'brasa' \}\)/.test(at)) fails.push('o lampadário queima o que o seu povo tem: o G.Atmos.luzPeca sem o combustível do lampadário de cada povo (L-2252)'); }
+// 505. "o volume segue toda fonte" (L-2256): a assinatura do volume de dentro (o L.sig do luz3d.js) carrega tudo o que o assado lê de cada
+// fonte — o lugar, a força, o alcance, a cor e o tremor —; com só a força, a lamparina do Nilo que perde o sal (a mesma força, outra cor) e
+// a lamparina posta noutro ponto livre da mesa (o mesmo id) ficavam no volume de antes
+{ const lz = (src['luz3d.js'] || []).join('\n'); const m = /const sig1 = s => `([^`]*)`;/.exec(lz); const f = m ? m[1] : '';
+  for (const k of ['s.id', 's.forca', 's.raio', 's.cor', 's.tremor', 's.x', 's.y', 's.z']) if (!f.includes(k)) fails.push(`o volume segue toda fonte: a assinatura do volume de dentro (L.sig) sem ${k}, que o assado lê (L-2256)`);
+  if (!/L\.sig = \(src, open\) => src\.map\(sig1\)/.test(lz)) fails.push('o volume segue toda fonte: o L.sig não assina cada fonte pelo sig1 (L-2256)'); }
+// 506. "a chama de dentro do tamanho da peça" (L-1882, D-1013): a chama de uma luz de dentro (a decoração, o lampadário, o altar) é desenhada
+// pelo fx3d.js no tamanho da sua fonte (o chama do G.Luz3D.LAMPS); toda linha do LAMPS que não é de uma peça diz a sua chama e a chama que é
+{ const fx = (src['fx3d.js'] || []).join('\n'), lz = (src['luz3d.js'] || []).join('\n');
+  if (!/const k = ls && ls\.chama > 0 \? ls\.chama : q\[3\];/.test(fx)) fails.push('a chama de dentro do tamanho da peça: o fx3d.js desenha a chama de uma luz de dentro sem o chama da sua fonte (L-1882, D-1013)');
+  const a = lz.indexOf('const LAMPS = {'), z = lz.indexOf('\n  };', a); const LM = a < 0 ? '' : lz.slice(a, z);
+  for (const mm of LM.matchAll(/^\s*('?[\w-]+'?): \{([^}]*)\}/gm)) { const nm = mm[1].replace(/'/g, ''), body = mm[2]; if (/\bpeca: 1\b/.test(body) && nm === 'altar') continue;
+    if (!/\bchama: [\d.]+/.test(body) || !/\bkind: '[\w-]+'/.test(body)) fails.push(`a chama de dentro do tamanho da peça: a luz ${nm} do G.Luz3D.LAMPS sem o tamanho da sua chama (chama) ou a chama que é (kind) (L-1882, D-1013)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

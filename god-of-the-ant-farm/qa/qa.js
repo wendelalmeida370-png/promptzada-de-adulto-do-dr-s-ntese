@@ -3992,7 +3992,10 @@
   };
   QA.dentroCausa = CAUSA; // (for the guard: every thing of the file has its cause here — rule 296)
   // (the walls' faces of a storey, as the plan has them: the distance of a point to the nearest face)
-  const faceDist = (p, lv, x, z) => { let d = 1e9; for (const w of p.walls) { if (w.lv !== lv) continue; const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L2 = ax * ax + az * az || 1; const t = G.clamp(((x - w.a[0]) * ax + (z - w.a[1]) * az) / L2, 0, 1); d = Math.min(d, Math.hypot(x - w.a[0] - ax * t, z - w.a[1] - az * t) - w.t / 2); } return d; };
+  // (the distance to the nearest face of a wall of the storey — and to the ring of a round hut, the shell's inner face on its ground storey:
+  // the plan keeps the ring as the shell, not as a wall, L-2254)
+  const faceDist = (p, lv, x, z) => { let d = 1e9; for (const w of p.walls) { if (w.lv !== lv) continue; const ax = w.b[0] - w.a[0], az = w.b[1] - w.a[1]; const L2 = ax * ax + az * az || 1; const t = G.clamp(((x - w.a[0]) * ax + (z - w.a[1]) * az) / L2, 0, 1); d = Math.min(d, Math.hypot(x - w.a[0] - ax * t, z - w.a[1] - az * t) - w.t / 2); }
+    const sh = p.shell; if (sh && sh.kind === 'round' && lv === Math.min(...p.levels.map(q => q.lv))) d = Math.min(d, sh.r - sh.t - Math.hypot(x - sh.cx, z - sh.cz)); return d; };
   const ovR = (a, c, m) => a[0] < c[2] + m && c[0] < a[2] + m && a[1] < c[3] + m && c[1] < a[3] + m;
   // (what a storey keeps clear, the plan's own: the doors' ways, the stairs, the corridor — turned to the lot — and where one stands)
   const keep = (p, lv) => { const In = G.Interiors, P0 = p._P, s = p.side, L = p.lot.w; const out = [];

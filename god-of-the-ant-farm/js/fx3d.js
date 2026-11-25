@@ -249,10 +249,11 @@
   // windows of the houses near it; each eases out of one place before it goes to the next (no light jumps), and a flame's
   // flickers. Only seen: what lights the drawing is what the world has burning or lit
   let lamps = [];
-  // (the source of a flame of an inside that is a light of its decoration — a lamp, a candle, the ocote, the brazier: its colour and its
-  // flicker, as the volume of the inside was baked with it, G.Luz3D.state —, or null)
+  // (the source of a flame of an inside that is a light — a lamp, a candle, the ocote, the brazier of its decoration; the lamp stand of each
+  // people, the altar's flame —: its colour, its flicker and the size of its flame (chama: a candle's, a lamp's, a torch's — the piece's own,
+  // L-1882), as the volume of the inside was baked with it, G.Luz3D.state —, or null: a fire's, or a light not baked yet)
   const lampOf = (bid, key) => { const st = G.Luz3D && G.Luz3D.state ? G.Luz3D.state(bid) : null; if (!st || !st.src) return null; const pre = 'i' + bid + ':';
-    for (const s of st.src) if (!s.fire && /^d:/.test(String(s.id)) && pre + s.id === key) return s; return null; };
+    for (const s of st.src) if (!s.fire && pre + s.id === key) return s; return null; };
   // (how many real lights the quality gives the flames: none in the lightest — the painted light carries them all there)
   const lampsOf = q => G.clamp(q && Number.isFinite(q.lights) ? q.lights | 0 : 2, 0, 6);
   const FIRE = [1, 0.54, 0.23], TORCH = [1, 0.63, 0.29], HEARTH = [1, 0.66, 0.36], CANDLE = [1, 0.76, 0.46];
@@ -465,13 +466,15 @@
     F3.torches = 0; let ti = 0;
     const inB = G.Possess && G.Possess.body && G.Possess.body() ? G.Possess.body().inside || 0 : 0;
     for (const fs of [G.People3D && G.People3D.flames, G.Things3D && G.Things3D.flames, G.Build3D && G.Build3D.flames]) if (fs) for (const q of fs) {
-      if (n >= MAXF) break; const k = q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
+      // (a light of an inside burns a flame of its own size — the source's chama, G.Luz3D.LAMPS: the lantern's candle, the lamp of the north,
+      // the brazier's embers, the lamp on its stand —; any other, the size it is handed)
+      if (n >= MAXF) break; const ls = q[4] ? lampOf(q[4], q[5]) : null; const k = ls && ls.chama > 0 ? ls.chama : q[3]; const fl = 0.8 + Math.sin(t * 11 + q[0] * 3.1) * 0.15 + G.VR() * 0.1;
       tongue(n, q[0], q[1], q[2], 0.26 * k, 0.55 * k * fl, G.hash(ti * 13 + 5), true); n++; F3.torches++;
       halo(q[0], q[1] + 0.18 * k, q[2], 1.5 * k, 0.75, ti);
       // (a flame of an inside — Build3D's: its building and its own key —: the strongest lights go first to the room the body is in)
       // (its real light the colour and the flicker of what burns in it — the decoration's lamp of each people, the torch of ocote, the
       // brazier: its source's, G.Luz3D.LAMPS (D-1012) —; a fire's, the hearth's)
-      if (q[4]) { const ls = lampOf(q[4], q[5]); src.push([8 * k / (1 + near2(q[0], q[2]) / 40) * (q[4] === inB ? 6 : 1), q[5], q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 14, ls ? ls.cor : k < 0.4 ? CANDLE : HEARTH, ls ? ls.tremor : k < 0.4 ? 0.06 : 0.12, q[4]]); ti++; }
+      if (q[4]) { src.push([8 * k / (1 + near2(q[0], q[2]) / 40) * (q[4] === inB ? 6 : 1), q[5], q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 14, ls ? ls.cor : k < 0.4 ? CANDLE : HEARTH, ls ? ls.tremor : k < 0.4 ? 0.06 : 0.12, q[4]]); ti++; }
       else src.push([8 * k / (1 + near2(q[0], q[2]) / 40), 't' + (ti++), q[0], q[1] + 0.35, q[2], Math.min(8, 9 * k), 16, TORCH, 0.12]);
       if (G.VR() < rdt * 1.6 * k) spawn(PG, { x: q[0], y: q[1] + 0.3 * k, z: q[2], vx: G.vrr(-0.2, 0.2), vy: G.vrr(0.8, 1.6), vz: G.vrr(-0.2, 0.2), life: G.vrr(0.5, 0.9), s0: 0.06, s1: 0.02, c: [1, 0.7, 0.3], a: 1, sh: 1, drag: 0.5, wob: 1 });
     }

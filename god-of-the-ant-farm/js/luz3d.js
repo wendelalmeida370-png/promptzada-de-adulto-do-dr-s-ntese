@@ -67,7 +67,8 @@
   //     candle; the lantern of horn, a candle behind its panes; the torch of ocote; the brazier's embers (the light of each people, D-1012).
   // A wave's new lamp — the palace's candelabrum, the hanging lucerna — is a line here, with its model and its cause (G.Atmos)
   const LAMPS = {
-    lampadario: { peca: 1, y: 0.02, forca: 0.55, raio: 8, cor: LAMP, tremor: 0.05 }, altar: { peca: 1, y: 0.1, forca: 0.4, raio: 7, cor: HEARTH, tremor: 0.09 },
+    // (the stand of oil — the candelabrum's lucerna of clay, the bowl on the papyrus of the Nile —: a lamp's flame, L-1882; the altar's, a fire's)
+    lampadario: { peca: 1, y: 0.02, forca: 0.55, raio: 8, cor: LAMP, tremor: 0.05, chama: 0.15, kind: 'lamparina' }, altar: { peca: 1, y: 0.1, forca: 0.4, raio: 7, cor: HEARTH, tremor: 0.09 },
     // (the stands that are not an oil lamp's: the candle of the north's post, the brazier on the column of the lake)
     'lampadario-vela': { y: 0.045, forca: 0.36, raio: 6, cor: CANDLE, tremor: 0.07, chama: 0.12, kind: 'vela' },
     'lampadario-brasa': { y: -0.06, forca: 0.6, raio: 8, cor: [1, 0.52, 0.24], tremor: 0.1, chama: 0.3, kind: 'braseira' },
@@ -100,8 +101,11 @@
       out.push({ x: f.x, y: f.y, z: f.z, lv, forca: f.forca, raio: f.raio || 5, cor: f.cor || LAMP, tremor: f.tremor || 0.05, why: f.why || 'decoracao', kind: f.kind || 'lamparina', id: f.id !== undefined ? f.id : 'd' + out.length, fire: 0, chama: f.chama || 0, luz: f.luz || f.kind || 'lamparina', modelo: f.modelo || '' }); }
     return out;
   };
-  // (what the volume depends on: the sources lit, and which of the plan's doors stand open — the sky comes in through them)
-  L.sig = (src, open) => src.map(s => s.id + ':' + s.forca.toFixed(2)).join(',') + '|' + (open || '');
+  // (what the volume depends on: the sources lit — each with all the bake reads of it: where it is, its strength, its reach, its colour and
+  // its flicker; the lamp of the Nile that loses its salt keeps its strength and changes its colour, the lamp put at another free point of
+  // its table keeps its id: L-2256 —, and which of the plan's doors stand open — the sky comes in through them)
+  const sig1 = s => `${s.id}:${s.forca.toFixed(2)}:${s.raio.toFixed(1)}:${s.cor.map(c => c.toFixed(2)).join('/')}:${s.tremor.toFixed(3)}:${s.x.toFixed(2)}/${s.y.toFixed(2)}/${s.z.toFixed(2)}`;
+  L.sig = (src, open) => src.map(sig1).join(',') + '|' + (open || '');
   // ------------------------------ the bake ------------------------------
   const C = () => G.Interiors.CELL;
   // (the cells one stands in or over: inside a room)
