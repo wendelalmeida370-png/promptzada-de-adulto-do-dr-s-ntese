@@ -1,7 +1,8 @@
 // luz-inv: as regras do verificador para a luz de dentro (os interiores 2.0, a frente P1 — D-700 a D-709, js/luz3d.js):
 //   · toda chama desenhada dentro de um prédio tem a sua causa no mundo agora (S3): o fogo de um lar, de um fogão, de uma forja só
 //     com o prédio queimando (G.Atmos.fire: a família dormindo, o lar apagado), o lampadário e o altar só com alguém acordado
-//     dentro (G.Atmos.lit), a lamparina da decoração com o seu porquê (G.Dentro3D.fontes, P5);
+//     dentro (G.Atmos.lit) — e o lampadário só com o que o seu povo queima nele (G.Atmos.luzPeca, L-2252) —, a lamparina da decoração
+//     com o seu porquê (G.Dentro3D.fontes, P5);
 //   · a luz de dentro não vaza (S2): no volume desenhado, fora dos cômodos não há fogo, e nenhum voxel de cômodo tem a luz de um
 //     fogo de outro andar;
 //   · o volume desenhado é o da planta e das fontes de agora, ou o próximo está assando (S3: um volume velho que ficou);
@@ -23,6 +24,7 @@
       const it = p && p.items.find(i => String(i.id) === id); const tag = `${b.type}#${b.id}`;
       if (it && it.fire && !At.fire(b)) out.push([3, `${tag}: o fogo de ${it.kind} desenhado aceso sem nada queimando no prédio (G.Atmos.fire)`]);
       else if (it && !it.fire && L.LAMPS[it.kind] && !At.lit(b)) out.push([3, `${tag}: ${it.kind} desenhado aceso sem ninguém acordado dentro (G.Atmos.lit)`]);
+      else if (it && !it.fire && L.LAMPS[it.kind] && At.luzPeca && At.luzPeca(b, it.kind) === null) out.push([3, `${tag}: ${it.kind} desenhado aceso sem nada que o seu povo queime nele (G.Atmos.luzPeca: nada vem do nada, L-2252)`]);
       if (!byId.has(bid)) out.push([3, `${tag}: uma chama de dentro desenhada com o prédio fechado`]);
     }
     // the volumes drawn: of the plan and the sources now (or the next one baking); no fire out of the rooms, nor of another storey

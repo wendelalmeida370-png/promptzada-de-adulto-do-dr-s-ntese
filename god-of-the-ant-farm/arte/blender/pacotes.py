@@ -136,6 +136,10 @@ DECO = {
     'pao': 'comum', 'tortilhas': 'comum', 'queijo': 'comum', 'presunto': 'comum', 'peixe-seco': 'comum', 'alho': 'comum', 'ervas': 'comum', 'milho': 'comum',
     'saco': 'comum', 'cesto': 'comum', 'lenha': 'comum', 'panela': 'comum', 'caldeirao': 'comum', 'lamparina': 'comum', 'vela': 'comum',
     'pano-dobrado': 'comum', 'tapete': 'comum', 'tapecaria': 'comum', 'cavilha': 'comum', 'suporte': 'comum', 'teia': 'comum',
+    # (the light of each people — the interiors 3, the front L, D-1012: the open saucer of the Nile, the soapstone of the north, the lamp
+    # on its tall foot of the dawn of the cities, the ocote of the lake in its holder, the brazier of clay, the lantern of horn of Rome:
+    # every inside's light, in houses and taverns alike)
+    'lamparina-pires': 'comum', 'lamparina-pedra': 'comum', 'lamparina-pe': 'comum', 'ocote': 'comum', 'braseira': 'comum', 'lanterna': 'comum',
     'rabisco-a': 'comum', 'rabisco-b': 'comum', 'rabisco-c': 'comum', 'rabisco-d': 'comum',
     # (the tavern's own: the marks of its nights, the boards at its door, the keeper's cloth, the feast, the door, the games — and, by
     # their names below, the feast's platters and the standards of each people)

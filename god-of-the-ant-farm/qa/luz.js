@@ -7,7 +7,8 @@
 //      voxel de cômodo sem linha de visada a nenhum fogo do seu andar (uma parede inteira no meio, pela grade da planta, casa a
 //      casa) sem fogo; o céu só por onde há abertura (um cômodo sem nenhuma abertura para fora, escuro)
 //   l3 toda fonte tem causa: em cada prédio com planta, de dia e de noite, os fogos da luz de dentro só com o prédio queimando
-//      (G.Atmos.fire) e os lampadários só com alguém acordado (G.Atmos.lit); a casa de família dormindo, sem fogo
+//      (G.Atmos.fire) e os lampadários só com alguém acordado (G.Atmos.lit) e o que o povo queima neles (G.Atmos.luzPeca, L-2252); a
+//      casa de família dormindo, sem fogo
 //   l4 o deus interfere: a casa que pega fogo, o prédio que vira ruína — as fontes de dentro seguem o mundo (a ruína não tem dentro)
 //   l5 o save no meio: as fontes e o volume de um prédio antes e depois de salvar e carregar, iguais
 //   l6 o assado aos pedaços: o trabalho de um prédio grande em passos de 3 ms, nenhum passo muito além (o grande palácio), e o volume
@@ -85,7 +86,7 @@ if (want('l3')) {
     for (const [b, p] of planned()) { const src = L.sources(b, p); const f = At.fire(b), li = At.lit(b);
       for (const s of src) { const it = p.items.find(q => q.id === s.id); if (!it) continue;
         if (it.fire) { fires++; if (!f) bad.push(`${b.type}#${b.id} fogo de ${it.kind} sem causa`); }
-        else if (L.LAMPS[it.kind]) { lamps++; if (!li) bad.push(`${b.type}#${b.id} ${it.kind} aceso sem ninguém acordado`); } }
+        else if (L.LAMPS[it.kind]) { lamps++; if (!li) bad.push(`${b.type}#${b.id} ${it.kind} aceso sem ninguém acordado`); if (At.luzPeca && At.luzPeca(b, it.kind) === null) bad.push(`${b.type}#${b.id} ${it.kind} aceso sem nada para queimar (L-2252)`); } }
       if (f && p.items.some(it => it.fire) && !src.some(s => s.fire)) bad.push(`${b.type}#${b.id} queimando sem fogo desenhado`);
       if (G.BDEF[b.type] && G.BDEF[b.type].housing && p.items.some(it => it.fire)) { homes++; if (!f && !src.length) dark++; } }
   }

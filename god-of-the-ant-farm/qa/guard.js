@@ -3100,6 +3100,86 @@ const barIds = arr => { const out = []; let d = 0, q = '', cur = ''; for (let i 
   if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
   if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
   if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
+// === os interiores 3 — a frente L: a decoração em módulos e a luz de cada povo (planos/interiores-3-contrato.md; D-1010 a D-1019) ===
+// 500. "a decoração por uso só lê e só desenha" (F7, D-1010): as regras do que um prédio mostra (G.Atmos.withinRule e oficioRule) e os
+// construtores do desenho de dentro (G.Dentro3D.builder e oficio), em qualquer arquivo de uma onda, seguem o within e o dentro3d.js (as
+// regras 290 a 292): nenhum acaso — nem o do mundo nem o do olhar: a escolha entre jeitos verdadeiros é do G.hash do id —, nenhuma escrita
+// num campo do mundo, da planta ou do within, nenhuma porta que muda o mundo; e o arquivo que constrói não lê o livro, o armazém nem a
+// origem por conta própria (a regra lê pelo c: c.D, c.O, c.ler; o construtor, só o W). Os registros são um só, do atmos.js e do
+// dentro3d.js — a taverna e a casa registradas neles como qualquer uso —, e o within é a soma das regras (o withinOf as aplica)
+{ const at = (src['atmos.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n');
+  if (!/At\.withinRule = function \(uso, fn, o\) \{/.test(at) || !/At\.oficioRule = function \(oficio, fn\) \{/.test(at) || !/At\.withinRule\('taverna', tavernWithin, \{/.test(at)) fails.push('a decoração por uso: o atmos.js sem o registro das regras (G.Atmos.withinRule, oficioRule) ou sem a regra da taverna registrada nele (D-1010)');
+  if (!/for \(const r of rules\) \{ const q = r\.fn\(b, c\);/.test(at)) fails.push('a decoração por uso: o withinOf do atmos.js não aplica as regras do uso (D-1010)');
+  if (!/D\.builder = function \(uso, fn\) \{/.test(dt) || !/D\.oficio = function \(oficio, fn\) \{/.test(dt) || !/D\.builder\('taverna', tavern\);/.test(dt) || !/D\.builder\('casa', house\);/.test(dt) || !/const fn = D\.builderOf\(b\); if \(fn\) fn\(ctx, KIT\);/.test(dt)) fails.push('a decoração por uso: o dentro3d.js sem o registro dos construtores (G.Dentro3D.builder, oficio) ou sem a taverna e a casa registradas nele (D-1010)');
+  if (/if \(b\.type === 'taverna'\) tavern\(ctx\)/.test(dt)) fails.push('a decoração por uso: o build do dentro3d.js escolhe a taverna pelo tipo, fora do registro dos construtores (D-1010)');
+  for (const f of files) {
+    const L = src[f] || []; const all = L.map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n');
+    if (f !== 'atmos.js' && /\bAt\.(?:withinRule|oficioRule)\s*=|\bG\.Atmos\.(?:withinRule|oficioRule)\s*=/.test(all)) fails.push(`a decoração por uso: ${f} escreve o registro das regras do within (só o atmos.js, D-1010)`);
+    if (f !== 'dentro3d.js' && /\bG\.Dentro3D\.(?:builder|oficio|KIT)\s*=/.test(all)) fails.push(`a decoração por uso: ${f} escreve o registro dos construtores (só o dentro3d.js, D-1010)`);
+    if (f === 'atmos.js' || f === 'dentro3d.js') continue;
+    const rule = /\bG\.Atmos\.(?:withinRule|oficioRule)\(/.test(all), bld = /\bG\.Dentro3D\.(?:builder|oficio)\(/.test(all); if (!rule && !bld) continue;
+    L.forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, '');
+      if (/\bG\.(?:R|rr|ri|pick|chance|shuffle|VR|vrr|vri|vpick|vchance|vshuffle)\(|Math\.random/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} tira de um acaso (a escolha é do G.hash do id, D-1010): ${l.trim().slice(0, 100)}`);
+      if (/\b(?:b|v|f|h|op|m|S|G\.S|I|p|it|pl|q|W|ctx\.W)\.[\w.[\]'"]+\s*(?:=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} escreve num campo do mundo, da planta ou do within (D-1010): ${l.trim().slice(0, 100)}`);
+      if (WORLD_WRITE.test(c) || /\b(?:setTask|Vg\.give|Urban\.(?:note|noteB|mourn|remember)|touchWalk)\s*\(/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} abre uma porta que muda o mundo (D-1010): ${l.trim().slice(0, 100)}`);
+      if (bld && /\bG\.(?:Depot|Origem|Eco)\.|\.inv\b|\.pantry\b|f\.stock\b/.test(c)) fails.push(`a decoração por uso: ${f}:${k + 1} constrói lendo o livro, o armazém ou a origem por conta própria (a regra do within lê pelo c; o construtor, só o W — D-1010): ${l.trim().slice(0, 100)}`); }); } }
+// 501. "o que uma peça guarda é o do livro" (D-1011, L-2250): o enchimento das peças de guardar que as caixas desenham (o fillOf do
+// interiors.js, o cx.fill) é o G.Atmos.guardado — a divisão do G.Depot.slots, o negócio da banca, a parte do G.Depot.share do povo —, a
+// mesma leitura da decoração; nunca uma conta própria do b.inv, do b.pantry ou do f.stock
+{ const ir = (src['interiors.js'] || []).join('\n'); const i = ir.indexOf('function fillOf(b, it) {'), j = ir.indexOf('\n  }', i); const f = i < 0 ? '' : ir.slice(i, j);
+  if (!f || !/A\.guardado\(b\)\.find\(q => q\.it === it\.id\)/.test(f) || /\.inv\b|\.pantry\b|\.stock\b|\.coin\b/.test(f)) fails.push('o que uma peça guarda é o do livro: o fillOf do interiors.js não lê o G.Atmos.guardado, ou conta o b.inv, a despensa, as moedas ou o armazém do povo por conta própria (L-2250)');
+  const at = (src['atmos.js'] || []).join('\n'); const a = at.indexOf('At.guardado = function (b) {'), z = at.indexOf('\n  };', a); const g = a < 0 ? '' : at.slice(a, z);
+  if (!g || !/D\.slots\(/.test(g) || !/D\.share\(b\)/.test(g) || !/In\.depotStores\(b\)/.test(g)) fails.push('o que uma peça guarda é o do livro: o G.Atmos.guardado não lê as peças da planta (In.depotStores), o G.Depot.slots e o G.Depot.share (D-1011)'); }
+// 502. "o pano tem dono" (L-2251): o tapete e a tapeçaria que o within diz (W.pano) só de uma casa (quem mora nela) ou de um prédio cujo
+// uso diz de quem é a riqueza que mostra (a regra dono: a taverna, a casa do taverneiro) — a terra cara de um prédio não é a riqueza de
+// ninguém —; e o verificador pergunta pelo dono no CAUSA do tapete e da tapeçaria
+{ const at = (src['atmos.js'] || []).join('\n'); const i = at.indexOf('function withinOf(b) {'), j = at.indexOf('\n  }\n', i); const f = i < 0 ? '' : at.slice(i, j);
+  if (!/const owned = home \|\| !!firstOf\(b, 'dono'\);/.test(f) || !/const pano = owned && \(/.test(f)) fails.push('o pano tem dono: o within dá o tapete e a tapeçaria sem perguntar se o prédio é de uma casa ou de um uso com dono (L-2251)');
+  let inv = ''; try { inv = fs.readFileSync(path.join(dir, '..', 'qa', 'dentro-inv.js'), 'utf8'); } catch (e) { }
+  if (!/tapete: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv) || !/tapecaria: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv)) fails.push('o pano tem dono: o verificador não pergunta pelo dono no CAUSA do tapete e da tapeçaria (L-2251)'); }
+// 503. "a luz de cada povo" (D-1012): como cada povo se ilumina é uma regra do mundo, uma só — o G.Atmos.LUZ (a lamparina que faz e os
+// óleos que queima, a vela, a tocha, o braseiro, a lanterna; o asteca sem lamparina de óleo nem vela) —, lida pelo within (luzOf); o
+// desenho põe o modelo que o within diz e dá a cada luz a força, a cor, o tremor e a chama do G.Luz3D.LAMPS (nenhuma cor de chama escrita
+// no dentro3d.js); toda luz que o atmos.js nomeia tem a sua linha no LAMPS, e todo modelo de luz de um povo, a sua linha na TABLE do deco.py
+{ const at = (src['atmos.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n'), lz = (src['luz3d.js'] || []).join('\n');
+  const i = at.indexOf('At.LUZ = Object.freeze({'), j = at.indexOf('\n  });', i); const T = i < 0 ? '' : at.slice(i, j);
+  for (const c of ['romano', 'grego', 'egipcio', 'asteca', 'nordico', 'classico']) if (!new RegExp(`\\n    ${c}: Object\\.freeze\\(\\{`).test(T)) fails.push(`a luz de cada povo: o G.Atmos.LUZ sem o ${c} (D-1012)`);
+  if (!/asteca: Object\.freeze\(\{[^\n]*k: null[^\n]*vela: 0/.test(T)) fails.push('a luz de cada povo: o asteca com lamparina de óleo ou vela no G.Atmos.LUZ — a luz dele é o ocote e o braseiro (D-1012)');
+  if (!/const luz = luzOf\(b, \{/.test(at) || !/const P = At\.LUZ\[civ\] \|\| At\.LUZ\.classico;/.test(at)) fails.push('a luz de cada povo: o within não lê a luz pelo G.Atmos.LUZ (luzOf, D-1012)');
+  const k = dt.indexOf('function lightsOf(ctx) {'), m = dt.indexOf('\n  }\n', k); const L = k < 0 ? '' : dt.slice(k, m);
+  if (!/G\.Luz3D\.LAMPS/.test(L) || /\[1, 0\.\d+, 0\.\d+\]/.test(L)) fails.push('a luz de cada povo: o lightsOf do dentro3d.js não tira a força, a cor e a chama de cada luz do G.Luz3D.LAMPS (D-1012)');
+  if (/\bconst (LAMP|CANDLE) = \[/.test(dt)) fails.push('a luz de cada povo: o dentro3d.js com a cor de uma chama escrita nele (a do G.Luz3D.LAMPS, D-1012)');
+  const a = lz.indexOf('const LAMPS = {'), z = lz.indexOf('\n  };', a); const LM = a < 0 ? '' : lz.slice(a, z);
+  for (const q of ['lamparina', 'lamparina-foca', 'lamparina-sal', 'vela', 'lanterna', 'tocha', 'braseira', 'lampadario', 'lampadario-vela', 'lampadario-brasa', 'altar'])
+    if (!new RegExp(`[\\s{,]'?${q.replace(/-/g, '\\-')}'?: \\{`).test(LM)) fails.push(`a luz de cada povo: a luz ${q} sem a sua linha no G.Luz3D.LAMPS (D-1012)`);
+  let py = ''; try { py = fs.readFileSync(path.join(dir, '..', 'arte', 'blender', 'deco.py'), 'utf8'); } catch (e) { }
+  const models = new Set(); for (const mm of T.matchAll(/\b(?:k|tocha): '([\w-]+)'/g)) models.add(mm[1]); for (const q of ['vela', 'braseira', 'lanterna']) models.add(q);
+  for (const q of models) if (!new RegExp(`\\('${q.replace(/-/g, '\\-')}', [\\d.]+, [\\d.]+, [\\d.]+, C\\d?\\.`).test(py)) fails.push(`a luz de cada povo: o modelo ${q} sem a sua linha na TABLE do deco.py (D-1012)`); }
+// 504. "o lampadário queima o que o seu povo tem" (L-2252): a peça de luz da planta (o lampadário de cada povo) só acende com o que o seu povo
+// queima nela — o G.Atmos.luzPeca (o óleo, a vela de cera, as brasas da lenha), perguntado pelo G.Luz3D.sources: sem nada, apagada
+{ const lz = (src['luz3d.js'] || []).join('\n'), at = (src['atmos.js'] || []).join('\n'); const i = lz.indexOf('L.sources = function'), j = lz.indexOf('\n  };', i); const f = i < 0 ? '' : lz.slice(i, j);
+  if (!/At\.luzPeca\(b, it\.kind\)/.test(f) || !/if \(q === null\) continue;/.test(f)) fails.push('o lampadário queima o que o seu povo tem: o G.Luz3D.sources acende a peça de luz sem perguntar ao G.Atmos.luzPeca (L-2252)');
+  if (!/At\.luzPeca = function \(b, kind\) \{/.test(at) || !/lampadario: Object\.freeze\(\{ romano: 'oleo', grego: 'oleo', classico: 'oleo', egipcio: 'oleo', nordico: 'vela', asteca: 'brasa' \}\)/.test(at)) fails.push('o lampadário queima o que o seu povo tem: o G.Atmos.luzPeca sem o combustível do lampadário de cada povo (L-2252)'); }
+// 505. "o volume segue toda fonte" (L-2256): a assinatura do volume de dentro (o L.sig do luz3d.js) carrega tudo o que o assado lê de cada
+// fonte — o lugar, a força, o alcance, a cor e o tremor —; com só a força, a lamparina do Nilo que perde o sal (a mesma força, outra cor) e
+// a lamparina posta noutro ponto livre da mesa (o mesmo id) ficavam no volume de antes
+{ const lz = (src['luz3d.js'] || []).join('\n'); const m = /const sig1 = s => `([^`]*)`;/.exec(lz); const f = m ? m[1] : '';
+  for (const k of ['s.id', 's.forca', 's.raio', 's.cor', 's.tremor', 's.x', 's.y', 's.z']) if (!f.includes(k)) fails.push(`o volume segue toda fonte: a assinatura do volume de dentro (L.sig) sem ${k}, que o assado lê (L-2256)`);
+  if (!/L\.sig = \(src, open\) => src\.map\(sig1\)/.test(lz)) fails.push('o volume segue toda fonte: o L.sig não assina cada fonte pelo sig1 (L-2256)'); }
+// 506. "a chama de dentro do tamanho da peça" (L-1882, D-1013): a chama de uma luz de dentro (a decoração, o lampadário, o altar) é desenhada
+// pelo fx3d.js no tamanho da sua fonte (o chama do G.Luz3D.LAMPS); toda linha do LAMPS que não é de uma peça diz a sua chama e a chama que é
+{ const fx = (src['fx3d.js'] || []).join('\n'), lz = (src['luz3d.js'] || []).join('\n');
+  if (!/const k = ls && ls\.chama > 0 \? ls\.chama : q\[3\];/.test(fx)) fails.push('a chama de dentro do tamanho da peça: o fx3d.js desenha a chama de uma luz de dentro sem o chama da sua fonte (L-1882, D-1013)');
+  const a = lz.indexOf('const LAMPS = {'), z = lz.indexOf('\n  };', a); const LM = a < 0 ? '' : lz.slice(a, z);
+  for (const mm of LM.matchAll(/^\s*('?[\w-]+'?): \{([^}]*)\}/gm)) { const nm = mm[1].replace(/'/g, ''), body = mm[2]; if (/\bpeca: 1\b/.test(body) && nm === 'altar') continue;
+    if (!/\bchama: [\d.]+/.test(body) || !/\bkind: '[\w-]+'/.test(body)) fails.push(`a chama de dentro do tamanho da peça: a luz ${nm} do G.Luz3D.LAMPS sem o tamanho da sua chama (chama) ou a chama que é (kind) (L-1882, D-1013)`); } }
+// 507. "o que a vista lê de um prédio está no save" (L-2261, L-2258): o cuidado do desgaste (o careOf do G.Atmos.wear) e a riqueza de um
+// prédio (o G.Atmos.rich) não leem o retrato do dia da cidade (G.Urban.peek, valueAt: o valor da terra) — derivado, nunca no save: depois
+// de um load ele só volta no dia de cada cidade, e o desgaste e a riqueza que a vista mostrava mudavam com um save
+{ const at = (src['atmos.js'] || []).join('\n'); const fnOf = head => { const i = at.indexOf(head); return i < 0 ? null : at.slice(i, at.indexOf('\n  }', i)); };
+  const care = fnOf('function careOf(b) {'), rich = fnOf('At.rich = function (b) {');
+  if (care === null || rich === null) fails.push('o que a vista lê de um prédio está no save: o careOf ou o G.Atmos.rich sumiu do atmos.js (L-2261, L-2258)');
+  else for (const [nm, f] of [['o cuidado do desgaste (careOf)', care], ['o G.Atmos.rich', rich]]) if (/\.peek\(|valueAt\(|\.cells\b|\.value\b/.test(f)) fails.push(`o que a vista lê de um prédio está no save: ${nm} lê o retrato do dia da cidade (G.Urban.peek, valueAt), que não vai no save (L-2261, L-2258)`); }
 // ------------------------------ os interiores 3, a frente X: as bibliotecas dos modelos em pacotes (D-1020 a D-1029; as regras 510 a 519) ------------------------------
 { const libs = [['movelmesh', MOVELIB, 'G.MOVEIS', 'movel'], ['decomesh', DECOLIB, 'G.DECO', 'deco']]; const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
   const html = fs.readFileSync(path.join(dir, '..', 'index.html'), 'utf8');
