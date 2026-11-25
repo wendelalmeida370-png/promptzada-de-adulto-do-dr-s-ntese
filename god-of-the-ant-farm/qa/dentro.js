@@ -13,7 +13,8 @@
 //   d7 o verificador (qa/dentro-inv.js) limpo no mundo e de olhos abertos: uma coisa sem causa, uma flutuando e uma no corredor
 //      plantadas, as três acusadas
 //   d8 o desenho: as malhas por instância (uma por coisa, parte e padrão) com tantas instâncias quanto as partes que aparecem, e o
-//      orçamento da biblioteca (o js/decomesh.js ≤ 2,5 MB, D-748; cada coisa no seu orçamento de triângulos)
+//      orçamento da biblioteca (cada arquivo dela — o índice js/decomesh.js e cada pacote, D-1020 — ≤ 3,5 MB; cada coisa no seu
+//      orçamento de triângulos)
 //   d9 o prato da mesa (D-748): o mundo vivido até alguém ser servido de comer — o prato esvazia pelo que se comeu (o estágio, os
 //      bocados à vista), o vapor só enquanto quente e some ao esfriar (At.COOL), um save no meio da refeição igual, o prato vazio na
 //      mesa ao acabar; e o que fica na mesa depois que o freguês levanta (o registro da P7, plantado) até recolher
@@ -154,11 +155,12 @@ if (want('d8')) {
   const NM = k => (/^(comida|bebida)-/.test(k) ? k : 'deco-' + k);
   const pl = D.plan(b, plan(b), true); let parts = 0; for (const t of pl.list) parts += G.Mesh3D.parts(NM(t.k)).filter(pt => D.shows(pt, t)).length;
   let inst = 0, tris = 0; for (const m of meshes) { if (/^dentro:vapor/.test(m.name)) continue; inst += m.count; tris += m.count * m.geometry.index.count / 3; }
-  const ROOT = path.join(__dirname, '..'); const kb = fs.statSync(path.join(ROOT, 'js', 'decomesh.js')).size / 1024; const B = G.DECO.budget; const bad = [];
+  // (the library's largest file: its index or a pack — each in the budget of a file, the index's own in G.DECO.budget.indice: D-1020)
+  const ROOT = path.join(__dirname, '..'); const lib = ['js/decomesh.js'].concat(Object.values(G.DECO.packs || {}).map(q => q.f)); const kb = Math.max(...lib.map(f => fs.statSync(path.join(ROOT, f)).size)) / 1024; const B = G.DECO.budget; const bad = [];
   for (const n of Object.keys(G.MESH3D)) { if (!/^(deco|comida|bebida)-/.test(n) || /@1$/.test(n)) continue; const d = G.MESH3D[n], d1 = G.MESH3D[n + '@1']; const lim = /^(comida|bebida)-/.test(n) ? B.prato : G.DECO.big.includes(d.kind) ? B.grande : B.coisa;
     if (d.t > lim) bad.push(`${n} ${d.t} > ${lim}`); if (!d1) bad.push(`${n} sem o nível do meio`); else if (d1.t > Math.max(d.t * B.meio, B.meioMin)) bad.push(`${n}@1 ${d1.t}`);
     for (const p of d.parts) { if (!G.DECO.parts.includes(p[0])) bad.push(`${n}: parte ${p[0]}`); if (!D.paintable(p[0])) bad.push(`${n}: a parte ${p[0]} sem tinta no dentro3d.js`); } }
-  ok(`d8 o desenho por instâncias e o orçamento: uma malha por coisa, parte e padrão; as instâncias as partes das coisas; o arquivo no seu orçamento (${B.arquivo} MB) e cada coisa no seu`, meshes.length > 0 && inst <= parts && inst >= parts * 0.7 && kb <= B.arquivo * 1024 && !bad.length, `${b.type}#${b.id}: ${pl.list.length} coisas, ${meshes.length} malhas, ${inst} instâncias de ${parts} partes, ${Math.round(tris)} triângulos; decomesh.js ${kb.toFixed(0)} KB${bad.length ? '; fora: ' + bad.slice(0, 4).join(', ') : ''}`);
+  ok(`d8 o desenho por instâncias e o orçamento: uma malha por coisa, parte e padrão; as instâncias as partes das coisas; cada arquivo da biblioteca no seu orçamento (${B.arquivo} MB) e cada coisa no seu`, meshes.length > 0 && inst <= parts && inst >= parts * 0.7 && kb <= B.arquivo * 1024 && !bad.length, `${b.type}#${b.id}: ${pl.list.length} coisas, ${meshes.length} malhas, ${inst} instâncias de ${parts} partes, ${Math.round(tris)} triângulos; o maior arquivo da biblioteca (de ${lib.length}) ${kb.toFixed(0)} KB${bad.length ? '; fora: ' + bad.slice(0, 4).join(', ') : ''}`);
 }
 
 // ------------------------------ what is served and the marks of the night (D-748, D-749) ------------------------------

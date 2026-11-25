@@ -5,6 +5,9 @@ const dir = path.resolve(process.argv[2] || path.join(__dirname, '..'), 'js');
 // (the insides' pictures in high resolution — js/tex3d-alta-<nome>.js, P8 — are only base64 made by arte/tex_alta.py: their size and
 // their form are rule 320's; read line by line here they cost the guard half again its time)
 const TEXA = /^tex3d-alta-.+\.js$/;
+// (the libraries of the interiors' models — the index and its packs, js/movelmesh*.js and js/decomesh*.js: D-1020 — are only data the
+// generators write: what only is seen, as the files of the 3D are)
+const MOVELIB = /^movelmesh(-[\w-]+)?\.js$/, DECOLIB = /^decomesh(-[\w-]+)?\.js$/;
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.js') && !TEXA.test(f)).sort();
 const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(path.join(dir, f), 'utf8').split('\n')]));
 const fails = [];
@@ -29,7 +32,7 @@ const WALK_OK = [
 const WALK_HOOK = /touchWalk|typeVer|invalidateLand/;
 // 3. "um acaso por sistema": o que só se vê ou se ouve não tira do acaso do mundo (G.R, rr, ri, pick, chance), e ninguém usa Math.random
 const LOOK = ['embriaguez-corpo.js', 'render.js', 'fx.js', 'audio.js', 'audio-src.js', 'cinema.js', 'sky.js', 'photo.js', 'minimap.js', 'ui.js', 'story-ui.js', 'sea-ui.js', 'wars-ui.js', 'story-track.js', 'art.js', 'arch.js', 'cityart.js', 'cave-art.js', 'fauna-art.js', 'talk.js',
-  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js', /* T4, D-851: a tela do jogo de dados */ 'jogo-dados-ui.js', /* T5, D-862, D-869: a arte e a mesa das Tabuletas */ 'cartas-arte.js', 'cartas-ui.js', /* D-940: a festa das mesas */ 'jogo-fx.js', /* D-945: os jogos se ensinam */ 'jogos-ensina.js']; // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
+  'space.js', 'tex3d.js', 'tex3d-alta.js', 'ground3d.js', 'realm3d.js', 'build3d.js', 'people3d.js', 'fx3d.js', 'dragon3d.js', 'things3d.js', 'grass3d.js', 'cam3d.js', 'input3d.js', 'incui.js', 'diario-ui.js', 'modes.js', 'mesh3d.js', 'mesh-dragao.js', 'mesh-dragao2.js', 'mesh-runa.js', 'mesh-portal.js', 'mesh-empena.js', 'mesh-casco.js', 'mesh-banca.js', 'props3d.js', 'body3d.js', 'bodymesh.js', 'fauna3d.js', 'fauna-anim.js', 'fauna-gesto3d.js', 'fauna-receitas.js', 'faunamesh.js', 'post3d.js', 'int-planta.js', 'atmos.js', 'itemarte.js', /* 20d: */ 'itemforma.js', 'itemicons.js', 'inv-ui.js', /* 20f: */ 'combate-clips.js', 'combate3d.js', 'combate-ui.js', /* 20e: */ 'mira3d.js', 'guardados-ui.js', 'interacao-clips.js', /* 21: */ 'arvore3d.js', 'mata3d.js', 'geo3d.js', 'agua3d.js', 'ceu3d.js', /* 22a: */ 'look3d.js', 'feicao.js', 'retrato3d.js', /* 22c: */ 'vida3d.js', 'vida-clips.js', 'social-clips.js', /* 23, os interiores 2.0: */ 'luz3d.js', 'movel3d.js', 'movelmesh.js', 'dentro3d.js', 'decomesh.js', 'grupo-clips.js', 'duo-clips.js', /* P7, D-767 a D-769: o cardápio da taverna e os gestos da mesa */ 'cardapio-ui.js', 'mesa-clips.js', /* T4, D-851: a tela do jogo de dados */ 'jogo-dados-ui.js', /* T5, D-862, D-869: a arte e a mesa das Tabuletas */ 'cartas-arte.js', 'cartas-ui.js', /* D-940: a festa das mesas */ 'jogo-fx.js', /* D-945: os jogos se ensinam */ 'jogos-ensina.js'].concat(/* D-1020: os pacotes das bibliotecas dos modelos */ files.filter(f => /^(?:movelmesh|decomesh)-[\w-]+\.js$/.test(f))); // (the 3D view of the Modo Encarnado: only seen; the gameplay base's drawing and screens, JOGABILIDADE.md)
 // (drawing functions outside the drawing files may ask the camera: they are listed here)
 const VIEW_OK = [['naval.js', 'const face = G.Render.sface(s);'], ['carnage.js', 'const rv = G.Render.rot();'], ['siege.js', 'ctx.scale(G.Render.sface(e), 1)'], ['save.js', 'view: G.Render.rot()'], ['main.js', 'G.Render.rot']];
 const RANDOM_OK = [
@@ -1871,15 +1874,18 @@ for (const f of files) { if (f === 'soc-tutela.js') continue; src[f].forEach((l,
   let o = null; try { o = JSON.parse(fs.readFileSync(path.join(__dirname, 'oldsave_7.json'), 'utf8')); } catch (e) { fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json não abre (' + e.message.slice(0, 60) + ')'); }
   if (o && (o.oresV || (o.ores || []).some(q => q.kind === 'cobre' || q.kind === 'estanho'))) fails.push('o save antigo das provas é fixo: o qa/oldsave_7.json já tem as jazidas do bronze — um save novo no lugar do antigo (L-1715; o de antes está no 580a920)'); }
 // ------------------------------ os interiores 2.0, a frente P2: os móveis modelados (D-710 a D-719; as regras 260 a 269) ------------------------------
-// 260. "os móveis são do Blender" (D-711): o js/movelmesh.js é escrito pelo arte/blender/moveis.py — o cabeçalho o diz, o script
-// existe, e cada modelo é uma linha só (M["movel-…"] = {…};), refeita por comando, nunca à mão
-{ const mm = src['movelmesh.js'] || []; const root = path.resolve(dir, '..');
+// 260. "os móveis são do Blender" (D-711): os js/movelmesh*.js — o índice e os pacotes (D-1020) — são escritos pelo
+// arte/blender/moveis.py — o cabeçalho de cada um o diz, o script existe, e cada modelo é uma linha só (M["movel-…"] = {…};), refeita
+// por comando, nunca à mão
+{ const root = path.resolve(dir, '..');
   if (!fs.existsSync(path.join(root, 'arte', 'blender', 'moveis.py'))) fails.push('os móveis são do Blender: falta o arte/blender/moveis.py que escreve o js/movelmesh.js (D-711)');
-  if (!/made in Blender by arte\/blender\/moveis\.py/.test(mm.slice(0, 4).join('\n'))) fails.push('os móveis são do Blender: o js/movelmesh.js sem o cabeçalho de quem o gera (D-711)');
-  mm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["movel-[\w~@-]+"\] = \{.*\};$/.test(l)) fails.push(`os móveis são do Blender: movelmesh.js:${k + 1} não é a linha de um modelo como o moveis.py a escreve (D-711)`); }); }
+  if (!src['movelmesh.js']) fails.push('os móveis são do Blender: falta o js/movelmesh.js, o índice dos móveis (D-711, D-1020)');
+  for (const f of files.filter(f => MOVELIB.test(f))) { const mm = src[f] || [];
+    if (!/made in Blender by arte\/blender\/moveis\.py/.test(mm.slice(0, 4).join('\n'))) fails.push(`os móveis são do Blender: o js/${f} sem o cabeçalho de quem o gera (D-711)`);
+    mm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["movel-[\w~@-]+"\] = \{.*\};$/.test(l)) fails.push(`os móveis são do Blender: ${f}:${k + 1} não é a linha de um modelo como o moveis.py a escreve (D-711)`); }); } }
 // 261. "o móvel pela porta" (D-712): só o movel3d.js lê os modelos dos móveis pelo nome ('movel-…'); o 3D chega a eles pela porta
-// G.Movel3D (pick, paint, parts, partGeo, anchorsOf) — nunca pelo G.MESH3D direto
-for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]movel-/.test(c)) fails.push(`o móvel pela porta: ${f}:${k + 1} lê um modelo dos móveis pelo nome (é do G.Movel3D, D-712)`); }); }
+// G.Movel3D (pick, paint, parts, partGeo, anchorsOf) — nunca pelo G.MESH3D direto (e os arquivos da biblioteca os escrevem: D-1020)
+for (const f of files) { if (f === 'movel3d.js' || MOVELIB.test(f)) continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`]movel-/.test(c)) fails.push(`o móvel pela porta: ${f}:${k + 1} lê um modelo dos móveis pelo nome (é do G.Movel3D, D-712)`); }); }
 // 262. "o modelo antes da caixa" (D-712): no B3.interior cada peça pergunta primeiro ao G.Movel3D (o modelo do povo dela, no
 // tamanho dela, a rica da casa rica) e só sem modelo — ou com um que não cabe sob o teto do cômodo — cai nas caixas do FURN
 { const b3 = (src['build3d.js'] || []).join('\n');
@@ -2122,14 +2128,15 @@ for (const f of files) { if (f === 'movel3d.js' || f === 'movelmesh.js') continu
   if (!dt.some(l => /G\.Atmos\.within\(b\)/.test(l))) fails.push('o dentro3d.js só desenha: o dentro3d.js não pergunta ao G.Atmos.within (D-742)'); }
 // 293. "a coisa pela porta" (D-743, D-748): só o dentro3d.js lê as coisas da decoração pelo nome ('deco-…', e os pratos e as bebidas:
 // 'comida-…', 'bebida-…'); o resto pergunta ao G.Dentro3D — o desenho das mãos (P6) pelo G.Dentro3D.served
-for (const f of files) { if (f === 'dentro3d.js' || f === 'decomesh.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`](?:deco|comida|bebida)-/.test(c)) fails.push(`a coisa pela porta: ${f}:${k + 1} lê uma coisa da decoração pelo nome (é do G.Dentro3D, D-743)`); }); }
-// 294. "as coisas são do Blender" (D-743, D-745): o js/decomesh.js é escrito pelo arte/blender/deco.py — o cabeçalho o diz, o script
-// existe e cada linha de modelo é como ele a escreve
+for (const f of files) { if (f === 'dentro3d.js' || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/['"`](?:deco|comida|bebida)-/.test(c)) fails.push(`a coisa pela porta: ${f}:${k + 1} lê uma coisa da decoração pelo nome (é do G.Dentro3D, D-743)`); }); }
+// 294. "as coisas são do Blender" (D-743, D-745): os js/decomesh*.js — o índice e os pacotes (D-1020) — são escritos pelo
+// arte/blender/deco.py — o cabeçalho de cada um o diz, o script existe e cada linha de modelo é como ele a escreve
 { const dm = src['decomesh.js'] || []; const root = path.resolve(dir, '..');
   if (!dm.length) fails.push('as coisas são do Blender: falta o js/decomesh.js (D-743)');
   if (!fs.existsSync(path.join(root, 'arte', 'blender', 'deco.py'))) fails.push('as coisas são do Blender: falta o arte/blender/deco.py que escreve o js/decomesh.js (D-743)');
-  if (dm.length && !/made in Blender by arte\/blender\/deco\.py/.test(dm.slice(0, 4).join('\n'))) fails.push('as coisas são do Blender: o js/decomesh.js sem o cabeçalho de quem o gera (D-743)');
-  dm.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["(?:deco|comida|bebida)-[\w-]+(@1)?"\] = \{.*\};$/.test(l)) fails.push(`as coisas são do Blender: decomesh.js:${k + 1} não é a linha de uma coisa como o deco.py a escreve (D-743)`); });
+  for (const f of files.filter(f => DECOLIB.test(f))) { const dd = src[f] || [];
+    if (dd.length && !/made in Blender by arte\/blender\/deco\.py/.test(dd.slice(0, 4).join('\n'))) fails.push(`as coisas são do Blender: o js/${f} sem o cabeçalho de quem o gera (D-743)`);
+    dd.forEach((l, k) => { if (/^\s*M\[/.test(l) && !/^ {2}M\["(?:deco|comida|bebida)-[\w-]+(@1)?"\] = \{.*\};$/.test(l)) fails.push(`as coisas são do Blender: ${f}:${k + 1} não é a linha de uma coisa como o deco.py a escreve (D-743)`); }); }
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8'); const iM = html.indexOf('src="js/mesh3d.js"'), iD = html.indexOf('src="js/decomesh.js"'), iT = html.indexOf('src="js/dentro3d.js"');
   if (!(iM >= 0 && iM < iD && iD < iT)) fails.push('as coisas são do Blender: o index.html não carrega o decomesh.js entre o mesh3d.js e o dentro3d.js (D-743)'); }
 // 295. "a decoração entra pelo desenho dos móveis" (D-742): o build3d.js põe as coisas pelo G.Dentro3D.draw no grupo dos móveis (com
@@ -3033,5 +3040,83 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
   if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
   if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
+// ------------------------------ os interiores 3, a frente X: as bibliotecas dos modelos em pacotes (D-1020 a D-1029; as regras 510 a 519) ------------------------------
+{ const libs = [['movelmesh', MOVELIB, 'G.MOVEIS', 'movel'], ['decomesh', DECOLIB, 'G.DECO', 'deco']]; const code = l => l.replace(/(^|\s)\/\/\s.*$/, '');
+  const html = fs.readFileSync(path.join(dir, '..', 'index.html'), 'utf8');
+  const index = (lib, obj) => { const l = (src[lib + '.js'] || []).find(x => x.startsWith(`  ${obj} = {`)); try { return l ? JSON.parse(l.slice(l.indexOf('{'), l.lastIndexOf('}') + 1)) : null; } catch (e) { return null; } };
+  const models = f => (src[f] || []).map(l => (l.match(/^ {2}M\["([^"]+)"\] = (\{.*\});$/) || [])).filter(m => m.length).map(m => ({ name: m[1], line: m[2] }));
+  const kindOf = line => (line.match(/"kind":"([^"]+)"/) || [])[1];
+  // 510. "os pacotes pelo arquivo de cada um" (D-1020, D-1022): cada biblioteca dos modelos de dentro é um índice — o js/movelmesh.js, o
+  // js/decomesh.js, no index.html — e os seus pacotes, um arquivo uma família (js/movelmesh-<família>.js, js/decomesh-<família>.js), que
+  // só o carregador do movel3d.js pede (o G.Movel3D.pacote, por uma tag de script, quando uma peça da família é desenhada): nenhum pacote
+  // no index.html (carregaria no começo do jogo, sempre, como as bibliotecas inteiras de antes); cada pacote que o índice nomeia tem o
+  // seu arquivo, e cada arquivo é de um pacote nomeado; e nenhum outro arquivo do jogo nomeia o arquivo de um pacote
+  for (const [lib, re, obj] of libs) { const P = index(lib, obj);
+    if (!/<script src="js\/movelmesh\.js"><\/script>/.test(html) || !/<script src="js\/decomesh\.js"><\/script>/.test(html)) fails.push('os pacotes pelo arquivo de cada um: o index.html sem um dos índices das bibliotecas (js/movelmesh.js, js/decomesh.js: D-1020)');
+    if (new RegExp(`<script src="js/${lib}-`).test(html)) fails.push(`os pacotes pelo arquivo de cada um: um pacote da biblioteca ${lib} no index.html — carregaria no começo do jogo, sempre (só o movel3d.js o pede: D-1020)`);
+    if (!P || !P.packs || !P.of) { fails.push(`os pacotes pelo arquivo de cada um: o js/${lib}.js sem o índice dos pacotes (${obj}: packs, of — D-1020)`); continue; }
+    const named = new Set(Object.keys(P.packs).map(fam => `${lib}-${fam}.js`));
+    for (const fam of Object.keys(P.packs)) { if (P.packs[fam].f !== `js/${lib}-${fam}.js`) fails.push(`os pacotes pelo arquivo de cada um: o pacote ${fam} de ${lib} no arquivo ${P.packs[fam].f} (D-1020)`); if (!src[`${lib}-${fam}.js`]) fails.push(`os pacotes pelo arquivo de cada um: o pacote ${fam} de ${lib} sem o seu arquivo js/${lib}-${fam}.js (D-1020)`); }
+    for (const f of files.filter(f => re.test(f) && f !== lib + '.js')) if (!named.has(f)) fails.push(`os pacotes pelo arquivo de cada um: js/${f} é um pacote que o índice js/${lib}.js não nomeia (D-1020)`); }
+  for (const f of files) { if (MOVELIB.test(f) || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { if (/(?:movelmesh|decomesh)-[\w-]+\.js/.test(code(l))) fails.push(`os pacotes pelo arquivo de cada um: ${f}:${k + 1} nomeia o arquivo de um pacote — quem pede um pacote é o G.Movel3D.pacote, pelo índice (D-1022)`); }); }
+  { const mv = (src['movel3d.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n');
+    if (!/const s = doc\.createElement\('script'\); s\.async = true; s\.src = file;/.test(mv)) fails.push('os pacotes pelo arquivo de cada um: o G.Movel3D.script não pede o arquivo de um pacote por uma tag de script (o jogo abre do disco: D-1022)');
+    if (/createElement\(['"]script['"]\)/.test(dt)) fails.push('os pacotes pelo arquivo de cada um: o dentro3d.js cria uma tag de script — a decoração pede os seus pacotes pelo G.Movel3D.pacote (D-1022)'); }
+  // 511. "a base é o que a casca e a rua desenham" (D-1020): o índice dos móveis traz, além do índice, só os modelos da família «base» — a
+  // folha da porta (a casca do interior aberto) e as peças de um quintal (o pedaço da rua): o que se desenha uma vez e não espera um
+  // pacote, porque nada o refaz quando o pacote chega —; o índice da decoração não traz modelo nenhum (a decoração vai toda pelo desenho
+  // dos móveis, que se refaz)
+  { const P = index('movelmesh', 'G.MOVEIS'); if (P && P.of) {
+      if (P.of.folha !== 'base') fails.push('a base é o que a casca e a rua desenham: a folha da porta fora da base (a casca do interior aberto não a esperaria: D-1020)');
+      for (const m of models('movelmesh.js')) if (P.of[kindOf(m.line)] !== 'base') fails.push(`a base é o que a casca e a rua desenham: o índice js/movelmesh.js traz o ${m.name}, da família «${P.of[kindOf(m.line)]}» (o seu lugar é o pacote dela: D-1020)`); }
+    if (models('decomesh.js').length) fails.push(`a base é o que a casca e a rua desenham: o índice js/decomesh.js traz ${models('decomesh.js').length} modelos (a decoração vai toda nos pacotes: D-1020)`); }
+  // 512. "um modelo, um pacote" (D-1020): cada modelo de uma biblioteca está num arquivo só dela, o pacote da família do seu tipo (o of
+  // do índice; a base no índice); todo tipo do índice tem os seus modelos, e todo modelo o seu tipo no índice; o número de cada pacote é o
+  // que ele traz
+  for (const [lib, re, obj] of libs) { const P = index(lib, obj); if (!P || !P.of || !P.packs) continue; const at = new Map(); const kinds = new Set(); const per = {};
+    for (const f of files.filter(f => re.test(f))) for (const m of models(f)) { if (at.has(m.name)) fails.push(`um modelo, um pacote: ${m.name} em dois arquivos (js/${at.get(m.name)} e js/${f}: D-1020)`); at.set(m.name, f); per[f] = (per[f] || 0) + 1;
+      const k = kindOf(m.line); kinds.add(k); const fam = P.of[k]; const want = fam === 'base' ? lib + '.js' : `${lib}-${fam}.js`;
+      if (!fam) fails.push(`um modelo, um pacote: ${m.name} — o tipo ${k} sem a sua família no índice js/${lib}.js (D-1020)`); else if (f !== want) fails.push(`um modelo, um pacote: ${m.name} no js/${f}, e a família do ${k} é «${fam}» (js/${want}: D-1020)`); }
+    for (const k of Object.keys(P.of)) if (!kinds.has(k)) fails.push(`um modelo, um pacote: o tipo ${k} no índice js/${lib}.js sem modelo nenhum (D-1020)`);
+    for (const fam of Object.keys(P.packs)) if ((per[`${lib}-${fam}.js`] || 0) !== P.packs[fam].n) fails.push(`um modelo, um pacote: o pacote ${fam} de ${lib} diz ${P.packs[fam].n} modelos e traz ${per[`${lib}-${fam}.js`] || 0} (D-1020)`); }
+  // 513. "o desenho espera o pacote e se refaz quando ele chega" (D-1022): o G.Movel3D.pick pede o pacote do tipo antes de escolher o modelo
+  // (sem ele, nenhum modelo: as caixas do FURN, como antes), e a assinatura do G.Movel3D.look leva os pacotes que chegaram (o V.gen: um a
+  // mais, e o que se desenha de um interior aberto é feito de novo); a decoração pede o pacote da coisa no seu MESH (sem ele, a coisa não
+  // está); cada pacote, ao chegar, diz que chegou (o G.PACOTES, que o V.ready lê, e o G.Movel3D.got)
+  { const mv = (src['movel3d.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n');
+    if (!/V\.pick = function \(kind, civ, w, d, h, vr\) \{\n    if \(!V\.pacote\('movel', V\.familyOf\('movel', kind\)\)\) return null;/.test(mv)) fails.push('o desenho espera o pacote: o G.Movel3D.pick escolhe um modelo sem pedir o pacote do tipo (D-1022)');
+    if (!/out\.sig = \[civ, metal \|\| '-', out\.bronze \? 1 : 0, out\.couro \? 1 : 0, out\.barro \? 1 : 0, weave \? 1 : 0, r, 'p' \+ GEN\]\.join\('\|'\);/.test(mv)) fails.push('o desenho se refaz quando o pacote chega: a assinatura do G.Movel3D.look sem os pacotes que chegaram (o V.gen: D-1022)');
+    if (!/V\.got = function \(lib, fam\) \{ asked\.delete\(lib \+ ':' \+ fam\); GEN\+\+; \};/.test(mv)) fails.push('o desenho se refaz quando o pacote chega: o G.Movel3D.got não conta o pacote que chegou (D-1022)');
+    if (!/const MESH = k => \{ const m = G\.MESH3D \? G\.MESH3D\[NAME\(k\)\] : null; if \(m \|\| !G\.DECO \|\| !G\.DECO\.of \|\| !G\.Movel3D \|\| !G\.Movel3D\.pacote\) return m \|\| null;\n    G\.Movel3D\.pacote\('deco', G\.DECO\.of\[k\]\); return null; \};/.test(dt)) fails.push('o desenho espera o pacote: o MESH do dentro3d.js não pede o pacote da coisa que não está (D-1022)');
+    for (const [lib, re] of libs) for (const f of files.filter(f => re.test(f) && f !== lib + '.js')) { const fam = f.slice(lib.length + 1, -3); const L = libs.find(q => q[0] === lib)[3];
+      if (!(src[f] || []).some(l => l === `  (G.PACOTES = G.PACOTES || {})["${L}:${fam}"] = ${models(f).length}; if (G.Movel3D && G.Movel3D.got) G.Movel3D.got('${L}', "${fam}");`)) fails.push(`o desenho se refaz quando o pacote chega: o js/${f} não diz que chegou (o G.PACOTES e o G.Movel3D.got: D-1022)`); } }
+  // 514. "os modelos de dentro em 16 bits" (D-1021): todo modelo das duas bibliotecas está na forma 2 — os pontos e o uv como inteiros de
+  // 16 bits sobre as suas caixas, as normais octaédricas em dois bytes (p16, n8, u16) —, nunca os números de ponto flutuante de antes; e só
+  // o mesh3d.js (o G.Mesh3D, o leitor de todo G.MESH3D) lê essa forma: ninguém decodifica um modelo por conta própria
+  for (const f of files.filter(f => MOVELIB.test(f) || DECOLIB.test(f))) for (const m of models(f)) if (!/^\{"v":2,"n":\d+,"t":\d+,"box":\[[^\]]*\],"p16":"[^"]*","n8":"[^"]*",/.test(m.line) || /"pos":"/.test(m.line)) fails.push(`os modelos de dentro em 16 bits: ${m.name} (js/${f}) não está na forma 2 (D-1021)`);
+  for (const f of files) { if (f === 'mesh3d.js' || MOVELIB.test(f) || DECOLIB.test(f)) continue; (src[f] || []).forEach((l, k) => { if (/\.(?:p16|n8|u16)\b/.test(code(l))) fails.push(`os modelos de dentro em 16 bits: ${f}:${k + 1} lê a forma de 16 bits de um modelo por conta própria (é do G.Mesh3D: D-1021)`); }); }
+  // 515. "as mãos pelo carregador" (L-2262): o que as mãos seguram de uma taverna — a caneca servida (G.Dentro3D.served) e o pano do ombro
+  // do taverneiro (G.Dentro3D.ombro) — chega ao seu modelo pelo carregador das malhas (o MESH do dentro3d.js), como toda coisa da
+  // decoração: o pacote pedido quando não está; nunca o G.Mesh3D.parts de um nome que ninguém pediu
+  { const dt = (src['dentro3d.js'] || []).join('\n');
+    if (!/const parts = \(MESH\(name\) && G\.Mesh3D \? G\.Mesh3D\.parts\(name\) : \[\]\)\.filter\(pt => shows\(pt, t\)\);/.test(dt)) fails.push('as mãos pelo carregador: o G.Dentro3D.served lê o modelo da caneca ou do prato sem pedir o seu pacote (o MESH: L-2262)');
+    if (!/return \{ name, parts: MESH\('pano-ombro'\) && G\.Mesh3D \? G\.Mesh3D\.parts\(name\) : \[\],/.test(dt)) fails.push('as mãos pelo carregador: o G.Dentro3D.ombro lê o modelo do pano sem pedir o seu pacote (o MESH: L-2262)'); }
+  // 516. "o mundo pede os pacotes dos seus prédios" (D-1025): uma família que não é cedo diz os tipos de prédio que a desenham (tipos, no
+  // índice; o TIPOS do arte/blender/pacotes.py), e o mundo aberto pede na hora as famílias dos tipos que tem — o gancho do mundo agenda o
+  // G.Movel3D.forWorld para depois de o mundo estar dentro (o gancho roda antes dos prédios); a família cedo não tem tipos
+  { const mv = (src['movel3d.js'] || []).join('\n');
+    if (!/if \(G\.worldHooks\) G\.worldHooks\.push\(\(\) => \{ if \(typeof setTimeout === 'function'\) setTimeout\(V\.forWorld, 0\); \}\);/.test(mv)) fails.push('o mundo pede os pacotes dos seus prédios: o movel3d.js não agenda o G.Movel3D.forWorld ao abrir um mundo (D-1025)');
+    if (!/const T = P\.packs\[fam\]\.tipos; if \(T && T\.some\(t => types\.has\(t\)\)\) \{ V\.pacote\(lib, fam\);/.test(mv)) fails.push('o mundo pede os pacotes dos seus prédios: o G.Movel3D.forWorld não pede as famílias pelos tipos do índice (D-1025)');
+    for (const [lib, , obj] of libs) { const P = index(lib, obj); if (!P || !P.packs) continue; for (const fam of Object.keys(P.packs)) { const T = P.packs[fam].tipos;
+      if (T !== undefined && !(Array.isArray(T) && T.length && T.every(t => typeof t === 'string' && /^[a-z_]+$/.test(t)))) fails.push(`o mundo pede os pacotes dos seus prédios: os tipos do pacote ${fam} de ${lib} não são uma lista de tipos de prédio (D-1025)`);
+      if (T && P.packs[fam].cedo) fails.push(`o mundo pede os pacotes dos seus prédios: o pacote ${fam} de ${lib} é cedo e tem tipos — uma coisa ou a outra (D-1025)`); } } }
+  // 517. "o quintal diz o que espera" (D-1027): o número do quintal (o G.Movel3D.yardSig — o que a assinatura da casca de um prédio leva para
+  // o pedaço da rua se refazer quando chega o pacote de uma peça do seu quintal) lê só o índice e os pacotes que chegaram (o V.familyOf e o
+  // V.ready): puro, nada do mundo, nenhum sorteio, nenhum pedido — quem pede o pacote é o desenho (o V.pick); e, onde o Build3D.shellSig o
+  // leva, leva-o pela casca do próprio prédio (o S.yard do B3.shellOf)
+  { const mv = (src['movel3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+    if (!/V\.yardSig = function \(yard\) \{\n    let h = 0; if \(yard\) for \(const it of yard\) \{ const f = V\.familyOf\('movel', it\.kind\); if \(f && f !== 'base'\) h = \(Math\.imul\(h, 3\) \+ \(V\.ready\('movel', f\) \? 2 : 1\)\) \| 0; \}\n    return h;\n  \};/.test(mv)) fails.push('o quintal diz o que espera: o G.Movel3D.yardSig não é o número puro dos pacotes do quintal (o V.familyOf e o V.ready, nada mais: D-1027)');
+    if (/yardSig\(/.test(b3) && !/if \(S && S\.yard && G\.Movel3D && G\.Movel3D\.yardSig\) h = \(Math\.imul\(h, 31\) \+ G\.Movel3D\.yardSig\(S\.yard\)\) \| 0;/.test(b3)) fails.push('o quintal diz o que espera: o build3d.js lê o G.Movel3D.yardSig fora da casca do prédio no B3.shellSig (D-1027)'); }
+}
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

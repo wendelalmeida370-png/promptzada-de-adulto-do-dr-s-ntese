@@ -2,7 +2,9 @@
 const M = require('../nodemundo.js');
 const fs = require('fs');
 const G = M.load({}); const In = G.Interiors;
-const mesh = fs.readFileSync(require('path').join(__dirname, '..', '..', 'js', 'movelmesh.js'), 'utf8');
+// (the furniture's library is an index and its packs — js/movelmesh.js, js/movelmesh-<família>.js, D-1020 —: every file of it read, T-2163)
+const JSD = require('path').join(__dirname, '..', '..', 'js');
+const mesh = fs.readdirSync(JSD).filter(f => /^movelmesh(-[\w-]+)?\.js$/.test(f)).sort().map(f => fs.readFileSync(require('path').join(JSD, f), 'utf8')).join('\n');
 const models = new Set([...mesh.matchAll(/M\["movel-([a-z-]+?)-(romano|classico|grego|egipcio|nordico|asteca)/g)].map(m => m[1]));
 const P = require('./plantas.json');
 const use = {}; for (const p of P.real.concat(P.sample)) for (const k in p.items) { (use[k] = use[k] || new Set()).add(p.t); }

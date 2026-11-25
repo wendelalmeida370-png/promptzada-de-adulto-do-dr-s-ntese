@@ -83,14 +83,20 @@ for (const W of WORLDS) {
     if (hadF === undefined) delete had.ferro; else had.ferro = hadF; if (artF === undefined) delete f.tech.known.ferro;
     console.log(`  (m4: taverna#${b.id}, ${look0.civ}, o metal ${look0.metal || 'nenhum'} → ferro: ${JSON.stringify(m0)} → ${JSON.stringify(m1)})`); did4 = true;
   }
-  // m5: the rich house and the keeper who dies (a Roman or classical tavern: they have the rich pieces)
+  // m5: the rich house and the keeper who dies (the tavern of a people with a rich piece of its own — the Roman's and the classical's
+  // round table, the Greek's long table —, or any; the rich piece of a people that has one, the Roman's where the tavern's people has
+  // none: the ready worlds have no Roman tavern since they were made again, and the first Greek one asked for a round table it has
+  // never had — T-2160)
   if (!did5) {
-    const b = ts.find(t => ['romano', 'classico', 'grego'].includes(MV.look(t).civ) && G.Taverna.keeperOf(t)); if (b) {
+    const RICH = [['mesa-redonda', 0.9, 0.9, 0.74], ['mesa-taverna', 1.6, 0.8, 0.74]];
+    const richOf = c => RICH.find(([kd, w, d, hh]) => { const p = MV.pick(kd, c, w, d, hh, 'rico'); return !!p && /~rico/.test(p.name); });
+    const b = ts.find(t => richOf(MV.look(t).civ) && G.Taverna.keeperOf(t)) || ts.find(t => G.Taverna.keeperOf(t)); if (b) {
       const k = G.Taverna.keeperOf(b), h = S.buildings.get(k.home); const coin0 = h ? h.coin : 0;
       if (h) h.coin = 500; const rich = MV.look(b); if (h) h.coin = 0; const poor = MV.look(b); if (h) h.coin = coin0;
       if (h && (rich.rico !== 2 || poor.rico !== 0)) bad.m5.push(`taverna#${b.id}: a riqueza do taverneiro não chega à taverna (${rich.rico}, ${poor.rico})`);
-      const pr = MV.pick('mesa-redonda', rich.civ, 0.9, 0.9, 0.74, 'rico'), pp = MV.pick('mesa-redonda', rich.civ, 0.9, 0.9, 0.74, '');
-      if (!pr || !pp || pr.name === pp.name || !/~rico/.test(pr.name)) bad.m5.push(`a mesa redonda do ${rich.civ} rico é a mesma do pobre (${pr && pr.name}, ${pp && pp.name})`);
+      const civR = richOf(rich.civ) ? rich.civ : 'romano'; const [kd, w, d, hh] = richOf(civR);
+      const pr = MV.pick(kd, civR, w, d, hh, 'rico'), pp = MV.pick(kd, civR, w, d, hh, '');
+      if (!pr || !pp || pr.name === pp.name || !/~rico/.test(pr.name)) bad.m5.push(`a ${kd} do ${civR} rico é a mesma do pobre (${pr && pr.name}, ${pp && pp.name})`);
       if (MV.pick('mesa-redonda', 'nordico', 0.9, 0.9, 0.74, 'rico').name !== MV.pick('mesa-redonda', 'nordico', 0.9, 0.9, 0.74, '').name) bad.m5.push('o povo sem a peça rica não ganhou a dela');
       G.Village.kill(k); const after = MV.look(b); let o2 = null; try { o2 = B3.interior(In.plan(b), b, { fine: true }); } catch (e) { bad.m5.push(`taverna#${b.id}: o taverneiro morto, o desenho quebrou (${e.message})`); }
       if (o2 && !o2.inst.length) bad.m5.push(`taverna#${b.id}: o taverneiro morto, nenhum móvel`);
