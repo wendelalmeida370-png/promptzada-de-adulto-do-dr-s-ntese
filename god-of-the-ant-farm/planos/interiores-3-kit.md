@@ -317,6 +317,11 @@ supervisor). `node qa/plantas-iguais.js sobe forja` é a prova da própria vers�
   assento sobre a peça por conta própria); conte segundos do mundo.
 - **R13, o desempenho**: cada tipo com a sua meta de tempo de planta (a taverna: 400 ms).
 - **R14, o catálogo**: a versão do tipo (§9).
+- **A receita não quebra onde não vale** (L-2230): o catálogo prova cada família em toda chave do tipo — todo povo, terra quente ou
+  não, cada riqueza —, também onde o `can` dela a recusa (as regras dependem de cada prédio e são lidas na hora). Uma receita que lê
+  o que pode não existir (a forma de um povo que não tem a forma, `G.Forma.of`; uma peça que o povo não tem) diz o porquê em
+  `P.errs` e volta, nunca quebra: o erro de JavaScript vira o motivo guardado no catálogo (o celeiro pela forma guardava «Invalid
+  value used as weak map key» em 24 chaves).
 - **A planta não muda de tamanho** (D-663): o lote é o do degrau; o espaço é da receita.
 - **Ninguém sentado no ar** (regra 271): todo lugar sentado sobre uma peça de sentar — o `P.groups` recusa outro; para um lugar fora
   dos grupos (o tear, a roda do oleiro), a frente S (F2) traz o assento.
@@ -325,7 +330,8 @@ supervisor). `node qa/plantas-iguais.js sobe forja` é a prova da própria vers�
 
 - `node qa/motor-plantas.js` — a parte 6 prova cada ferramenta com receitas de teste (as escolhas e o espelho, a zona de caminho e a
   de posto na planta, o corredor com o tronco e a recusa, a reserva, os grupos com o papel na planta, o modelo de assento no ar
-  recusado, a riqueza por uma regra de teste).
+  recusado), e a parte 7 a riqueza por uma regra de teste num prédio do mundo pronto «cidade» (7) e a faixa do motor contra a conta
+  da taverna de antes (7b).
 - `node qa/taverna-padrao.js` — a taverna, a primeira receita do kit (t1 a t3 em minutos; `N=12 ONLY=t1,t2,t3,t4,t5` antes da versão).
 - `node qa/plantas-iguais.js compara ANTES.json` / `sobe TIPO` — as plantas iguais byte a byte; a versão por tipo.
 - `node qa/catalogo.js confere 30` / `confere TIPO` — o catálogo em dia; a versão de cada tipo no arquivo.
