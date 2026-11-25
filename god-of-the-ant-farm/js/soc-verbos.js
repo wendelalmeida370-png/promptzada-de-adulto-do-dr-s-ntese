@@ -17,6 +17,26 @@
   const near = (a, b, t) => { const p = at(a), q = at(b); return G.dist(p[0], p[1], q[0], q[1]) <= t; };
   // (one in the body's own room — the tavern it sits in, its house —, there to be spoken to where they are: L-2170)
   const room = (o, me) => !!o.inside && o.inside === me.inside;
+  // (a wall of a building's plan between two points of one storey — metres of the lot —: the line sampled on the plan's grid every 6 cm,
+  // as the plan's own reach is (interiors.js); pure, the plan read by the world's own door (G.Interiors.plan). One across a wall is not in
+  // the room: the body does not turn to them, and they do not see what it does — in the houses of rooms the body spoke to the one beyond
+  // the wall, and the kitchen saw the kiss in the hall: L-2271)
+  const TILE = 4; // (metres a tile of the world — the plans')
+  SV.parede = function (b, lv, ax, az, bx, bz) {
+    const In = G.Interiors; const p = b && In && In.plan ? In.plan(b) : null; const g = p && p.grid && p.grid.lv ? p.grid.lv[lv || 0] : null; if (!g) return false;
+    const n = p.grid.n, cs = p.grid.cs, W = In.CELL.WALL; const k = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.06));
+    for (let q = 0; q <= k; q++) { const x = Math.floor((ax + (bx - ax) * q / k) / cs), z = Math.floor((az + (bz - az) * q / k) / cs); if (x >= 0 && z >= 0 && x < n && z < n && g[z * n + x] === W) return true; }
+    return false;
+  };
+  // (where one is for the eyes and the word: in a room at one's place, In.posOf — the body where it stands, on its own storey)
+  const spot = v => { const p = at(v); if (v.inside && S_().avatar && S_().avatar.id === v.id) { const lv = G.Possess && G.Possess.level ? G.Possess.level() : undefined; return [p[0], p[1], Number.isFinite(lv) ? lv : p[2]]; } return p; };
+  // two in one building see each other: the same storey, no wall of its plan between them; two in the street, always; one in and one
+  // out, never (pure: the eyes of a room, the word of the body)
+  SV.veem = function (a, c) {
+    if (!a || !c) return false; if (!a.inside || !c.inside) return !a.inside && !c.inside; if (a.inside !== c.inside) return false;
+    const p = spot(a), q = spot(c); if (p[2] !== q[2]) return false; const b = S_().buildings.get(a.inside); if (!b) return true;
+    return !SV.parede(b, p[2], (p[0] - b.x) * TILE, (p[1] - b.y) * TILE, (q[0] - b.x) * TILE, (q[1] - b.y) * TILE);
+  };
   // (the two at the tables of an open tavern: the body's there, by the tavern's own reading — G.Taverna.corpo)
   const atTav = (o, me) => room(o, me) && !!(G.Taverna && G.Taverna.corpo && G.Taverna.convida && G.Taverna.corpo(me));
   const oa = v => (v && v.g === 'f' ? 'a' : 'o');
@@ -32,8 +52,8 @@
   // who is looking: the awake people of twelve or more within six metres of the two (the shame and the pride of being seen)
   SV.olhos = function (o, me) {
     let n = 0; const r2 = 1.5 * 1.5; const q = at(o);
-    // (in a room, the ones in it: the tavern's tables look on as the street does — L-2172)
-    for (const p of S_().villagers.values()) { if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside)) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) < r2) n++; }
+    // (in a room, the ones in it: the tavern's tables look on as the street does — L-2172 —, on its storey and this side of its walls — L-2271)
+    for (const p of S_().villagers.values()) { if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside) || (o.inside && !SV.veem(o, p))) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) < r2) n++; }
     return n;
   };
   // how the other reads the body now: what they feel (the kin's base and what life did), the name the body has in their town, the
@@ -54,6 +74,7 @@
     if (o.sleeping) return { ok: false, why: `${Who(me, o)} está dormindo.` };
     if (o.age < 4) return { ok: false, why: `${Who(me, o)} é pequen${oa(o)} demais.` };
     if ((o.inside && !room(o, me)) || o.aboard || o.held || o.air || o.jail || o.ug || o.captive) return { ok: false, why: `Agora não dá com ${who(me, o)}.` };
+    if (o.inside && !SV.veem(me, o)) return { ok: false, why: `${Who(me, o)} está do outro lado da parede.` }; // (L-2271)
     if (o.task && o.task.pri > 1.2 && !(o.task.type === 'resposta' && o.task.id === me.id)) return { ok: false, why: `${Who(me, o)} está ocupad${oa(o)} com algo que não pode esperar.` };
     if (!near(me, o, 1)) return { ok: false, why: 'Longe demais.' };
     return { ok: true };
@@ -156,7 +177,7 @@
         L().ato(me, o, 'insulto'); L().marca(o, 'insultou', me.id, 40); deed('insulto');
         // (who saw it thinks less of the body: up to four of the ones looking)
         let k = 0; const r2 = 1.5 * 1.5;
-        { const q = at(o); for (const p of S_().villagers.values()) { if (k >= 4) break; if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside)) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) >= r2) continue; L().ato(p, me, 'atrito'); k++; } } // (in a room, the ones in it: L-2172)
+        { const q = at(o); for (const p of S_().villagers.values()) { if (k >= 4) break; if (p === o || p === me || p.sleeping || p.age < 12 || (p.inside && p.inside !== o.inside) || (!p.inside && o.inside) || (o.inside && !SV.veem(o, p))) continue; const w = p.inside ? at(p) : [p.x, p.y]; if (G.dist2(w[0], w[1], q[0], q[1]) >= r2) continue; L().ato(p, me, 'atrito'); k++; } } // (in a room, the ones in it, this side of its walls: L-2172, L-2271)
         const orgulho = R.ag * 0.7 + R.imp * 0.3 + Math.min(4, R.olhos) * 0.05 - R.neu * 0.3;
         const amigo = SV.defende(me, o);
         if (orgulho > 0.7 && !amigo && hits(o, me)) return { ok: true, say: `${Who(me, o)} não engole o insulto e parte para cima de você!` };

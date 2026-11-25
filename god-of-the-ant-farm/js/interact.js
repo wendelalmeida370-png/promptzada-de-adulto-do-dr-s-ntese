@@ -389,6 +389,9 @@
         if (o.inside) {
           if (!ind || !ind.b || o.inside !== ind.b.id || o.sleeping || o.age < 2 || !In || !In.posOf || (In.passage && In.passage(o))) continue; // (a baby in the room is no one to turn to: it is in someone's arms or its crib)
           const p = In.posOf(o); if (!p || p[2] !== ind.lv || Math.abs(p[0] - ctx.x) > R || Math.abs(p[1] - ctx.y) > R) continue;
+          // (and on this side of the room's walls: one beyond a wall of the plan — the next room of a house, the neighbours of an insula,
+          // the hall beside the throne — is no one the body turns to: L-2271)
+          const B = ind.b; if (G.SocVerbos && G.SocVerbos.parede && G.SocVerbos.parede(B, ind.lv, ctx.X - B.x * L(), ctx.Z - B.y * L(), (p[0] - B.x) * L(), (p[1] - B.y) * L())) continue;
           out.push({ o, X: p[0] * L(), Z: p[1] * L(), room: ind.b.id, pref: I.ROOM_PREF }); continue;
         }
         if (Math.abs(o.x - ctx.x) > R || Math.abs(o.y - ctx.y) > R) continue;
