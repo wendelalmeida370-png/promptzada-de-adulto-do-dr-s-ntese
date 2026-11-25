@@ -10,8 +10,8 @@
 //       rests and the broth's level; no model of before missing
 // And the packs, in the game in Node (qa/visual/tres-node.js with the libraries' indexes alone — pacotes: false —, the packs let in by
 // the proof's own hand, as the page's script tags would):
-//   p2. the base is what the shell and the street draw: the leaf of a door and every piece the ready worlds' plans put in a yard are of
-//       the family «base», in the index — the only models there —; nothing else
+//   p2. the base is what the shell and the street draw: the leaf of a door of the family «base», in the index — the only models there
+//       are the base's —, and in the base only the leaf and the pieces the ready worlds' plans put in a yard; nothing else
 //   p3. without the packs, the drawing of today without models: a tavern of the world opened as the game opens it (Build3D.insideTick)
 //       — every piece of a pack by the boxes of the FURN, the leaves of its doors by their model (the base), the decoration without the
 //       things of the packs —, no error; the packs of its families asked for, once (asked again, not asked twice)
@@ -31,6 +31,10 @@
 //       once it is in, the families whose types it has and no other; a new world without them asks for none
 //   p11. the hands ask for the pack of what they hold (L-2262): the cup served and the keeper's cloth by the loader — asked for while
 //       out, nothing of the model in the hands; with every pack in, the models
+//   p12. the yard waits for its pack, and the street is drawn again when it comes (D-1027): a piece of a yard given (planted) a family
+//       whose pack is out — by the boxes, its pack asked for —, then the pack in — by its model —: the yard's number (G.Movel3D.yardSig)
+//       changes; where Build3D.shellSig carries it (the line for the supervisor), the building's part of its chunk's signature changes
+//       too, and a yard's piece may live in a family's pack; where it does not, every piece of a yard with a model is in the base
 const fs = require('fs'), path = require('path'), vm = require('vm'), cp = require('child_process');
 const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..'));
 const BASE = process.env.BASE || '5c482ef';
@@ -135,15 +139,16 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
   const b = taverns().find(t => G.Taverna.keeperOf(t)) || taverns()[0]; const plan = G.Space.planNow(b);
   const fams = lib => Object.keys((lib === 'movel' ? G.MOVEIS : G.DECO).packs).sort();
 
-  // ---- p2: the base is what the shell and the street draw
-  { const bad = []; const yard = new Set();
-    for (const w of ['metropole', 'mundial', 'mega']) { M.pronto(w); for (const q of S().buildings.values()) { if (!q.built || !In.has(q)) continue; const p = G.Space.planNow(q); if (!p || !p.items) continue; for (const it of p.items) if (it.yard) yard.add(it.kind); } }
+  // ---- p2: the base is what the shell and the street draw (whether a piece of a yard may be out of it is the p12's)
+  const YARD = new Set(); let YARD_AT = null; // (the kinds of the pieces of the ready worlds' yards; the first building with one of a model: [world, id, kind])
+  { const bad = [];
+    for (const w of ['metropole', 'mundial', 'mega']) { M.pronto(w); for (const q of [...S().buildings.values()].sort((a, c) => a.id - c.id)) { if (!q.built || !In.has(q)) continue; const p = G.Space.planNow(q); if (!p || !p.items) continue;
+      for (const it of p.items) if (it.yard) { YARD.add(it.kind); if (!YARD_AT && G.MOVEIS.of[it.kind]) YARD_AT = [w, q.id, it.kind]; } } }
     const P = G.MOVEIS; const base = Object.keys(P.of).filter(k => P.of[k] === 'base').sort();
-    const need = ['folha'].concat([...yard].filter(k => P.of[k])).sort(); // (a piece of a yard with a model of its own; the others are the boxes')
-    for (const k of need) if (P.of[k] !== 'base') bad.push(`${k} (de um quintal ou a folha) na família «${P.of[k]}»`);
-    for (const k of base) if (!need.includes(k)) bad.push(`${k} na base, sem ser da casca nem de um quintal`);
+    if (P.of.folha !== 'base') bad.push(`a folha da porta na família «${P.of.folha}»`);
+    for (const k of base) if (k !== 'folha' && !YARD.has(k)) bad.push(`${k} na base, sem ser da casca nem de um quintal`);
     const inIdx = Object.keys(G.MESH3D).filter(n => /^movel-/.test(n)); for (const n of inIdx) if (P.of[G.MESH3D[n].kind] !== 'base') bad.push(`${n} no índice, sem ser da base`);
-    ok('p2 a base é o que a casca e a rua desenham: a folha da porta e cada peça de um quintal com modelo, no índice — e nada mais', !bad.length && inIdx.length > 0, `a base: ${base.join(', ')} (${inIdx.length} modelos no índice); os quintais dos mundos prontos: ${[...yard].sort().join(', ')}${few(bad)}`);
+    ok('p2 a base é o que a casca e a rua desenham: a folha da porta no índice, e na base só ela e as peças de um quintal — nada mais', !bad.length && inIdx.length > 0, `a base: ${base.join(', ')} (${inIdx.length} modelos no índice); os quintais dos mundos prontos: ${[...YARD].sort().join(', ')}${few(bad)}`);
     M.pronto('metropole');
   }
   const b1 = S().buildings.get(b.id); const plan1 = G.Space.planNow(b1);
@@ -256,6 +261,35 @@ const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.0
       const dp = D.groupsOf(D.plan(t, p, true), t, [0, 0, 0], 0); const things = new Set(dp.map(g => g.name)).size;
       rows.push(`#${t.id} ${gs.length}+${dp.length} → ${models}+${things} (os móveis a meio caminho: ${half})`); mx = [Math.max(mx[0], gs.length + dp.length), Math.max(mx[1], models + things), Math.max(mx[2], gs.length), Math.max(mx[3], half), Math.max(mx[4], models)]; }
     ok('p9 (medida, D-665, D-1023) as malhas de uma taverna — os móveis + as coisas, uma por modelo, parte e padrão — e as que seriam com as partes de um modelo numa malha', true, `${rows.join(' · ')}; no máximo ${mx[0]} → ${mx[1]}; só os móveis: ${mx[2]} → ${mx[4]} (a meio caminho, sem sombreador novo: ${mx[3]})`);
+  }
+  // ---- p12: the yard waits for its pack, and the street is drawn again when it comes (D-1027) — a piece of a yard is drawn into the
+  // street's chunk, drawn again only when its signature changes: G.Movel3D.yardSig, the number of its packs, changes when one comes in
+  // (planted here: a yard's kind given a family whose pack is out — the file held in the proof's hand —, then let in as its file would
+  // say so); with that number in Build3D.shellSig (the line for the supervisor) the chunk's signature changes too, and a piece of a
+  // yard may be in a family's pack; without it, every piece of a yard with a model is in the base
+  { const bad = []; const P = G.MOVEIS; let q0 = null, k0 = null, line = false, info = '';
+    if (YARD_AT) { M.pronto(YARD_AT[0]); q0 = S().buildings.get(YARD_AT[1]); k0 = YARD_AT[2]; if (q0) G.Space.planNow(q0); }
+    const Sh0 = q0 && B3.shellOf(q0); if (!Sh0 || !(Sh0.yard || []).some(t => t.kind === k0)) { bad.push(`nenhum prédio dos mundos prontos com uma peça de quintal com modelo na casca (${YARD_AT ? YARD_AT.join(' ') : '-'})`); q0 = null; }
+    if (q0) { const Sh = Sh0, look = MV.look(q0), it = Sh.yard.find(t => t.kind === k0), fam0 = P.of[k0], FAM = 'p12';
+      // (the piece as the street draws it: its rectangle across and deep by its turn — Build3D's shellYard)
+      const r = it.r, side = Math.abs(Math.sin(it.rot || 0)) > 0.5, w = side ? r[3] - r[1] : r[2] - r[0], d = side ? r[2] - r[0] : r[3] - r[1];
+      const y0 = MV.yardSig(Sh.yard); P.of[k0] = FAM; P.packs[FAM] = { f: 'js/movelmesh-p12.js', n: 0 };
+      // (the building's part of its chunk's signature — Build3D.sig over its own lot: what the street compares to draw it again)
+      const cs = () => B3.sig(q0.x, q0.y, 1);
+      try {
+        const h1 = B3.shellSig(q0), c1 = cs(), pk0 = MV.pick(k0, look.civ, w, d, it.h, look.rico >= 2 ? 'rico' : ''), y1 = MV.yardSig(Sh.yard); const asked = held.some(h => h.file.endsWith('movelmesh-p12.js'));
+        (G.PACOTES = G.PACOTES || {})['movel:' + FAM] = 1; MV.got('movel', FAM); const i = held.findIndex(h => h.file.endsWith('movelmesh-p12.js')); if (i >= 0) held.splice(i, 1)[0].done(true);
+        const pk1 = MV.pick(k0, look.civ, w, d, it.h, look.rico >= 2 ? 'rico' : ''), y2 = MV.yardSig(Sh.yard), h2 = B3.shellSig(q0), c2 = cs();
+        if (pk0) bad.push('a peça do quintal pelo modelo com o pacote fora'); if (!asked) bad.push('a peça do quintal não pediu o seu pacote'); if (!pk1) bad.push('a peça do quintal sem o modelo com o pacote dentro');
+        if (y1 === y2) bad.push('o número do quintal não mudou quando o pacote chegou');
+        line = h1 !== h2; if (line && c1 === c2) bad.push('o Build3D.shellSig mudou e a assinatura do pedaço da rua não');
+        info = `${q0.type}#${q0.id} (${k0}): o número do quintal ${y0} → ${y1} (o pacote fora) → ${y2} (dentro); o Build3D.shellSig ${line ? `muda com ele, e o pedaço da rua ${c1 !== c2 ? 'também' : 'NÃO'}` : 'não o leva (a linha do D-1027, do supervisor)'}`;
+      } finally { P.of[k0] = fam0; delete P.packs[FAM]; delete G.PACOTES['movel:' + FAM]; }
+    }
+    // (without the line, nothing draws the street again when a pack comes: every piece of a yard with a model in the base)
+    if (!line) for (const k of [...YARD].sort()) if (P.of[k] && P.of[k] !== 'base') bad.push(`${k} (de um quintal) na família «${P.of[k]}», e a rua não se refaz quando o pacote chega`);
+    ok('p12 o quintal espera o seu pacote e a rua se refaz quando ele chega (D-1027): o número do quintal muda com o pacote; sem ele no Build3D.shellSig, toda peça de quintal com modelo na base', !bad.length,
+      `${info}; as peças de quintal com modelo: ${[...YARD].filter(k => P.of[k]).sort().join(', ') || '-'}${few(bad)}`);
   }
   const E = M.erros(); const con = E.console.filter((l, i) => !planted.includes(i));
   ok('sem erro de módulo nem aviso no console (fora a falha plantada da p5)', !Object.keys(E.mod).length && !con.length, JSON.stringify(E.mod).slice(0, 200) + ' ' + con.slice(0, 3).join(' | '));

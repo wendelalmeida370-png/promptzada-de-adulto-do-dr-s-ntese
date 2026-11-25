@@ -7,12 +7,60 @@
 // drawn, as qa/visual/fotos.js does) and the eye on the hall from two sides: taverna-a.png, taverna-b.png. Side by side:
 // python3 qa/visual/compara.py ANTES DEPOIS SAIDA. With SEM=1, the packs are not waited for: sem-pacote.png is the tavern as the
 // page draws it before its pack comes (its own pieces by the boxes), chegou.png the same eye once every pack is in and a second of
-// the world has passed (the inside drawn again by itself, D-1022)
+// the world has passed (the inside drawn again by itself, D-1022).
+// With CARGA=n, no photos — what the page costs to open, before and after (D-1026):
+//   CARGA=5 bash qa/navegador.sh node qa/visual/pacotes-fotos.js PASTA_DO_JOGO [OUTRA_PASTA…]
+// each folder n times, the rounds interleaved (the machine is shared: its load drifts), each in a fresh context of the browser (nothing
+// kept from the round before): the bytes of JavaScript the page's own script tags bring, and of them the libraries of the interiors'
+// models; the time until the DOM is read and until the page has run every script of index.html (its load event) — by the clock, and
+// by the work of the page's own thread (Chrome's metrics in the thread's time: what the machine's load does not stretch — the tasks,
+// the scripts run, their compiling); the JS heap then, after a collection; and, where the game has packs, the time for every one of
+// them asked for at once to come in, and the heap with them all in — the medians, and every round
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
-const path = require('path'); const fs = require('fs');
-const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); const OUT = process.argv[3] || path.join(require('os').tmpdir(), 'pacotes-fotos'); const WORLD = process.argv[4] || 'metropole';
-fs.mkdirSync(OUT, { recursive: true });
+const path = require('path'); const fs = require('fs'); const os = require('os');
+const CARGA = +process.env.CARGA || 0;
+const ROOT = path.resolve(process.argv[2] || path.join(__dirname, '..', '..')); const OUT = process.argv[3] || path.join(os.tmpdir(), 'pacotes-fotos'); const WORLD = process.argv[4] || 'metropole';
+if (!CARGA) fs.mkdirSync(OUT, { recursive: true });
+// (the page's own JavaScript, by the script tags of its index.html; the libraries' files among them, and the packs beside them)
+const LIBF = /^js\/(?:movelmesh|decomesh)(?:-[\w-]+)?\.js$/;
+function bytesOf(root) {
+  const tags = [...fs.readFileSync(path.join(root, 'index.html'), 'utf8').matchAll(/<script src="([^"]+)"><\/script>/g)].map(m => m[1]);
+  const size = f => (fs.existsSync(path.join(root, f)) ? fs.statSync(path.join(root, f)).size : 0);
+  const packs = fs.readdirSync(path.join(root, 'js')).filter(f => /^(?:movelmesh|decomesh)-[\w-]+\.js$/.test(f)).map(f => 'js/' + f);
+  return { js: tags.reduce((s, f) => s + size(f), 0), lib: tags.filter(f => LIBF.test(f)).reduce((s, f) => s + size(f), 0), packs: packs.reduce((s, f) => s + size(f), 0), npacks: packs.length };
+}
+async function carga(roots, n) {
+  const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192 --expose-gc', '--enable-precise-memory-info', '--enable-unsafe-swiftshader'] });
+  const rows = new Map(roots.map(r => [r, []])); const mib = b => b / 1048576;
+  const heap = page => page.evaluate(() => { if (window.gc) { window.gc(); window.gc(); } return performance.memory ? performance.memory.usedJSHeapSize : -1; });
+  console.log(`a máquina: carga ${os.loadavg().map(v => v.toFixed(1)).join(' ')} (${os.cpus().length} núcleos)`);
+  for (let k = 0; k < n; k++) for (const root of roots) {
+    const cx = await browser.newContext({ viewport: { width: 1000, height: 620 } }); const page = await cx.newPage(); const errs = [];
+    page.on('pageerror', e => errs.push(e.message));
+    await page.addInitScript(() => { window.requestAnimationFrame = () => 0; try { localStorage.clear(); } catch (e) { } });
+    await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+    const cdp = await cx.newCDPSession(page); await cdp.send('Performance.enable', { timeDomain: 'threadTicks' });
+    await page.goto('file://' + path.join(root, 'index.html'), { waitUntil: 'load' });
+    const nav = await page.evaluate(() => { const e = performance.getEntriesByType('navigation')[0]; return { dcl: e.domContentLoadedEventEnd, load: e.loadEventEnd }; });
+    const pm = {}; for (const q of (await cdp.send('Performance.getMetrics')).metrics) pm[q.name] = q.value * 1000; // (seconds to ms)
+    const r = { dcl: nav.dcl, load: nav.load, task: pm.TaskDuration, script: pm.ScriptDuration, compile: pm.V8CompileDuration, heap: await heap(page), packs: -1, heapAll: -1 };
+    if (await page.evaluate(() => !!(window.G && G.Movel3D && G.Movel3D.wantAll))) {
+      const t0 = await page.evaluate(() => performance.now()); await page.waitForFunction(() => G.Movel3D.wantAll(), null, { timeout: 120000, polling: 10 });
+      r.packs = (await page.evaluate(() => performance.now())) - t0; r.heapAll = await heap(page);
+    }
+    r.err = errs.slice(0, 2).join(' | '); rows.get(root).push(r); await cx.close();
+  }
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
+  for (const root of roots) { const R = rows.get(root); const B = bytesOf(root); const has = R[0].packs >= 0;
+    console.log(`${root}\n  o JavaScript da página ${(B.js / 1024).toFixed(0)} KB, dos quais as bibliotecas dos modelos ${(B.lib / 1024).toFixed(0)} KB; ${B.npacks ? `os ${B.npacks} pacotes ${(B.packs / 1024).toFixed(0)} KB, fora da página` : 'nenhum pacote'}`);
+    console.log(`  a mediana de ${R.length}: o DOM em ${med(R.map(q => q.dcl)).toFixed(0)} ms, a página carregada em ${med(R.map(q => q.load)).toFixed(0)} ms (o trabalho da linha da página ${med(R.map(q => q.task)).toFixed(0)} ms: os scripts ${med(R.map(q => q.script)).toFixed(0)}, compilá-los ${med(R.map(q => q.compile)).toFixed(0)}), a memória do JS ${mib(med(R.map(q => q.heap))).toFixed(1)} MiB` +
+      (has ? `; os pacotes todos em ${med(R.map(q => q.packs)).toFixed(0)} ms depois de pedidos, a memória com eles ${mib(med(R.map(q => q.heapAll))).toFixed(1)} MiB` : ''));
+    R.forEach((q, i) => console.log(`    vez ${i + 1}: o DOM ${q.dcl.toFixed(0)} ms, carregada ${q.load.toFixed(0)} ms (o trabalho ${q.task.toFixed(0)}, os scripts ${q.script.toFixed(0)}, compilar ${q.compile.toFixed(0)}), ${mib(q.heap).toFixed(1)} MiB` + (q.packs >= 0 ? `; os pacotes ${q.packs.toFixed(0)} ms, ${mib(q.heapAll).toFixed(1)} MiB` : '') + (q.err ? ` · erro: ${q.err}` : ''))); }
+  console.log(`a máquina no fim: carga ${os.loadavg().map(v => v.toFixed(1)).join(' ')}`);
+  await browser.close();
+}
 (async () => {
+  if (CARGA) return carga(process.argv.slice(2).length ? process.argv.slice(2).map(p => path.resolve(p)) : [ROOT], CARGA);
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: +process.env.VW || 1000, height: +process.env.VH || 620 } });
   const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { const t = m.text(); if ((m.type() === 'warning' || m.type() === 'error') && !/ERR_FAILED|fonts|GL Driver|GroupMarker|software WebGL|WebGL: INVALID|CONTEXT_LOST/.test(t)) errs.push('console: ' + t.slice(0, 300)); });

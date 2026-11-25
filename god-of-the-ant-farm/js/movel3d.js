@@ -102,6 +102,14 @@
     return out;
   };
   if (G.worldHooks) G.worldHooks.push(() => { if (typeof setTimeout === 'function') setTimeout(V.forWorld, 0); });
+  // what of the packs a building's yard waits for (D-1027): a piece of a yard is drawn into the street's own chunk, which is drawn again
+  // only when its signature changes (Build3D.sig, a building's part by Build3D.shellSig) — a number that changes when the pack of one of
+  // its pieces comes in: each piece whose family is not the base, in or not yet. With it in the shell's signature, a yard's pieces may
+  // be in the pack of their building's family, as an inside's are, and the base keeps only the leaf of the door. Pure: the page's packs
+  V.yardSig = function (yard) {
+    let h = 0; if (yard) for (const it of yard) { const f = V.familyOf('movel', it.kind); if (f && f !== 'base') h = (Math.imul(h, 3) + (V.ready('movel', f) ? 2 : 1)) | 0; }
+    return h;
+  };
 
   // ------------------------------ the models of the file ------------------------------
   // (kind → the people's tag — 'romano', 'romano~rico' — → its models, by size; made once, from what the files hold — the index's

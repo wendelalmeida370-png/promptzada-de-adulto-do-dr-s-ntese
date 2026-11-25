@@ -3110,6 +3110,13 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
     for (const [lib, , obj] of libs) { const P = index(lib, obj); if (!P || !P.packs) continue; for (const fam of Object.keys(P.packs)) { const T = P.packs[fam].tipos;
       if (T !== undefined && !(Array.isArray(T) && T.length && T.every(t => typeof t === 'string' && /^[a-z_]+$/.test(t)))) fails.push(`o mundo pede os pacotes dos seus prédios: os tipos do pacote ${fam} de ${lib} não são uma lista de tipos de prédio (D-1025)`);
       if (T && P.packs[fam].cedo) fails.push(`o mundo pede os pacotes dos seus prédios: o pacote ${fam} de ${lib} é cedo e tem tipos — uma coisa ou a outra (D-1025)`); } } }
+  // 517. "o quintal diz o que espera" (D-1027): o número do quintal (o G.Movel3D.yardSig — o que a assinatura da casca de um prédio leva para
+  // o pedaço da rua se refazer quando chega o pacote de uma peça do seu quintal) lê só o índice e os pacotes que chegaram (o V.familyOf e o
+  // V.ready): puro, nada do mundo, nenhum sorteio, nenhum pedido — quem pede o pacote é o desenho (o V.pick); e, onde o Build3D.shellSig o
+  // leva, leva-o pela casca do próprio prédio (o S.yard do B3.shellOf)
+  { const mv = (src['movel3d.js'] || []).join('\n'), b3 = (src['build3d.js'] || []).join('\n');
+    if (!/V\.yardSig = function \(yard\) \{\n    let h = 0; if \(yard\) for \(const it of yard\) \{ const f = V\.familyOf\('movel', it\.kind\); if \(f && f !== 'base'\) h = \(Math\.imul\(h, 3\) \+ \(V\.ready\('movel', f\) \? 2 : 1\)\) \| 0; \}\n    return h;\n  \};/.test(mv)) fails.push('o quintal diz o que espera: o G.Movel3D.yardSig não é o número puro dos pacotes do quintal (o V.familyOf e o V.ready, nada mais: D-1027)');
+    if (/yardSig\(/.test(b3) && !/if \(S && S\.yard && G\.Movel3D && G\.Movel3D\.yardSig\) h = \(Math\.imul\(h, 31\) \+ G\.Movel3D\.yardSig\(S\.yard\)\) \| 0;/.test(b3)) fails.push('o quintal diz o que espera: o build3d.js lê o G.Movel3D.yardSig fora da casca do prédio no B3.shellSig (D-1027)'); }
 }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

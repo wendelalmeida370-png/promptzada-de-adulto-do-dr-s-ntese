@@ -81,7 +81,10 @@ def worst(): return f"os 16 bits: o ponto mais longe a {WORST['pos'] * 1000:.3f}
 # a model is in the pack of the family of what it is for —
 #   · 'base': what the shell and the street draw at first sight — the leaf of a door (the shell of an inside open), the pieces of a
 #     yard (drawn into the street's own picture, which a pack that comes later does not make again) —: in the index itself, never
-#     waiting for a pack;
+#     waiting for a pack. The pieces of a yard only until the street's chunk carries what its yard's packs are (G.Movel3D.yardSig in
+#     Build3D.shellSig — the line for the supervisor, D-1027): with it, a yard's piece goes to the family of its building, by its
+#     TIPOS, as an inside's does, and the base keeps the leaf alone (a kind of a yard is ≈ 76 KB of the index, whose budget holds
+#     three or four more: the potter's yard has six pieces, none of them modelled yet — the proof p12 of qa/visual/pacotes.js);
 #   · 'comum': what every inside has — to sit, to set down, to keep, to light; the vessels, the cups and the food of a shelf, the cloth,
 #     the pegs, the years' marks —: the pack every inside asks for, asked a few seconds after the page opens (CEDO);
 #   · 'casa': to sleep and to cook at home — the houses, and the rooms of whoever lives in a building (the seat, the tavern's inn);
@@ -171,7 +174,8 @@ def files(lib, lines, index_text, pack_text, budget):
         elif fam in TIPOS[ln]: meta[fam]['tipos'] = sorted(TIPOS[ln][fam])
     out[f'{lib}.js'] = index_text(groups.get('base', {}), {k: of[k] for k in sorted(of)}, meta)
     for f, t in out.items():
-        lim = budget['indice'] if f == f'{lib}.js' else budget['arquivo']
+        idx = f == f'{lib}.js'; lim = budget['indice'] if idx else budget['arquivo']
+        if mib(t) > lim and idx: raise SystemExit(f'js/{f}: {mib(t):.2f} MiB, passa do orçamento do índice ({lim} MiB) — a base é só a folha da porta e as peças de quintal: com a linha do D-1027 no Build3D.shellSig (o G.Movel3D.yardSig), ponha as peças de quintal na família do seu prédio (MOVEL e TIPOS, no arte/blender/pacotes.py)')
         if mib(t) > lim: raise SystemExit(f'js/{f}: {mib(t):.2f} MiB, passa do orçamento ({lim} MiB) — divida a família em duas no arte/blender/pacotes.py')
     if sum(mib(t) for t in out.values()) > budget['todos']: raise SystemExit(f"a biblioteca {lib} passa de {budget['todos']} MiB")
     return out, sorted(loose)
