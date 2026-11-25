@@ -8,6 +8,7 @@
 // no ponto do cômodo mais longe dela, olhando a luz.
 //   bash qa/navegador.sh node qa/visual/luz-povos-fotos.js PASTA [PASTA_DO_JOGO]     env: WORLD (metropole), Q (media), HOUR (21.5), TAG, CASA,
 //   FRAMES (160: os quadros de cada casa, no máximo — param quando a luz está assada, nunca menos de 24),
+//   DEUS (um bem — azeite —: a mão do deus dá três a cada povo pelo livro antes das fotos; o clássico de um mundo novo pode não ter o que queimar),
 //   CASOS (a linha «CASOS …» que outra rodada imprimiu: as mesmas casas e o mesmo olho — o «antes» de uma luz que não havia)
 // A pasta do jogo dá o «antes» (uma cópia do jogo de antes: as mesmas casas, a luz de antes). FALHA: um erro de página, um aviso ou um
 // erro no console, um erro de módulo
@@ -39,6 +40,9 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
     if (env.CL) G.Main.newGame({ type: 'ilha', size: 64, tribes: 2, temper: 'normal', clima: 'variado', classic: 1, seed: env.SEED }); else G.Save.apply(JSON.parse(G.Ready.data[env.W]));
     G.Main.mode = 'game'; document.querySelector('#menu').classList.add('hidden'); G.UI.showHUD(true); G.UI.setSpeed(1); if (G.Audio) G.Audio.mute = true;
     if (env.CL) for (let k = 0; k < 900; k++) G.debug.step(0.1); // (the new world's first houses up)
+    // (DEUS=azeite: the god's hand gives every people three of it, by the book — a world of the dawn of the cities may have nothing to burn
+    // yet, and its lamp stays out: nada vem do nada; the scene of the lamp lit is the god's gift, as the d17 of qa/dentro.js gives it)
+    if (env.DEUS) { G.inSim++; try { for (const f of G.S.factions.values()) if (f) G.Depot.make('f:' + f.id, env.DEUS, 3, { code: 'prova' }); } finally { G.inSim--; } }
     const S = G.S, In = G.Interiors, Sp = G.Space, TL = Sp.TILE; const CORE = ['mesa-casa', 'mesa', 'mesa-baixa', 'esteira-comer', 'mesa-terreiro', 'bancada'];
     const civOf = b => b.style || ((G.Fac.ofSet(b.set) || {}).civ) || 'classico';
     // (a household of each people: a plan with a table the family eats at; one body for all — someone awake inside: the light lit —, taken
@@ -62,7 +66,7 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
     window.__body = body.id;
     window.__cases = cases.map(c => ({ civ: c.civ, id: c.b.id, t: c.t.id, luz: c.t.id === 'luz' ? c.t : null }));
     return { body: body.id, cases: cases.map(c => `${c.civ}: ${c.b.type}#${c.b.id} (${c.t.id === 'luz' ? `a luz na parede: ${c.t.kind}${c.t.round ? ', a cabana redonda' : ''}` : 'a mesa ' + c.t.kind})`) };
-  }, { Q: process.env.Q || 'media', W, CL, SEED: +process.env.SEED || 4242, CASA: process.env.CASA || 'mesa', CASOS: process.env.CASOS || '' });
+  }, { Q: process.env.Q || 'media', W, CL, SEED: +process.env.SEED || 4242, CASA: process.env.CASA || 'mesa', CASOS: process.env.CASOS || '', DEUS: process.env.DEUS || '' });
   console.log(JSON.stringify(info));
   console.log('CASOS ' + JSON.stringify(await page.evaluate(() => window.__cases))); // (for the «before»: CASOS='…' the same houses and eye)
   const cases = await page.evaluate(() => window.__cases);
