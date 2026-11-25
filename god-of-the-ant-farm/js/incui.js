@@ -480,9 +480,9 @@
   function renderPrompt(c) {
     const pr = $('.ih-prompt', hud); const I = G.Interact;
     G.People3D.highlight = best && best.id === 'pessoa' && !hudOff ? best.t.o.id : 0; // (the mark over the one faced is the screen's)
-    // (the table one sits at, with its bar in sight: the bar says its E and its verbs — the prompt would say them again over it; the E
-    // still does the table's E: acoes-ui.js, the wave 4 I)
-    const tableBar = !!(best && best.id === 'taverna' && !best.t.bal && G.AcoesUI && G.AcoesUI.mesaOn && G.AcoesUI.mesaOn());
+    // (the place one is at, with its bar in sight — the tavern's table, the throne a wave gives its bar —: the bar says its E and its verbs,
+    // and the prompt would say them again over it; the E still does the place's E: acoes-ui.js, the wave 4 I, F14 — G.AcoesUI.daBarra)
+    const tableBar = !!(best && G.AcoesUI && G.AcoesUI.daBarra && G.AcoesUI.daBarra(best));
     if (!best || tableBar) { pr.classList.add('hidden'); aim.verbs = null; aim.hv = false; return; }
     pr.classList.remove('hidden'); pr.classList.toggle('no', !best.ok);
     pr.querySelector('kbd').textContent = G.Input3D.label('interagir'); pr.querySelector('span').textContent = best.ok ? best.label : `${best.label} — ${best.why}`;
