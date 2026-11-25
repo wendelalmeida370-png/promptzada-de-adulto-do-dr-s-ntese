@@ -22,6 +22,7 @@ import moveis as MV
 import deco_coisas as C
 import deco_comida as C2  # (its colours of each point hook the shapes: imported before any is made)
 import deco_festa as C3   # (the fourth wave's: the feast, the door, the games — T7)
+import deco_luz as C4     # (the light of each people — the interiors 3, the front L, D-1012)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, 'js', 'decomesh.js')
@@ -33,7 +34,9 @@ PARTS = ['louca', 'barro', 'tampa', 'madeira', 'madeira2', 'pano', 'pano2', 'cor
          'cera0', 'cera1', 'cera2', 'cera3', 'osso', 'mancha', 'ardosia', 'escrita', 'giz', 'tinta', 'tinta2',
          # (the fourth wave's — T7, D-880: a flower, a die and its pips, the dice's cup, a tablet's back, face and edge, the parts of a
          # feast's platter by the part of the food each is)
-         'flor', 'dado', 'pinta', 'copo', 'verso', 'face', 'borda', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho']
+         'flor', 'dado', 'pinta', 'copo', 'verso', 'face', 'borda', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho',
+         # (the light of each people — the front L, D-1012: the panes of horn of the lantern, the embers of the brazier and of the torch)
+         'chifre', 'brasa']
 BIG = {'tapete', 'tapecaria', 'caldeirao', 'lenha', 'guirlanda-flores', 'guirlanda-horta', 'bandeirolas', 'pano-festa', 'porta-caida', 'cartas', 'monte'} | {'estandarte-' + c for c in ('classico', 'romano', 'grego', 'egipcio', 'nordico', 'asteca')}
 BUDGET = {'coisa': 700, 'grande': 1400, 'prato': 1600, 'meio': 0.7, 'meioMin': 200, 'arquivo': 3.5}
 SERVED = ('comida-', 'bebida-')  # (the dishes and the drinks: named as they are, their budget a dish's)
@@ -54,6 +57,12 @@ TABLE = [
     ('panela', 0.30, 0.26, 0.24, C.panela, 'base'), ('caldeirao', 0.62, 0.62, 0.80, C.caldeirao, 'base'),
     # ---- the light ----
     ('lamparina', 0.10, 0.16, 0.06, C.lamparina, 'base'), ('vela', 0.09, 0.09, 0.20, C2.vela_noite, 'base'),
+    # ---- the light of each people (the interiors 3, the front L — D-1012): the open saucer of the Nile, the soapstone of the north, the
+    # stone lamp on its tall foot of the dawn of the cities, the ocote of the lake in its holder on the wall, the portable brazier of clay,
+    # the lantern of horn of Rome
+    ('lamparina-pires', 0.13, 0.18, 0.035, C4.lamparina_pires, 'base'), ('lamparina-pedra', 0.14, 0.17, 0.05, C4.lamparina_pedra, 'base'),
+    ('lamparina-pe', 0.13, 0.19, 0.17, C4.lamparina_pe, 'base'), ('ocote', 0.08, 0.14, 0.40, C4.ocote, 'parede'),
+    ('braseira', 0.40, 0.35, 0.14, C4.braseira, 'base'), ('lanterna', 0.14, 0.14, 0.312, C4.lanterna, 'pende'),
     # ---- cloth ----
     ('pano-dobrado', 0.42, 0.32, 0.12, C.pano_dobrado, 'base'), ('tapete', 1.60, 1.00, 0.012, C.tapete, 'base'), ('tapecaria', 1.00, 0.06, 1.30, C.tapecaria, 'parede'),
     # ---- on the walls, in the corners ----
@@ -112,6 +121,7 @@ for _k in ('f1', 'f2', 'f3', 'f4'): DCOR[_k] = (0.45, 0.07, 0.05)
 for _k in ('cera0', 'cera1', 'cera2', 'cera3'): DCOR[_k] = DCOR['cera']
 for _k in ('flor', 'pinta', 'x-carne', 'x-peixe', 'x-pao', 'x-fruta', 'x-horta', 'x-milho'): DCOR[_k] = (1, 1, 1)
 DCOR.update({'dado': (0.78, 0.72, 0.6), 'copo': (0.3, 0.17, 0.08), 'verso': (0.42, 0.12, 0.08), 'face': (0.8, 0.74, 0.58), 'borda': (0.6, 0.5, 0.36)})
+DCOR.update({'chifre': (0.62, 0.36, 0.13), 'brasa': (0.9, 0.16, 0.02)})  # (the light of each people: the front L)
 
 def nome(k): return k if k.startswith(SERVED) else 'deco-' + k
 

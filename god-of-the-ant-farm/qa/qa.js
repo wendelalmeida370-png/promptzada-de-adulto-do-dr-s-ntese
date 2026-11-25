@@ -3829,7 +3829,8 @@
 // luz-inv: as regras do verificador para a luz de dentro (os interiores 2.0, a frente P1 — D-700 a D-709, js/luz3d.js):
 //   · toda chama desenhada dentro de um prédio tem a sua causa no mundo agora (S3): o fogo de um lar, de um fogão, de uma forja só
 //     com o prédio queimando (G.Atmos.fire: a família dormindo, o lar apagado), o lampadário e o altar só com alguém acordado
-//     dentro (G.Atmos.lit), a lamparina da decoração com o seu porquê (G.Dentro3D.fontes, P5);
+//     dentro (G.Atmos.lit) — e o lampadário só com o que o seu povo queima nele (G.Atmos.luzPeca, L-2252) —, a lamparina da decoração
+//     com o seu porquê (G.Dentro3D.fontes, P5);
 //   · a luz de dentro não vaza (S2): no volume desenhado, fora dos cômodos não há fogo, e nenhum voxel de cômodo tem a luz de um
 //     fogo de outro andar;
 //   · o volume desenhado é o da planta e das fontes de agora, ou o próximo está assando (S3: um volume velho que ficou);
@@ -3851,6 +3852,7 @@
       const it = p && p.items.find(i => String(i.id) === id); const tag = `${b.type}#${b.id}`;
       if (it && it.fire && !At.fire(b)) out.push([3, `${tag}: o fogo de ${it.kind} desenhado aceso sem nada queimando no prédio (G.Atmos.fire)`]);
       else if (it && !it.fire && L.LAMPS[it.kind] && !At.lit(b)) out.push([3, `${tag}: ${it.kind} desenhado aceso sem ninguém acordado dentro (G.Atmos.lit)`]);
+      else if (it && !it.fire && L.LAMPS[it.kind] && At.luzPeca && At.luzPeca(b, it.kind) === null) out.push([3, `${tag}: ${it.kind} desenhado aceso sem nada que o seu povo queime nele (G.Atmos.luzPeca: nada vem do nada, L-2252)`]);
       if (!byId.has(bid)) out.push([3, `${tag}: uma chama de dentro desenhada com o prédio fechado`]);
     }
     // the volumes drawn: of the plan and the sources now (or the next one baking); no fire out of the rooms, nor of another storey
@@ -3915,6 +3917,9 @@
   // tavern's keeper: G.Atmos.rulesOf, the use's own rules)
   const dono = b => !!b && (G.Village.bedsOf(b) > 0 || (G.Atmos.rulesOf ? G.Atmos.rulesOf(b).some(r => r.dono) : b.type === 'taverna'));
   const festa = (W, k) => !!W.festa && W.festa.enfeites.some(e => e.k === k);
+  // (a lamp of the oil there is, and the one its people makes: the lucerna of Rome and Greece, the saucer of the Nile, the soapstone of the
+  // north, the lamp on its foot of the dawn of the cities — never the lake's, which lit no lamp of oil: G.Atmos.LUZ, D-1012)
+  const lamp = (W, k) => (!!W.luz && !!W.luz.oleo && W.luz.k === k) || `${k} sem óleo, ou que não é a lamparina do povo (${W.luz && W.luz.k ? W.luz.k : 'nenhuma: o povo não acende lamparina de óleo'})`;
   const festaM = (W, m) => !!W.festa && W.festa.enfeites.some(e => e.modelo === m);
   const pratoF = (W, m) => !!W.festa && !!W.festa.prato && 'comida-festa-' + W.festa.prato.civ === m;
   // the cause of each thing, read again from what the building has now (G.Atmos.within): true, or what is missing
@@ -3936,12 +3941,17 @@
     saco: W => cereal(W) || 'saco sem grão', cesto: W => W.comida.some(q => ['fruta', 'ovos', 'marisco'].includes(q.k)) || 'cesto sem fruta, ovos nem mariscos',
     lenha: W => !!W.lenha || 'lenha sem madeira no armazém do povo',
     panela: W => !!W.cozinha || 'panela sem fogo cozinhando', caldeirao: W => (!!W.cozinha && !!W.metal) || 'caldeirão sem fogo cozinhando ou sem metal',
-    lamparina: W => (!!W.luz && !!W.luz.oleo) || 'lamparina sem óleo para queimar', vela: W => (!!W.luz && W.luz.cera) || festa(W, 'vela') || 'vela sem cera (nem a cera da festa)',
+    // (the lamp of the people's own — its model the one its people makes, At.LUZ — with the oil there is; the candle where it lights candles;
+    // the ocote of the lake, the brazier, the lantern of horn by their causes: D-1012)
+    lamparina: W => lamp(W, 'lamparina'), 'lamparina-pires': W => lamp(W, 'lamparina-pires'), 'lamparina-pedra': W => lamp(W, 'lamparina-pedra'), 'lamparina-pe': W => lamp(W, 'lamparina-pe'),
+    vela: W => (!!W.luz && W.luz.cera) || festa(W, 'vela') || 'vela sem cera, ou de um povo que não acende velas (nem a cera da festa)',
+    ocote: W => (!!W.luz && !!W.luz.tocha) || 'tocha de ocote sem madeira ou de um povo que não a acende', braseira: W => (!!W.luz && !!W.luz.braseira) || 'braseiro sem frio nem casa rica, sem lenha ou de um povo que não o usa',
+    lanterna: W => (!!W.luz && !!W.luz.lanterna) || 'lanterna de chifre sem chifre, sem casa rica ou sem o que queimar',
     'pano-dobrado': W => W.weave || W.bens.some(q => q.k === 'tecido') || 'pano onde o povo não tece',
     // (the rug and the hanging of whoever paid for them: a household, a building whose use says whose wealth it shows — L-2251)
     tapete: (W, t, b) => (!!W.pano && (W.pano.tapete || W.weave) && dono(b)) || 'tapete sem tecelagem, sem riqueza ou sem casa que o pagou', tapecaria: (W, t, b) => (!!W.pano && W.pano.tapecaria && dono(b)) || 'tapeçaria sem tecelagem, sem riqueza ou sem casa que a pagou',
     cavilha: () => true, // (the peg of what hangs: its own cause, checked with it)
-    suporte: W => !!W.luz || 'suporte de lamparina sem o que queimar',
+    suporte: W => (!!W.luz && (!!W.luz.k || W.luz.cera)) || 'suporte de lamparina sem lamparina nem vela',
     'rabisco-a': W => W.rabiscos > 0 || 'riscos de carvão sem doses servidas', 'rabisco-b': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-c': W => W.rabiscos > 0 || 'riscos sem doses', 'rabisco-d': W => W.rabiscos > 0 || 'riscos sem doses',
     teia: W => !!W.teia || 'teia numa casa nova ou cuidada',
     // ---- what is served (D-748): the dish of who eats it; the cup of whose round is done
@@ -3994,6 +4004,7 @@
     for (const b of list) {
       if (!b || !b.built || b.type === 'ruin') continue; const p = G.Space.planMade ? G.Space.planMade(b) : null; if (!p || !p.grid) continue;
       const W = At.within(b); const pl = D.plan(b, p, true); const tag = `${b.type}#${b.id}`; const L = p.lot.w; const S = D.surfacesOf ? D.surfacesOf(b, p) : [];
+      const fac = G.Fac.ofSet(b.set); const fid = fac ? fac.id : 0; const known = fac && fac.tech ? fac.tech.known : null;
       const counts = {}; for (const t of pl.list) counts[t.k] = (counts[t.k] || 0) + 1;
       // what the counts may be at most, by the world: a vessel a unit of drink (and the open one), the marks, the cups of the seats
       const units = W.bebida.reduce((n, q) => n + q.n + (q.aberta ? 1 : 0), 0) + 1 + W.bens.reduce((n, q) => n + (['anforeta', 'pote', 'potes'].includes(q.como) ? q.n : 0), 0);
@@ -4020,6 +4031,9 @@
         const c = CAUSA[t.k]; const r = c ? c(W, t, b) : 'coisa sem regra de causa no verificador'; if (r !== true && !(r && typeof r !== 'string')) out.push([3, `${what}: ${r}`, b.id]);
         if (CLAY[t.k] && !W.barro) out.push([2, `${what} de barro onde o povo nunca teve a cerâmica (nada vem do nada)`, b.id]);
         if (t.k === 'caldeirao' && !W.metal) out.push([2, `${what} de metal onde o povo não tem metal`, b.id]);
+        // (the stuff of a light: the clay where the people has had the ware, the bronze and the iron where it has had them — D-1012)
+        if (t.lmat === 'barro' && !W.barro) out.push([2, `${what} de barro onde o povo nunca teve a cerâmica (nada vem do nada)`, b.id]);
+        if ((t.lmat === 'bronze' || t.lmat === 'ferro') && !G.Origem.matOK(fid, t.lmat, known)) out.push([2, `${what} de ${t.lmat} onde o povo não tem a arte e o metal (nada vem do nada)`, b.id]);
         if (t.lit && !(W.luz && W.luz.acesa) && !(t.festa && W.festa && W.festa.acesa)) out.push([3, `${what} acesa sem ninguém acordado no escuro (${W.luz ? W.luz.why : 'nada para queimar'})`, b.id]);
         // (a part of the feast's platter only of what the recipe spent; a die on a face of its own)
         if (/^comida-festa-/.test(t.k) && W.festa && W.festa.prato && JSON.stringify(t.de || []) !== JSON.stringify(W.festa.prato.de)) out.push([3, `${what}: as partes do prato da festa não são as que a receita gastou`, b.id]);
@@ -4061,7 +4075,7 @@
         }
       }
       // nothing over another: on the walls (a peg and what hangs from it, a lamp's shelf and its lamp, go together) and on the floor
-      const pair = t => t.key.replace(/^(cavilha|pende)\//, 'p/').replace(/^(parede-luz\/\d+).*$/, '$1');
+      const pair = t => t.key.replace(/(^|\/)(cavilha|pende)\//, '$1p/').replace(/^(parede-luz\/\d+).*$/, '$1'); // (a peg and what hangs from it, with the tag of the call that hung them: F7)
       const wall = pl.list.filter(t => t.on === 'parede'), floor = pl.list.filter(t => t.on === 'chao' && t.k !== 'tapete' && !t.solto);
       for (let i = 0; i < wall.length; i++) for (let j = i + 1; j < wall.length; j++) { const a = wall[i], c = wall[j]; if (pair(a) === pair(c)) continue; const ma = G.MESH3D[NM(a.k)], mc = G.MESH3D[NM(c.k)]; if (!ma || !mc) continue;
         const dx = Math.hypot(a.x - c.x, a.z - c.z), ya = [a.y, a.y + ma.h * a.s[1]], yc = [c.y, c.y + mc.h * c.s[1]];

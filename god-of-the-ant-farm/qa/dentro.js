@@ -30,6 +30,10 @@
 //      (a caneca caída, a bebida em volta); um save no meio
 //  d16 a decoração por uso e por ofício (F7, D-1010, D-1011): a regra e o construtor de um uso, a regra e o desenho de um ofício, as
 //      leituras de verdade (o que cada peça guarda pelo livro, o ofício pelo kit e pela origem), os casos ruins
+//  d17 a luz de cada povo (D-1012, L-2252): a lamparina de cada povo e o que ela queima — a lucerna de barro (a de bronze da casa rica
+//      romana), a lamparina aberta do Nilo com sal no óleo, a de pedra-sabão do norte, a de pé alto da aurora das cidades —, o ocote do
+//      lago sem lamparina nem vela, a vela rica do norte, a lanterna de chifre de Roma, o braseiro do frio, os lampadários pelo que o
+//      povo queima neles; cada luz pelo G.Luz3D.LAMPS; o sal, o óleo e a cera tirados pela mão do deus; o save no meio
 //  d18 o pano tem dono (L-2251): com a terra mais cara posta em todo prédio, o tapete e a tapeçaria só de uma casa ou da taverna; a
 //      terra cara de um prédio não é a riqueza de ninguém
 //   node qa/dentro.js            ONLY=d1,d2 …
@@ -50,6 +54,8 @@ const inSim = fn => { G.inSim++; try { return fn(); } finally { G.inSim--; } };
 const openOf = b => ({ b, p: plan(b), out: { at: [b.x * Sp.TILE, Sp.plinth(b).y0, b.y * Sp.TILE] }, MI: new THREE.MeshBasicMaterial(), shade: () => { }, items: null });
 const drawOpen = o => { const grp = new THREE.Group(); const meshes = []; D.draw(o, grp, meshes); o.items = { grp, meshes }; return meshes; };
 const VESSELS = ['jarra', 'jarra-alta', 'anforeta', 'pote', 'cabaca', 'jarro-madeira'];
+// (the lights of the decoration: the lamp of each people, the candle, the ocote, the brazier, the lantern — D-1012)
+const LUZES = ['lamparina', 'lamparina-pires', 'lamparina-pedra', 'lamparina-pe', 'vela', 'ocote', 'braseira', 'lanterna'];
 
 if (want('d1')) {
   const cnt = [0, 0]; G.rngWatch = k => { cnt[k]++; };
@@ -93,9 +99,9 @@ if (want('d3')) {
     let guest = null; if (!inside.length) { guest = [...S0.villagers.values()].find(v => !v.inside && v.age >= 18 && !v.aboard && !v.jail); if (guest) { guest.inside = b.id; guest.sleeping = false; } } else inside.forEach(v => { v.sleeping = false; });
     fresh(); const a = D.plan(b, plan(b), true); const litA = a.list.filter(t => t.lit).length; const srcA = (G.Luz3D ? G.Luz3D.sources(b, plan(b)) : []).filter(s => /^d:/.test(String(s.id))).length;
     for (const v of S0.villagers.values()) if (v.inside === b.id) v.sleeping = true; fresh();
-    const c = D.plan(b, plan(b), true); const litC = c.list.filter(t => t.lit).length; const lampsC = c.list.filter(t => t.k === 'lamparina' || t.k === 'vela').length; const srcC = (G.Luz3D ? G.Luz3D.sources(b, plan(b)) : []).filter(s => /^d:/.test(String(s.id))).length;
+    const c = D.plan(b, plan(b), true); const litC = c.list.filter(t => t.lit).length; const lampsC = c.list.filter(t => LUZES.includes(t.k)).length; const srcC = (G.Luz3D ? G.Luz3D.sources(b, plan(b)) : []).filter(s => /^d:/.test(String(s.id))).length;
     for (const [v, s] of saved) v.sleeping = s; if (guest) guest.inside = 0;
-    info = `${b.type}#${b.id} ${b.style} às ${S0.time}: acordados → ${litA} acesa(s), ${srcA} luz(es) da decoração no G.Luz3D; todos deitados → ${litC} acesa(s) (${lampsC} lamparina(s) apagada(s) no lugar), ${srcC} luz(es)`;
+    info = `${b.type}#${b.id} ${b.style} às ${S0.time}: acordados → ${litA} acesa(s), ${srcA} luz(es) da decoração no G.Luz3D; todos deitados → ${litC} acesa(s) (${lampsC} luz(es) apagada(s) no lugar), ${srcC} luz(es)`;
     good = litA > 0 && srcA === a.fontes.length && litC === 0 && srcC === 0 && lampsC >= litA;
   }
   S0.time = t0; fresh();
@@ -228,7 +234,9 @@ if (want('d10')) {
   // ---- the candles and the lamps spend the night: the candle as much of it as is left (T.luz — P7's count of what burnt by the book —,
   // planted here), the flame at its top; burnt out, none; the lamp low on oil, its light lower; the morning's new candle only with wax
   const T0 = G.Taverna, was = T0.luz; const S0 = S(); const t0 = S0.time; S0.time = 0.8; let info = '', good = false;
-  const b = taverns()[0]; const f = b && G.Fac.ofSet(b.set);
+  // (a tavern of a people that lights candles and lamps of oil — Rome's, G.Atmos.LUZ, D-1012 —, else the first read as Rome's: its style)
+  const b = taverns().find(q => (At.LUZ[q.style] || At.LUZ.classico).vela === 1) || taverns()[0]; const f = b && G.Fac.ofSet(b.set); const st0 = b ? b.style : null;
+  if (b && (At.LUZ[b.style] || At.LUZ.classico).vela !== 1) b.style = 'romano';
   if (b && f) {
     const inside = [...S0.villagers.values()].filter(v => v.inside === b.id); let guest = null; if (!inside.some(v => !v.sleeping)) { guest = [...S0.villagers.values()].find(v => !v.inside && v.age >= 18 && !v.aboard && !v.jail); if (guest) { guest.inside = b.id; guest.sleeping = false; } }
     inSim(() => { G.Depot.make('f:' + f.id, 'cera', 3, { code: 'prova' }); });
@@ -240,10 +248,10 @@ if (want('d10')) {
     T0.luz = () => ({}); inSim(() => G.Depot.use('f:' + f.id, 'cera', f.stock.cera || 0, { code: 'prova' })); fresh(); const noWax = D.plan(b, plan(b), true).list.filter(t => t.k === 'vela').length;
     inSim(() => G.Depot.make('f:' + f.id, 'cera', 2, { code: 'prova' })); fresh(); const wax = D.plan(b, plan(b), true).list.filter(t => t.k === 'vela' || t.k === 'lamparina').length;
     if (guest) guest.inside = 0;
-    info = `taverna#${b.id}: a vela inteira → ${whole.c} vela(s) no tanto ${whole.vs}, chama a ${whole.fy[0] && whole.fy[0].toFixed(3)}; 55% gasta → ${half.vs}, chama a ${half.fy[0] && half.fy[0].toFixed(3)}; um toco → ${stub.vs}; acabou → ${out.c} vela(s), ${out.l} lamparina(s); o azeite cheio → luz ${oilFull.fl[0]}, quase no fim → ${oilLow.fl[0]}; de manhã sem cera no armazém → ${noWax} vela(s), com cera → ${wax} luz(es) na mesa`;
+    info = `taverna#${b.id} ${st0 === b.style ? b.style : st0 + ' lida como romana'}: a vela inteira → ${whole.c} vela(s) no tanto ${whole.vs}, chama a ${whole.fy[0] && whole.fy[0].toFixed(3)}; 55% gasta → ${half.vs}, chama a ${half.fy[0] && half.fy[0].toFixed(3)}; um toco → ${stub.vs}; acabou → ${out.c} vela(s), ${out.l} lamparina(s); o azeite cheio → luz ${oilFull.fl[0]}, quase no fim → ${oilLow.fl[0]}; de manhã sem cera no armazém → ${noWax} vela(s), com cera → ${wax} luz(es) na mesa`;
     good = whole.c > 0 && whole.vs === 0 && half.vs === 2 && stub.vs === 3 && half.fy[0] < whole.fy[0] && stub.fy[0] < half.fy[0] && out.c === 0 && out.l === 0 && oilFull.l > 0 && oilLow.fl[0] < oilFull.fl[0] && noWax === 0 && wax > 0 && [whole, half, stub, out, oilFull, oilLow].every(r => !r.qa);
   }
-  T0.luz = was; S0.time = t0; fresh();
+  if (b) b.style = st0; T0.luz = was; S0.time = t0; fresh();
   ok('d10 as velas e as lamparinas gastam a noite: a vela pelo que resta, a chama no topo dela, a lamparina pelo azeite; a vela nova só com cera', good, info);
 }
 
@@ -438,6 +446,12 @@ if (want('d16')) {
   const Wo = fb ? At.within(fb).oficios : []; const qa1 = fb ? dentroQA(fb) : [];
   check('a regra e o desenho do ofício', !!fb && Wo.some(x => x.oficio === 'ferreiro' && x.ferramentas.length) && hung.length >= 2 && near0 && !qa1.length && At.within(hs[0]).oficios !== undefined,
     `${Wo.map(x => `#${x.v} ${x.oficio} (${x.ferramentas.join(', ')})`).join(', ') || 'ninguém'}; ${hung.length} coisa(s) nas cavilhas da forja perto do fogo${qa1.length ? '; ' + qa1.map(q => q[1]).join(' | ') : ''}`);
+  // (4b) the marks of the years by a count of the world (K.riscos — the days of who is held, the tallies of a barracks, in a wave): a
+  // builder of the use puts n of them on the walls, each on a free stretch, none over another, keyed by its own tag; taken away, none
+  if (fb) { const offB = D.builder('forja', (ctx, K) => { K.riscos(ctx, 5, { tag: 'prova-dias', perto: ctx.p.items.filter(it => it.fire), why: 'cinco marcas de uma conta do mundo (a prova)' }); });
+    fresh(); const M5 = D.plan(fb, plan(fb), true).list.filter(t => /^prova-dias\//.test(t.key)); offB(); fresh(); const M0 = D.plan(fb, plan(fb), true).list.filter(t => /^prova-dias\//.test(t.key));
+    const apart = M5.every((a, i) => M5.every((c, j) => i >= j || Math.hypot(a.x - c.x, a.z - c.z) > 0.05 || Math.abs(a.y - c.y) > 0.1));
+    check('as marcas dos anos por uma conta (K.riscos)', M5.length === 5 && M5.every(t => t.on === 'parede' && /^rabisco-/.test(t.k)) && apart && !M0.length, `forja#${fb.id}: ${M5.length} marca(s) nas paredes (${M5.map(t => t.key).join(', ')}); o construtor tirado → ${M0.length}`); }
   // (5) the save in the middle: the same within and the same things after the load (the rules are code; what they read, the world)
   if (fb) { const a = JSON.stringify(At.within(fb)) + snap(fb); M.salvarCarregar(); fresh(); const b2 = S().buildings.get(fb.id); const c = JSON.stringify(At.within(b2)) + snap(b2);
     check('o save no meio', a === c, a === c ? 'iguais depois de salvar e carregar' : 'DIFERENTES depois do load'); }
@@ -451,9 +465,98 @@ if (want('d16')) {
   // (8) all taken away: the forge's things as before the rules came
   offD(); offT(); offR(); fresh();
   if (fb2) { const after = snap(fb2); check('tudo tirado', after === base && !At.within(fb2).bigorna, after === base ? 'as coisas da forja como eram' : 'as coisas da forja DIFERENTES das de antes'); }
-  check('o kit dos construtores', Object.isFrozen(D.KIT) && ['pack', 'scatter', 'beside', 'near', 'byWall', 'pendura', 'hangFood', 'runs', 'ceilAt', 'floorFree', 'hv', 'casa', 'taverna'].every(k => typeof D.KIT[k] === 'function'), Object.keys(D.KIT).length + ' portas');
+  check('o kit dos construtores', Object.isFrozen(D.KIT) && ['pack', 'scatter', 'beside', 'near', 'byWall', 'pendura', 'hangFood', 'riscos', 'wallSpots', 'onWall', 'runs', 'ceilAt', 'floorFree', 'hv', 'casa', 'taverna'].every(k => typeof D.KIT[k] === 'function'), Object.keys(D.KIT).length + ' portas');
   void W0;
   ok('d16 a decoração por uso e por ofício: a regra e o construtor de um uso, a regra e o desenho de um ofício, as leituras de verdade, os casos ruins', good, info.join('; '));
+}
+
+// ------------------------------ the light of each people (the interiors 3, the front L — D-1012, L-2252) ------------------------------
+if (want('d17')) {
+  // ---- the light of each people, with what it burns (G.Atmos.LUZ): the lamp each people makes and its stuff — the lucerna of clay (the
+  // Roman's of bronze in the rich house), the saucer of the Nile with salt in its oil, the soapstone of the north, the stone lamp on its
+  // foot of the dawn of the cities —; the lake with no lamp of oil nor candle, the ocote on its wall; the candle of the north the rich
+  // house's only; the Greek's brazier in the cold; the lantern of horn by the door of a rich Roman house; each flame's light the
+  // G.Luz3D.LAMPS's; the lamp stands by what their people burns; the bad cases — the salt gone, the oil and the wax gone by the god's hand,
+  // the save in the middle — and the verifier clean on each
+  const info = []; let good = true; const check = (name, c, txt) => { info.push(`${c ? '' : '✗ '}${name}: ${txt}`); if (!c) good = false; };
+  const S0 = S(); const t0 = S0.time; S0.time = 0.9; const L3 = G.Luz3D; const Dp = G.Depot; const LUZ = At.LUZ;
+  const civOf = b => b.style || ((G.Fac.ofSet(b.set) || {}).civ) || 'classico';
+  const homes = [...S().buildings.values()].filter(b => b.built && G.BDEF[b.type] && G.BDEF[b.type].housing && plan(b) && plan(b).items.some(it => D.KIT.CORE.includes(it.kind))).sort((a, c) => a.id - c.id);
+  // (someone awake inside a house, in the dark: who is there woken, or a neighbour brought in — given back after)
+  const guests = []; const wake = b => { const inn = [...S().villagers.values()].filter(v => v.inside === b.id); if (inn.length) { for (const v of inn) { guests.push([v, v.inside, v.sleeping]); v.sleeping = false; } return; }
+    const g = [...S().villagers.values()].find(v => !v.inside && v.age >= 18 && !v.aboard && !v.jail && !guests.some(q => q[0] === v)); if (g) { guests.push([g, g.inside, g.sleeping]); g.inside = b.id; g.sleeping = false; } };
+  const LIGHT = ['lamparina', 'lamparina-pires', 'lamparina-pedra', 'lamparina-pe', 'vela', 'ocote', 'braseira', 'lanterna'];
+  const lights = b => D.plan(b, plan(b), true).list.filter(t => LIGHT.includes(t.k));
+  const by = {}; for (const b of homes) { const c = civOf(b); (by[c] = by[c] || []).push(b); }
+  for (const c of Object.keys(by)) for (const b of by[c].slice(0, 6)) wake(b); fresh();
+  const peoples = Object.keys(by).sort(); const seen = {};
+  // (1) each people's own lamp where it has the oil, of its stuff; the lake none — its ocote, lit —; every light's colour, strength and
+  // flame the G.Luz3D.LAMPS's of what burns in it; the verifier clean
+  for (const c of peoples) { const P = LUZ[c] || LUZ.classico; let n = 0; const bad = [];
+    for (const b of by[c].slice(0, 6)) { const W = At.within(b); const L = lights(b); const pl = D.plan(b, plan(b), true); n++; seen[c] = (seen[c] || 0) + L.length;
+      if (!W.luz) continue;
+      if (!P.k && (W.luz.k || W.luz.oleo || W.luz.cera || L.some(t => /^lamparina|^vela$/.test(t.k)))) bad.push(`#${b.id} com lamparina ou vela`);
+      if (P.k && W.luz.oleo && W.luz.k !== P.k) bad.push(`#${b.id} a lamparina ${W.luz.k} (o povo faz ${P.k})`);
+      if (L.some(t => /^lamparina/.test(t.k) && t.k !== P.k)) bad.push(`#${b.id} uma lamparina de outro povo`);
+      if (c === 'nordico' && W.luz.oleo && W.luz.mat !== 'pedra-sabao') bad.push(`#${b.id} a lamparina de ${W.luz.mat}`);
+      if (P.tocha && W.luz.tocha && W.luz.acesa && !L.some(t => t.k === P.tocha && t.lit)) bad.push(`#${b.id} sem o ocote aceso`);
+      for (const f of pl.fontes) { const t = pl.list.find(q => 'd:' + q.key === f.id); const Lm = t && L3.LAMPS[t.luz || (t.k === 'vela' ? 'vela' : 'lamparina')];
+        if (!Lm || JSON.stringify(f.cor) !== JSON.stringify(Lm.cor) || f.chama !== Lm.chama || f.kind !== (Lm.kind || t.luz)) bad.push(`#${b.id} a luz de ${t ? t.k : '?'} fora do seu LAMPS`); }
+      const q = dentroQA(b); if (q.length) bad.push(`#${b.id}: ${q.map(x => x[1]).slice(0, 2).join(' | ')}`); }
+    check(`a luz do ${c}`, !bad.length && n > 0, `${n} casa(s): ${by[c].slice(0, 3).map(b => { const W = At.within(b); return W.luz ? `${W.luz.k || (W.luz.tocha ? 'ocote' : '-')} de ${W.luz.mat}${W.luz.oleo ? ' com ' + W.luz.oleo : ''}${W.luz.sal ? ' e sal' : ''}${W.luz.cera ? ', vela' : ''}${W.luz.acesa ? ' (acesa)' : ''}` : 'nada que queimar'; }).join('; ')}${bad.length ? '; ' + bad.slice(0, 3).join(', ') : ''}`); }
+  // (2) the dawn of the cities: the stone lamp on its foot, of stone, with the people's oil (a house of the others read as of the classical
+  // people: its style — the within's own reading)
+  { const b = (by.romano || by.grego || by.egipcio || [])[0]; if (b) { const s0 = b.style; b.style = 'classico'; fresh(); const W = At.within(b); const L = lights(b); const q = dentroQA(b); b.style = s0; fresh();
+    check('a luz do clássico', !!W.luz && (!W.luz.oleo || (W.luz.k === 'lamparina-pe' && W.luz.mat === 'pedra' && L.some(t => t.k === 'lamparina-pe'))) && !W.luz.cera && !q.length, W.luz ? `${W.luz.k} de ${W.luz.mat}${W.luz.oleo ? ' com ' + W.luz.oleo : ''}${W.luz.cera ? ', vela' : ', nenhuma vela'}${q.length ? '; ' + q.map(x => x[1]).join(' | ') : ''}` : 'nada que queimar'); } }
+  // (3) the salt in the oil of the Nile: with it, the clearer flame; the salt gone (the god's hand), the plain lamp; given back
+  { const b = (by.egipcio || []).find(q => At.within(q).luz && At.within(q).luz.oleo); if (b) { const f = G.Fac.ofSet(b.set); const ref = 'h:' + b.id;
+    const s0 = Dp.get('f:' + f.id, 'sal'), h0 = Dp.get(ref, 'sal'); if (s0 < 1 && h0 < 1) inSim(() => Dp.make('f:' + f.id, 'sal', 2, { code: 'prova' })); fresh();
+    const a = At.within(b).luz; const fa = D.plan(b, plan(b), true).fontes; const s1 = Dp.get('f:' + f.id, 'sal'); inSim(() => { if (s1 > 0) Dp.use('f:' + f.id, 'sal', s1, { code: 'prova' }); if (h0 > 0) Dp.use(ref, 'sal', h0, { code: 'prova' }); }); fresh();
+    const c = At.within(b).luz; const fc = D.plan(b, plan(b), true).fontes;
+    inSim(() => { if (s0 > 0) Dp.make('f:' + f.id, 'sal', s0, { code: 'prova' }); if (h0 > 0) Dp.make(ref, 'sal', h0, { code: 'prova' }); }); fresh();
+    const sal = L3.LAMPS['lamparina-sal'].cor; check('o sal no óleo do Nilo', a.sal === 1 && a.luz === 'lamparina-sal' && (!a.acesa || fa.some(s => JSON.stringify(s.cor) === JSON.stringify(sal))) && !c.sal && c.luz !== 'lamparina-sal' && fc.every(s => JSON.stringify(s.cor) !== JSON.stringify(sal)) && At.within(b).luz.sal === (s0 >= 1 || h0 >= 1 ? 1 : 0),
+      `com sal no armazém: ${a.luz}${a.acesa ? ` (${fa.length} chama(s) da cor clara)` : ''}; sem o sal (a mão do deus): ${c.luz}; o sal de volta: ${At.within(b).luz.luz}`); } }
+  // (4) the candle of the north, the rich house's: a poor one with wax has none, the same rich has it
+  { const b = (by.nordico || []).find(q => At.within(q).luz && At.rich(q) < 2); if (b) { const f = G.Fac.ofSet(b.set); const w0 = Dp.get('f:' + f.id, 'cera'); if (w0 < 1) inSim(() => Dp.make('f:' + f.id, 'cera', 2, { code: 'prova' })); const c0 = b.coin; fresh();
+    const a = At.within(b).luz; b.coin = 400; fresh(); const r = At.within(b).luz; const L = lights(b); b.coin = c0; if (w0 < 1) inSim(() => Dp.use('f:' + f.id, 'cera', 2, { code: 'prova' })); fresh();
+    check('a vela do nórdico, da casa rica', !!a && !a.cera && !!r && r.cera && !L.some(t => t.k === 'lamparina' || t.k === 'lamparina-pires' || t.k === 'lamparina-pe'), `pobre (${c0 | 0} moedas), com cera no armazém: ${a && a.cera ? 'vela' : 'sem vela'}; rica: ${r && r.cera ? 'vela' : 'sem vela'}, ${L.map(t => t.k).join(', ')}`); } }
+  // (5) the Roman's rich house: its lamp of bronze where the people has had it; the lantern of horn by the door where the people has horn
+  { const b = (by.romano || []).find(q => At.within(q).luz && At.within(q).luz.oleo); if (b) { const f = G.Fac.ofSet(b.set); const c0 = b.coin; const k0 = Dp.get('f:' + f.id, 'chifre'); b.coin = 400;
+    if (k0 < 1) inSim(() => Dp.make('f:' + f.id, 'chifre', 1, { code: 'prova' })); fresh(); const W = At.within(b); const L = lights(b); const qa1 = QA.dentro([b]).filter(q => q[0] <= 3 || /lanterna/.test(q[1]));
+    if (k0 < 1) inSim(() => Dp.use('f:' + f.id, 'chifre', 1, { code: 'prova' })); b.coin = c0; fresh(); const W2 = At.within(b);
+    const bronze = G.Origem.matOK(f.id, 'bronze', f.tech ? f.tech.known : null); const ln = L.find(t => t.k === 'lanterna');
+    check('a casa rica romana: o bronze e a lanterna de chifre', (!bronze || W.luz.mat === 'bronze') && !!W.luz.lanterna && !!ln && ln.on === 'parede' && !W2.luz.lanterna && !qa1.length,
+      `rica: a lamparina de ${W.luz.mat} (o povo ${bronze ? 'teve' : 'não teve'} o bronze), ${L.filter(t => t.k === 'lanterna').length} lanterna(s) de chifre junto da porta${ln ? ` (${ln.lmat}, ${ln.lit ? 'acesa' : 'apagada'})` : ''}; sem o chifre e pobre: ${W2.luz.lanterna ? 'lanterna' : 'nenhuma'}${qa1.length ? '; ' + qa1.map(q => q[1]).join(' | ') : ''}`); } }
+  // (6) the Greek's brazier with the cold (G.Atmos.cold where the house stands): at noon of a land not cold, none; on a cold night, and in
+  // the god's sudden winter over the house, on the floor by where the family sits, its embers lit
+  { const gs = (by.grego || []).filter(q => At.within(q).luz); const cx = q => At.cold(q.x + q.w / 2, q.y + q.h / 2);
+    S0.time = 0.45; fresh(); const b = gs.find(q => cx(q) === 0) || gs[0]; const noon = b ? { c: cx(b), br: !!(At.within(b).luz || {}).braseira } : null; S0.time = 0.9; fresh();
+    if (b) { const night = { c: cx(b), br: !!At.within(b).luz.braseira }; const wi = S().winters || (S().winters = []); wi.push({ x: b.x + b.w / 2, y: b.y + b.h / 2, r: 6, t: 30 }); fresh();
+      const c = At.within(b).luz; const L = lights(b); const qa1 = dentroQA(b); const src = L3.sources(b, plan(b)).filter(s => s.luz === 'braseira'); wi.pop(); fresh();
+      check('o braseiro grego no frio', noon.br === (noon.c >= 1) && night.br === (night.c >= 1) && !!c.braseira && c.braseira.frio === 2 && L.some(t => t.k === 'braseira' && t.on === 'chao') && (!c.acesa || src.length > 0) && !qa1.length,
+        `casa#${b.id} ao meio-dia (frio ${noon.c}): ${noon.br ? 'braseiro' : 'nenhum'}; de noite (frio ${night.c}): ${night.br ? 'braseiro' : 'nenhum'}; o inverno do deus (frio ${c.braseira ? c.braseira.frio : 0}): ${L.filter(t => t.k === 'braseira').length} braseiro(s) no chão, ${src.length} luz(es) de brasa${qa1.length ? '; ' + qa1.map(q => q[1]).join(' | ') : ''}`); } }
+  // (7) the lamp stands by what their people burns: lit only with it; all of it gone (the god's hand), dark; given back
+  { const stands = [...S().buildings.values()].filter(b => b.built && plan(b) && plan(b).items.some(it => it.kind === 'lampadario')).sort((a, c) => a.id - c.id); let lit = 0; const bad = []; let dark = null;
+    for (const b of stands) { wake(b); fresh(); const src = L3.sources(b, plan(b)).filter(s => plan(b).items.some(it => it.id === s.id && it.kind === 'lampadario')); const q = At.luzPeca(b, 'lampadario');
+      if (src.length && !q) bad.push(`${b.type}#${b.id} aceso sem o que queimar`); if (!src.length && q && At.lit(b)) bad.push(`${b.type}#${b.id} apagado com ${q.comb.join(', ')}`);
+      if (src.length && q && JSON.stringify(src[0].cor) !== JSON.stringify(L3.LAMPS[q.luz].cor)) bad.push(`${b.type}#${b.id} a cor da chama`); lit += src.length; }
+    const b = stands.find(q => L3.sources(q, plan(q)).some(s => plan(q).items.some(it => it.id === s.id && it.kind === 'lampadario')));
+    if (b) { const f = G.Fac.ofSet(b.set); const K = ['azeite', 'oleo', 'cera', 'wood']; const keep = {}; const refs = ['f:' + f.id, (G.Village.bedsOf(b) > 0 ? 'h:' : 'b:') + b.id];
+      inSim(() => { for (const r of refs) for (const k of K) { const n = Dp.get(r, k); if (n > 0) { keep[r + k] = n; Dp.use(r, k, n, { code: 'prova' }); } } }); fresh();
+      const n0 = L3.sources(b, plan(b)).filter(s => plan(b).items.some(it => it.id === s.id && it.kind === 'lampadario')).length;
+      inSim(() => { for (const r of refs) for (const k of K) if (keep[r + k]) Dp.make(r, k, keep[r + k], { code: 'prova' }); }); fresh();
+      const n1 = L3.sources(b, plan(b)).filter(s => plan(b).items.some(it => it.id === s.id && it.kind === 'lampadario')).length;
+      dark = `${b.type}#${b.id} ${civOf(b)}: sem óleo, cera nem lenha → ${n0} chama(s); de volta → ${n1}`; if (n0 || !n1) bad.push('o lampadário não segue o que se queima'); }
+    check('os lampadários pelo que o povo queima', stands.length > 0 && lit > 0 && !bad.length, `${stands.length} prédio(s) com lampadário, ${lit} chama(s) acesas; ${dark || '-'}${bad.length ? '; ' + bad.slice(0, 3).join(', ') : ''}`); }
+  // (8) the save in the middle: the world as it was — who was woken and brought in by the proof's hand given back (a guest put inside by
+  // hand is no stay of the world's, and the load does not keep it), its own hour —, the light of every house tried the same after the load
+  for (const [v, ins, sl] of guests) { v.inside = ins; v.sleeping = sl; } guests.length = 0; S0.time = t0;
+  { const ids = peoples.flatMap(c => by[c].slice(0, 6)).map(b => b.id); const snap = () => ids.map(id => { const b = S().buildings.get(id); const W = At.within(b); return id + ':' + JSON.stringify(W.luz) + JSON.stringify(D.plan(b, plan(b), true).fontes); });
+    fresh(); const a = snap(); M.salvarCarregar(); fresh(); const c = snap(); const d = a.filter((x, k) => x !== c[k]);
+    const k0 = a.findIndex((x, k) => x !== c[k]); const at = k0 < 0 ? 0 : [...a[k0]].findIndex((ch, k) => ch !== c[k0][k]);
+    check('o save no meio', !d.length, d.length ? `${d.length} diferentes: #${ids[k0]} antes …${a[k0].slice(Math.max(0, at - 60), at + 80)}… depois …${c[k0].slice(Math.max(0, at - 60), at + 80)}…` : `${ids.length} casas iguais (${a.filter(x => /"acesa":1/.test(x)).length} com a luz acesa)`); }
+  S().time = t0; fresh();
+  ok('d17 a luz de cada povo: a lamparina de cada povo e o que ela queima, o ocote do lago, o sal do Nilo, a vela rica do norte, o bronze e a lanterna de Roma, o braseiro do frio, os lampadários, o save no meio', good, info.join('; ') + ` — coisas de luz por povo ${JSON.stringify(seen)}`);
 }
 
 // ------------------------------ the cloth has an owner (the interiors 3, the front L — L-2251) ------------------------------

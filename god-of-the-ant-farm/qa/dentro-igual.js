@@ -5,12 +5,13 @@
 //   node qa/dentro-igual.js PASTA_DE_ANTES [cidade,metropole,mega] [SEG]
 //   MUDA=luz,pano,enchimento …   o que a mudança diz que muda (um defeito consertado, a luz de cada povo): o resto tem de sair igual, e
 //                                 as coisas e as luzes só mudam nos prédios onde um campo dito mudou
+//   SEMPORQUE=1                   as coisas comparadas sem as palavras do porquê (o que muda de lugar, de forma ou de acesa)
 'use strict';
 const path = require('path'), fs = require('fs'), cp = require('child_process');
 const here = path.join(__dirname, '..'); const there = process.argv[2] ? path.resolve(process.argv[2]) : null;
 if (!there || !fs.existsSync(path.join(there, 'index.html'))) { console.log('FALHOU | dentro-igual | dê a pasta do jogo de antes: node qa/dentro-igual.js PASTA [mundos] [SEG]'); process.exit(1); }
 const WORLDS = (process.argv[3] || 'cidade,metropole,mega').split(',').filter(Boolean); const SEG = +(process.argv[4] || 0);
-const MUDA = new Set((process.env.MUDA || '').split(',').filter(Boolean));
+const MUDA = new Set((process.env.MUDA || '').split(',').filter(Boolean)); const SEMPORQUE = !!process.env.SEMPORQUE;
 // (the dump of one tree: run inside it, its own files — qa/visual/tres-node.js of that tree)
 const code = (root, world) => `'use strict'; const path = require('path'), crypto = require('crypto');
   const T = require(${JSON.stringify(path.join(root, 'qa', 'visual', 'tres-node.js'))}); const { G, M } = T.load({ qa: false });
@@ -23,7 +24,7 @@ const code = (root, world) => `'use strict'; const path = require('path'), crypt
     for (const id of ids) { const b = G.S.buildings.get(id); const p = In.has && In.has(b) ? Sp.planNow(b) : null; if (!p || !p.ok) continue;
       const W = At.within(b); const near = D.plan(b, p, true), far = D.plan(b, p, false); const st = In.state(b); const fill = {};
       if (st) for (const k of Object.keys(st.items).sort((a, c) => a - c)) if (Number.isFinite(st.items[k].fill)) fill[k] = st.items[k].fill;
-      out.push([id + '@' + (hour === null ? 'h' : hour), b.type, Object.fromEntries(Object.keys(W).sort().map(k => [k, h(W[k])])), h(near.list.map(t => [t.k, t.x, t.y, t.z, t.ry, t.key, t.why, t.s, t.on, t.lit || 0])), h(far.list.map(t => [t.k, t.x, t.y, t.z, t.ry, t.key])), h(near.fontes), h(fill), near.list.length]); } }
+      out.push([id + '@' + (hour === null ? 'h' : hour), b.type, Object.fromEntries(Object.keys(W).sort().map(k => [k, h(W[k])])), h(near.list.map(t => [t.k, t.x, t.y, t.z, t.ry, t.key, ${SEMPORQUE} ? '' : t.why, t.s, t.on, t.lit || 0])), h(far.list.map(t => [t.k, t.x, t.y, t.z, t.ry, t.key])), h(near.fontes), h(fill), near.list.length]); } }
   G.S.time = t0; process.stdout.write(JSON.stringify({ n: out.length, day: G.S.day, err: M.limpo() ? 0 : JSON.stringify(M.erros()), out }));`;
 const run = (root, world) => JSON.parse(cp.execFileSync(process.execPath, ['-e', code(root, world)], { maxBuffer: 1 << 28, cwd: root }).toString());
 let fails = 0;

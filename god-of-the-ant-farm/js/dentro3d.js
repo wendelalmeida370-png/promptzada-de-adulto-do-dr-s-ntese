@@ -583,7 +583,7 @@
     pendura(ctx, items, p.items.filter(it => it.lv === lv && (it.fire || it.kind === 'prateleira-bar' || it.kind === 'balcao' || it.kind === 'fogao' || it.kind === 'despensa')), { lv });
   }
   // ---- what hangs from a peg in a wall near some pieces (perto: within o.raio of the nearest — 4.5 m —, the nearest first), else —
-  // o.teto, the default — from the joists of a floor above them: items [{ k, key, why }] on storey o.lv (the hall's), each with its peg,
+  // o.teto, the default — from the joists of a floor above them: items [{ k, key, why, o }] on storey o.lv (the hall's), each with its peg,
   // clear of the openings and of what stands taller there; → what found no place. Two calls never take one place: the wall has an owner
   // (ctx.wallFree), a joist taken is kept (ctx.teto); o.tag names the keys of a call of its own (the tools of a trade on a wall: F7)
   function pendura(ctx, items, perto, o) {
@@ -607,28 +607,38 @@
       while (k < pool.length && !at) { const s = pool[k++]; if (s.kind === 'teto' && (s.y - m.h - l.y < 1.95 || used.has(s.at))) continue; if (s.kind === 'parede' && !ctx.wallFree(s.x, s.z, Math.max(m.w, 0.12), s.y - m.h, s.y + 0.03)) continue; at = s; }
       if (at && at.kind === 'parede') ctx.wallTake(at.x, at.z, Math.max(m.w, 0.12), at.y - m.h, at.y + 0.03);
       if (!at) return items.slice(i);
-      if (at.kind === 'teto') { used.add(at.at); ctx.put(q.k, at.x, at.y - m.h, at.z, at.ry + (hv(b, 60 + k) - 0.5) * 0.8, { lv, on: 'teto', key: `${tag}teto/${at.at}`, why: `${q.why} — pendurado nas vigas do soalho de cima` }); }
+      if (at.kind === 'teto') { used.add(at.at); ctx.put(q.k, at.x, at.y - m.h, at.z, at.ry + (hv(b, 60 + k) - 0.5) * 0.8, Object.assign({ lv, on: 'teto', key: `${tag}teto/${at.at}`, why: `${q.why} — pendurado nas vigas do soalho de cima` }, q.o || {})); }
       else {
         const out = Math.max(0.06, m.d / 2 + 0.012); const x = at.x + at.r.nx * out, z = at.z + at.r.nz * out;
         ctx.put('cavilha', at.x + at.r.nx * 0.04, at.y - 0.015, at.z + at.r.nz * 0.04, at.ry, { lv, on: 'parede', key: `${tag}cavilha/${r3(at.x)},${r3(at.z)}`, why: 'a cavilha de onde pende' });
-        ctx.put(q.k, x, at.y - m.h - 0.004, z, at.ry, { lv, on: 'parede', key: `${tag}pende/${r3(at.x)},${r3(at.z)}`, why: `${q.why} — pendurado na parede` });
+        ctx.put(q.k, x, at.y - m.h - 0.004, z, at.ry, Object.assign({ lv, on: 'parede', key: `${tag}pende/${r3(at.x)},${r3(at.z)}`, why: `${q.why} — pendurado na parede` }, q.o || {}));
       }
     }
     return [];
   }
   // ---- the marks of charcoal: on the walls by the tables, at the height of one sitting and drinking
   function marks(ctx) {
-    const { b, p, W } = ctx; const n = W.rabiscos; if (!n || !ctx.near) return;
-    const lv = p.entryLv || 0; const l = lvOf(p, lv); const tabs = p.items.filter(it => it.lv === lv && TABLES[it.kind]);
-    const R = runs(p, lv, 0.95, 1.6, ctx.look).filter(r => r.s1 - r.s0 > 0.4);
-    const slots = []; for (const r of R) for (let s = r.s0 + 0.2; s <= r.s1 - 0.2; s += 0.34) { const x = r.x + r.tx * s, z = r.z + r.tz * s; slots.push({ r, s, x, z, d: tabs.length ? Math.min(...tabs.map(t => Math.hypot(x - t.x, z - t.z))) : 0 }); }
+    const { p, W } = ctx; if (!W.rabiscos || !ctx.near) return; const lv = p.entryLv || 0;
+    riscos(ctx, W.rabiscos, { lv, perto: p.items.filter(it => it.lv === lv && TABLES[it.kind]), why: W.why.rabiscos });
+  }
+  // ---- the marks of the years on the walls (F7: the tavern's charcoal of its rounds; a wave's — the days of who is held in a cell, the
+  // tallies of a barracks — by a count of the world its use's rule says, never a number of its own): n marks on the walls of storey o.lv,
+  // the nearest to the pieces o.perto first, each in the band of heights o.y0 … o.y1 (a mark's foot from o.y0 + its share of o.dy), of the
+  // models o.kinds, keyed o.tag/i, with the cause o.why; which model, which height, which order between as near — the building's id
+  function riscos(ctx, n, o) {
+    const { b, p } = ctx; o = o || {}; const lv = o.lv !== undefined ? o.lv : p.entryLv || 0; const l = lvOf(p, lv); if (!l || !(n > 0)) return 0;
+    const near0 = o.perto || []; const kinds = o.kinds || ['rabisco-a', 'rabisco-b', 'rabisco-c', 'rabisco-d']; const tag = o.tag || 'rabisco';
+    const y0 = o.y0 !== undefined ? o.y0 : 1.0, dy = o.dy !== undefined ? o.dy : 0.38;
+    const R = runs(p, lv, o.r0 !== undefined ? o.r0 : 0.95, o.r1 !== undefined ? o.r1 : 1.6, ctx.look).filter(r => r.s1 - r.s0 > 0.4);
+    const slots = []; for (const r of R) for (let s = r.s0 + 0.2; s <= r.s1 - 0.2; s += 0.34) { const x = r.x + r.tx * s, z = r.z + r.tz * s; slots.push({ r, s, x, z, d: near0.length ? Math.min(...near0.map(t => Math.hypot(x - t.x, z - t.z))) : 0 }); }
     slots.sort((a, c) => a.d - c.d || hv(b, Math.round(a.s * 100)) - hv(b, Math.round(c.s * 100)));
-    const kinds = ['rabisco-a', 'rabisco-b', 'rabisco-c', 'rabisco-d'];
-    for (let i = 0, j = 0; i < n && j < slots.length; j++) {
+    let i = 0;
+    for (let j = 0; i < n && j < slots.length; j++) {
       const s = slots[j]; const k = kinds[Math.floor(hv(b, 70 + i) * kinds.length)]; const m = MESH(k); if (!m) continue;
-      const y = l.y + 1.0 + hv(b, 80 + i) * 0.38; const out = m.d / 2 + 0.002; if (!ctx.wallFree(s.x, s.z, m.w, y, y + m.h)) continue; ctx.wallTake(s.x, s.z, m.w, y, y + m.h); i++;
-      ctx.put(k, s.x + s.r.nx * out, y, s.z + s.r.nz * out, Math.atan2(s.r.nx, s.r.nz), { lv, on: 'parede', key: `rabisco/${i}`, why: W.why.rabiscos });
+      const y = l.y + y0 + hv(b, 80 + i) * dy; const out = m.d / 2 + 0.002; if (!ctx.wallFree(s.x, s.z, m.w, y, y + m.h)) continue; ctx.wallTake(s.x, s.z, m.w, y, y + m.h); i++;
+      ctx.put(k, s.x + s.r.nx * out, y, s.z + s.r.nz * out, Math.atan2(s.r.nx, s.r.nz), { lv, on: 'parede', key: `${tag}/${i}`, why: o.why || '' });
     }
+    return i;
   }
 
   // ---- the house: the family's table, the food of the pantry, its goods, the cloth of a people that weaves
@@ -664,42 +674,97 @@
     hearth(ctx, food, false); hangFood(ctx, food);
   }
 
-  // ---- the lamps: on the tables with people at them in a tavern, on the counter; the family's table; a bench of work — lit with
-  // someone awake inside in the dark (G.Atmos.within.luz), out otherwise; nothing where there is nothing to burn
+  // ---- the light of each people (W.luz, G.Atmos.LUZ — D-1012): its own lamp on the tables with people at them in a tavern and on its
+  // counter, on the family's table, on a bench of work — the lucerna of clay (of bronze in the rich house of Rome), the open saucer of the
+  // Nile, the soapstone of the north, the stone lamp on its tall foot of the dawn of the cities —, or a candle where the people lights
+  // candles; the tavern's hall lit on its walls, a lamp on its little shelf or the ocote of the lake in its holder; the ocote on the wall by
+  // where a household of the lake sits, the brazier of clay on the floor by it, the lantern of horn hung by the door. Lit with someone awake
+  // inside in the dark (W.luz.acesa), out otherwise; nothing where there is nothing to burn — and nothing a people never lit itself with
   function lamps(ctx) {
-    const { b, p, W, S } = ctx; const L = W.luz; if (!L) return;
-    const kind = L.oleo && (!L.cera || hv(b, 11) < 0.6) ? 'lamparina' : L.cera ? 'vela' : null; if (!kind || !MESH(kind)) return;
-    const why = `${kind === 'vela' ? 'uma vela de cera' : `uma lamparina de ${L.oleo}`}: ${L.why}`;
-    // (as much of the candle as the night has left — its stage, cera0 whole … cera3 a stub —, the oil left in the lamp: D-749)
+    const { b, p, W, S } = ctx; const L = W.luz; if (!L) return; const A = G.Atmos;
+    // (the lamp of the people's — none for the lake's —, or its candle: one or the other, by the building's id, where it has both)
+    const kind = L.k && L.oleo && (!L.cera || hv(b, 11) < 0.6) ? L.k : L.cera ? 'vela' : null;
+    const what = k => (k === 'vela' ? A.LUZ_NOME.vela : `${A.LUZ_NOME[k] || k} ${A.MAT_NOME[L.mat] || ''}`.trim());
+    const why = kind ? `${what(kind)}: ${L.why}` : '';
+    // (as much of the candle as the night has left — its stage, cera0 whole … cera3 a stub —, the oil left in the lamp: D-749; the light of
+    // the flame by what burns in it — G.Luz3D.LAMPS: the olive's, the seal's, the oil with salt —; the oil seen in an open lamp)
     const burn = kind === 'vela' ? { vs: Math.min(3, Math.floor((1 - L.vela) * 4 + 1e-6)) } : { oil: L.azeite };
-    const spots = [];
-    if (b.type === 'taverna') {
-      if (ctx.tableGuests) for (const [s] of ctx.tableGuests) spots.push(s);
-      const counter = S.find(s => s.k === 'tampo' && (s.it.kind === 'balcao' || s.it.kind === 'balcao-alvenaria')); if (counter) spots.push(counter);
-    } else {
-      let t = null; for (const k of CORE) { t = S.find(s => s.k === 'tampo' && s.it.kind === k); if (t) break; }
-      if (t) spots.push(t);
+    const oilC = kind && kind !== 'vela' ? { liquido: DRINK[L.oleo] || DRINK.azeite } : null; const luzK = kind === 'vela' ? 'vela' : L.luz;
+    const lit = L.acesa ? 1 : 0;
+    if (kind && MESH(kind)) {
+      const spots = [];
+      if (b.type === 'taverna') {
+        if (ctx.tableGuests) for (const [s] of ctx.tableGuests) spots.push(s);
+        const counter = S.find(s => s.k === 'tampo' && (s.it.kind === 'balcao' || s.it.kind === 'balcao-alvenaria')); if (counter) spots.push(counter);
+      } else {
+        let t = null; for (const k of CORE) { t = S.find(s => s.k === 'tampo' && s.it.kind === k); if (t) break; }
+        if (t) spots.push(t);
+      }
+      // (the free point of each top nearest its middle: the lamp among the cups, never in one)
+      // (on a counter, at one end of it — the keeper works the middle —; on a table, among the cups)
+      let put = 0;
+      for (const s of spots.slice(0, 8)) { const bar = s.it.kind === 'balcao' || s.it.kind === 'balcao-alvenaria'; const end = hv(b, 13) < 0.5 ? -1 : 1;
+        put += scatter(ctx, s, [{ k: kind, key: 'luz', why, ry: (hv(b, 12 + s.it.k) - 0.5) * 2.4, at: bar ? [end * (s.w / 2 - 0.1), 0] : null, c: oilC, o: Object.assign({ lit, lmat: L.mat, luz: luzK }, burn) }]).length; }
+      // (a household with no top to set it on — the eating bench of Rome, of Greece, of the north; a table full — the lamp on its little shelf
+      // on the wall by where the family eats, else by its fire: the light the within says burns has its place, D-1012)
+      const lv0 = p.entryLv || 0; const l0 = lvOf(p, lv0);
+      if (b.type !== 'taverna' && !put && l0 && MESH('suporte')) {
+        const by0 = p.items.find(it => it.lv === lv0 && (it.kind === 'banco-comer' || CORE.includes(it.kind))) || p.items.find(it => it.lv === lv0 && it.fire);
+        const sm = MESH('suporte'), lm = MESH(kind); const q = by0 ? wallSpots(ctx, lv0, 1, () => true, [by0], 1.45, sm.h + lm.h)[0] : null;
+        if (q) { const ry = Math.atan2(q.r.nx, q.r.nz); const y = l0.y + 1.45; const o = sm.d / 2 + 0.002; ctx.wallTake(q.x, q.z, 0.22, y - 0.03, y + sm.h + lm.h);
+          ctx.put('suporte', q.x + q.r.nx * o, y, q.z + q.r.nz * o, ry, { lv: lv0, on: 'parede', key: 'parede-luz/0', why: `o suporte de ${what(kind)} junto de onde a família come: ${L.why}` });
+          ctx.put(kind, q.x + q.r.nx * (o + 0.012), y + sm.h, q.z + q.r.nz * (o + 0.012), ry, Object.assign({ lv: lv0, on: 'parede', key: `parede-luz/0/${kind}`, why, lit, lmat: L.mat, luz: luzK, c: oilC }, burn)); }
+        // (the round hut: no straight wall to hang a shelf on — the lamp on the floor by the hearth)
+        else { const fire = p.items.find(it => it.lv === lv0 && it.fire); if (fire) near(ctx, fire, [{ k: kind, key: 'luz-chao', why: `${what(kind)} no chão junto do fogo: ${L.why}`, c: oilC, o: Object.assign({ lit, lmat: L.mat, luz: luzK }, burn) }]); }
+      }
     }
-    // (the free point of each top nearest its middle: the lamp among the cups, never in one)
-    // (on a counter, at one end of it — the keeper works the middle —; on a table, among the cups)
-    for (const s of spots.slice(0, 8)) { const bar = s.it.kind === 'balcao' || s.it.kind === 'balcao-alvenaria'; const end = hv(b, 13) < 0.5 ? -1 : 1;
-      scatter(ctx, s, [{ k: kind, key: 'luz', why, ry: (hv(b, 12 + s.it.k) - 0.5) * 2.4, at: bar ? [end * (s.w / 2 - 0.1), 0] : null, o: Object.assign({ lit: L.acesa ? 1 : 0, lmat: L.mat }, burn) }]); }
-    // (and the lamps on the walls of a tavern's hall — the light of a room people sit in at night —: one for every eighteen square
-    // metres of it, four at most, each on its little shelf a hand over the heads of who sits, clear of the windows, the doors and
-    // what stands against the wall; the first by the tables, the others as far from each other as the walls allow)
-    if (b.type !== 'taverna' || !MESH('suporte')) return;
-    const lv = p.entryLv || 0; const l = lvOf(p, lv); const hall = p.rooms.filter(m => m.lv === lv && !m.open && !m.circ).sort((a, c) => (c.r[2] - c.r[0]) * (c.r[3] - c.r[1]) - (a.r[2] - a.r[0]) * (a.r[3] - a.r[1]))[0]; if (!l || !hall) return;
-    const area = (hall.r[2] - hall.r[0]) * (hall.r[3] - hall.r[1]); const n = G.clamp(Math.round(area / 18), 1, 4);
-    const tabs = p.items.filter(it => it.lv === lv && TABLES[it.kind]); const cand = [];
-    for (const r of runs(p, lv, 1.3, 1.85, ctx.look)) for (let s = r.s0 + 0.15; s <= r.s1 - 0.15 + EPS; s += 0.25) { const x = r.x + r.tx * s, z = r.z + r.tz * s; if (!inR(hall.r, x, z, 0.4)) continue; cand.push({ r, x, z, d: tabs.length ? Math.min(...tabs.map(t => Math.hypot(t.x - x, t.z - z))) : 0 }); }
+    const lv = p.entryLv || 0; const l = lvOf(p, lv); if (!l) return;
+    const pine = L.tocha && MESH(L.tocha.k) ? L.tocha : null;
+    // (the lights on the walls of a tavern's hall — the light of a room people sit in at night —: one for every eighteen square metres of it,
+    // four at most, a hand over the heads of who sits, clear of the windows, the doors and what stands against the wall; the first by the
+    // tables, the others as far from each other as the walls allow: the people's lamp on its little shelf, or the ocote of the lake)
+    if (b.type === 'taverna') {
+      const wallK = pine ? pine.k : kind && MESH(kind) && MESH('suporte') ? kind : null;
+      const hall = wallK ? p.rooms.filter(m => m.lv === lv && !m.open && !m.circ).sort((a, c) => (c.r[2] - c.r[0]) * (c.r[3] - c.r[1]) - (a.r[2] - a.r[0]) * (a.r[3] - a.r[1]))[0] : null;
+      if (hall) {
+        const area = (hall.r[2] - hall.r[0]) * (hall.r[3] - hall.r[1]); const n = G.clamp(Math.round(area / 18), 1, 4);
+        const tabs = p.items.filter(it => it.lv === lv && TABLES[it.kind]);
+        if (pine) { const m = MESH(pine.k); const got = wallSpots(ctx, lv, n, q => inR(hall.r, q.x, q.z, 0.4), tabs, OCOTE_Y, m.h);
+          got.forEach((q, i) => onWall(ctx, pine.k, q, lv, l.y + OCOTE_Y, { key: `parede-luz/${i}/${pine.k}`, why: `${A.LUZ_NOME.ocote} do salão (${area.toFixed(0)} m²): ${pine.why} — ${L.why}`, lit, lmat: L.mat, luz: 'tocha' })); }
+        else { const sm = MESH('suporte'); const lm = MESH(kind); const got = wallSpots(ctx, lv, n, q => inR(hall.r, q.x, q.z, 0.4), tabs, 1.45, sm.h + lm.h);
+          got.forEach((q, i) => {
+            const ry = Math.atan2(q.r.nx, q.r.nz); const y = l.y + 1.45; const o = sm.d / 2 + 0.002; ctx.wallTake(q.x, q.z, 0.22, y - 0.03, y + sm.h + lm.h);
+            ctx.put('suporte', q.x + q.r.nx * o, y, q.z + q.r.nz * o, ry, { lv, on: 'parede', key: `parede-luz/${i}`, why: `o suporte de uma lamparina do salão (${area.toFixed(0)} m²): ${L.why}` });
+            ctx.put(kind, q.x + q.r.nx * (o + 0.012), y + sm.h, q.z + q.r.nz * (o + 0.012), ry, Object.assign({ lv, on: 'parede', key: `parede-luz/${i}/${kind}`, why, lit, lmat: L.mat, luz: luzK, c: oilC }, burn));
+          }); }
+      }
+    }
+    // (where a household sits — its table, its eating bench, else its fire; a tavern's guests, at its tables: the ocote of the lake on the
+    // wall by it, the brazier of clay on the floor by it)
+    let core = null; for (const k of b.type === 'taverna' ? Object.keys(TABLES) : CORE.concat('banco-comer')) { core = p.items.find(it => it.lv === lv && it.kind === k); if (core) break; }
+    const by = core || p.items.find(it => it.lv === lv && it.fire) || null;
+    if (pine && by && b.type !== 'taverna') { const m = MESH(pine.k); const q = wallSpots(ctx, lv, 1, () => true, [by], OCOTE_Y, m.h)[0];
+      if (q) onWall(ctx, pine.k, q, lv, l.y + OCOTE_Y, { key: `${pine.k}/${by.id}`, why: `${pine.why} — ${L.why}`, lit, lmat: L.mat, luz: 'tocha' }); }
+    if (L.braseira && by && ctx.near && MESH('braseira')) near(ctx, by, [{ k: 'braseira', key: 'braseira', why: `${L.braseira.why} — ${L.why}`, o: { lit, lmat: 'barro', luz: 'braseira' } }]);
+    // (the lantern of horn hung by the door, inside: the one to go out with at night — on a peg of the wall a few steps from the door)
+    if (L.lanterna && ctx.near && MESH('lanterna')) { const d = doorAt(p); if (d && d.lv === lv) pendura(ctx, [{ k: 'lanterna', key: 'lanterna', why: `${L.lanterna.why} — ${L.why}`, o: { lit, lmat: L.mat === 'bronze' ? 'bronze' : W.metal || 'madeira', luz: 'lanterna' } }],
+      [{ x: d.cx + d.nx * 0.6, z: d.cz + d.nz * 0.6 }], { lv, teto: false, raio: 2.6, tag: 'porta' }); }
+  }
+  const OCOTE_Y = 1.3; // (the holder of the ocote on the wall: its foot over the floor — the flame a little over the heads)
+  // (n points on the walls of a storey for a light — a hand over the heads, clear of what is on the wall between y0 and y0 + h —: the first
+  // nearest the pieces near (the tables, the place of the family), the others as far from each other as the walls allow; inside: which count)
+  function wallSpots(ctx, lv, n, inside, near0, y0, h) {
+    const { b, p } = ctx; const l = lvOf(p, lv); const cand = [];
+    for (const r of runs(p, lv, 1.3, 1.85, ctx.look)) for (let s = r.s0 + 0.15; s <= r.s1 - 0.15 + EPS; s += 0.25) { const x = r.x + r.tx * s, z = r.z + r.tz * s; if (!inside({ x, z })) continue; cand.push({ r, x, z, d: near0.length ? Math.min(...near0.map(t => Math.hypot(t.x - x, t.z - z))) : 0 }); }
     const got = []; cand.sort((a, c) => a.d - c.d || hv(b, Math.round(a.x * 40 + a.z * 7)) - hv(b, Math.round(c.x * 40 + c.z * 7)));
-    const lm = MESH(kind); const top = 1.45 + MESH('suporte').h + lm.h; for (let i = cand.length - 1; i >= 0; i--) if (!ctx.wallFree(cand[i].x, cand[i].z, 0.22, l.y + 1.42, l.y + top)) cand.splice(i, 1);
+    for (let i = cand.length - 1; i >= 0; i--) if (!ctx.wallFree(cand[i].x, cand[i].z, 0.22, l.y + y0 - 0.03, l.y + y0 + h)) cand.splice(i, 1);
     while (got.length < n && cand.length) { let best = null, bs = -1; for (const q of cand) { const s = got.length ? Math.min(...got.map(g => Math.hypot(g.x - q.x, g.z - q.z))) : 1e9 - q.d; if (got.length && s < 2.4) continue; if (s > bs) { bs = s; best = q; } } if (!best) break; got.push(best); }
-    const sm = MESH('suporte'); got.forEach((q, i) => {
-      const ry = Math.atan2(q.r.nx, q.r.nz); const y = l.y + 1.45; const o = sm.d / 2 + 0.002; ctx.wallTake(q.x, q.z, 0.22, y - 0.03, l.y + top);
-      ctx.put('suporte', q.x + q.r.nx * o, y, q.z + q.r.nz * o, ry, { lv, on: 'parede', key: `parede-luz/${i}`, why: `o suporte de uma lamparina do salão (${area.toFixed(0)} m²): ${L.why}` });
-      ctx.put(kind, q.x + q.r.nx * (o + 0.012), y + sm.h, q.z + q.r.nz * (o + 0.012), ry, Object.assign({ lv, on: 'parede', key: `parede-luz/${i}/${kind}`, why, lit: L.acesa ? 1 : 0, lmat: L.mat }, burn));
-    });
+    return got;
+  }
+  // (a thing that stands out of a wall on its own — the ocote's holder —: its back on the wall's face at the point, its foot at y)
+  function onWall(ctx, k, q, lv, y, o) {
+    const m = MESH(k); if (!m) return null; const ry = Math.atan2(q.r.nx, q.r.nz); const out = m.d / 2 + 0.002; ctx.wallTake(q.x, q.z, Math.max(0.22, m.w), y - 0.03, y + m.h);
+    return ctx.put(k, q.x + q.r.nx * out, y, q.z + q.r.nz * out, ry, Object.assign({ lv, on: 'parede' }, o));
   }
   // ---- the cloth: the hanging on the wall behind the musician, the rug on his stage (a people that weaves; a house rich now); the
   // rug — or the pelt — of a rich house on its floor
@@ -748,29 +813,32 @@
   // the ways of putting things a builder has (each thing with its cause in `why`, never a draw: the place, the side, the turn by the
   // building's id — K.hv): K.pack (a row along a shelf or a top), K.scatter (about a top, each at the free point nearest its own),
   // K.beside / K.near / K.byWall (on the floor beside a piece, or against a wall near it), K.pendura (from the pegs of a wall near some
-  // pieces, else the joists: the tools of a trade, what is cured), K.hangFood (the food of the store, by the fire and the bar), K.runs
+  // pieces, else the joists: the tools of a trade, what is cured), K.hangFood (the food of the store, by the fire and the bar), K.riscos (the
+  // marks of the years on the walls, by a count of the world: the tavern's charcoal, the days of the cell), K.wallSpots / K.onWall (the
+  // points on the walls for a light over the heads, and a thing out of a wall at one: the ocote of the lake), K.runs
   // (the free stretches of a storey's walls between two heights), K.ceilAt, K.floorFree, the plan's frame and cells; the cups, the
   // vessels and the dishes of each people (K.cupOf, K.vesselOf, K.vesselName, K.dishOf); and the builders of the tavern and of the house
   // (K.taverna, K.casa), for a use that is one of them and more (the palace: a house of who rules)
-  const KIT = D.KIT = Object.freeze({ pack, scatter, beside, near, byWall, pendura, hangFood, runs, ceilAt, floorFree, surfaces, frame, lvOf, cellAt, inR, ovR, rectsOf, topOf,
+  const KIT = D.KIT = Object.freeze({ pack, scatter, beside, near, byWall, pendura, hangFood, riscos, wallSpots, onWall, runs, ceilAt, floorFree, surfaces, frame, lvOf, cellAt, inR, ovR, rectsOf, topOf,
     hv, r3, has: D.has, TABLES, CORE, FLOOR_UP, TAU, HALF, cupOf, vesselOf, vesselName, dishOf, DRINK, DISH, FRUIT, taverna: tavern, casa: house });
   D.builder('taverna', tavern);
   D.builder('casa', house);
 
   // ------------------------------ the lights ------------------------------
-  // the lamps and candles lit, at the flame of each (its model's anchor), in the lot's frame: [{ x, y, z, cor, forca, raio, tremor,
-  // why, kind, id }] — G.Luz3D bakes them with the others (P1)
-  const LAMP = [1, 0.74, 0.44], CANDLE = [1, 0.8, 0.52];
+  // the lamps and candles lit, at the flame of each (its model's anchor), in the lot's frame: [{ x, y, z, cor, forca, raio, tremor, chama,
+  // kind (the flame drawn: a candle's, a lamp's, a torch's, a brazier's), luz, modelo, why, id }] — the light of each the G.Luz3D.LAMPS's by
+  // what burns in it (the thing's luz, D-1012), and G.Luz3D bakes them with the others (P1)
   function lightsOf(ctx) {
-    const out = [];
+    const out = []; const LM = (G.Luz3D && G.Luz3D.LAMPS) || {};
     for (const t of ctx.out) {
       if (!t.lit) continue; const m = MESH(t.k); const ak = t.vs ? 'chama' + t.vs : 'chama'; const a = m && ((m.anc || []).find(q => q.k === ak) || (m.anc || []).find(q => q.k === 'chama')); if (!a) continue;
+      const lk = t.luz || (t.k === 'vela' ? 'vela' : 'lamparina'); const lm = LM[lk] || LM.lamparina; if (!lm) continue;
       const c = Math.cos(t.ry), s = Math.sin(t.ry); const sx = t.s[0], sy = t.s[1], sz = t.s[2];
       const x = t.x + a.x * sx * c + a.z * sz * s, z = t.z - a.x * sx * s + a.z * sz * c, y = t.y + a.y * sy;
-      const candle = t.k === 'vela';
       // (a lamp low on oil burns low: its light by what is left in it — D-749)
-      const oil = candle || !Number.isFinite(t.oil) ? 1 : 0.45 + 0.55 * G.clamp(t.oil * 2.5, 0, 1);
-      out.push({ x: r3(x), y: r3(y + 0.06), z: r3(z), cor: candle ? CANDLE : LAMP, forca: r3((candle ? 0.2 : 0.3) * oil), raio: r3((candle ? 3.5 : 4.5) * (0.7 + 0.3 * oil)), tremor: candle ? 0.07 : oil < 0.8 ? 0.09 : 0.05, why: t.why, kind: t.k, id: 'd:' + t.key });
+      const oil = !lm.oleo || !Number.isFinite(t.oil) ? 1 : 0.45 + 0.55 * G.clamp(t.oil * 2.5, 0, 1);
+      out.push({ x: r3(x), y: r3(y + 0.06), z: r3(z), cor: lm.cor, forca: r3(lm.forca * oil), raio: r3(lm.raio * (0.7 + 0.3 * oil)), tremor: lm.oleo && oil < 0.8 ? Math.max(0.09, lm.tremor) : lm.tremor,
+        chama: lm.chama || 0, kind: lm.kind || lk, luz: lk, modelo: t.k, why: t.why, id: 'd:' + t.key });
     }
     return out;
   }
@@ -789,7 +857,8 @@
     const civ = W.civ, MV = G.Movel3D; const wood = (MV && MV.WOOD && (MV.WOOD[civ] || MV.WOOD.classico)) || [[122, 88, 58], [88, 62, 42]]; const clay = (MV && MV.CLAY && (MV.CLAY[civ] || MV.CLAY.classico)) || [176, 102, 66];
     const own = t.c && t.c[part]; const tone = 0.92 + G.hash(Math.imul(t.key.length + 7, 131) + t.x * 977 + t.z * 31) * 0.14;
     const mul = (c, f) => [c[0] * f, c[1] * f, c[2] * f];
-    const metal = m => (m === 'ferro' ? [[62, 60, 58], 'iron'] : m === 'bronze' ? [[150, 108, 56], 'bronze'] : m === 'pedra' ? [[150, 146, 138], 'stone'] : [mul(clay, 0.9), 'barro']);
+    // (the stuff of a lamp, of a pot: the iron, the bronze, the stone — the soapstone of the north, grey-green (D-1012) —, else the people's clay)
+    const metal = m => (m === 'ferro' ? [[62, 60, 58], 'iron'] : m === 'bronze' ? [[150, 108, 56], 'bronze'] : m === 'pedra' ? [[150, 146, 138], 'stone'] : m === 'pedra-sabao' ? [[112, 118, 104], 'stone'] : [mul(clay, 0.9), 'barro']);
     switch (part) {
       case 'louca': return W.barro ? [mul(clay, tone), 'barro'] : [mul(wood[0], tone * 1.05), 'madeira'];
       case 'barro': return [mul(clay, tone), W.rico >= 2 && (civ === 'grego' || civ === 'romano') ? 'vidrado' : 'barro'];
@@ -813,7 +882,11 @@
       case 'cabaca': return [[176, 140, 80], 0];
       case 'queijo': return [[224, 186, 98], 0];
       case 'lampada': { const q = metal(t.lmat); return [q[0], q[1]]; }
-      case 'castical': return t.lmat === 'pedra' ? [mul(wood[1], 1), 'madeira2'] : metal(t.lmat);
+      case 'castical': return t.lmat === 'pedra' || t.lmat === 'pedra-sabao' || t.lmat === 'madeira' ? [mul(wood[1], 1), 'madeira2'] : metal(t.lmat);
+      // (the panes of horn of a lantern — the light through them warmer and brighter while the candle burns —; the embers of a brazier and of
+      // the tips of a torch, red while they burn, grey ash out: D-1012)
+      case 'chifre': return [t.lit ? [236, 194, 120] : [168, 132, 82], 0];
+      case 'brasa': return [t.lit ? [255, 112, 34] : [62, 56, 52], 0];
       case 'cera': return [[234, 220, 182], 0];
       case 'panela': { const q = metal(t.pmat || (W.metal || 'barro')); return [mul(q[0], 0.8), q[1]]; }
       case 'ferro': return W.metal ? metal(W.metal) : [[138, 112, 74], 'wicker']; // (the hoops of a jug of staves: withies where there is no metal)

@@ -48,7 +48,7 @@
   const BOUNCE = 0.5; // (the share of the sky that comes in thrown back off the floor and the walls — a pale floor in the sun)
   // ------------------------------ the sources, with their causes ------------------------------
   // (the colour of each light: the hearth's embers and flame, the oil lamp's, a candle's)
-  const HEARTH = [1, 0.6, 0.3], LAMP = [1, 0.74, 0.44];
+  const HEARTH = [1, 0.6, 0.3], LAMP = [1, 0.74, 0.44], CANDLE = [1, 0.8, 0.52];
   // the lights a building has burning now, in its plan's frame — each with its cause (why) and what it is (kind, the piece):
   // the fires of its hearths, kitchens, forges and kilns while the world has it burning (G.Atmos.fire: the family asleep, the
   // hearth is out), the lamps on their stands and the altar's flame with someone awake inside (G.Atmos.lit), and the lamps and
@@ -56,8 +56,30 @@
   const FIRE_K = { lar: 1, 'fogo-chao': 0.9, fogao: 0.7, forno: 0.5, fogareiro: 0.45, braseiro: 0.6, 'forja-fogo': 1, 'forno-olaria': 0.6, fornalha: 0.5, 'fornalha-banho': 0.55,
     lareira: 0.9, 'forno-barro': 0.55, 'fogao-comal': 0.6, 'fogo-comprido': 1.2 };
   L.FIRE_K = FIRE_K;
-  // (the pieces that are a lamp: lit by someone awake — the stand's oil lamp, the altar's flame)
-  const LAMPS = { lampadario: { y: 0.02, forca: 0.55, raio: 8, cor: LAMP, tremor: 0.05 }, altar: { y: 0.1, forca: 0.4, raio: 7, cor: HEARTH, tremor: 0.09 } };
+  // the lamps: the light of each — its strength (forca), its reach (raio), its colour (cor), its flicker (tremor) — and the flame drawn
+  // (chama: its size; kind: the flame the 3D draws, a candle's, a lamp's, a torch's, a brazier's — Build3D draws a candle's and a lamp's
+  // at their own size: L-1882). Two kinds of entry:
+  //   · a piece of the plan that is a lamp (peca: 1; y: its flame over the piece's top): the altar's flame, lit with someone awake inside
+  //     (G.Atmos.lit); the lamp stand, lit with someone awake and with what its people burns in it — the stand of each people, its light
+  //     the entry G.Atmos.luzPeca names (nada vem do nada: L-2252);
+  //   · the light of a thing of the decoration (the thing's `luz` — G.Dentro3D, by what it burns —, else its model's name): the lamp of
+  //     olive oil; the seal's and the whale's, which smokes and flickers; the oil with salt of the Nile, which burns clear and steady; the
+  //     candle; the lantern of horn, a candle behind its panes; the torch of ocote; the brazier's embers (the light of each people, D-1012).
+  // A wave's new lamp — the palace's candelabrum, the hanging lucerna — is a line here, with its model and its cause (G.Atmos)
+  const LAMPS = {
+    lampadario: { peca: 1, y: 0.02, forca: 0.55, raio: 8, cor: LAMP, tremor: 0.05 }, altar: { peca: 1, y: 0.1, forca: 0.4, raio: 7, cor: HEARTH, tremor: 0.09 },
+    // (the stands that are not an oil lamp's: the candle of the north's post, the brazier on the column of the lake)
+    'lampadario-vela': { y: 0.045, forca: 0.36, raio: 6, cor: CANDLE, tremor: 0.07, chama: 0.12, kind: 'vela' },
+    'lampadario-brasa': { y: -0.06, forca: 0.6, raio: 8, cor: [1, 0.52, 0.24], tremor: 0.1, chama: 0.3, kind: 'braseira' },
+    // (the decoration's: oleo — its light goes down as the oil does, D-749)
+    lamparina: { forca: 0.3, raio: 4.5, cor: LAMP, tremor: 0.05, chama: 0.15, kind: 'lamparina', oleo: 1 },
+    'lamparina-foca': { forca: 0.32, raio: 4.5, cor: [1, 0.66, 0.36], tremor: 0.08, chama: 0.17, kind: 'lamparina', oleo: 1 },
+    'lamparina-sal': { forca: 0.3, raio: 4.5, cor: [1, 0.78, 0.5], tremor: 0.035, chama: 0.15, kind: 'lamparina', oleo: 1 },
+    vela: { forca: 0.2, raio: 3.5, cor: CANDLE, tremor: 0.07, chama: 0.12, kind: 'vela' },
+    lanterna: { forca: 0.15, raio: 3.5, cor: [1, 0.72, 0.42], tremor: 0.02, chama: 0.1, kind: 'vela' },
+    tocha: { forca: 0.55, raio: 6.5, cor: [1, 0.57, 0.27], tremor: 0.14, chama: 0.3, kind: 'tocha' },
+    braseira: { forca: 0.34, raio: 4, cor: [1, 0.44, 0.19], tremor: 0.05, chama: 0.2, kind: 'braseira' },
+  };
   L.LAMPS = LAMPS;
   L.sources = function (b, p) {
     const out = []; if (!b || !p || !p.items) return out;
@@ -66,13 +88,16 @@
     for (const it of p.items) {
       if (it.fire) { if (!fire) continue; const k = (FIRE_K[it.kind] || 0.5) * (fire.k || 1);
         out.push({ x: it.x, y: lvY(it.lv) + (it.y || 0) + Math.min(it.h, 0.6), z: it.z, lv: it.lv, forca: k, raio: 7 + 3 * k, cor: HEARTH, tremor: 0.12, why: fire.why, kind: it.kind, id: it.id, fire: 1 }); continue; }
-      const lm = LAMPS[it.kind]; if (!lm || !lit) continue;
-      out.push({ x: it.x, y: lvY(it.lv) + (it.y || 0) + it.h + lm.y, z: it.z, lv: it.lv, forca: lm.forca, raio: lm.raio, cor: lm.cor, tremor: lm.tremor, why: 'acordado', kind: it.kind, id: it.id, fire: 0 });
+      const lp = LAMPS[it.kind]; if (!lp || !lp.peca || !lit) continue;
+      // (the stand burns what its people burns in it — its oil, its candle, its embers —, or it is dark: L-2252; the altar's flame as before)
+      const q = At && At.luzPeca ? At.luzPeca(b, it.kind) : undefined; if (q === null) continue; const lm = (q && LAMPS[q.luz]) || lp;
+      out.push({ x: it.x, y: lvY(it.lv) + (it.y || 0) + it.h + (Number.isFinite(lm.y) ? lm.y : lp.y), z: it.z, lv: it.lv, forca: lm.forca, raio: lm.raio, cor: lm.cor, tremor: lm.tremor, why: q ? q.why : 'acordado', kind: lm.kind || it.kind, id: it.id, fire: 0, chama: lm.chama || 0, luz: q ? q.luz : it.kind });
     }
-    // (the decoration's lamps and candles, P5: in the lot's frame, each with its cause; on the storey whose floor is under it)
+    // (the decoration's lamps and candles, P5: in the lot's frame, each with its cause; on the storey whose floor is under it — the flame
+    // it is (kind, chama) and its light (luz) the G.Luz3D.LAMPS's, D-1012)
     const D = G.Dentro3D && G.Dentro3D.fontes ? G.Dentro3D.fontes(b) : null;
     if (D) for (const f of D) { let lv = p.levels[0].lv, ly = -1e9; for (const l of p.levels) if (l.y <= f.y + 0.05 && l.y > ly) { ly = l.y; lv = l.lv; }
-      out.push({ x: f.x, y: f.y, z: f.z, lv, forca: f.forca, raio: f.raio || 5, cor: f.cor || LAMP, tremor: f.tremor || 0.05, why: f.why || 'decoracao', kind: f.kind || 'lamparina', id: f.id !== undefined ? f.id : 'd' + out.length, fire: 0 }); }
+      out.push({ x: f.x, y: f.y, z: f.z, lv, forca: f.forca, raio: f.raio || 5, cor: f.cor || LAMP, tremor: f.tremor || 0.05, why: f.why || 'decoracao', kind: f.kind || 'lamparina', id: f.id !== undefined ? f.id : 'd' + out.length, fire: 0, chama: f.chama || 0, luz: f.luz || f.kind || 'lamparina', modelo: f.modelo || '' }); }
     return out;
   };
   // (what the volume depends on: the sources lit, and which of the plan's doors stand open — the sky comes in through them)

@@ -3070,5 +3070,28 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/const owned = home \|\| !!firstOf\(b, 'dono'\);/.test(f) || !/const pano = owned && \(/.test(f)) fails.push('o pano tem dono: o within dá o tapete e a tapeçaria sem perguntar se o prédio é de uma casa ou de um uso com dono (L-2251)');
   let inv = ''; try { inv = fs.readFileSync(path.join(dir, '..', 'qa', 'dentro-inv.js'), 'utf8'); } catch (e) { }
   if (!/tapete: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv) || !/tapecaria: \(W, t, b\) => \([^\n]*dono\(b\)\)/.test(inv)) fails.push('o pano tem dono: o verificador não pergunta pelo dono no CAUSA do tapete e da tapeçaria (L-2251)'); }
+// 503. "a luz de cada povo" (D-1012): como cada povo se ilumina é uma regra do mundo, uma só — o G.Atmos.LUZ (a lamparina que faz e os
+// óleos que queima, a vela, a tocha, o braseiro, a lanterna; o asteca sem lamparina de óleo nem vela) —, lida pelo within (luzOf); o
+// desenho põe o modelo que o within diz e dá a cada luz a força, a cor, o tremor e a chama do G.Luz3D.LAMPS (nenhuma cor de chama escrita
+// no dentro3d.js); toda luz que o atmos.js nomeia tem a sua linha no LAMPS, e todo modelo de luz de um povo, a sua linha na TABLE do deco.py
+{ const at = (src['atmos.js'] || []).join('\n'), dt = (src['dentro3d.js'] || []).join('\n'), lz = (src['luz3d.js'] || []).join('\n');
+  const i = at.indexOf('At.LUZ = Object.freeze({'), j = at.indexOf('\n  });', i); const T = i < 0 ? '' : at.slice(i, j);
+  for (const c of ['romano', 'grego', 'egipcio', 'asteca', 'nordico', 'classico']) if (!new RegExp(`\\n    ${c}: Object\\.freeze\\(\\{`).test(T)) fails.push(`a luz de cada povo: o G.Atmos.LUZ sem o ${c} (D-1012)`);
+  if (!/asteca: Object\.freeze\(\{[^\n]*k: null[^\n]*vela: 0/.test(T)) fails.push('a luz de cada povo: o asteca com lamparina de óleo ou vela no G.Atmos.LUZ — a luz dele é o ocote e o braseiro (D-1012)');
+  if (!/const luz = luzOf\(b, \{/.test(at) || !/const P = At\.LUZ\[civ\] \|\| At\.LUZ\.classico;/.test(at)) fails.push('a luz de cada povo: o within não lê a luz pelo G.Atmos.LUZ (luzOf, D-1012)');
+  const k = dt.indexOf('function lightsOf(ctx) {'), m = dt.indexOf('\n  }\n', k); const L = k < 0 ? '' : dt.slice(k, m);
+  if (!/G\.Luz3D\.LAMPS/.test(L) || /\[1, 0\.\d+, 0\.\d+\]/.test(L)) fails.push('a luz de cada povo: o lightsOf do dentro3d.js não tira a força, a cor e a chama de cada luz do G.Luz3D.LAMPS (D-1012)');
+  if (/\bconst (LAMP|CANDLE) = \[/.test(dt)) fails.push('a luz de cada povo: o dentro3d.js com a cor de uma chama escrita nele (a do G.Luz3D.LAMPS, D-1012)');
+  const a = lz.indexOf('const LAMPS = {'), z = lz.indexOf('\n  };', a); const LM = a < 0 ? '' : lz.slice(a, z);
+  for (const q of ['lamparina', 'lamparina-foca', 'lamparina-sal', 'vela', 'lanterna', 'tocha', 'braseira', 'lampadario', 'lampadario-vela', 'lampadario-brasa', 'altar'])
+    if (!new RegExp(`[\\s{,]'?${q.replace(/-/g, '\\-')}'?: \\{`).test(LM)) fails.push(`a luz de cada povo: a luz ${q} sem a sua linha no G.Luz3D.LAMPS (D-1012)`);
+  let py = ''; try { py = fs.readFileSync(path.join(dir, '..', 'arte', 'blender', 'deco.py'), 'utf8'); } catch (e) { }
+  const models = new Set(); for (const mm of T.matchAll(/\b(?:k|tocha): '([\w-]+)'/g)) models.add(mm[1]); for (const q of ['vela', 'braseira', 'lanterna']) models.add(q);
+  for (const q of models) if (!new RegExp(`\\('${q.replace(/-/g, '\\-')}', [\\d.]+, [\\d.]+, [\\d.]+, C\\d?\\.`).test(py)) fails.push(`a luz de cada povo: o modelo ${q} sem a sua linha na TABLE do deco.py (D-1012)`); }
+// 504. "o lampadário queima o que o seu povo tem" (L-2252): a peça de luz da planta (o lampadário de cada povo) só acende com o que o seu povo
+// queima nela — o G.Atmos.luzPeca (o óleo, a vela de cera, as brasas da lenha), perguntado pelo G.Luz3D.sources: sem nada, apagada
+{ const lz = (src['luz3d.js'] || []).join('\n'), at = (src['atmos.js'] || []).join('\n'); const i = lz.indexOf('L.sources = function'), j = lz.indexOf('\n  };', i); const f = i < 0 ? '' : lz.slice(i, j);
+  if (!/At\.luzPeca\(b, it\.kind\)/.test(f) || !/if \(q === null\) continue;/.test(f)) fails.push('o lampadário queima o que o seu povo tem: o G.Luz3D.sources acende a peça de luz sem perguntar ao G.Atmos.luzPeca (L-2252)');
+  if (!/At\.luzPeca = function \(b, kind\) \{/.test(at) || !/lampadario: Object\.freeze\(\{ romano: 'oleo', grego: 'oleo', classico: 'oleo', egipcio: 'oleo', nordico: 'vela', asteca: 'brasa' \}\)/.test(at)) fails.push('o lampadário queima o que o seu povo tem: o G.Atmos.luzPeca sem o combustível do lampadário de cada povo (L-2252)'); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

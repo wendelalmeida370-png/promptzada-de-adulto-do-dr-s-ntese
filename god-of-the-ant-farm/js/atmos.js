@@ -502,6 +502,103 @@
     const U = G.Urban; const sn = U && U.peek ? U.peek(b.set) : null; const c = sn && sn.cells ? sn.cells.get(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) : null;
     return c ? (c.value >= 62 ? 2 : c.value >= 28 ? 1 : 0) : 1;
   };
+  // ------------------------------ the light of each people (the interiors 3, the front L — D-1012) ------------------------------
+  // How a people lights itself at night is a rule of the world, not an ornament (planos/levantamentos/interiores3-D-referencias.md §1.4,
+  // §19.2): the lamp it makes and the oils it burns in it, in the order of its custom; whether it lights candles; its torch; its brazier;
+  // its lantern — each only with what there is to burn (the house's, else the people's store: nada vem do nada, D-440) and of the stuff the
+  // people has had (G.Origem.matOK):
+  //   · romano: the lucerna of clay (lamparina) with the oil — of bronze in a house rich now, where the people has had the bronze —, the
+  //     candle of wax, and by the door of a rich house the lantern of horn (the laterna cornea), where the people has the horn;
+  //   · grego: the lychnos of clay (lamparina) with the oil; the portable brazier of clay on a cold night (At.cold);
+  //   · egipcio: the open saucer of clay of the Nile (lamparina-pires), salt in its oil where the people has salt — the flame burns clear and
+  //     steady, with less smoke (Herodotus II.62) —;
+  //   · asteca: no lamp of oil and no candle: the torch of ocote — the splinters of the resinous pine: wood — in its holder on the wall, and
+  //     the brazier of clay of the rich house, with the copal where the people has the incense;
+  //   · nordico: the lamp of soapstone (lamparina-pedra) with the oil of the seal and the whale (oleo; the olive's where it came by trade);
+  //     the candle of wax only in the rich house, the wax being dear;
+  //   · classico (the dawn of the cities, D-978): the lamp of stone on its tall foot (lamparina-pe) with the oil; the brazier on a cold night.
+  // (k: the lamp's model; oleos: what it burns, the first the people has; mat: its stuff — 'barro' the potter's ware where the people has had
+  // it —; rico: its stuff in a house rich now; vela: 1 candles, 'rico' only in a rich house, 0 none; tocha: the torch's model; braseira:
+  // 'frio' on a cold night, 'rico' in a rich house — a household, or a building whose use says whose wealth it shows; lanterna: by the door)
+  At.LUZ = Object.freeze({
+    romano: Object.freeze({ nome: 'a lucerna de barro', k: 'lamparina', oleos: Object.freeze(['azeite', 'oleo']), mat: 'barro', rico: 'bronze', vela: 1, lanterna: 1 }),
+    grego: Object.freeze({ nome: 'o lychnos de barro', k: 'lamparina', oleos: Object.freeze(['azeite', 'oleo']), mat: 'barro', vela: 0, braseira: 'frio' }),
+    egipcio: Object.freeze({ nome: 'a lamparina de barro do Nilo', k: 'lamparina-pires', oleos: Object.freeze(['azeite', 'oleo']), mat: 'barro', sal: 1, vela: 0 }),
+    asteca: Object.freeze({ nome: 'a tocha de ocote', k: null, oleos: NONE, vela: 0, tocha: 'ocote', braseira: 'rico' }),
+    nordico: Object.freeze({ nome: 'a lamparina de pedra-sabão', k: 'lamparina-pedra', oleos: Object.freeze(['oleo', 'azeite']), mat: 'pedra-sabao', vela: 'rico' }),
+    classico: Object.freeze({ nome: 'a lamparina de pedra de pé alto', k: 'lamparina-pe', oleos: Object.freeze(['azeite', 'oleo']), mat: 'pedra', vela: 0, braseira: 'frio' }),
+  });
+  // (the name of each light and of the stuff of a lamp, for the reasons in words)
+  At.LUZ_NOME = Object.freeze({ lamparina: 'a lamparina', 'lamparina-pires': 'a lamparina aberta do Nilo', 'lamparina-pedra': 'a lamparina', 'lamparina-pe': 'a lamparina de pé alto',
+    vela: 'a vela de cera', ocote: 'a tocha de ocote', braseira: 'o braseiro de barro', lanterna: 'a lanterna de chifre' });
+  At.MAT_NOME = Object.freeze({ barro: 'de barro', bronze: 'de bronze', pedra: 'de pedra', 'pedra-sabao': 'de pedra-sabão' });
+  // the light a building has, by its people's custom (the within's luz): { comb (what there is to burn: its oils, the wax, the wood), oleo
+  // (the oil of the lamp), cera (a candle), vela, azeite (tonight's count: what is left of the candle and of the lamp's oil), mat (the lamp's
+  // stuff), acesa, awake, k (the people's lamp — null for the lake's), luz (the lamp's light: G.Luz3D.LAMPS — the olive's, the seal's, the oil
+  // with salt), sal, tocha, braseira, lanterna (each { why }, or null), why } — or null: nothing to burn
+  function luzOf(b, c) {
+    const { civ, f, home, owned, ref, rico, barro, ok, LZ } = c; const D = G.Depot; const P = At.LUZ[civ] || At.LUZ.classico;
+    const own = k => (D ? D.get(ref, k) : 0);
+    const has = k => (home && own(k) >= 1 - EPS) || ((f && f.stock ? f.stock[k] || 0 : 0) >= 1 - EPS);
+    // (the night burns them, D-749: what is left of the candle lit tonight and of the oil in the lamps — the building's own count, its use's
+    // (the tavern's T.luz: P7's, the wax and the oil burnt by the book, the new candle of the morning lit only with wax in store) —; whole where
+    // the world keeps no count. The candle burnt out and none new: no candle; the oil gone: the lamp out)
+    const cntV = !!LZ && Number.isFinite(LZ.vela), cntA = !!LZ && Number.isFinite(LZ.azeite);
+    const vela = cntV ? G.clamp(LZ.vela, 0, 1) : 1, azeite = cntA ? G.clamp(LZ.azeite, 0, 1) : 1;
+    // (the oils of its lamp that there are, the first its custom burns; its candles — in the north only the rich house's —: the candle of
+    // tonight was the store's when it was lit, and stands while there is some of it; uncounted, while there is wax)
+    const oils = P.k ? P.oleos.filter(has) : NONE; const velaOk = P.vela === 1 || (P.vela === 'rico' && rico >= 2);
+    const hasC = velaOk && (cntV ? vela > EPS : has('cera')); const hasO = !!P.k && (cntA ? azeite > EPS : oils.length > 0);
+    // (the wood of the torch and of the brazier: the house's, the building's place by its fire (the tavern's), the people's store)
+    const wood = has('wood') || own('wood') >= 0.25;
+    const pine = !!P.tocha && wood;
+    // (the brazier of clay, its embers of the wood: on a cold night in a household or a building whose use says whose it is — the Greek's,
+    // the dawn of the cities' —, in a rich one the lake's, with the copal of the incense where there is)
+    const cold = P.braseira === 'frio' && owned ? At.cold(b.x + b.w / 2, b.y + b.h / 2) : 0;
+    const brasa = !!P.braseira && owned && barro && wood && (P.braseira === 'rico' ? rico >= 2 : cold >= 1);
+    // (the lantern of horn by the door of a rich household, or of the tavern of a rich keeper, where the people has the horn — the world's is
+    // the rhinoceros's, a luxury: the cattle's has no source in the world yet — and a candle or the oil to burn in it)
+    const horn = !!P.lanterna && owned && rico >= 2 && has('chifre') && (hasC || hasO);
+    if (!hasC && !hasO && !pine && !brasa && !horn) return null;
+    const lit = At.lit(b) && darkHour();
+    // (the lamp's stuff: the people's — the potter's clay where it has had the ware; Rome's rich house's of bronze where it has had the
+    // bronze; without the ware, the bronze it has had or the stone —, the soapstone of the north, the stone of the dawn of the cities)
+    const bronze = ok('bronze');
+    const mat = P.mat && P.mat !== 'barro' ? P.mat : P.rico === 'bronze' && rico >= 2 && bronze ? 'bronze' : barro ? 'barro' : bronze ? 'bronze' : 'pedra';
+    const oleo = hasO ? oils[0] || (cntA ? 'azeite' : P.oleos[0]) : null; const sal = oleo && P.sal && has('sal') ? 1 : 0;
+    const comb = oils.concat(hasC && has('cera') ? ['cera'] : [], pine || brasa ? ['wood'] : []);
+    // (the reasons in words say only what the within's signature carries — what burns and where it is kept, the candle's quarter and the
+    // lamp's, lit or out —, so the drawing kept while the signature is the same never says what was true when it was made: the count of
+    // who is awake is the field awake, not the words)
+    const de = home && comb.some(k => own(k) >= 1) ? 'casa' : 'povo'; const where = de === 'casa' ? 'na casa' : 'no armazém do povo';
+    const incenso = brasa && has('incenso') ? 1 : 0; const pk = oleo ? P.k : null;
+    const vq = Math.min(3, Math.floor((1 - vela) * 4)), oq = Math.ceil(azeite * 4);
+    const pineDe = !pine ? '' : has('wood') ? (home && own('wood') >= 1 ? 'casa' : 'povo') : 'fogo';
+    const hornDe = !horn ? '' : home && own('chifre') >= 1 ? 'casa' : 'povo';
+    return Object.freeze({ comb: Object.freeze(comb), oleo, cera: hasC, vela, azeite, mat, acesa: lit ? 1 : 0, awake: At.awake(b), de,
+      k: pk, luz: !oleo ? null : sal ? 'lamparina-sal' : oleo === 'oleo' ? 'lamparina-foca' : 'lamparina', sal,
+      tocha: pine ? Object.freeze({ k: P.tocha, de: pineDe, why: `a tocha de ocote — a lasca do pinho resinoso, madeira ${pineDe === 'casa' ? 'da casa' : pineDe === 'povo' ? 'do armazém do povo' : 'junto do fogo'}` }) : null,
+      braseira: brasa ? Object.freeze({ frio: cold, incenso, why: `o braseiro de barro ${P.braseira === 'frio' ? `da noite fria (frio ${cold})` : 'da casa rica'}: as brasas da lenha${incenso ? ', o copal do incenso' : ''}` }) : null,
+      lanterna: horn ? Object.freeze({ de: hornDe, why: `a lanterna de chifre junto da porta: o chifre que ${hornDe === 'casa' ? 'a casa' : 'o povo'} tem, ${hasC ? 'a vela de cera' : 'o óleo'} dentro` }) : null,
+      why: `${pk ? `${At.LUZ_NOME[pk]} ${At.MAT_NOME[mat] || ''} com ${oleo}${sal ? ' e sal (menos fumaça)' : ''}` : pine ? At.LUZ_NOME.ocote : 'nenhuma lamparina'}${hasC ? ', velas de cera' : ''}${brasa ? ', o braseiro' : ''}${horn ? ', a lanterna de chifre' : ''} — ${At.LUZ[civ] ? P.nome : 'a luz do clássico'}, ${comb.join(' e ')} para queimar (${where})${LZ ? `; esta noite: a vela ${cntV ? (vq >= 3 ? 'no fim' : vq ? `com ${4 - vq}/4` : 'inteira') : 'por acender'}, a lamparina ${cntA ? `com ${oq}/4 do azeite` : 'por encher'} (a conta da taverna)` : ''}${lit ? '; acesa: alguém acordado dentro, no escuro' : '; apagada: ' + (!At.lit(b) ? 'ninguém acordado dentro' : 'ainda é dia')}` });
+  }
+  // the light of a piece of the plan that is a lamp (G.Luz3D.LAMPS, peca): the lamp stand of each people — the candelabrum of bronze of Rome,
+  // of Greece and of the dawn of the cities with its lamp of clay, the stand of papyrus of the Nile with its bowl, both of oil; the post of
+  // the north with its candle; the column of the lake with its brazier — by what its people burns in it: { comb, luz (the entry of
+  // G.Luz3D.LAMPS), why }, or null: nothing to burn — the stand dark (nada vem do nada, L-2252); undefined for a piece whose people's fuel
+  // no rule says (the altar's flame). The building's own place, else the people's store (as the lamps). Pure
+  const PECA = Object.freeze({ lampadario: Object.freeze({ romano: 'oleo', grego: 'oleo', classico: 'oleo', egipcio: 'oleo', nordico: 'vela', asteca: 'brasa' }) });
+  At.luzPeca = function (b, kind) {
+    const how = PECA[kind]; if (!how) return undefined; if (!b || !b.built || b.type === 'ruin') return null;
+    const f = G.Fac && G.Fac.ofSet ? G.Fac.ofSet(b.set) : null; const civ = b.style || (f && f.civ) || 'classico'; const P = At.LUZ[civ] || At.LUZ.classico;
+    const D = G.Depot; const ref = (G.Village.bedsOf(b) > 0 ? 'h:' : 'b:') + b.id;
+    const has = k => (D ? D.get(ref, k) : 0) >= 1 - EPS || ((f && f.stock ? f.stock[k] || 0 : 0) >= 1 - EPS);
+    const w = how[civ] || how.classico;
+    if (w === 'oleo') { const k = (P.oleos.length ? P.oleos : At.LUZ.classico.oleos).find(has); return k ? Object.freeze({ comb: Object.freeze([k]), luz: kind, why: `o lampadário com ${k}${P.sal && has('sal') ? ' e sal' : ''}` }) : null; }
+    if (w === 'vela') return has('cera') ? Object.freeze({ comb: Object.freeze(['cera']), luz: kind + '-vela', why: 'o lampadário com a vela de cera' }) : null;
+    if (w === 'brasa') return has('wood') ? Object.freeze({ comb: Object.freeze(has('incenso') ? ['wood', 'incenso'] : ['wood']), luz: kind + '-brasa', why: `o braseiro do lampadário: as brasas da lenha${has('incenso') ? ', o copal do incenso' : ''}` }) : null;
+    return null;
+  };
   const win = new Map(); let winK = -1, winS = null;
   At.within = function (b) {
     const S = G.S; if (!S || !b || !b.built || b.type === 'ruin') return NOWITHIN;
@@ -554,22 +651,10 @@
     if (LZ && Number.isFinite(LZ.lenha)) { const q = Math.min(4, Math.ceil(LZ.lenha / (At.LENHA / 4) - EPS)); if (q > 0) lenha = Object.freeze({ q, why: `${LZ.lenha.toFixed(2)} de lenha junto do fogo (o que se trouxe do armazém menos o que o fogo queimou)` }); }
     else if ((b.inv || NOINV).wood !== undefined) { const q = Math.min(4, Math.ceil(own / (At.LENHA / 4) - EPS)); if (q > 0) lenha = Object.freeze({ q, why: `${own.toFixed(2)} de lenha no lugar do prédio no livro (${ref})` }); }
     else if (wood >= 1) lenha = Object.freeze({ q: 4, why: `${Math.floor(wood)} de madeira no armazém do povo` });
-    // ---- the lamps: something to burn — the house's oil or wax, else the people's store —, a lamp to burn it in (clay, bronze, the
-    // candle's holder), lit only with someone awake inside in the dark (G.Atmos.lit), never in the New Fire's dark (festivals.js)
-    let luz = null; const has = k => (home && D ? D.get(ref, k) : 0) >= 1 - EPS || ((f && f.stock ? f.stock[k] || 0 : 0) >= 1 - EPS);
-    const comb = ['azeite', 'oleo', 'cera'].filter(has);
-    // (the night burns them, D-749: what is left of the candle lit tonight and of the oil in the lamps — the building's own count, its
-    // use's (the tavern's T.luz: P7's, the wax and the oil burnt by the book, the new candle of the morning lit only with wax in store) —;
-    // whole where the world keeps no count. The candle burnt out and none new: no candle; the oil gone: the lamp out)
-    const cntV = !!LZ && Number.isFinite(LZ.vela), cntA = !!LZ && Number.isFinite(LZ.azeite);
-    const vela = cntV ? G.clamp(LZ.vela, 0, 1) : 1, azeite = cntA ? G.clamp(LZ.azeite, 0, 1) : 1;
-    // (the candle of tonight was the store's when it was lit: it stands while there is some of it; uncounted, while the store has wax)
-    const oilK = comb.filter(k => k !== 'cera'); const hasC = cntV ? vela > EPS : comb.includes('cera'); const hasO = cntA ? azeite > EPS : oilK.length > 0;
-    if (hasC || hasO) {
-      const lit = At.lit(b) && darkHour();
-      luz = Object.freeze({ comb: Object.freeze(comb), oleo: hasO ? oilK[0] || 'azeite' : null, cera: hasC, vela, azeite, mat: barro ? 'barro' : metal === 'bronze' || ok('bronze') ? 'bronze' : 'pedra', acesa: lit ? 1 : 0, awake: At.awake(b),
-        why: `${comb.join(' e ')} para queimar (${home && comb.some(k => D && D.get(ref, k) >= 1) ? 'na casa' : 'no armazém do povo'})${LZ ? `; esta noite: a vela com ${Math.round(vela * 100)}%, o azeite com ${Math.round(azeite * 100)}% (a conta da taverna)` : ''}${lit ? `; acesa: ${At.awake(b)} acordado(s) dentro, ${G.isNight() ? 'noite' : 'fim da tarde'}` : '; apagada: ' + (!At.lit(b) ? 'ninguém acordado dentro' : 'ainda é dia')}` });
-    }
+    // ---- the light of each people (D-1012, At.LUZ): its lamp and the oil it burns, its candle, its torch, its brazier, its lantern — only
+    // with what there is to burn (the house's, else the people's store; the night's count of the building's use, the tavern's T.luz), of
+    // the stuff the people has had, lit only with someone awake inside in the dark (G.Atmos.lit), never in the New Fire's dark
+    const luz = luzOf(b, { civ, f, home, owned, ref, rico, barro, ok, LZ });
     // ---- the cloth on the walls and the floor: a people that weaves and the wealth of whoever paid for it — a household rich now, a
     // building whose use says whose wealth it shows (the tavern: its keeper's house) —; the dye of who can pay for it (At.deep); the pelt
     // where the house keeps pelts (the rug of the north, woven or not). A building nobody's purse keeps has none: the rug on the floor of
@@ -596,7 +681,8 @@
     let s = [civ, rico, barro ? 1 : 0, metal || '-', weave ? 1 : 0,
       bebida.map(q => q.k + q.n + (q.aberta ? 'a' : '')).join(','), comida.map(q => q.k + Math.min(6, Math.ceil(q.n))).join(','), bens.map(q => q.k + q.n).join(','),
       louca ? louca.mat + louca.n : '-', mesa.map(q => q.id + (q.cup || '') + q.cs + (q.prato ? ':' + q.prato + q.ps + (q.quente ? 'q' : '') : '') + (q.jogo ? 'j' : '')).join(','), cozinha ? 'c' + (cozinha.mat || '') : '-', lenha ? 'l' + lenha.q : '-',
-      luz ? luz.comb.join('') + luz.mat + luz.acesa + (luz.cera ? 'v' + Math.min(3, Math.floor((1 - luz.vela) * 4)) : '') + (luz.oleo ? 'o' + Math.ceil(luz.azeite * 4) : '') : '-', pano ? `${pano.tapete}${pano.pele}${pano.tapecaria}${pano.cor || ''}` : '-', rabiscos, teia ? teia.n : 0,
+      luz ? luz.comb.join('') + luz.mat + luz.acesa + (luz.cera ? 'v' + Math.min(3, Math.floor((1 - luz.vela) * 4)) : '') + (luz.oleo ? 'o' + Math.ceil(luz.azeite * 4) : '')
+        + luz.de + (luz.k || '') + (luz.luz || '') + (luz.tocha ? 't' + luz.tocha.de : '') + (luz.braseira ? 'b' + luz.braseira.frio + luz.braseira.incenso : '') + (luz.lanterna ? 'l' + luz.lanterna.de : '') : '-', pano ? `${pano.tapete}${pano.pele}${pano.tapecaria}${pano.cor || ''}` : '-', rabiscos, teia ? teia.n : 0,
       manchas, sujo.map(q => `${q.x.toFixed(2)},${q.z.toFixed(2)}${q.prato || q.cup}${q.st}`).join(','), chao.map(q => `${q.k}${q.x.toFixed(2)},${q.z.toFixed(2)}`).join(','),
       lousa ? `${lousa.k}:${lousa.prato ? lousa.prato.de : '-'}:${lousa.bebidas.join('+')}` : '-', ombro ? ombro.id : 0,
       festa ? `${festa.motivo}:${festa.enfeites.map(q => q.modelo).join('+')}:${festa.prato ? festa.prato.de.join('') : '-'}:${festa.acesa}` : '-', porta ? porta.estado : '-',
