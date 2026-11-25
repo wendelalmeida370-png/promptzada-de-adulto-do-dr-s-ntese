@@ -39,10 +39,29 @@ porque não cunhavam moeda — fiel à história.
 **Entre os povos:** o valor é o mesmo por baixo; o cambista da feira (a onda E dos interiores) troca o dinheiro de um povo pelo de outro,
 com uma taxa pequena, como os cambistas gregos.
 
+## Os preciosos valem em todo povo (a observação do dono, 25/11/2026)
+
+«Independente do material da moeda, tem coisas que são muito valiosas em todas as civilizações… se tu chegar com moedas de ouro lá [nos
+astecas], com uma barra de ouro, vai ter valor pra caralho.» **Procede** — e o «valor só por baixo» já o garante: o ouro, a prata, as pérolas,
+o coral, o marfim, a seda, o incenso são bens com preço em todo o mundo (`js/economy.js`, `js/riches.js`); quem chega com uma barra de ouro
+ao mercado asteca a vende pelo valor dela, em grãos de cacau. E era assim na história: na feira de Tlatelolco o pó de ouro corria em canudos
+de pena transparentes, como dinheiro das compras grandes.
+
+**O apreço de cada povo** (proposta do supervisor, com a W): o mesmo precioso vale mais num povo do que noutro, pelo gosto e pela raridade
+de cada um — o asteca punha o jade e as penas de quetzal acima do ouro; o egípcio das primeiras dinastias tinha a prata por mais rara que o
+ouro, que vinha da Núbia; o nórdico media tudo em prata e amava o âmbar; o romano e o grego, o ouro e a prata. Uma tabela só, pura, do
+apreço de cada povo por cada precioso, que o preço da feira e do mercador lê — e que dá ao mercador o seu jogo: comprar onde abunda e vender
+onde é raro.
+
+**As pedras** (o jade, a turquesa, o lápis-lazúli, o âmbar, o cristal de rocha) ainda não existem no mundo: entram com a sua fonte (a jazida,
+o rio, a costa — nada vem do nada), com o ourives (a onda F) e com o mercador (o Patch 37). O diamante, na Antiguidade, era a pedra dura da
+Índia que corta as outras, não a joia lapidada de hoje.
+
 ## A ordem
 
 1. **A frente W dos interiores 3 (a Fase 1, junto das outras mudanças do mundo e da geração única dos mundos prontos):** o material de cada
-   povo, a prata no mundo (a jazida, a mina, a fundição, a origem), a cunhagem, a pesagem e a colheita de cada povo, o T-063 fechado.
+   povo, a prata no mundo (a jazida, a mina, a fundição, a origem), a cunhagem, a pesagem e a colheita de cada povo, o T-063 fechado, e
+   o apreço de cada povo pelos preciosos (o ouro e a prata primeiro).
 2. **A tela** (a frente B, a bolsa do corpo, e a W): o dinheiro com o nome e a figura do povo do corpo; a moeda do romano e do grego com o
    rosto de quem governa agora.
 3. **Depois** (com o tesouro do palácio, onda A, e os patches dos ofícios): cada lote de moedas guarda o rei de quando foi cunhado — as
