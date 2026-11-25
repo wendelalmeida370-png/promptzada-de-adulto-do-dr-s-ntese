@@ -2783,13 +2783,25 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
     if (/\b(Possess|P\(\))\.apply\(/.test(c) && !inVerb) fails.push(`as ações pelos verbos: acoes-ui.js:${k + 1} pede ao mundo fora do run de um verbo do registro (D-916): ${l.trim().slice(0, 110)}`);
     if (/\blocalStorage\./.test(c) && !/\btry\s*\{/.test(c)) fails.push(`a dica no navegador: acoes-ui.js:${k + 1} lê ou escreve o localStorage sem try (D-923): ${l.trim().slice(0, 110)}`);
     if (/\b(e|ev|event)\.(key|code)\s*[!=]==?\s*['"]/.test(c)) fails.push(`as teclas são ações: acoes-ui.js:${k + 1} lê uma tecla pela letra (D-339): ${l.trim().slice(0, 110)}`); }); }
-// 446. "os lugares da barra são verbos da mesa" (I, D-916, D-920): cada lugar da barra da mesa (o UI.ORDER do acoes-ui.js, menos o E da
-// mesa) é um verbo do registro no provedor 'taverna', pelo seu id — a barra lê os verbos pelo id, e um id mudado tiraria uma ação da barra
-// sem ninguém ver (a frente J reescreve o can, o label e o run dos jogos, nunca o id)
-{ const A = (src['acoes-ui.js'] || []).join('\n'); const m = A.match(/UI\.ORDER = \[([^\]]*)\]/); const ids = m ? [...m[1].matchAll(/'([\w-]*)'/g)].map(q => q[1]).filter(Boolean) : [];
-  if (!ids.length) fails.push('a barra da mesa: o acoes-ui.js sem o UI.ORDER (D-916)');
-  const all = files.map(f => src[f].join('\n')).join('\n');
-  for (const id of ids) if (!new RegExp(`\\b(I|Interact)\\.verb\\(\\s*'taverna'\\s*,\\s*\\{\\s*id:\\s*'${id}'`).test(all)) fails.push(`a barra da mesa: o lugar «${id}» não é um verbo da mesa no registro (G.Interact.verb('taverna', { id: '${id}', … }) — D-916)`); }
+// 446. "os lugares de toda barra são verbos do registro" (I, D-916, D-920; a barra de todo lugar, F14 — D-1030, D-1031): cada lugar de
+// cada barra registrada — a ordem do G.AcoesUI.bar(provedor, [...]) e os G.AcoesUI.slot(provedor, { id }) que outro arquivo traz —, menos
+// o E do alvo (''), é um verbo do registro no provedor dela, pelo seu id: a barra lê os verbos pelo id, e um id mudado tiraria uma ação da
+// barra sem ninguém ver (a frente J reescreve o can, o label e o run dos jogos, nunca o id). E a «Mesa» da taverna é uma barra registrada,
+// com os seus lugares de sempre
+const barText = (s, at) => { let i = at, d = 0, q = ''; for (; i < s.length; i++) { const c = s[i]; if (q) { if (c === q && s[i - 1] !== '\\') q = ''; continue; } if (c === "'" || c === '"' || c === '`') { q = c; continue; } if (c === '[' || c === '(' || c === '{') d++; else if (c === ']' || c === ')' || c === '}') { d--; if (d === 0) return s.slice(at, i + 1); } } return null; };
+// (the slots of a bar's order: its top-level items, a verb's id written or an object with its id first)
+const barIds = arr => { const out = []; let d = 0, q = '', cur = ''; for (let i = 1; i < arr.length - 1; i++) { const c = arr[i]; if (q) { cur += c; if (c === q && arr[i - 1] !== '\\') q = ''; continue; } if (c === "'" || c === '"' || c === '`') { q = c; cur += c; continue; } if (c === '[' || c === '(' || c === '{') d++; if (c === ']' || c === ')' || c === '}') d--; if (c === ',' && d === 0) { out.push(cur.trim()); cur = ''; continue; } cur += c; } if (cur.trim()) out.push(cur.trim());
+  return out.map(x => { const m = /^'([\w-]*)'$/.exec(x) || /^\{\s*id:\s*'([\w-]*)'/.exec(x); return m ? m[1] : null; }); };
+{ const all = files.map(f => src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n')).join('\n'); const bars = [];
+  for (const f of files) { const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); // (the code only: a bar in a comment — the manual of the acoes-ui.js — is no bar)
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.bar\(\s*'([\w-]+)'\s*,\s*(?=\[)/g)) { const arr = barText(s, m.index + m[0].length); const ids = arr ? barIds(arr) : null;
+      if (!ids || ids.some(x => x === null)) { fails.push(`a barra de um lugar: ${f} registra a barra «${m[1]}» com um lugar sem o id escrito (cada lugar, o id do verbo ou { id: '…', … } — D-1030)`); continue; } bars.push({ f, prov: m[1], ids }); }
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.slot\(\s*'([\w-]+)'\s*,\s*\{\s*id:\s*'([\w-]+)'/g)) bars.push({ f, prov: m[1], ids: [m[2]], slot: true }); }
+  for (const b of bars) for (const id of b.ids) if (id && !new RegExp(`\\b(I|Interact)\\.verb\\(\\s*'${b.prov}'\\s*,\\s*\\{\\s*id:\\s*'${id}'`).test(all)) fails.push(`a barra de um lugar: o lugar «${id}» da barra «${b.prov}» (${b.f}) não é um verbo do registro nesse provedor (G.Interact.verb('${b.prov}', { id: '${id}', … }) — D-916, D-1030)`);
+  // (one bar a provider, registered in one place: a second would take the first's place in silence — the R1 of the plan)
+  { const by = new Map(); for (const b of bars) if (!b.slot) by.set(b.prov, (by.get(b.prov) || []).concat(b.f)); for (const [p, L] of by) if (L.length > 1) fails.push(`a barra de um lugar: a barra «${p}» registrada ${L.length} vezes (${L.join(', ')}) — a segunda tomaria o lugar da primeira em silêncio; um ofício traz um lugar dela pelo slot (D-1030, D-1031)`); }
+  const tv = bars.find(b => b.prov === 'taverna' && b.f === 'acoes-ui.js'); const want = ['', 'tv-rodada', 'jd-dados', 'tv-cartas', 'tv-jogo', 'tv-musica', 'tv-gorjeta-mesa'];
+  if (!tv || tv.ids.join('|') !== want.join('|')) fails.push(`a barra da mesa: a «Mesa» da taverna não é a barra registrada no acoes-ui.js com os seus lugares, na sua ordem (${want.map(x => x || 'o E').join(', ')} — D-916, D-1030)`); }
 // 447. "quem está na sala fica no lugar" (I, L-2170, L-2171): as pessoas da sala do corpo são alvos dele, e uma tarefa dada a quem está
 // dentro de um prédio o faz sair pela porta antes (o setTask do villagers.js): a palavra do corpo (o run da pessoa, no interact.js), a
 // resposta dos verbos sociais (o responde do soc-verbos.js) e o abraço não dão tarefa a quem está dentro — a pessoa responde do lugar
@@ -3064,5 +3076,60 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   if (!/!\(v\.carry && v\.carry\.k === 'food'\) && !\(T\.segura && T\.segura\(v\)\)\) return v;/.test(tf) || !/if \(T\.segura && T\.segura\(v\)\) continue;/.test(tf)) fails.push('a partida do corpo segura: os bardos da festa (TF.lider, TF.coro) sobem ao estrado da partida do corpo (D-962)');
   if (!/if \(op && op\.data && op\.data\.fecha\) return \{ ok: false, why: 'A taverna está fechando: não começa outra partida\.' \};/.test(cm) || !/C\.prendeCorpo = v =>/.test(cm)) fails.push('a partida do corpo segura e o fechamento espera: as Tabuletas (C.prendeCorpo; nenhuma partida nova depois do chamado, D-963)');
   if (!/if \(top\.data\.fecha\) return \{ k: null, ok: false, why: 'A taverna está fechando: nenhum jogo novo\.' \};/.test(jd) || !/\(top\.data\.fecha && !bodyIn\(d\)\)\) return close\(op, 'a taverna fechou'\);/.test(jd) || !/JD\.prendeCorpo = function \(v\)/.test(jd)) fails.push('a partida do corpo segura e o fechamento espera: o copo (JD.prendeCorpo; o chamado fecha o jogo do corpo; um jogo novo depois do chamado, D-963)'); }
+// ---------------- I-2 — M: a barra do lugar e o tempo que se demora (F14, F15; D-1030 a D-1039) ----------------
+// 520. "a barra de um lugar é um registro, e só lê" (F14, D-1030, D-1031): a barra de um lugar só nasce pelo G.AcoesUI.bar e ganha um
+// lugar de outro arquivo só pelo G.AcoesUI.slot — nenhum arquivo além do acoes-ui.js escreve no G.AcoesUI (uma barra posta por cima da de
+// outro prédio, um lugar trocado em silêncio) —; e o que um registro de barra lê (a pergunta do lugar, o tema, o nome, o alvo, a palavra
+// da primeira vez) só lê: dentro do registro, nenhuma escrita no mundo, nenhum pedido às mãos, nenhum livro, nenhuma tarefa, nenhum sorteio
+{ for (const f of files) { if (f === 'acoes-ui.js') continue; (src[f] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bAcoesUI\.\w+\s*(=(?!=)|\+=|-=)|\bAcoesUI\[/.test(c)) fails.push(`a barra de um lugar: ${f}:${k + 1} escreve no G.AcoesUI — uma barra só pelo bar, um lugar dela só pelo slot (D-1030): ${l.trim().slice(0, 110)}`); }); }
+  for (const f of files) { const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n');
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.bar\(/g)) { const t = barText(s, m.index + m[0].length - 1) || ''; const line = s.slice(0, m.index).split('\n').length;
+      t.split('\n').forEach((l, k) => { const c = l.replace(/'[^']*'|`[^`]*`/g, "''"); if (/\b(Possess|P\(\))\.apply\(|\b(G\.Depot|D|Depot)\.(move|make|use|drop|swap)\(|\bsetTask\(|\bG\.(R|rr|ri|pick|chance|shuffle)\(|Math\.random|\b(v|s|t|b|o|w|x|G\.S)\.[A-Za-z_][\w.]*\s*(=(?!=)|\+=|-=|\+\+|--)/.test(c)) fails.push(`a barra de um lugar: ${f}:${line + k} — o que a barra lê escreve no mundo, pede às mãos, mexe no livro ou sorteia (D-1030): ${l.trim().slice(0, 110)}`); }); } } }
+// 521. "o verbo que gasta ou dá uma coisa passa pelo livro" (F14, D-1032; o lembrete do dono: nada vem do nada): um verbo do registro
+// (G.Interact.verb) ou um provedor (G.Interact.add) — o que cada ofício vai pôr no seu posto — não escreve à mão bens, moedas, cargas, a
+// mochila nem o equipamento, e o livro (G.Depot: move, make, use, drop, swap; G.Eco.spend) ele só chama no passo do mundo: dentro das
+// mãos (G.Possess.apply) ou do op de um ato (o G.Avatar.act que o mundo faz no contato), com o seu código
+{ const HAND = /(\.coin|\.purse|\.stock\[[^\]]+\]|\.pantry|\.carry|\.inv\[[^\]]+\]|\.mochila|\.equip)\s*(=(?!=)|\+=|-=)/, LED = /\b(G\.Depot|D|Depot)\.(move|make|use|drop|swap)\(|\bEco\.spend\(/g;
+  // (where a piece of code ends: from an opening bracket to its own closing one, strings skipped)
+  const close = (s, at) => { let d = 0, q = ''; for (let i = at; i < s.length; i++) { const c = s[i]; if (q) { if (c === q && s[i - 1] !== '\\') q = ''; continue; } if (c === "'" || c === '"' || c === '`') { q = c; continue; } if (c === '(' || c === '[' || c === '{') d++; else if (c === ')' || c === ']' || c === '}') { d--; if (d === 0) return i; } } return s.length; };
+  // (the world's step in a registration: the hands' asking, G.Possess.apply(…), and an act's op — op: w => { … } or op: w => …)
+  const steps = t => { const out = [];
+    for (const m of t.matchAll(/\b(?:Possess|P\(\))\.apply\(/g)) { const a = m.index + m[0].length - 1; out.push([a, close(t, a)]); }
+    for (const m of t.matchAll(/\bop:\s*(?:\([^)]*\)|\w+)\s*=>\s*/g)) { const a = m.index + m[0].length; if (t[a] === '{' || t[a] === '(') out.push([a, close(t, a)]); else { let d = 0, i = a; for (; i < t.length; i++) { const c = t[i]; if (c === '(' || c === '[' || c === '{') d++; else if (c === ')' || c === ']' || c === '}') { if (d === 0) break; d--; } else if (c === ',' && d === 0) break; } out.push([a, i]); } }
+    return out; };
+  for (const f of files) { const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n');
+    for (const m of s.matchAll(/\b(?:I|Interact)\.(verb|add)\(/g)) { const a = m.index + m[0].length - 1; const t = s.slice(a, close(s, a) + 1); const line = s.slice(0, m.index).split('\n').length; const sp = steps(t);
+      t.split('\n').forEach((l, k) => { if (HAND.test(l)) fails.push(`o verbo passa pelo livro: ${f}:${line + k} — um verbo ou um provedor escreve à mão bens, moedas ou cargas (G.Depot, D-1032): ${l.trim().slice(0, 110)}`); });
+      for (const q of t.matchAll(LED)) if (!sp.some(([x, y]) => q.index > x && q.index < y)) fails.push(`o verbo passa pelo livro: ${f}:${line + t.slice(0, q.index).split('\n').length - 1} — um verbo ou um provedor chama o livro (${q[0].slice(0, -1)}) fora do passo do mundo: só dentro das mãos (G.Possess.apply) ou do op de um ato (D-1032)`); } } }
+// 523. "a palavra da primeira vez é da sua barra" (F14, L-2270): a palavra da primeira vez de uma barra some quando aquela barra é usada —
+// um lugar dela, o «Entendi», uma linha da lista feita com o corpo no lugar dela —, guardada pela chave dela; nunca por uma linha da lista
+// feita longe de qualquer barra (cumprimentar alguém na rua escondia para sempre a palavra da mesa da taverna): o acoes-ui.js nunca dá a
+// palavra por vista sem dizer de qual barra (dicaDone com a barra ou com a chave)
+{ (src['acoes-ui.js'] || []).forEach((l, k) => { const c = l.replace(/(^|\s)\/\/\s.*$/, ''); if (/\bdicaDone\(\s*\)/.test(c)) fails.push(`a palavra da primeira vez: acoes-ui.js:${k + 1} dá a palavra por vista sem dizer de qual barra (L-2270): ${l.trim().slice(0, 110)}`); });
+  if (!/function dicaDone\(m, k\) \{/.test((src['acoes-ui.js'] || []).join('\n'))) fails.push('a palavra da primeira vez: o acoes-ui.js sem o dicaDone(m, k) — a palavra de cada barra pela sua chave (L-2270)'); }
+// 524. "um nome, um registro" (F14, D-1031; o R1 do plano: o mesmo nome em duas frentes): na barra de um lugar cada nome é de um só —
+// nenhuma figura (G.AcoesUI.icone) registrada por dois arquivos nem com o nome de uma do acoes-ui.js, nenhum lugar (G.AcoesUI.slot) trazido
+// duas vezes à mesma barra, nenhum lugar trazido com o id de um que a barra já tem (ficaria o da barra, em silêncio); e toda figura escrita
+// numa barra ou num lugar trazido existe — a do acoes-ui.js ou a que um arquivo traz: com o nome errado, viraria a mão em silêncio
+{ const A = (src['acoes-ui.js'] || []).join('\n'); const pm = A.match(/const PATH = \{([\s\S]*?)\n  \};/); const own = new Set(pm ? [...pm[1].matchAll(/^\s*([a-z][\w-]*):/gm)].map(m => m[1]) : []);
+  if (own.size < 10) fails.push('um nome, um registro: o acoes-ui.js sem as suas figuras (o PATH, D-1031)');
+  const icons = new Map(), slots = new Map(), mine = new Map(), named = [];
+  for (const f of files) { const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n');
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.icone\(\s*'([\w-]+)'/g)) { const k = m[1];
+      if (own.has(k)) fails.push(`um nome, um registro: ${f} registra a figura «${k}», que é do acoes-ui.js (D-1031)`); else if (icons.has(k) && icons.get(k) !== f) fails.push(`um nome, um registro: a figura «${k}» registrada por ${icons.get(k)} e por ${f} (D-1031)`); else icons.set(k, f); }
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.slot\(\s*'([\w-]+)'\s*,\s*\{\s*id:\s*'([\w-]+)'([^}]*)\}/g)) { const key = m[1] + '/' + m[2];
+      if (slots.has(key)) fails.push(`um nome, um registro: o lugar «${m[2]}» da barra «${m[1]}» trazido por ${slots.get(key)} e por ${f} (D-1031)`); else slots.set(key, f);
+      const ic = /icon:\s*'([\w-]+)'/.exec(m[3]); if (ic) named.push({ f, k: ic[1], where: `o lugar «${m[2]}» da barra «${m[1]}»` }); }
+    for (const m of s.matchAll(/\b(?:UI|AcoesUI)\.bar\(\s*'([\w-]+)'\s*,\s*(?=\[)/g)) { const call = barText(s, m.index + m[0].indexOf('(')) || ''; const arr = barText(s, m.index + m[0].length); const ids = arr ? barIds(arr) : null;
+      if (ids) mine.set(m[1], new Set(ids.filter(Boolean))); for (const ic of call.matchAll(/icon:\s*'([\w-]+)'/g)) named.push({ f, k: ic[1], where: `a barra «${m[1]}»` }); } }
+  for (const [key, f] of slots) { const [prov, id] = key.split('/'); if (mine.has(prov) && mine.get(prov).has(id)) fails.push(`um nome, um registro: ${f} traz à barra «${prov}» o lugar «${id}», que a barra já tem — ficaria o da barra, em silêncio (D-1031)`); }
+  for (const x of named) if (!own.has(x.k) && !icons.has(x.k)) fails.push(`um nome, um registro: ${x.f} — ${x.where} usa a figura «${x.k}», que ninguém registra: viraria a mão, em silêncio (D-1031)`); }
+// 525. "quem registra na barra carrega depois dela" (F14, D-1030): o G.AcoesUI nasce no acoes-ui.js, um dos últimos arquivos do index.html;
+// um arquivo que registra uma barra, um lugar dela ou uma figura (bar, slot, icone) carrega depois dele — um arquivo da tela (um *-ui.js),
+// porque a barra só se vê e o módulo do mundo só responde (o can, as portas dele). Antes dele, o registro seria um erro na carga
+{ const html = fs.readFileSync(path.join(dir, '..', 'index.html'), 'utf8'); const at = s => html.indexOf(`src="js/${s}"`); const a = at('acoes-ui.js');
+  if (a < 0) fails.push('quem registra na barra carrega depois dela: o index.html sem o js/acoes-ui.js (D-1030)');
+  for (const f of files) { if (f === 'acoes-ui.js') continue; const s = src[f].map(l => l.replace(/(^|\s)\/\/\s.*$/, '')).join('\n'); if (!/\bAcoesUI\.(bar|slot|icone)\(/.test(s)) continue;
+    const i = at(f); if (i < 0 || i < a) fails.push(`quem registra na barra carrega depois dela: ${f} registra no G.AcoesUI ${i < 0 ? 'e não está no index.html' : 'e carrega antes do acoes-ui.js no index.html'} — registre de um arquivo da tela que carrega depois dele (D-1030)`); } }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);

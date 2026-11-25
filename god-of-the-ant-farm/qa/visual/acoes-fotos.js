@@ -6,7 +6,12 @@
 //  2 a lista de ações (o botão «Ações» do toque, a tecla Y do PC): a da mesa, e a de uma pessoa da mesa escolhida pelo nome;
 //  3 os dados de ponta a ponta: «Dados» na barra abre a mesa do copo — o convite, o começo, os palpites pelos toques, o fim;
 //  4 as Tabuletas de ponta a ponta: «Tabuletas» na barra abre o convite (com quem, a aposta), «Desafiar», as sete rodadas pelos toques,
-//    o fim da partida pela regra (não pelo fechamento da taverna).
+//    o fim da partida pela regra (não pelo fechamento da taverna);
+//  5 a barra de um lugar que não é a taverna (F14): a prova registra o lugar, os verbos e a barra «Trono», como uma onda registraria, e
+//    um verbo com o seu lugar e a sua figura, como um ofício que vem depois; o corpo senta no palácio ou num templo, e cada lugar pelos
+//    toques (no PC, pelas teclas): a oferta pelo livro, o arauto, o E, o apagado com o porquê, a lista do lugar, levantar.
+// Junto de cada foto, o HTML da barra, da palavra e da lista (NOME.html): a mesma prova sobre uma cópia do jogo de antes de uma mudança
+// e sobre o jogo depois dela diz, letra por letra, se a tela saiu igual (F14).
 // Mede: a barra e a lista inteiras na tela, sem rolagem de lado, os botões de tocar de 44 px ou mais (no PC, de 24: o mouse), o apagado com o porquê escrito; e
 // nenhum erro de página, de console nem de módulo. As regras são provadas em Node pelo qa/acoes.js; aqui, o que se vê e as mãos.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
@@ -14,7 +19,7 @@ const path = require('path'); const fs = require('fs');
 const ROOT = path.resolve(__dirname, '../..');
 const OUT = process.argv[2] || path.join(require('os').tmpdir(), 'acoes-fotos'); fs.mkdirSync(OUT, { recursive: true });
 const WORLD = process.argv[3] || 'metropole'; const PC = process.argv[4] === 'pc';
-const ATE = +(process.env.ATE || 4); // (ATE=1: só a barra; 2: e a lista; 3: e os dados; 4: e as Tabuletas)
+const ATE = +(process.env.ATE || 5); // (ATE=1: só a barra; 2: e a lista; 3: e os dados; 4: e as Tabuletas; 5: e a barra de outro lugar)
 (async () => {
   const browser = await chromium.launch({ args: ['--js-flags=--max-old-space-size=8192', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage(PC ? { viewport: { width: 1280, height: 760 } } : { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
@@ -27,7 +32,10 @@ const ATE = +(process.env.ATE || 4); // (ATE=1: só a barra; 2: e a lista; 3: e 
   await page.addScriptTag({ path: path.join(ROOT, 'qa', 'qa.js') });
   await page.addScriptTag({ path: path.join(ROOT, 'worlds', WORLD + '.js') });
   const fails = []; const ok = (name, cond, info) => { console.log(`${cond ? 'PASSOU' : 'FALHOU'} | acoes-fotos ${name} | ${info}`); if (!cond) fails.push(name.split(' ')[0]); };
-  const shot = async name => { try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 480000 }); console.log('foto: ' + path.join(OUT, name + '.png')); } catch (e) { console.log('(foto ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); } };
+  const shot = async name => { try { await page.screenshot({ path: path.join(OUT, name + '.png'), timeout: 480000 }); console.log('foto: ' + path.join(OUT, name + '.png')); } catch (e) { console.log('(foto ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); }
+    // (and what the bar, the word and the list are, letter by letter, beside the photo: the same proof over a copy of the game before a change
+    // and over the game after it says whether the screen came out the same — F14, D-1030 —, not only the eye)
+    try { const h = await page.evaluate(() => ['.ac-mesa', '.ac-dica', '#acoes-panel'].map(s => { const el = document.querySelector(s); return `<!-- ${s} -->\n` + (el && !el.classList.contains('hidden') ? el.outerHTML.replace(/<canvas[^>]*>/g, '<canvas>') : ''); }).join('\n')); fs.writeFileSync(path.join(OUT, name + '.html'), h); } catch (e) { console.log('(o html de ' + name + ' não saiu: ' + e.message.slice(0, 60) + ')'); } };
   const E = (fn, arg) => page.evaluate(fn, arg);
   const wait = ms => page.waitForTimeout(ms);
   // (a tap where the finger would: the middle of an element of the page — the phone's touch; on the PC a click of the mouse there)
@@ -218,6 +226,72 @@ const ATE = +(process.env.ATE || 4); // (ATE=1: só a barra; 2: e a lista; 3: e 
     }
     ok('4 as Tabuletas pela barra, de ponta a ponta: o desafio, as rodadas pelos toques, o fim da partida pela regra', !!jogo && !!fimC && fimC.por !== 'fechou' && rodadas >= 3, jogo ? `${rodadas} tabuleta(s) jogada(s) pelos toques; o fim: ${fimC ? `${fimC.meu > 0 ? 'vitória' : fimC.meu < 0 ? 'derrota' : 'empate'} (${fimC.por || 'pela glória'})` : 'NÃO ACABOU'}` : 'ninguém aceitou o desafio');
   } else ok('4 as Tabuletas', true, `não dá agora: «${c0.why || 'já numa partida'}» — a parte não se aplica`);
+  if (ATE < 5) { await fim(); return; }
+  // ================================ 5: the bar of a place that is no tavern (F14, D-1030 to D-1033)
+  // (the proof registers here what a building's wave and a trade that comes later would — the place, its verbs, its bar «Trono»; the herald's
+  // verb with its slot and its figure —, the body goes up from the table and sits at a free place of the palace or a temple by the verb
+  // «lugar»; then every slot by the taps — or by its key on the PC —, the greyed one, the list, getting up)
+  await semMenu();
+  const p5 = await E(() => {
+    const T = window.__T, In = G.Interiors, I = G.Interact, Po = G.Possess, U = G.AcoesUI, TL = G.Space.TILE;
+    if (G.IncUI.closeAll) G.IncUI.closeAll(); if (G.Modes.panel()) G.Modes.setPanel(null); T.ui(4); // (the game's panel of part 4 shut, as its own button would)
+    if (G.Avatar.seatNow()) { G.Avatar.input.mz = 1; T.ui(2); G.Avatar.input.mz = 0; T.ui(20); }
+    const usable = q => I.PURE.has(q.use) || !!I.useRuleOf(q.use); const order = t => (/palac/.test(t) ? 0 : t === 'temple' ? 1 : 2); let P0 = null;
+    for (const b of [...G.S.buildings.values()].filter(q => q.built && q.type !== 'taverna' && In.has(q)).sort((a, c) => order(a.type) - order(c.type) || a.id - c.id)) {
+      const p = G.Space.planNow(b); if (!p || !p.entrance) continue;
+      const seats = In.freeNear(b, p.entryLv || 0, p.entrance.x, p.entrance.z, 60, ['sentar', 'comer', 'rezar', 'aquecer', 'ler']).filter(q => usable(q) && In.walkIn(b, q) < Infinity);
+      if (seats.length) { P0 = { b, pl: seats[0] }; break; } }
+    if (!P0) return { none: 'nenhum prédio que não seja a taverna com um lugar livre' };
+    const b = P0.b, fid = G.Village.facOfSet(b.set), coin = G.Eco.coinage(fid); const PL = T.PL = { b: b.id, olhou: 0, arauto: 0 };
+    I.add({ id: 'prova-trono', prio: 4.45, reach: 2.4,
+      find(ctx) { const u = Po.useOf(); if (!PL.b || !u || u.b !== PL.b || ctx.v.inside !== PL.b) return []; return [{ u, X: ctx.X + Math.cos(ctx.yaw) * 0.45, Z: ctx.Z + Math.sin(ctx.yaw) * 0.45, pref: 2 }]; },
+      label: () => 'Olhar o salão', can: () => ({ ok: true }), run: () => { PL.olhou++; return { ok: true, msg: 'Você olha o salão.' }; } });
+    I.verb('prova-trono', { id: 'pt-oferta', k: 'outra', ord: 1, label: () => (coin ? 'Deixar uma oferta (0,2)' : ''), can: ctx => (G.Eco.purse(ctx.v) + 1e-6 >= 0.2 ? { ok: true } : { ok: false, why: 'Você não tem com que deixar uma oferta.' }),
+      run: () => { const ask = Po.apply(w => (G.Eco.spend(w, 0.2, 'f:' + fid, 'prova-oferta') ? { ok: true, msg: 'Você deixa a oferta.' } : { ok: false, why: 'Falta dinheiro.' })); return { ok: true, ask, get msg() { return (ask.res && (ask.res.msg || ask.res.why)) || '…'; } }; } });
+    I.verb('prova-trono', { id: 'pt-decreto', k: 'outra', ord: 2, label: 'Ler o decreto', can: () => ({ ok: false, why: 'Não há decreto nenhum para ler.' }), run: () => ({ ok: false, msg: 'Não há decreto nenhum para ler.' }) });
+    U.bar('prova-trono', ['', { id: 'pt-oferta', nome: 'Oferta', icon: 'gorjeta', dft: 'Deixar uma oferta' }, { id: 'pt-decreto', nome: 'Decreto', icon: 'tabuletas', dft: 'Ler o decreto' }],
+      { rotulo: 'Trono', icon: 'mesa', levantar: 'Levantar do trono', alvo: () => 'O trono', alvoSub: () => 'onde você está' });
+    U.icone('arauto', '<path d="M4 10h3l7-4v12l-7-4H4z"/><path d="M17.5 9c1.4 1.2 1.4 4.8 0 6"/>');
+    I.verb('prova-trono', { id: 'pt-arauto', k: 'outra', ord: 3, label: 'Chamar o arauto', can: () => ({ ok: true }), run: () => { PL.arauto++; return { ok: true, msg: 'O arauto vem.' }; } });
+    U.slot('prova-trono', { id: 'pt-arauto', nome: 'Arauto', icon: 'arauto', dft: 'Chamar o arauto', ord: 1.5 });
+    T.led = []; G.Depot.onMove.push(e => T.led.push({ c: e[8], from: String(e[3]), to: String(e[4]), n: e[6] }));
+    // (into the building where one gets onto the place, and sat down by the verb, as the hands do — the proof's hand, as T.seat)
+    const v = Po.body(); const pl = P0.pl; pl.at = In.standFor(b, pl, pl.x, pl.z);
+    G.Avatar.detach(); T.god(() => { v.inside = b.id; v.x = b.x + pl.at[0] / TL; v.y = b.y + pl.at[1] / TL; }); Po.setLevel(pl.lv); G.Avatar.attach(v, 0); T.ui(6);
+    const st = G.Avatar.state(); let best = null;
+    for (let k = 0; k < 40 && !(best && best.id === 'lugar'); k++) { const ya = Math.atan2(b.y * TL + pl.z - st.Z, b.x * TL + pl.x - st.X); G.Avatar.input.camYaw = ya; st.yaw = ya; best = I.best(); T.ui(1); }
+    if (!(best && best.id === 'lugar')) return { none: `o E oferece ${best ? best.label : 'nada'} no ${b.type} #${b.id}` };
+    I.run(best); T.run(() => G.Avatar.seatNow() && G.Avatar.seatNow().k >= 1, 4); T.ui(8); G.Avatar.input.camYaw = G.Avatar.state().yaw + 0.5; T.ui(6);
+    return { where: `${G.Village.buildName(b)} #${b.id} (${b.type}), o lugar «${pl.use}»`, coin, fid };
+  });
+  if (p5.none) ok('5 a barra de um lugar que não é a taverna', false, p5.none);
+  else {
+    await E(() => { const T = window.__T; T.ui(4); T.f(3); }); await wait(700); const m5 = await measure();
+    const ids5 = m5.A.itens.map(q => q.id); const want5 = ['', p5.coin ? 'pt-oferta' : null, 'pt-arauto', 'pt-decreto', 'levantar'].filter(x => x !== null);
+    const tit = await E(() => { const el = document.querySelector('.ac-mesa .ac-tit'); return el ? el.textContent : ''; });
+    const daBarra = await E(() => { const b = G.Interact.best(); return { e: b ? b.id : '', sim: !!G.AcoesUI.daBarra(b) }; }); // (the screen's target is the place of the bar up: its prompt is the bar's — D-925, for the incui)
+    ok('5 sentado num lugar que não é a taverna: a barra «Trono» que a onda registrou, com o lugar que o ofício trouxe de outro arquivo, inteira na tela, o apagado com o porquê escrito',
+      m5.A.mesa && m5.A.barra === 'prova-trono' && tit === 'Trono' && JSON.stringify(ids5) === JSON.stringify(want5) && m5.inBar && !m5.side && !m5.small.length && !m5.offWhy && daBarra.e === 'prova-trono' && daBarra.sim, `${p5.where}: «${tit}» — ${flags(m5)}; ${m5.items.join(' · ')}; o alvo da tela ${daBarra.e} (${daBarra.sim ? 'o lugar da barra' : 'NÃO É O DA BARRA'})`);
+    await shot(`11-trono${PC ? '-pc' : ''}`);
+    // (each slot by the fingers — or by its key on the PC —: the offering by the ledger, the herald, the place's E; the greyed one says why)
+    const led0 = await E(() => window.__T.led.length); const toasts0 = await E(() => (window.__T.toasts || []).length);
+    if (p5.coin) { await tapSlot('pt-oferta'); await E(() => { const T = window.__T; T.run(() => T.led.some(e => e.c === 'prova-oferta'), 3); T.ui(4); }); }
+    await tapSlot('pt-arauto'); await E(() => window.__T.ui(4)); await tapSlot(''); await E(() => window.__T.ui(6));
+    await tapSlot('pt-decreto'); await E(() => { const T = window.__T; T.ui(2); T.f(2); }); await wait(500); await shot(`12-trono-apagado${PC ? '-pc' : ''}`);
+    const r5 = await E(([l0, t0, fid]) => { const T = window.__T; return { paid: T.led.slice(l0).filter(e => e.c === 'prova-oferta').map(e => `${e.from} → ${e.to}, ${e.n}`), toFid: T.led.slice(l0).filter(e => e.c === 'prova-oferta' && e.to === 'f:' + fid).length, arauto: T.PL.arauto, olhou: T.PL.olhou, said: (T.toasts || []).slice(t0) }; }, [led0, toasts0, p5.fid]);
+    ok('5 cada lugar pelos toques (no PC, pela tecla): a oferta pelo livro, uma vez; o arauto do ofício; o E do lugar; o apagado diz por quê e não faz nada',
+      (!p5.coin || (r5.paid.length === 1 && r5.toFid === 1)) && r5.arauto === 1 && r5.olhou === 1 && r5.said.some(t => /decreto/.test(t)), `a oferta: ${r5.paid.join('; ') || (p5.coin ? 'NADA NO LIVRO' : 'o povo não usa moeda')}; o arauto ${r5.arauto}×; o E ${r5.olhou}×; o que se disse: ${r5.said.join(' | ')}`);
+    // (the place's list: «Ações» — the Y on the PC —, the throne by its bar's word)
+    if (PC) await page.keyboard.press('y'); else { const t = await page.$('.ih-tb .ih-tbtn[data-k="acoes"]'); const bb = t && await t.boundingBox(); if (bb) await page.touchscreen.tap(bb.x + bb.width / 2, bb.y + bb.height / 2); }
+    await E(() => window.__T.ui(6)); await wait(600); const m6 = await measure();
+    const nm6 = await E(() => { const el = document.querySelector('#acoes-panel .ac-who b'); return el ? el.textContent : ''; });
+    ok('5 a lista do lugar: «O trono», cada verbo com as suas palavras, o apagado com o porquê, levantar no fim', m6.A.lista && nm6 === 'O trono' && m6.inSheet && !m6.small.length && !m6.offWhy && /Levantar do trono/.test(m6.rows[m6.rows.length - 1] || ''), `«${nm6}»: ${m6.rows.join(' | ')}`);
+    await E(() => window.__T.f(2)); await shot(`13-trono-lista${PC ? '-pc' : ''}`);
+    await tap('#acoes-panel [data-a="close"]'); await E(() => window.__T.ui(4));
+    await tapSlot('levantar'); await E(() => { const T = window.__T; T.ui(30); });
+    const up5 = await E(() => ({ seated: G.Avatar.seated(), use: !!G.Possess.useOf(), mesa: G.AcoesUI.shown().mesa }));
+    ok('5 levantar pela barra: o corpo se levanta, o lugar solto, a barra sai', !up5.seated && !up5.use && !up5.mesa, JSON.stringify(up5));
+  }
   await fim();
   async function fim() {
     const me = await E(() => Object.keys(G.modErr || {}));

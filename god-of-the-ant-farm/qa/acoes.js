@@ -18,10 +18,23 @@
 //     senta ao lado (L-2181)
 //  a9 os jogos da casa (a frente J): de onde vem o jogo e o aluguel sob o nome dele, na barra; sem um livre, «esperando um jogo livre»
 //     com o porquê do mundo, e a compra do seu na lista, ao preço do taverneiro; comprado pela lista, «os seus dados»
+//  a10 a barra de um lugar que não é a taverna (F14, D-1030 a D-1033), de ponta a ponta: a prova registra, como uma onda registraria, o
+//     lugar (um provedor), os verbos dele no registro e a barra («Trono», no palácio ou num templo), e — como um ofício que vem depois, do
+//     seu arquivo — um verbo e o seu lugar na barra, com a sua figura; o corpo senta lá pelo verbo «lugar»: a barra na ordem, com as teclas
+//     e o apagado com o porquê; cada lugar chega ao mundo pela porta do verbo (a oferta pelo livro, uma vez); a lista do lugar; levantar; a
+//     figura com o nome de outra recusada e o lugar trazido de um verbo que a barra tem, o dela (D-1036); a pergunta de uma barra que quebra,
+//     erro do módulo dela, e a tela segue; e os casos ruins: o save no meio, a mão do deus, o corpo que morre, o prédio que cai
+//  a12 a palavra da primeira vez é da sua barra (L-2270): uma linha da lista feita longe de qualquer barra não esconde a palavra da mesa
 //  a6 o verificador limpo em tudo (as regras «interacao» e as da taverna), nenhum erro de módulo
 //   node qa/acoes.js [mundo]          (≈ 4 min; ONLY=a1,a2 para algumas)
+//   node qa/acoes.js igual PASTA      a «Mesa» igual à de antes (F14): a mesma mão — o corpo senta à mesa, a barra, a lista da mesa e a de uma
+//                                     pessoa, a rodada pela barra, levantar — sobre o jogo daqui e sobre o da PASTA (uma cópia do jogo de
+//                                     antes), cada um no seu processo; a barra e as listas iguais letra por letra (≈ 3 min)
+//   RAIZ=PASTA node qa/acoes.js       a prova sobre o jogo da PASTA (ONLY=a12 sobre uma cópia de antes do L-2270 o reproduz)
+const path = require('path');
+if (process.argv[2] === 'igual') { igual(process.argv[3]); return; }
 const M = require('./nodemundo.js');
-const G = M.load({ qa: true, extra: ['js/space.js', 'js/people3d.js', 'js/anim-gait.js', 'js/anim-clips.js', 'js/anim-body.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'js/interacao-clips.js', 'js/cam3d.js', 'js/input3d.js', 'js/incui.js', 'js/cardapio-ui.js', 'js/cartas-arte.js', 'js/cartas-ui.js', 'js/jogo-dados-ui.js', 'js/acoes-ui.js', 'js/combate-clips.js', 'js/combate3d.js', 'js/combate-ui.js', 'js/modes.js', 'qa/interacao-inv.js', 'qa/taverna-vida-inv.js'] });
+const G = M.load({ qa: true, root: process.env.RAIZ || undefined, extra: ['js/space.js', 'js/people3d.js', 'js/anim-gait.js', 'js/anim-clips.js', 'js/anim-body.js', 'js/possess.js', 'js/interact.js', 'js/avatar.js', 'js/interacao-clips.js', 'js/cam3d.js', 'js/input3d.js', 'js/incui.js', 'js/cardapio-ui.js', 'js/cartas-arte.js', 'js/cartas-ui.js', 'js/jogo-dados-ui.js', 'js/acoes-ui.js', 'js/combate-clips.js', 'js/combate3d.js', 'js/combate-ui.js', 'js/modes.js', 'qa/interacao-inv.js', 'qa/taverna-vida-inv.js'] });
 const D = G.Depot, T = G.Taverna, In = G.Interiors, Po = G.Possess, I = G.Interact, U = G.AcoesUI;
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; const on = k => !ONLY || ONLY.includes(k);
 const fails = []; const ok = (name, c, info) => { console.log(`${c ? 'PASSOU' : 'FALHOU'} | acoes ${name} | ${info}`); if (!c) fails.push(name.split(' ')[0]); };
@@ -88,6 +101,48 @@ const mates = () => { const v = Po.body(); const u = Po.useOf(); if (!u) return 
 const personOf = o => { const sn = I.scan(); const c = sn && sn.all.find(q => q.p.id === 'pessoa' && q.t.o === o); return c ? I.asChoice({ p: c.p, t: c.t }) : null; };
 const rowOf = (c, id) => { const m = U.lista(c); return m ? m.verbs.findIndex(q => q.id === id) : -1; };
 const slot = id => { const m = U.mesa(); return m ? m.items.findIndex(q => q.id === id) : -1; };
+// (the words told to the player — a greyed slot's why, an answer)
+const toasts = []; { const t0 = G.IncUI.toast; G.IncUI.toast = function (t) { toasts.push(String(t || '')); return t0.apply(this, arguments); }; }
+
+// ---------------- the portrait of the table's bar (RETRATO=1, for «igual»: the same hand over this game and over a copy of before) ----------------
+// (seated at the table: the bar, the table's list, a person's of the table, the dice's word; the round by the bar; up — each as the screen
+// reads it, only the fields the bar had before F14: the same letters, or the Mesa is not the same)
+if (process.env.RETRATO) {
+  fresh(); const r = sit(); const out = { sat: !!r.ok, why: r.why || '', meta: { raiz: M.root, registro: typeof U.bar === 'function' } }; // (meta: which game ran — out of the comparison)
+  const bar = m => (m ? { b: m.b, tema: m.tema, nome: m.nome, items: m.items } : null);
+  const lst = m => (m ? { key: m.key, id: m.id, nome: m.nome, sub: m.sub, o: m.o, icon: m.icon, verbs: m.verbs.map(q => ({ k: q.k, id: q.id, label: q.label, sub: q.sub, ok: q.ok, why: q.why, icon: q.icon, key: q.key })) } : null);
+  if (r.ok) {
+    for (let k = 0; k < 20; k++) frame();
+    out.mesa = bar(U.mesa()); out.listaMesa = lst(U.lista(I.here('taverna'))); out.how = U.how('jd-dados');
+    const o = mates().filter(x => personOf(x))[0]; out.pessoa = o ? lst(U.lista(personOf(o))) : null;
+    const ir = slot('tv-rodada'); out.rodada = ir >= 0 ? U.faz(ir) : null; for (let k = 0; k < 30; k++) frame(); out.mesa2 = bar(U.mesa()); out.toasts = toasts.slice();
+    const il = slot('levantar'); out.up = U.faz(il); for (let k = 0; k < 40; k++) frame(); out.mesa3 = bar(U.mesa()); out.listaUp = lst(U.lista(I.here('taverna')));
+  }
+  process.stdout.write('\nRETRATO ' + JSON.stringify(out) + '\n'); process.exit(0);
+}
+
+// ---------------- a12 the word of the first time is its bar's (L-2270) ----------------
+// (first of the parts: the table's word not yet seen in this run. A greeting done by the list in the street — away from any bar — leaves the
+// table's word to show; a slot of the table's bar, then, marks it seen — the tavern's key, «gotaf-dica-mesa» —, and only it)
+if (on('a12')) {
+  fresh(); bad.length = 0; let pair = null;
+  for (const v of [...S().villagers.values()].filter(o => o.age >= 18 && o.age < 55 && !o.sleeping && !o.inside && !o.aboard && Po.can(o).ok).sort((a, c) => a.id - c.id)) {
+    const o = [...S().villagers.values()].find(x => x !== v && x.age >= 16 && !x.sleeping && !x.inside && !x.aboard && !x.held && G.dist(x.x, x.y, v.x, v.y) * TL < 2.4 && G.dist(x.x, x.y, v.x, v.y) * TL > 0.6); if (o) { pair = { v, o }; break; } }
+  const seen0 = U.dicaVista();
+  if (!pair) ok('a12 a palavra da primeira vez', false, 'ninguém na rua ao lado de alguém');
+  else {
+    const { v, o } = pair; G.Vg.endTask(v); v.path = null; Po.take(v); G.Avatar.attach(v, Math.atan2(o.y - v.y, o.x - v.x)); for (let k = 0; k < 4; k++) frame();
+    const c = personOf(o); const ig = c ? rowOf(c, 'soc-cumprimentar') : -1; if (ig >= 0) U.lado(ig, c); for (let k = 0; k < 10; k++) frame();
+    let kept = null; try { kept = localStorage.getItem('gotaf-dica-mesa'); } catch (e) { kept = 'erro'; }
+    const street = U.dicaVista(); let after = null;
+    // (then at the table, the bar used: the table's word is done with)
+    // (a slot that can be done now — getting up always can: a greyed one tapped only says why, and was never a use of the bar)
+    fresh(); const r = sit(); if (r.ok) { for (let k = 0; k < 10; k++) frame(); U.faz(slot('levantar')); after = U.dicaVista(); }
+    ok('a12 a palavra da primeira vez é da sua barra: cumprimentar alguém na rua pela lista não esconde a palavra da mesa da taverna; usar a barra da mesa, sim (L-2270)',
+      !seen0 && ig >= 0 && !street && kept === null && (!r.ok || after === true), `antes ${seen0 ? 'JÁ VISTA' : 'não vista'}; ${ig >= 0 ? `cumprimentou ${nameOf(o)} na rua pela lista` : 'SEM O VERBO'}: a palavra da mesa ${street ? 'DADA POR VISTA' : 'ainda por ver'} (no navegador: ${kept === null ? 'nada guardado' : `«${kept}»`}); à mesa, depois de usar a barra: ${after === null ? '—' : after ? 'vista' : 'AINDA POR VER'}`);
+    watch(); ok('a12 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
+  }
+}
 
 // ---------------- a1 the bar of the table ----------------
 if (on('a1') || on('a2')) {
@@ -351,8 +406,125 @@ if (on('a9')) {
     bad.length = 0; watch(); ok('a9 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
   }
 }
+// ---------------- a10 the bar of a place that is no tavern, end to end (F14) ----------------
+// (the proof registers what a building's wave and a trade that comes later would, each as from its own file: the place — a provider whose
+// find is the place the body holds in that building —, its verbs in the registry, its bar («Trono»); and the trade's verb with its slot on
+// that bar and its figure. The body sits there by the verb «lugar», as the player does)
+const usable = q => I.PURE.has(q.use) || !!I.useRuleOf(q.use);
+function placeFor() {
+  const order = t => (/palac/.test(t) ? 0 : t === 'temple' ? 1 : 2);
+  for (const b of [...S().buildings.values()].filter(q => q.built && q.type !== 'taverna' && In.has(q)).sort((a, c) => order(a.type) - order(c.type) || a.id - c.id)) {
+    const p = G.Space.planNow(b); if (!p || !p.entrance) continue;
+    const seats = In.freeNear(b, p.entryLv || 0, p.entrance.x, p.entrance.z, 60, ['sentar', 'comer', 'rezar', 'aquecer', 'ler']).filter(q => usable(q) && In.walkIn(b, q) < Infinity);
+    const v = seats.length ? bodyFor(b, null) : null; if (v) return { b, seat: seats[0], v };
+  }
+  return null;
+}
+if (on('a10')) {
+  fresh(); bad.length = 0; const P0 = placeFor();
+  if (!P0) ok('a10 a barra de um lugar que não é a taverna', false, 'nenhum prédio com um lugar livre que o verbo «lugar» ofereça e alguém para o deus viver');
+  else {
+    const fid = G.Village.facOfSet(P0.b.set); const coin = G.Eco.coinage(fid); const PL = { b: P0.b.id, olhou: 0, arauto: 0 };
+    // (the building's wave: the place, its verbs, its bar)
+    I.add({ id: 'prova-trono', prio: 4.45, reach: 2.4,
+      find(ctx) { const u = Po.useOf(); if (!PL.b || !u || u.b !== PL.b || ctx.v.inside !== PL.b) return []; return [{ u, X: ctx.X + Math.cos(ctx.yaw) * 0.45, Z: ctx.Z + Math.sin(ctx.yaw) * 0.45, pref: 2 }]; },
+      label: () => 'Olhar o salão', can: () => ({ ok: true }), run: () => { PL.olhou++; return { ok: true, msg: 'Você olha o salão.' }; } });
+    I.verb('prova-trono', { id: 'pt-oferta', k: 'outra', ord: 1, label: () => (coin ? 'Deixar uma oferta (0,2)' : ''), can: ctx => (G.Eco.purse(ctx.v) + 1e-6 >= 0.2 ? { ok: true } : { ok: false, why: 'Você não tem com que deixar uma oferta.' }),
+      run: () => { const ask = Po.apply(w => (G.Eco.spend(w, 0.2, 'f:' + fid, 'prova-oferta') ? { ok: true, msg: 'Você deixa a oferta.' } : { ok: false, why: 'Falta dinheiro.' })); return { ok: true, ask, get msg() { return (ask.res && (ask.res.msg || ask.res.why)) || '…'; } }; } });
+    I.verb('prova-trono', { id: 'pt-decreto', k: 'outra', ord: 2, label: 'Ler o decreto', can: () => ({ ok: false, why: 'Não há decreto nenhum para ler.' }), run: () => ({ ok: false, msg: 'Não há decreto nenhum para ler.' }) });
+    const barOk = U.bar('prova-trono', ['', { id: 'pt-oferta', nome: 'Oferta', icon: 'gorjeta', dft: 'Deixar uma oferta' }, { id: 'pt-decreto', nome: 'Decreto', icon: 'tabuletas', dft: 'Ler o decreto' }],
+      { rotulo: 'Trono', icon: 'mesa', levantar: 'Levantar do trono', alvo: () => 'O trono', alvoSub: () => 'onde você está', dica: { chave: 'gotaf-dica-prova-trono', html: () => '<b>No trono</b><p>A barra do lugar.</p>' } });
+    // (a trade that comes later, from its own file: its verb in the registry, its slot on the place's bar — between the offering and the
+    // decree — and its figure)
+    const ARAUTO = '<path d="M4 10h3l7-4v12l-7-4H4z"/><path d="M17.5 9c1.4 1.2 1.4 4.8 0 6"/>'; const icOk = U.icone('arauto', ARAUTO);
+    I.verb('prova-trono', { id: 'pt-arauto', k: 'outra', ord: 3, label: 'Chamar o arauto', can: () => ({ ok: true }), run: () => { PL.arauto++; return { ok: true, msg: 'O arauto vem.' }; } });
+    const slOk = U.slot('prova-trono', { id: 'pt-arauto', nome: 'Arauto', icon: 'arauto', dft: 'Chamar o arauto', ord: 1.5 });
+    // (another file bringing a slot of a verb the bar already has: it stays the bar's, at its own place — the verb shown once)
+    const dupOk = U.slot('prova-trono', { id: 'pt-decreto', nome: 'Outro decreto', icon: 'mais', ord: 0.5 });
+    // (what is no bar, no slot and no new figure is refused — said in the console, the words kept here; this file's own figure never replaced)
+    const w0 = console.warn; const warned = []; console.warn = (...a) => warned.push(a.join(' ')); let refused;
+    // (and a figure under a name already another's — this file's own, or one another file brought with other strokes —: refused; the same
+    // strokes again are the same figure)
+    try { refused = [U.bar('', []), U.bar('x', 'nada'), U.slot('prova-trono', { nome: 'sem id' }), U.icone('mesa', '<path d="M0 0"/>'), U.icone('arauto', '<path d="M1 1"/>')]; } finally { console.warn = w0; }
+    const again = U.icone('arauto', ARAUTO);
+    const { b } = P0; const sitAt = w => { const bb = S().buildings.get(PL.b); const pl = In.freeFor(bb, P0.seat.it.id, P0.seat.q, P0.seat.x, P0.seat.z) || P0.seat; return seatIn(bb, w, Object.assign({}, P0.seat, pl)); };
+    const r = sitAt(P0.v); const v = Po.body();
+    if (!r.ok) ok('a10 o corpo senta no lugar', false, r.why || 'não sentou');
+    else {
+      for (let k = 0; k < 12; k++) frame();
+      const m = U.mesa(); const ids = m ? m.items.map(q => q.id) : []; const want = ['', coin ? 'pt-oferta' : null, 'pt-arauto', 'pt-decreto', 'levantar'].filter(x => x !== null);
+      const keyOk = !!m && m.items.every((q, i) => q.key === (q.id === 'levantar' ? G.Input3D.label('pular') : i < 5 ? G.Input3D.label('rapido' + (i + 1)) : G.Input3D.label('acao' + (i + 1))));
+      const dec = m ? m.items.find(q => q.id === 'pt-decreto') : null; const how = U.how('pt-arauto'); const i3 = slot('pt-arauto');
+      ok('a10 a barra de um lugar que não é a taverna: registrada pela onda (bar), um lugar trazido por um ofício de outro arquivo (slot, entre os da barra pelo ord) com a sua figura, as teclas pela ordem, o apagado com o porquê; o que não é barra, lugar nem figura nova recusado (a figura com o nome de outra também), e o lugar de um verbo que a barra já tem fica o dela',
+        barOk && slOk && icOk && dupOk && again && refused.every(x => x === false) && warned.length === refused.length && !!m && m.prov === 'prova-trono' && m.rotulo === 'Trono' && JSON.stringify(ids) === JSON.stringify(want) && keyOk && !!dec && dec.nome === 'Decreto' && !dec.ok && dec.why === 'Não há decreto nenhum para ler.' && how === `a tecla ${G.Input3D.label('rapido' + (i3 + 1))} («Arauto», na barra do trono)` && U.barras().some(x => x.prov === 'taverna'),
+        `${G.Village.buildName(b)} #${b.id} (${b.type}), o lugar «${P0.seat.use}»: ${m ? `«${m.rotulo}» — ${m.items.map(q => `[${q.key}] ${q.nome}${q.ok ? '' : ` — «${q.why}»`}`).join(' · ')}` : 'SEM BARRA'}; «${how}»; recusados ${refused.filter(x => x === false).length} de ${refused.length} (${warned.length} ditos no console); a mesma figura de novo ${again ? 'aceita' : 'RECUSADA'}`);
+      // (each slot reaches the world by the verb's own door — the offering by the ledger, from the body's coins to the people's treasury, once;
+      // the trade's herald; the place's E —; the greyed one says why, and does nothing)
+      const t0 = S().clock; const n0 = PL.olhou, a0 = PL.arauto; const ofer = () => seen.filter(e => e.t >= t0 && e.c === 'prova-oferta');
+      if (coin) { U.faz(slot('pt-oferta')); until(() => ofer().length > 0, 3); }
+      U.faz(slot('pt-arauto')); for (let k = 0; k < 4; k++) frame(); U.faz(slot('')); for (let k = 0; k < 6; k++) frame();
+      const said0 = toasts.length; U.faz(slot('pt-decreto')); for (let k = 0; k < 6; k++) frame(); const denied = toasts.slice(said0).some(t => /decreto/.test(t));
+      const paid = ofer();
+      ok('a10 cada lugar chega ao mundo pela porta do verbo: a oferta pelo livro (das moedas do corpo ao tesouro do povo, no passo do mundo, uma vez), o arauto do ofício, o E do lugar; o apagado diz por quê e não faz nada',
+        (!coin || (paid.length === 1 && paid[0].from === G.Eco.coinRef(v) && paid[0].to === 'f:' + fid && Math.abs(paid[0].n - 0.2) < 1e-9)) && PL.arauto === a0 + 1 && PL.olhou === n0 + 1 && denied && ofer().length === (coin ? 1 : 0),
+        `${coin ? `a oferta: ${paid.map(e => `${e.from} → ${e.to}, ${e.n} (${e.c})`).join('; ') || 'NADA NO LIVRO'}` : 'o povo não usa moeda'}; o arauto ${PL.arauto - a0}×; o E ${PL.olhou - n0}×; o decreto: «${toasts.slice(said0).join(' | ')}»`);
+      // (the place's list — the key Y, the «Ações» of the fingers —: the throne by its bar's word, every verb with its words, the greyed one
+      // with why, getting up at the end)
+      const L = U.lista(I.here('prova-trono')); const rows = L ? L.verbs : [];
+      ok('a10 a lista do lugar: o alvo pelo nome que a barra dá, cada verbo com as suas palavras e a figura do seu lugar, o apagado com o porquê, levantar no fim',
+        !!L && L.nome === 'O trono' && L.sub === 'onde você está' && rows.length >= 4 && rows[rows.length - 1].id === 'levantar' && rows[rows.length - 1].label === 'Levantar do trono' && rows.some(q => q.id === 'pt-decreto' && !q.ok && /decreto/.test(q.why) && q.icon === 'tabuletas') && rows.some(q => q.id === 'pt-arauto' && q.ok && q.icon === 'arauto'),
+        L ? `«${L.nome}» (${L.sub}): ${rows.map(q => `${q.label}${q.ok ? '' : ` — ${q.why}`} [${q.icon}]`).join(' | ')}` : 'sem lista');
+      // (getting up: the jump of the feet — the place let go by the world, the bar gone)
+      U.faz(slot('levantar')); for (let k = 0; k < 40; k++) frame();
+      ok('a10 levantar pela barra: o corpo se levanta, o mundo solta o lugar, a barra sai', !G.Avatar.seated() && !Po.useOf() && !U.mesa(), `sentado ${G.Avatar.seated()}, o lugar ${Po.useOf() ? 'ainda seu' : 'solto'}, a barra ${U.mesa() ? 'ainda lá' : 'fora'}`);
+      // (a module whose bar's question breaks: that module's error — G.modErr, said in the console —, and the screen goes on: on one's feet no
+      // bar, seated on the throne its bar. The fault the proof's own, caught here and wiped after: the broken bar made harmless again)
+      { const e0 = console.error; const errs = []; let m0 = 'x', m1 = 'x', thrown = '';
+        console.error = (...a) => errs.push(a.map(String).join(' ').slice(0, 120));
+        try { U.bar('prova-quebra', [''], { rotulo: 'Quebra', quando: () => { throw new Error('a pergunta quebrou'); } }); try { m0 = U.mesa(); } catch (e) { thrown = e.message; }
+          sitAt(Po.body() || P0.v); for (let k = 0; k < 8; k++) frame(); try { m1 = U.mesa(); } catch (e) { thrown = thrown || e.message; } }
+        finally { console.error = e0; }
+        const n = G.modErr['barra:prova-quebra'] || 0; U.bar('prova-quebra', [''], { rotulo: 'Quebra', quando: () => null }); delete G.modErr['barra:prova-quebra'];
+        ok('a10 a pergunta de uma barra que quebra é erro do módulo dela (G.modErr, dito no console), e a tela segue: de pé nenhuma barra, sentado no trono a dele',
+          !thrown && m0 === null && !!m1 && m1.prov === 'prova-trono' && n > 0 && errs.length > 0, `de pé: ${thrown ? 'A TELA QUEBROU: ' + thrown : m0 === null ? 'nenhuma barra' : 'UMA BARRA'}; sentado no trono: ${m1 && m1.prov ? `a barra «${m1.rotulo}»` : 'SEM BARRA'}; o erro do módulo ${n}× (${errs.length} linha(s) no console)`);
+        U.faz(slot('levantar')); for (let k = 0; k < 40; k++) frame(); }
+      // (the bad cases: a save with the bar up; the god's hand takes the body out; the body dies at the place; the building falls with a
+      // body at it — the bar follows the world, nothing breaks)
+      const bad10 = [];
+      { const r2 = sitAt(Po.body() || P0.v); for (let k = 0; k < 8; k++) frame(); const before = U.mesa();
+        G.Save.apply(JSON.parse(G.Save.serialize())); G.Avatar.attach(Po.body(), 0); for (let k = 0; k < 8; k++) frame(); const after = U.mesa(); const held = !!(Po.useOf() && Po.useOf().b === PL.b);
+        if (!r2.ok || !before || (held ? !after || after.items.map(q => q.id).join() !== before.items.map(q => q.id).join() : !!after)) bad10.push(`o save: antes ${before ? 'a barra' : 'NADA'}, depois ${after ? 'a barra' : 'nada'} (o lugar ${held ? 'seu' : 'solto'})`); else bad10.push(`o save: a barra ${held ? 'volta com o lugar' : 'sai com o lugar'}`); }
+      { const w = Po.body(); const bb = S().buildings.get(PL.b); god(() => { const d = G.Vg.door(bb); w.x = d[0]; w.y = d[1]; w.inside = 0; }); for (let k = 0; k < 12; k++) frame(); const m2 = U.mesa();
+        if (m2 || Po.useOf()) bad10.push(`a mão do deus: a barra ${m2 ? 'AINDA LÁ' : 'fora'}, o lugar ${Po.useOf() ? 'AINDA SEU' : 'solto'}`); else bad10.push('a mão do deus: a barra sai'); }
+      { const r3 = sitAt(Po.body()); for (let k = 0; k < 8; k++) frame(); const up = !!U.mesa(); god(() => G.Village.kill(Po.body(), 'teste', true)); for (let k = 0; k < 12; k++) frame();
+        if (!r3.ok || !up || Po.body() || U.mesa()) bad10.push(`a morte: sentado ${r3.ok}, a barra antes ${up}, depois ${U.mesa() ? 'AINDA LÁ' : 'fora'}`); else bad10.push('a morte no lugar: a barra sai'); }
+      { const bb = S().buildings.get(PL.b); const w = bodyFor(bb, null); const r4 = w ? sitAt(w) : { why: 'ninguém' }; for (let k = 0; k < 8; k++) frame(); const up = !!U.mesa(); god(() => G.Village.damageBuilding(bb, 1e9, 'deus')); for (let k = 0; k < 20; k++) frame();
+        if (!r4.ok || !up || U.mesa()) bad10.push(`o prédio cai: sentado ${!!r4.ok}, a barra antes ${up}, depois ${U.mesa() ? 'AINDA LÁ' : 'fora'}`); else bad10.push('o prédio cai: a barra sai'); }
+      ok('a10 os casos ruins: o save com a barra de pé, a mão do deus, o corpo que morre no lugar, o prédio que cai — a barra segue o mundo, nada quebra', bad10.length === 4 && bad10.every(s => !/AINDA|NADA|false/.test(s)) && M.limpo(), bad10.join('; '));
+    }
+    PL.b = 0; I.list = I.list.filter(p => p.id !== 'prova-trono'); if (Po.body()) god(() => Po.release('teste'));
+    watch(); ok('a10 o verificador limpo', !bad.length, bad.join(' | ') || 'nada');
+  }
+}
 // ---------------- a6 the errors ----------------
 { const e = M.erros(); ok('a6 nenhum erro de módulo nem do console', !Object.keys(e.mod || {}).length && !e.console.length, JSON.stringify(e).slice(0, 300)); }
 console.log(`(${(clock() - c0).toFixed(0)} s de máquina)`);
 console.log(fails.length ? `FALHOU: ${fails.join(', ')}` : 'acoes: PASSOU');
 process.exit(fails.length ? 1 : 0);
+// ---------------- igual: the table's bar the same as before (F14, D-1030) ----------------
+// (the same hand — RETRATO=1 — over the game here and over the game of the folder given, each in its own process: the bar, the table's list,
+// a person's, the dice's word, the round and getting up, letter by letter)
+function igual(baseDir) {
+  const cp = require('child_process'), fs = require('fs');
+  const here = path.join(__dirname, '..'); const there = baseDir ? path.resolve(baseDir) : null;
+  if (!there || !fs.existsSync(path.join(there, 'index.html'))) { console.log('FALHOU | acoes igual | dê a pasta do jogo de antes: node qa/acoes.js igual PASTA'); process.exit(1); }
+  const run = root => { const s = cp.execFileSync(process.execPath, [__filename], { env: Object.assign({}, process.env, { RETRATO: '1', RAIZ: root, ONLY: 'retrato' }), maxBuffer: 1 << 28 }).toString(); const m = /\nRETRATO (.*)\n/.exec(s); return m ? JSON.parse(m[1]) : null; };
+  const a = run(here), b = run(there); const noMeta = x => JSON.stringify(Object.assign({}, x, { meta: 0 })); const A = noMeta(a), B = noMeta(b);
+  // (where they part, when they do: the first key that differs, each side's)
+  const diff = (x, y, at) => { if (JSON.stringify(x) === JSON.stringify(y)) return ''; if (x && y && typeof x === 'object' && typeof y === 'object') { for (const k of new Set([...Object.keys(x), ...Object.keys(y)])) { const d = diff(x[k], y[k], at + '.' + k); if (d) return d; } } return `${at}: aqui ${JSON.stringify(x).slice(0, 160)} — antes ${JSON.stringify(y).slice(0, 160)}`; };
+  // (the two sides ran their own games: here the bars' registry, there — a copy of before F14 — none)
+  const two = !!a && !!b && a.meta.raiz !== b.meta.raiz;
+  const same = !!a && !!b && a.sat && two && A === B;
+  console.log(`${same ? 'PASSOU' : 'FALHOU'} | acoes igual a «Mesa» da taverna igual à de antes: a barra, a lista da mesa e a de uma pessoa, a palavra dos dados, a rodada e levantar, letra por letra | ${!a || !b ? 'um dos dois não deu o retrato' : !a.sat ? 'o corpo não sentou: ' + a.why : same ? `${a.mesa.items.length} lugares (${a.mesa.items.map(q => q.nome).join(', ')}); a lista da mesa com ${a.listaMesa ? a.listaMesa.verbs.length : 0} linhas; a de ${a.pessoa ? a.pessoa.nome : '—'} com ${a.pessoa ? a.pessoa.verbs.length : 0}; «${a.how}»` : diff(Object.assign({}, a, { meta: 0 }), Object.assign({}, b, { meta: 0 }), 'retrato')}${a && b ? ` (aqui ${a.meta.registro ? 'com' : 'sem'} o registro das barras; lá ${b.meta.registro ? 'com' : 'sem'})` : ''}`);
+  process.exit(same ? 0 : 1);
+}

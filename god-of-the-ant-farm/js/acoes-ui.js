@@ -1,9 +1,13 @@
 'use strict';
 // ============================================================
 //  Ações — what the body can do now, seen and reached (the wave
-//  4 I, D-915 to D-929). Seated at a tavern's table, the bar of
-//  the table is always in sight, in the house's own look: the
-//  menu and the keeper, a round for the table, the dice, the
+//  4 I, D-915 to D-929; the bar of any place, F14, D-1030 to
+//  D-1034). At a place that has a bar — a tavern's table, and
+//  whatever place a building's module gives one: the throne,
+//  the council's table, the couch of the banquet, the scribe's
+//  desk, the bench of a trade — the bar of that place is always
+//  in sight, in the house's own look: at the tavern the menu
+//  and the keeper, a round for the table, the dice, the
 //  Tabuletas, the bones, a song, a coin to the musician, and
 //  getting up — each with its key on the PC (the quick keys
 //  while one sits: the bar takes the place of the quick things)
@@ -11,9 +15,10 @@
 //  greyed, with the world's own why. The list of actions (the
 //  «Ações» button of the fingers, a key on the PC, a button of
 //  the controller) is everything about one target — a person,
-//  the table, a door —, the others in reach to switch to by
-//  their names. The first time at a tavern's table a word shows
-//  the bar, and never again once it is used.
+//  the place, a door —, the others in reach to switch to by
+//  their names. The first time at a place with a word of its
+//  own (the tavern's table) the word shows the bar, and never
+//  again once that bar is used.
 //  Only seen: it reads the verbs as the world says them (the
 //  doors of G.Interact: verbsOf, here, candidates; the names by
 //  G.Possess.knows) and does each by the verbs' own doors
@@ -21,6 +26,72 @@
 //  the world itself; the two verbs it brings (the coin to the
 //  musician from the table, the dice with someone at it) are
 //  verbs of the registry, asked by the hands (G.Possess.apply).
+//
+//  THE MANUAL (F14, F15) — a building's wave gives a place its
+//  bar, and a trade that comes later puts its verbs on it, each
+//  from its own file, never touching another's:
+//   1. the place is a provider of G.Interact.add({ id: 'trono',
+//      find, label, can, run }): its find gives the place while
+//      the body holds it (one target, a little before the body,
+//      as the 'taverna' of cardapio-ui.js); its E is its own;
+//   2. each thing to do there is a verb of the registry —
+//      G.Interact.verb('trono', { id: 'tr-ouvir', k: 'outra', ord,
+//      label, can → { ok, why }, run }) —: the can says why not
+//      with the world's own words; the run asks the world by the
+//      hands (G.Possess.apply), and whatever it spends or gives
+//      goes by the ledger (G.Depot: move, make, use, with its
+//      code) inside the hands or an act's op, never by hand
+//      (rule 521: nothing comes from nothing);
+//   3. the bar: G.AcoesUI.bar('trono', ['', { id: 'tr-ouvir',
+//      nome: 'Ouvir', icon: 'mao', dft: 'Ouvir o próximo' }, …],
+//      { rotulo: 'Trono', icon, de: 'do trono', quando: v => the
+//      place the body is at now ({ b: the building's id, … }) or
+//      null, levantar: 'Levantar do trono' (false where one
+//      stands), alvo, alvoSub, tema, nome, temaLista, doLugar,
+//      soLista, dica: { chave: 'gotaf-dica-trono', html } }) —
+//      one bar a provider (rule 446); every slot a verb of the
+//      registry on that provider, by its id; '' the target's E;
+//      the order is the bar's, and the key the order's: 1 to 5
+//      the quick keys (the bar takes them while it is up), 6 to
+//      8 acao6 to acao8, a ninth and after only by the fingers
+//      and the list; getting up is the jump. Each reading only
+//      reads (rule 520); the word of the first time, if the bar
+//      has one, is gone once that bar is used (rule 523). The bar
+//      is only seen: it is registered from a file of the screen (a
+//      *-ui.js) that index.html loads after this one (rule 525),
+//      and the building's own module only answers — its can, its
+//      doors;
+//   4. a trade puts its verb on a place's bar from its own file:
+//      its verb in the registry (2), its slot —
+//      G.AcoesUI.slot('trono', { id: 'ar-chamar', nome: 'Arauto',
+//      icon: 'arauto', dft: 'Chamar o próximo', ord: 1.5 }) (ord:
+//      among the bar's own slots, at their places 0, 1, 2…; none,
+//      after them) — and its figure, if it brings one:
+//      G.AcoesUI.icone('arauto', '<path d="…"/>') (strokes of a
+//      24-wide box, in currentColor). One name, one figure and
+//      one slot (rule 524): a figure under another's name is
+//      refused, a slot of a verb the bar has is the bar's. A verb
+//      of the place that no slot names shows after the slots, by
+//      its own words;
+//   5. the sun that lingers at the place for who lives it (the
+//      audience, the banquet, the rite) is the world's registry
+//      (world.js, F15): G.linger('audiencia', () => 0.2,
+//      audienciaCorpo, true) — on one line, its name written and
+//      never another's, of the body (true), its question and its
+//      pace only reading (rule 476); asked only while the god
+//      lives a body, the slowest one going; what the lingering
+//      spends goes by G.paceCorpo (as the tavern's, rule 477);
+//   6. another file's word to the player says how the hands reach
+//      a slot by G.AcoesUI.how(id) («a tecla 3 («Arauto», na
+//      barra do trono)»); the body's screen asks G.AcoesUI.daBarra
+//      (target) whether the target faced is the bar's own place;
+//   7. the proofs: a bar comes with its part in the mould of the
+//      a10 of qa/acoes.js (the bar, the keys, the greyed with
+//      why, each slot by its verb's door, the list, getting up,
+//      the save, the god's hand, the death, the building that
+//      falls), a cause with its own in the mould of the c6 to c11
+//      of qa/dia.js (the pace with the body, the world the same
+//      without it).
 // ============================================================
 (function (G) {
   const UI = G.AcoesUI = {};
@@ -95,13 +166,21 @@
   };
   const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATH[k] || PATH.mao}</svg>`;
   UI.svg = svg;
+  // (a figure a building's wave or a trade brings for its slots: strokes of a 24-wide box, in currentColor — only seen. One a name: this
+  // file's own are never replaced — a wave's 'mesa' would have changed the tavern's bar —, nor one another file brought, unless the same
+  // strokes (two fronts with one name, the R1 of the plan: the second figure took the first one's slots in silence); refused, said)
+  const OWN = new Set(Object.keys(PATH));
+  UI.icone = (k, path) => {
+    if (typeof k !== 'string' || !k || typeof path !== 'string' || !path || OWN.has(k) || (PATH[k] !== undefined && PATH[k] !== path)) { console.warn(`G.AcoesUI.icone: a figura «${k}» recusada — ${OWN.has(k) || PATH[k] !== undefined ? 'o nome já é de outra figura' : 'o nome e os traços'} (D-1031)`); return false; }
+    PATH[k] = path; return true; };
   // (the drawing of a verb: by its id — the social ones of soc-verbos by theirs —, the E by what it is to)
   const ICON = { dar: 'dar', abraco: 'abraco', desafiar: 'desafiar', 'pe-cartas': 'tabuletas', 'pe-dados': 'dados', 'tv-gorjeta': 'gorjeta', 'tv-gorjeta-mesa': 'gorjeta',
     'tv-rodada': 'rodada', 'tv-musica': 'musica', 'tv-jogo': 'ossinhos', 'jd-dados': 'dados', 'tv-cartas': 'tabuletas',
     'soc-cumprimentar': 'cumprimentar', 'soc-elogiar': 'elogiar', 'soc-beijar': 'beijar', 'soc-discutir': 'discutir', 'soc-insultar': 'insultar', 'soc-ameacar': 'ameacar',
     'soc-beber': 'beber', 'soc-ajuda': 'ajuda', 'soc-novidades': 'novidades', 'soc-casar': 'casar', 'soc-pazes': 'pazes', 'soc-adotar': 'adotar', chave: 'porta', bater: 'porta', armazem: 'porta',
     'jc-dados-compra': 'comprar', 'jc-baralho-compra': 'comprar' };
-  const iconOf = (x, pid) => (x.id ? ICON[x.id] || 'mao' : pid === 'pessoa' ? 'conversar' : pid === 'taverna' ? 'pedir' : /porta/i.test(pid) ? 'porta' : 'mao');
+  // (… a verb of a place's bar by its slot's figure; the E of a place by its bar's first slot)
+  const iconOf = (x, pid) => { const bar = barOf(pid); return x.id ? ICON[x.id] || (bar && slotIcon(bar, x.id)) || 'mao' : pid === 'pessoa' ? 'conversar' : bar ? slotIcon(bar, '') || 'mao' : /porta/i.test(pid) ? 'porta' : 'mao'; };
   // (the price or the stake a verb says at the end of its words, in brackets — «Pagar uma rodada para a mesa (0,6 prata)»)
   const paren = s => { const m = /\(([^()]+)\)\s*$/.exec(s || ''); return m ? m[1] : ''; };
   const bare = s => String(s || '').replace(/\s*\([^()]+\)\s*$/, '');
@@ -125,61 +204,129 @@
       row: [al ? `aluguel ${priceAt(v, al)}` : '', x.de || ''].filter(Boolean).join(' · ') };
   }
 
-  // ------------------------------ the bar of the table: what it shows (only read) ------------------------------
-  // The slots of the table, in their order: the table's own E (the menu, the keeper called, the cup, the plate), the round, the dice,
-  // the Tabuletas, the bones, a song, the coin to the musician; a verb another part brings to the table after them, by its words; and
-  // getting up. A slot is there greyed, with the world's why, while it cannot be done now — and away only where it is nothing of this
-  // table now (no words and no why: the body is the musician)
-  const SLOT = {
-    '': { nome: 'Pedir', icon: 'pedir' },
-    'tv-rodada': { nome: 'Rodada', icon: 'rodada', dft: 'Pagar uma rodada para a mesa' },
-    'jd-dados': { nome: 'Dados', icon: 'dados', dft: 'Chamar a mesa para os dados' },
-    'tv-cartas': { nome: 'Tabuletas', icon: 'tabuletas', dft: 'Jogar tabuletas' },
-    'tv-jogo': { nome: 'Ossinhos', icon: 'ossinhos', dft: 'Entrar no jogo de ossinhos' },
-    'tv-musica': { nome: 'Música', icon: 'musica', dft: 'Pedir uma música' },
-    'tv-gorjeta-mesa': { nome: 'Gorjeta', icon: 'gorjeta', dft: 'Dar uma gorjeta ao músico' },
+  // ------------------------------ the bars of the places: the registry (F14, D-1030 to D-1034) ------------------------------
+  // A bar is a provider's: its slots in its order, its words (rotulo: «Mesa»; de: «da mesa», as a word to the player names it), its
+  // figure, and the readings of its place — whether the body is at it now (quando: the place, or null), its look, its name, what the list
+  // calls its target —, each only read. One a provider: a bar registered again for the same provider takes the other's place, as a
+  // provider of G.Interact does. The slots another file brings to a bar (UI.slot: the trade that comes later) are kept apart, by provider,
+  // and join the bar whenever it is read — whichever file came first, the building's or the trade's
+  const BARS = new Map(), SLOTS = new Map();
+  const TEMAS = { romano: 1, grego: 1, egipcio: 1, nordico: 1, asteca: 1, classico: 1 }; // (the looks of a bar: one a people — css/style.css)
+  // (a place's look by its building: the building's own people's style, else its people's, else the classic one — as the tavern's, T.look)
+  const temaDe = b => { if (!b) return 'classico'; const f = G.Fac.get(G.Village.facOfSet(b.set)); return TEMAS[b.style] ? b.style : f && TEMAS[f.civ] ? f.civ : 'classico'; };
+  // (a slot: its verb's id ('' the target's own E), its short name and figure — text, or (the place, the verb) → text: the E of the table
+  // is «Beber» with a cup in hand —, its words while the verb has none of its own (dft), and its place among the bar's (ord))
+  const slotDef = (s, i) => (typeof s === 'string' ? { id: s, nome: '', icon: 'mao', dft: '', ord: i } : { id: String(s.id), nome: s.nome || '', icon: s.icon || 'mao', dft: s.dft || '', ord: Number.isFinite(s.ord) ? s.ord : i });
+  // the bar of a place: prov the provider whose target the place is; ordem its slots in order (verb ids, or { id, nome, icon, dft });
+  // o — rotulo, icon, de, quando(v) → the place now, { b: the building's id, … } — what the other readings get as s —, or null (pure:
+  // none, the place the body holds, and the bar is up where the provider finds its target then), tema(v, s),
+  // nome(v, s), temaLista(v) (the list's look about the place, even standing in its building), alvo(t, v) and alvoSub(t, v) (the list's
+  // name and line of the target), doLugar(t) (a target of the provider that is the bar's place — the tavern's table, not its counter),
+  // levantar (the words of getting up: false, none), soLista (verbs of the target only the list shows), dica { chave (the browser's key),
+  // html(v, touch) } (the word of the first time). A registration that is no bar is refused, said in the console; a reading that breaks
+  // is its module's error (ask, below), and the screen goes on
+  UI.bar = function (prov, ordem, o) {
+    if (typeof prov !== 'string' || !prov || !Array.isArray(ordem) || ordem.some(s => typeof s !== 'string' && !(s && typeof s.id === 'string'))) { console.warn(`G.AcoesUI.bar: a barra «${prov}» recusada — o provedor e a ordem dos verbos (D-1030)`); return false; }
+    o = o || {}; const rot = String(o.rotulo || 'Lugar'), low = rot.toLowerCase();
+    BARS.set(prov, { prov, slots: ordem.map(slotDef), rotulo: rot, icon: o.icon || 'mao', de: o.de || `${G.gen(low) === 'a' ? 'da' : 'do'} ${low}`,
+      quando: o.quando || (() => { const u = P().useOf(); return u ? { b: u.b } : null; }),
+      tema: o.tema || ((v, s) => temaDe(G.S.buildings.get(s.b))), nome: o.nome || ((v, s) => { const b = G.S.buildings.get(s.b); return b ? G.Village.buildName(b) : rot; }),
+      temaLista: o.temaLista || null, alvo: o.alvo || null, alvoSub: o.alvoSub || null, doLugar: o.doLugar || (() => true),
+      levantar: o.levantar === undefined ? 'Levantar' : o.levantar, soLista: new Set(o.soLista || []), dica: o.dica && o.dica.chave && typeof o.dica.html === 'function' ? o.dica : null });
+    barSig = ''; return true;
   };
-  UI.ORDER = ['', 'tv-rodada', 'jd-dados', 'tv-cartas', 'tv-jogo', 'tv-musica', 'tv-gorjeta-mesa'];
+  // a slot another file brings to a place's bar — the trade that comes later, its verb in the registry (G.Interact.verb) on the place's
+  // provider —, by the verb's id; ord: its place among the bar's own (0, 1, 2…: 1.5 between the second and the third), none after them
+  UI.slot = function (prov, s) {
+    if (typeof prov !== 'string' || !prov || !s || typeof s.id !== 'string' || !s.id) { console.warn(`G.AcoesUI.slot: o lugar «${s && s.id}» da barra «${prov}» recusado — o provedor e o id do verbo (D-1031)`); return false; }
+    const L = SLOTS.get(prov) || []; const i = L.findIndex(q => q.id === s.id); const d = slotDef(s, i >= 0 ? L[i].ord : 1000 + L.length);
+    if (i >= 0) L[i] = d; else L.push(d); SLOTS.set(prov, L); barSig = ''; return true;
+  };
+  const barOf = prov => BARS.get(prov) || null;
+  // (a bar's reading, asked of the module that registered it: one that breaks is that module's error — G.tryRun: G.modErr, a failure in
+  // every proof —, and the screen goes on with the reading's plain answer; a wave's broken question never stops the body's screen)
+  const ask = (bar, fn, dflt) => { let r = dflt; G.tryRun('barra:' + bar.prov, () => { r = fn(); }); return r; };
+  // (a bar's slots in their order: its own at their places, the others' by their ord — the first brought first among equals; one a verb:
+  // a slot another file brings with the id of one the bar has is the bar's — the verb shown twice, never)
+  const slotsOf = bar => { const own = new Set(bar.slots.map(d => d.id));
+    return bar.slots.concat((SLOTS.get(bar.prov) || []).filter(d => !own.has(d.id))).map((d, i) => [d, i]).sort((a, c) => a[0].ord - c[0].ord || a[1] - c[1]).map(e => e[0]); };
+  const slotIcon = (bar, id) => { const d = slotsOf(bar).find(q => q.id === id); return d ? (typeof d.icon === 'function' ? ask(bar, () => d.icon(null, null), 'mao') : d.icon) : ''; };
+  // (the place the body is at now, with its bar: the first registered whose question says the body is at its place and whose provider has
+  // that place in reach — { bar, s (the place, as the question gave it), tb (the target, I.here) } —, or null)
+  function barNow(v) { if (!v) return null; for (const bar of BARS.values()) { const s = ask(bar, () => bar.quando(v), null); if (!s) continue; const tb = I.here(bar.prov); if (tb) return { bar, s, tb }; } return null; }
+  UI.barras = () => [...BARS.values()].map(b => ({ prov: b.prov, rotulo: b.rotulo, de: b.de, ids: slotsOf(b).map(d => d.id), dica: b.dica ? b.dica.chave : '' })); // (for the proofs: the bars, read)
+  UI.kbd = a => `<kbd>${esc(In.label(a))}</kbd>`; // (for a bar's word of the first time, from another file: a key by its action)
   UI.KEYS = 8; // (the keys of the bar and of the list: the quick keys 1 to 5, and 6 to 8 of this file's own)
   // (the key of the slot i, as the screen says it: the quick keys while one sits, then this file's three; getting up is the jump)
   const keyOf = (i, id) => (id === 'levantar' ? In.label('pular') : i < 5 ? In.label('rapido' + (i + 1)) : i < UI.KEYS ? In.label('acao' + (i + 1)) : '');
+  // (a slot with no short name of its own: the first words of its verb's — never ending on a little word: «Olhar o salão», «Olhar»)
+  const PEQ = new Set(['o', 'a', 'os', 'as', 'um', 'uma', 'de', 'do', 'da', 'dos', 'das', 'no', 'na', 'nos', 'nas', 'ao', 'à', 'aos', 'às', 'em', 'com', 'para', 'pelo', 'pela', 'e']);
+  const curto = s => { const w = cap(bare(s)).split(' ').slice(0, 2); while (w.length > 1 && PEQ.has(w[w.length - 1].toLowerCase())) w.pop(); return w.join(' '); };
   // (a game's slot: its source under its name, or the wait for one free — and, waiting, the keeper's own to buy, when he sells one: buy)
-  const slotOf = (x, d, s, v, by) => {
-    let nome = d.nome; if (!x.id && s && s.hold) nome = s.hold.food ? 'Comer' : 'Beber';
+  const slotOf = (x, d, s, v, by, bar) => {
+    const nome = (typeof d.nome === 'function' ? ask(bar, () => d.nome(s, x), '') : d.nome) || curto(x.label || d.dft); const icon = typeof d.icon === 'function' ? ask(bar, () => d.icon(s, x), 'mao') : d.icon;
     const g = gameOf(x.id, v); const label = (g ? head(x.label) : x.label) || d.dft || ''; const why = x.ok ? '' : x.why || (x.label ? '' : 'Agora não.');
     const sub = g ? g.bar : [paren(x.label), x.sub].filter(Boolean).join(' · ') || (!x.id ? bare(x.label) : '');
     const bv = g && g.est && by ? by.get(BUY[g.tipo]) : null;
-    return { id: x.id, k: x.k, nome, icon: !x.id && s && s.hold && s.hold.food ? 'comer' : d.icon, label, sub, est: g ? g.est : '', buy: bv && bv.label ? bv.id : '', ok: !!x.ok, why };
+    return { id: x.id, k: x.k, nome, icon, label, sub, est: g ? g.est : '', buy: bv && bv.label ? bv.id : '', ok: !!x.ok, why };
   };
-  // (the verbs that are the list's only: buying a game — the bar keeps its slots; a game waiting for one free opens the list at it)
-  const LIST_ONLY = new Set(Object.values(BUY));
+  // the bar of the place the body is at now (only read): { prov, rotulo, icon, de, b, tema, nome, items } — the slots in their order, each
+  // there greyed with the world's why while it cannot be done now, and away only where it is nothing of this place now (no words and no
+  // why: at the tavern, the body is the musician); a verb of the place no slot names, after them by its own words; and getting up
   UI.mesa = function () {
-    const v = P().body(); const s = v && T() && T().corpo ? T().corpo(v) : null; if (!s || !s.open || !s.seat || v.sleeping) return null;
-    const tb = I.here('taverna'); if (!tb) return null;
-    const L = I.verbsOf(tb, true); const by = new Map(L.map(x => [x.id, x])); const out = [];
-    for (const id of UI.ORDER) { const x = by.get(id); if (!x || (!x.label && !x.why)) continue; out.push(slotOf(x, SLOT[id], s, v, by)); }
-    for (const x of L) if (!(x.id in SLOT) && !LIST_ONLY.has(x.id) && x.label) out.push(slotOf(x, { nome: cap(bare(x.label)).split(' ').slice(0, 2).join(' '), icon: 'mais' }, s, v, by)); // (another part's verb at the table: by its own words)
-    out.push({ id: 'levantar', k: 'levantar', nome: 'Levantar', icon: 'levantar', label: 'Levantar da mesa', sub: '', ok: true, why: '' });
+    const v = P().body(); if (!v || v.sleeping) return null; const at = barNow(v); if (!at) return null; const { bar, s, tb } = at;
+    const L = I.verbsOf(tb, true); const by = new Map(L.map(x => [x.id, x])); const out = []; const sl = slotsOf(bar); const named = new Set(sl.map(d => d.id));
+    for (const d of sl) { const x = by.get(d.id); if (!x || (!x.label && !x.why)) continue; out.push(slotOf(x, d, s, v, by, bar)); }
+    for (const x of L) if (x.id && !named.has(x.id) && !bar.soLista.has(x.id) && x.label) out.push(slotOf(x, { nome: curto(x.label), icon: 'mais' }, s, v, by, bar)); // (another part's verb at the place: by its own words)
+    if (bar.levantar) out.push({ id: 'levantar', k: 'levantar', nome: 'Levantar', icon: 'levantar', label: bar.levantar, sub: '', ok: true, why: '' });
     out.forEach((q, i) => { q.key = keyOf(i, q.id); });
-    const b = G.S.buildings.get(s.b); return { b: s.b, tema: b ? T().look(b).tema : 'classico', nome: b ? G.Village.buildName(b) : 'A taverna', items: out };
+    return { prov: bar.prov, rotulo: bar.rotulo, icon: bar.icon, de: bar.de, b: s.b, tema: ask(bar, () => bar.tema(v, s), 'classico'), nome: ask(bar, () => bar.nome(v, s), bar.rotulo), items: out };
   };
+  UI.barra = UI.mesa;
+
+  // ------------------------------ the bar of the tavern's table: the first bar registered (D-916; F14) ------------------------------
+  // The slots of the table, in their order: the table's own E (the menu, the keeper called, the cup, the plate), the round, the dice,
+  // the Tabuletas, the bones, a song, the coin to the musician; a verb another part brings to the table after them, by its words; and
+  // getting up. Buying one's own game of the keeper is the list's only (D-926): a game waiting for one free opens the list at it
+  const atTable = v => { const s = v && T() && T().corpo ? T().corpo(v) : null; return !!(s && s.open && s.seat); };
+  const DICA_MESA = 'gotaf-dica-mesa';
+  UI.bar('taverna', [
+    { id: '', nome: s => (s && s.hold ? (s.hold.food ? 'Comer' : 'Beber') : 'Pedir'), icon: s => (s && s.hold && s.hold.food ? 'comer' : 'pedir') },
+    { id: 'tv-rodada', nome: 'Rodada', icon: 'rodada', dft: 'Pagar uma rodada para a mesa' },
+    { id: 'jd-dados', nome: 'Dados', icon: 'dados', dft: 'Chamar a mesa para os dados' },
+    { id: 'tv-cartas', nome: 'Tabuletas', icon: 'tabuletas', dft: 'Jogar tabuletas' },
+    { id: 'tv-jogo', nome: 'Ossinhos', icon: 'ossinhos', dft: 'Entrar no jogo de ossinhos' },
+    { id: 'tv-musica', nome: 'Música', icon: 'musica', dft: 'Pedir uma música' },
+    { id: 'tv-gorjeta-mesa', nome: 'Gorjeta', icon: 'gorjeta', dft: 'Dar uma gorjeta ao músico' },
+  ], {
+    rotulo: 'Mesa', icon: 'mesa', de: 'da mesa', levantar: 'Levantar da mesa', soLista: Object.values(BUY),
+    // (seated at a tavern open for the evening: the tavern's own reading of the body — G.Taverna.corpo)
+    quando: v => { const s = T() && T().corpo ? T().corpo(v) : null; return s && s.open && s.seat ? s : null; },
+    tema: (v, s) => { const b = G.S.buildings.get(s.b); return b ? T().look(b).tema : 'classico'; },
+    nome: (v, s) => { const b = G.S.buildings.get(s.b); return b ? G.Village.buildName(b) : 'A taverna'; },
+    // (the list's look in a tavern — at its table or on one's feet in it —: the house's)
+    temaLista: v => { const s = v && T() && T().corpo ? T().corpo(v) : null; const b = s && G.S.buildings.get(s.b); return b ? T().look(b).tema : ''; },
+    alvo: t => (t.bal ? 'O balcão' : 'A mesa'), alvoSub: (t, v) => (t.bal ? 'onde se pede' : 'onde você está sentad' + (v.g === 'f' ? 'a' : 'o')), doLugar: t => !t.bal,
+    // (the word of the first time at a tavern's table: shows the bar — D-923)
+    dica: { chave: DICA_MESA, html: (v, touch) => { const oa = v.g === 'f' ? 'a' : 'o'; return `<b>Sentad${oa} à mesa</b><p>Tudo o que dá para fazer aqui está nesta barra: pedir, pagar uma rodada, os dados, as tabuletas, uma música. ${touch ? 'Toque numa ação.' : `Cada uma tem a sua tecla (<kbd>${esc(In.label('rapido1'))}</kbd> a <kbd>${esc(In.label('acao7') || '7')}</kbd>).`} O que está apagado diz por que não dá agora.</p><p>Para falar com alguém da mesa, ${touch ? 'toque em <b>Ações</b>' : `aperte <kbd>${esc(In.label('acoes'))}</kbd>`}: lá está tudo o que dá para fazer com cada um.</p>`; } },
+  });
 
   // ------------------------------ the list of actions: what it shows (only read) ------------------------------
   // the target's every verb — the E first —, each with its words, a short line under it, and the why where it cannot be done now; and the
   // others in reach to switch to (I.candidates), by their names. The slots a list keeps greyed while they have no words now: the giving
-  // (the bag empty, D-922), and at the tavern's table the games with someone — the Tabuletas and the dice
+  // (the bag empty, D-922), at the tavern's table the games with someone — the Tabuletas and the dice —, and at a place the slots of its bar
   // (each kept slot: its words while it has none of its own, and whether it is kept only at a tavern's table — the games with someone)
-  const KEEP = { pessoa: { dar: [(v, o) => `Dar algo ${ao(v, o)}`], 'pe-cartas': [(v, o) => `Desafiar ${who(v, o)} para as tabuletas`, 1], 'pe-dados': [(v, o) => `Jogar dados com ${who(v, o)}`, 1] },
-    taverna: Object.fromEntries(Object.keys(SLOT).filter(k => k).map(k => [k, [() => SLOT[k].dft]])) };
+  const KEEP_P = { dar: [(v, o) => `Dar algo ${ao(v, o)}`], 'pe-cartas': [(v, o) => `Desafiar ${who(v, o)} para as tabuletas`, 1], 'pe-dados': [(v, o) => `Jogar dados com ${who(v, o)}`, 1] };
+  const keepOf = id => { if (id === 'pessoa') return KEEP_P; const bar = barOf(id); return bar ? Object.fromEntries(slotsOf(bar).filter(d => d.id && d.dft).map(d => [d.id, [() => d.dft]])) : {}; };
   let subMemo = { id: 0, sub: '' }; // (the line under a person's name, made once a list: what the body knows of them — Interact.personCard)
-  const atTable = v => { const s = v && T() && T().corpo ? T().corpo(v) : null; return !!(s && s.open && s.seat); };
-  // (a building by its name: «a taverna», «o armazém»; its plan's door, «a porta da taverna»)
+  // (a building by its name: «a taverna», «o armazém»; its plan's door, «a porta da taverna»; a place by its bar's word for it, «a mesa»)
   const bname = b => (b ? G.Village.buildName(b).toLowerCase() : '');
-  const nameOf = (v, c) => (!c ? '' : c.id === 'pessoa' && c.t.o ? cap(who(v, c.t.o)) : c.id === 'taverna' ? (c.t.bal ? 'O balcão' : 'A mesa')
-    : c.id === 'portaPlanta' && c.t.b ? `A porta d${G.gen(bname(c.t.b)) === 'a' ? 'a' : 'o'} ${bname(c.t.b)}` : c.id === 'porta' && c.t.b ? cap(bname(c.t.b)) : cap(bare(c.label)));
+  const nameOf = (v, c) => { if (!c) return ''; const bar = barOf(c.id);
+    return c.id === 'pessoa' && c.t.o ? cap(who(v, c.t.o)) : bar && bar.alvo ? ask(bar, () => bar.alvo(c.t, v), cap(bare(c.label)))
+      : c.id === 'portaPlanta' && c.t.b ? `A porta d${G.gen(bname(c.t.b)) === 'a' ? 'a' : 'o'} ${bname(c.t.b)}` : c.id === 'porta' && c.t.b ? cap(bname(c.t.b)) : cap(bare(c.label)); };
   // (the rows of one target: its verbs, the kept slots greyed with why; ch, the target each row is done on)
   function rowsOf(v, c) {
-    const L = I.verbsOf(c, true); const keep = KEEP[c.id] || {}; const games = atTable(v); const out = [];
+    const L = I.verbsOf(c, true); const keep = keepOf(c.id); const games = atTable(v); const out = [];
     for (const x of L) {
       const dft = keep[x.id]; if (!x.label && !(dft && x.why && (!dft[1] || games) && (c.t.o || c.id !== 'pessoa'))) continue;
       const g = gameOf(x.id, v, c.t.o); const label = (g ? head(x.label) : x.label) || dft[0](v, c.t.o);
@@ -197,13 +344,14 @@
       const shut = !!st && (st.state === 'fechada' || st.state === 'trancada'); const more = rowsOf(v, c2); out = (shut ? door === c : door !== c) ? out.concat(more) : more.concat(out); }
     // (what can be done now first — the E always at the head —, what cannot after it, each in its order)
     out = out.map((q, i) => [q, i]).sort((a, b) => (a[0].k === 'usar' && a[1] === 0 ? -1 : 0) - (b[0].k === 'usar' && b[1] === 0 ? -1 : 0) || (b[0].ok ? 1 : 0) - (a[0].ok ? 1 : 0) || a[1] - b[1]).map(e => e[0]);
-    // (at the table one sits at, getting up too — the jump of the feet, as on the bar)
-    if (c.id === 'taverna' && !c.t.bal && atTable(v)) out.push({ k: 'levantar', id: 'levantar', label: 'Levantar da mesa', sub: '', ok: true, why: '', icon: 'levantar' });
+    // (at the place one is at — the table one sits at —, getting up too: the jump of the feet, as on the bar)
+    { const at = barNow(v); if (at && c.id === at.bar.prov && at.bar.levantar && ask(at.bar, () => at.bar.doLugar(c.t), false)) out.push({ k: 'levantar', id: 'levantar', label: at.bar.levantar, sub: '', ok: true, why: '', icon: 'levantar' }); }
     out.forEach((q, i) => { q.key = q.id === 'levantar' ? In.label('pular') : i < UI.KEYS ? (i < 5 ? In.label('rapido' + (i + 1)) : In.label('acao' + (i + 1))) : ''; });
     const o = c.id === 'pessoa' ? c.t.o : null; const k = o ? P().kin(v, o) : null;
     if (o && subMemo.id !== o.id) { const card = I.personCard ? I.personCard(o, v) : null; subMemo = { id: o.id, sub: card ? card.sub : '' }; }
     const dk = c.id === 'portaPlanta' || c.id === 'porta' ? (c2 && c2.id === 'portaPlanta' ? c2 : c) : null; // (a door and its building: named by the door)
-    return { key: I.keyOf(c), id: c.id, nome: nameOf(v, dk && dk.id === 'portaPlanta' ? dk : c), sub: o ? [k, subMemo.sub].filter(Boolean).join(' · ') : c.id === 'taverna' ? (c.t.bal ? 'onde se pede' : 'onde você está sentad' + (v.g === 'f' ? 'a' : 'o')) : '', o: o ? o.id : 0, icon: o ? 'conversar' : c.id === 'taverna' ? 'mesa' : iconOf({ id: '' }, c.id), verbs: out };
+    const bar = barOf(c.id); // (a place: its bar's line and figure — «onde você está sentado», the table)
+    return { key: I.keyOf(c), id: c.id, nome: nameOf(v, dk && dk.id === 'portaPlanta' ? dk : c), sub: o ? [k, subMemo.sub].filter(Boolean).join(' · ') : bar && bar.alvoSub ? ask(bar, () => bar.alvoSub(c.t, v), '') : '', o: o ? o.id : 0, icon: o ? 'conversar' : bar ? bar.icon : iconOf({ id: '' }, c.id), verbs: out };
   };
   // (the targets in reach, as the list offers them: one a thing, by its name — the table, a person —, the one shown marked)
   function others(v) {
@@ -223,7 +371,7 @@
     bar.addEventListener('touchstart', e => e.stopPropagation(), { passive: true }); // (the bar's touch is the bar's: never the stick nor the eye)
     bar.addEventListener('mousedown', e => e.stopPropagation());
     dica = document.createElement('div'); dica.className = 'ac-dica hidden'; hud.appendChild(dica);
-    dica.addEventListener('click', e => { if (e.target.closest('[data-a="ok"]')) { e.stopPropagation(); dicaDone(); } });
+    dica.addEventListener('click', e => { if (e.target.closest('[data-a="ok"]')) { e.stopPropagation(); dicaDone(null, dicaFor); } });
     dica.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
     sheet = document.createElement('div'); sheet.id = 'acoes-panel'; sheet.className = 'ac hidden';
     sheet.innerHTML = `<div class="ac-card"><div class="ac-band"></div><button class="x" data-a="close" aria-label="Fechar" title="Fechar (Esc)">×</button>
@@ -240,14 +388,14 @@
   function say(i, t) { hint = { i, t: t || 0 }; barSig = ''; }
 
   // ------------------------------ doing ------------------------------
-  // a slot of the bar: by the verb's own door (the E of the table: IncUI.use; a verb: IncUI.useVerb — the world asked by the hands,
+  // a slot of the bar: by the verb's own door (the E of the place: IncUI.use; a verb: IncUI.useVerb — the world asked by the hands,
   // the answer told as any verb's); getting up, the jump — as the feet do it —; one greyed, its why said
   function doSlot(i, tapped) {
     const m = model || UI.mesa(); const q = m && m.items[i]; if (!q) return false;
-    if (q.id === 'levantar') { dicaDone(); In.press('pular'); return true; }
-    if (!q.ok) { say(i, 3.5); deny(q.why || 'Agora não dá.'); if (q.buy) UI.open(I.here('taverna'), q.buy); return true; }
-    const tb = I.here('taverna'); if (!tb) return false;
-    dicaDone(); play('click', 0.35); void tapped;
+    if (q.id === 'levantar') { dicaDone(m); In.press('pular'); return true; }
+    if (!q.ok) { say(i, 3.5); deny(q.why || 'Agora não dá.'); if (q.buy) UI.open(I.here(m.prov), q.buy); return true; }
+    const tb = I.here(m.prov); if (!tb) return false;
+    dicaDone(m); play('click', 0.35); void tapped;
     // (the table's E while a sip is under way: the sip gives way where it may — as a verb does, Interact.runVerb)
     if (q.k === 'usar') { if (G.Avatar.busy() && G.Avatar.cuttable && G.Avatar.cuttable()) G.Avatar.cancelAct(); G.IncUI.use(tb); }
     else G.IncUI.useVerb(q.k, tb, q.id);
@@ -255,12 +403,13 @@
   }
   UI.faz = i => doSlot(i, false); // (for the proofs: the slot i of the bar, as a key does it)
   // a row of the list: the list shuts and the verb is done on the target it is of (the screen's own choice of a candidate — the one
-  // the player switched to — held as the screen holds it: IncUI.pick, D-397)
+  // the player switched to — held as the screen holds it: IncUI.pick, D-397); at a place with a bar, the bar's word of the first time is
+  // done with — away from any, no bar's (a word to someone in the street hid the table's word for good: L-2270)
   function doRow(i) {
     const q = rows[i]; if (!q) return false;
     if (!q.ok) { sel = i; mark(); deny(q.why || 'Agora não dá.'); return true; }
-    if (q.k === 'levantar') { hide(); dicaDone(); In.press('pular'); return true; }
-    const c = cur; hide(); if (!c) return true; dicaDone();
+    if (q.k === 'levantar') { hide(); dicaDone(model || UI.mesa()); In.press('pular'); return true; }
+    const c = cur; hide(); if (!c) return true; dicaDone(model || UI.mesa());
     const ch = q.ch && q.ch !== c.choice ? I.asChoice(q.ch) || q.ch : I.asChoice(c.cand || c.choice) || c.choice;
     if (q.k === 'usar') G.IncUI.use(ch); else G.IncUI.useVerb(q.k, ch, q.id);
     return true;
@@ -269,12 +418,12 @@
   UI.lado = (i, c, c2) => { if (c) { cur = { key: I.keyOf(c), choice: c, cand: null, pair: c2 || null }; curKey = cur.key; const m = UI.lista(c, c2); rows = m ? m.verbs : []; } return doRow(i); };
 
   // ------------------------------ the list: open, shut, drawn ------------------------------
-  // (open over the target the screen shows — or, seated at a tavern's table with no one faced, over the table —; ch: a choice of the
-  // screen's own, a candidate of I.candidates)
+  // (open over the target the screen shows — or, at a place with a bar (seated at a tavern's table) with no one faced, over the place —;
+  // ch: a choice of the screen's own, a candidate of I.candidates)
   UI.open = function (ch, rowId) {
     const v = P().body(); if (!G.Modes.inc() || !v || v.sleeping || !build()) return false;
     let c = ch || G.IncUI.best();
-    if (!ch && !(c && c.id === 'pessoa') && atTable(v)) c = I.here('taverna') || c;
+    if (!ch && !(c && c.id === 'pessoa')) { const at = barNow(v); if (at) c = at.tb; }
     G.IncUI.closeAll(); G.Modes.setPanel('acoes'); In.free(); G.IncUI.root().classList.add('ac-on');
     open = true; sel = -1; keyed = false; sheetSig = ''; subMemo = { id: 0, sub: '' }; setCur(c, v);
     sheet.className = `ac ${themeOf(v)}`; void sheet.offsetWidth; render(true); play('rustle', 0.35);
@@ -286,7 +435,9 @@
     open = false; sel = -1; if (sheet) sheet.classList.add('hidden'); const r = G.IncUI.root && G.IncUI.root(); if (r) r.classList.remove('ac-on');
     if (G.Modes.panelIs('acoes')) G.Modes.setPanel(null);
   }
-  const themeOf = v => { const s = v && T() && T().corpo ? T().corpo(v) : null; const b = s && G.S.buildings.get(s.b); return b ? `t-${T().look(b).tema}` : 't-hud'; };
+  // (the list's look: a place's own — the tavern's, in it, on one's feet too —, else the look of the place's bar the body is at, else the
+  // screen's)
+  const themeOf = v => { for (const bar of BARS.values()) { const t = bar.temaLista ? ask(bar, () => bar.temaLista(v), '') : ''; if (t) return `t-${t}`; } const at = barNow(v); return at ? `t-${ask(at.bar, () => at.bar.tema(v, at.s), 'classico')}` : 't-hud'; };
   // (the target held by the list: a candidate's key and its choice; null when nothing is in reach)
   function setCur(c, v) { cur = c ? { key: I.keyOf(c), choice: c, cand: null } : null; curKey = cur ? cur.key : ''; void v; }
   // (the list's target found again in a new look, by its key; gone from reach: the first one in reach, said so)
@@ -317,7 +468,7 @@
     const fc = top.querySelector('.ac-face'); const o = m && m.o ? G.S.villagers.get(m.o) : null; fc.classList.toggle('pic', !!o); fc.querySelector('i').innerHTML = o ? '' : svg(m ? m.icon : 'mao');
     if (o && fc._o !== o.id) { fc._o = o.id; face(fc.querySelector('canvas'), o); } if (!o) fc._o = 0;
     // (the others in reach, by their names: the one shown marked; a tap switches the list to it)
-    sheet.querySelector('.ac-tabs').innerHTML = L.length > 1 ? `<span class="ac-tl">Ao alcance</span>${L.map(q => `<button class="ac-tab${q.key === curKey ? ' on' : ''}" data-t="${esc(q.key)}">${q.id === 'pessoa' ? '' : `<i>${svg(q.id === 'taverna' ? 'mesa' : iconOf({ id: '' }, q.id))}</i>`}${esc(q.nome)}</button>`).join('')}` : '';
+    sheet.querySelector('.ac-tabs').innerHTML = L.length > 1 ? `<span class="ac-tl">Ao alcance</span>${L.map(q => `<button class="ac-tab${q.key === curKey ? ' on' : ''}" data-t="${esc(q.key)}">${q.id === 'pessoa' ? '' : `<i>${svg(barOf(q.id) ? barOf(q.id).icon : iconOf({ id: '' }, q.id))}</i>`}${esc(q.nome)}</button>`).join('')}` : '';
     sheet.querySelector('.ac-list').innerHTML = (gone ? `<div class="ac-gone">${esc(cap(gone))} não está mais ao alcance.</div>` : '') + (rows.length ? rows.map((q, i) => `<button class="ac-r${q.ok ? '' : ' off'}${i === sel ? ' sel' : ''}" data-r="${i}"${q.ok ? '' : ` aria-disabled="true"`}>${q.key && !touch ? `<kbd>${esc(q.key)}</kbd>` : ''}<span class="ic">${svg(q.icon)}</span><span class="nm"><b>${esc(cap(bare(q.label)) || cap(q.label))}</b>${q.sub ? `<small>${esc(q.sub)}</small>` : ''}${q.ok ? '' : `<em>${esc(q.why)}</em>`}</span></button>`).join('') : '<div class="ac-none">Nada a fazer aqui agora.</div>');
     sheet.querySelector('.ac-foot').innerHTML = touch ? '<button class="ac-fecha" data-a="close">Fechar</button>' : `<span><kbd>↑</kbd><kbd>↓</kbd> escolhe · <kbd>1</kbd>–<kbd>${UI.KEYS}</kbd> faz · <kbd>${esc(In.label('interagir'))}</kbd> faz · <kbd>Esc</kbd> fecha</span>`;
     if (keyed) { keyed = false; const r = sheet.querySelector('.ac-r.sel'); if (r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' }); }
@@ -341,32 +492,35 @@
   // ------------------------------ the bar: drawn ------------------------------
   function drawBar(m, v) {
     const touch = !!In.touch; const it = m.items;
-    const sig = JSON.stringify([m.tema, m.nome, it.map(q => [q.id, q.nome, q.sub, q.est, q.ok, q.why, q.key, q.icon]), touch, hint.i]);
+    const sig = JSON.stringify([m.prov, m.rotulo, m.icon, m.tema, m.nome, it.map(q => [q.id, q.nome, q.sub, q.est, q.ok, q.why, q.key, q.icon]), touch, hint.i]);
     if (sig === barSig) return; barSig = sig;
     bar.className = `ac-mesa t-${m.tema}${touch ? ' touch' : ''}`;
     const h = hint.i >= 0 && it[hint.i] ? it[hint.i] : null;
-    bar.querySelector('.ac-emb').innerHTML = svg('mesa'); bar.querySelector('.ac-tit').textContent = 'Mesa';
+    bar.querySelector('.ac-emb').innerHTML = svg(m.icon); bar.querySelector('.ac-tit').textContent = m.rotulo;
     bar.querySelector('.ac-say').innerHTML = h ? `${esc(cap(bare(h.label)))}${h.ok ? (h.sub ? ` <small>${esc(h.sub)}</small>` : '') : ` — <em>${esc(h.why)}</em>`}` : esc(m.nome);
     bar.querySelector('.ac-row').innerHTML = it.map((q, i) => `<button class="ac-b${q.ok ? '' : ' off'}${q.id === 'levantar' ? ' up' : ''}${i === hint.i ? ' hov' : ''}" data-i="${i}" title="${esc(q.ok ? cap(q.label) : `${cap(bare(q.label))} — ${q.why}`)}"${q.ok ? '' : ' aria-disabled="true"'}>${q.key && !touch ? `<kbd>${esc(q.key)}</kbd>` : ''}<span class="ic">${svg(q.icon)}</span><b>${esc(q.nome)}</b><small>${esc(q.ok ? q.sub : q.est || q.why)}</small></button>`).join('');
     void v;
   }
-  // (the word of the first time at a tavern's table: shows the bar; gone for good once the bar is used, or «Entendi» — kept in this
-  // browser, with try: a private window says nothing, and the word shows again — D-923)
-  const DICA = 'gotaf-dica-mesa';
-  const dicaSeen = () => { try { return localStorage.getItem(DICA) === '1'; } catch (e) { return false; } };
-  let dicaMem = false; // (with no storage at all: once this session)
-  function dicaDone() { if (dicaMem && !dicaOn) return; dicaMem = true; dicaOn = false; if (dica) dica.classList.add('hidden'); try { localStorage.setItem(DICA, '1'); } catch (e) { } }
-  UI.dicaVista = () => dicaMem || dicaSeen(); // (for the proofs)
-  function drawDica(v) {
-    if (dicaOn) return; dicaOn = true; const touch = !!In.touch; const oa = v.g === 'f' ? 'a' : 'o';
-    dica.innerHTML = `<b>Sentad${oa} à mesa</b><p>Tudo o que dá para fazer aqui está nesta barra: pedir, pagar uma rodada, os dados, as tabuletas, uma música. ${touch ? 'Toque numa ação.' : `Cada uma tem a sua tecla (<kbd>${esc(In.label('rapido1'))}</kbd> a <kbd>${esc(In.label('acao7') || '7')}</kbd>).`} O que está apagado diz por que não dá agora.</p><p>Para falar com alguém da mesa, ${touch ? 'toque em <b>Ações</b>' : `aperte <kbd>${esc(In.label('acoes'))}</kbd>`}: lá está tudo o que dá para fazer com cada um.</p><button data-a="ok">Entendi</button>`;
-    dica.className = `ac-dica t-${(model && model.tema) || 'classico'}`;
+  // (the word of the first time at a place whose bar has one — the tavern's table —: shows the bar; gone for good once that bar is used, or
+  // «Entendi» — kept in this browser by the bar's own key, with try: a private window says nothing, and the word shows again — D-923)
+  const dicaSeen = k => { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+  const dicaMem = new Set(); let dicaFor = ''; // (the bars' words seen this session — with no storage at all: once a session —; the one shown)
+  const dicaKey = m => { const bar = m && barOf(m.prov); return bar && bar.dica ? bar.dica.chave : ''; };
+  function dicaDone(m, k) {
+    k = k || dicaKey(m); if (!k || (dicaMem.has(k) && !(dicaOn && dicaFor === k))) return;
+    dicaMem.add(k); if (dicaFor === k) { dicaOn = false; if (dica) dica.classList.add('hidden'); } try { localStorage.setItem(k, '1'); } catch (e) { }
+  }
+  UI.dicaVista = k => { k = k || DICA_MESA; return dicaMem.has(k) || dicaSeen(k); }; // (for the proofs: a bar's word seen — the table's when none is said)
+  function drawDica(v, m) {
+    const k = dicaKey(m); if (!k || (dicaOn && dicaFor === k)) return; dicaOn = true; dicaFor = k; const touch = !!In.touch;
+    const bar = barOf(m.prov); dica.innerHTML = `${ask(bar, () => bar.dica.html(v, touch), '')}<button data-a="ok">Entendi</button>`;
+    dica.className = `ac-dica t-${(m && m.tema) || 'classico'}`;
   }
 
   // ------------------------------ the keys, the controller, the fingers ------------------------------
   // (the list's own action — a key of its own, a button of the controller —, the bar's sixth to eighth keys; the «Ações» of the fingers)
   In.def('acoes', 'Ações: tudo o que dá para fazer agora', ['y'], ['pad16']);
-  for (let i = 6; i <= UI.KEYS; i++) In.def('acao' + i, `Ação ${i} (da barra da mesa e da lista)`, [String(i)]);
+  for (let i = 6; i <= UI.KEYS; i++) In.def('acao' + i, `Ação ${i} (da barra do lugar e da lista)`, [String(i)]);
   In.button('acoes', { label: 'Ações', order: 13 });
   const barLive = () => !!(mesaOn && model && G.Modes.inc() && !G.Modes.panel());
   In.on('acoes', () => { if (!G.Modes.inc()) return false; if (open) { hide(); return true; } if (G.Modes.panel()) return false; UI.open(); return true; });
@@ -383,8 +537,9 @@
     return ck0 ? ck0.apply(this, arguments) : false; }; }
 
   // ------------------------------ the frame ------------------------------
-  // (a few times a second, from the body's screen: the bar shown while the body sits at an open tavern's table with no panel over the
-  // screen and nothing to fight, drawn again when what it shows changed; the list kept with the world; the word of the first time)
+  // (a few times a second, from the body's screen: the bar shown while the body is at a place with a bar — seated at an open tavern's
+  // table — with no panel over the screen and nothing to fight, drawn again when what it shows changed; the list kept with the world;
+  // the word of the first time)
   UI.frame = function (rdt) {
     if (!G.Modes.inc()) { if (open) hide(); if (mesaOn) setMesa(false); return; }
     if (!build()) return; const v = P().body(); if (!v) return;
@@ -397,8 +552,9 @@
     model = fight ? null : UI.mesa();
     const on = !!model && !G.Modes.panel() && !off;
     setMesa(on); if (on) { drawBar(model, v); const r = bar.getBoundingClientRect(); const hgt = Math.max(0, Math.round(innerHeight - r.top)); if (hgt && hgt !== barH) { barH = hgt; G.IncUI.root().style.setProperty('--ac-h', hgt + 'px'); } } // (how far up the bar stands: the word of the first time and the prompt over it)
-    // (the word of the first time, over the bar)
-    if (on && !dicaMem && !dicaSeen()) drawDica(v); else if (dicaOn && (!on || dicaMem)) { dicaOn = false; dica.classList.add('hidden'); }
+    // (the word of the first time, over the bar — the word of this bar, not another's)
+    const dk = dicaKey(model);
+    if (on && dk && !dicaMem.has(dk) && !dicaSeen(dk)) drawDica(v, model); else if (dicaOn && (!on || dk !== dicaFor || dicaMem.has(dk))) { dicaOn = false; dica.classList.add('hidden'); }
     if (!on && dicaOn) { dicaOn = false; dica.classList.add('hidden'); }
   };
   function setMesa(on) {
@@ -406,11 +562,14 @@
     if (bar) bar.classList.toggle('hidden', !on); if (!on && dica) { dica.classList.add('hidden'); dicaOn = false; } if (!on) hint = { i: -1, t: 0 };
   }
   UI.mesaOn = () => mesaOn; UI.alto = () => (mesaOn ? barH : 0); // (the screen asks: the bar is up, and how far up it stands)
+  // (a target of the screen that is the place of the bar up now — the table one sits at, not the counter —: the prompt over it says what the
+  // bar already says, D-925; for the body's screen, incui.js)
+  UI.daBarra = c => { const bar = c && model && mesaOn ? barOf(model.prov) : null; return !!(bar && c.id === bar.prov && c.t && ask(bar, () => bar.doLugar(c.t), false)); };
   // (how the hands reach a slot of the bar now, in words, for another part's word to the player — «toque em «Dados» na barra da mesa», «a
-  // tecla 3 («Dados», na barra da mesa)»; '' away from a table — the bar of the table one sits at, shown or under a panel for a moment (the
-  // menu the keeper brought): the dice's call said «F: entrar», and at the table the F is the round — L-2183)
-  UI.how = id => { const m = UI.mesa(); const q = m ? m.items.find(x => x.id === id) : null; if (!q) return ''; return In.touch ? `toque em «${q.nome}» na barra da mesa` : q.key ? `a tecla ${q.key} («${q.nome}», na barra da mesa)` : `«${q.nome}», na barra da mesa`; };
-  UI.shown = () => ({ mesa: mesaOn, dica: dicaOn, lista: open, sel, itens: model ? model.items.map(q => ({ id: q.id, nome: q.nome, ok: q.ok, why: q.why, key: q.key, sub: q.sub, est: q.est, buy: q.buy })) : [], rows: rows.map(q => ({ id: q.id, k: q.k, label: q.label, sub: q.sub, ok: q.ok, why: q.why, key: q.key })), alvo: curKey }); // (for the proofs)
+  // tecla 3 («Dados», na barra da mesa)»; '' away from a place with a bar — the bar of the place one is at, shown or under a panel for a
+  // moment (the menu the keeper brought): the dice's call said «F: entrar», and at the table the F is the round — L-2183)
+  UI.how = id => { const m = UI.mesa(); const q = m ? m.items.find(x => x.id === id) : null; if (!q) return ''; return In.touch ? `toque em «${q.nome}» na barra ${m.de}` : q.key ? `a tecla ${q.key} («${q.nome}», na barra ${m.de})` : `«${q.nome}», na barra ${m.de}`; };
+  UI.shown = () => ({ mesa: mesaOn, barra: model ? model.prov : '', rotulo: model ? model.rotulo : '', dica: dicaOn, lista: open, sel, itens: model ? model.items.map(q => ({ id: q.id, nome: q.nome, ok: q.ok, why: q.why, key: q.key, sub: q.sub, est: q.est, buy: q.buy })) : [], rows: rows.map(q => ({ id: q.id, k: q.k, label: q.label, sub: q.sub, ok: q.ok, why: q.why, key: q.key })), alvo: curKey }); // (for the proofs)
   const frame0 = G.IncUI.frame;
   G.IncUI.frame = function (rdt) { const r = frame0.apply(this, arguments); UI.frame(rdt); return r; };
 })(window.G);
