@@ -1,4 +1,4 @@
-# A decoração por uso e por ofício — o manual de uma onda (os interiores 3, F7; D-1010 a D-1014, L-2250 a L-2257)
+# A decoração por uso e por ofício — o manual de uma onda (os interiores 3, F7; D-1010 a D-1015, L-2250 a L-2261)
 
 Para quem vai pôr a decoração de um prédio — a forja, o templo, o palácio, a cadeia — numa onda dos interiores 3. A regra magna do
 dono (D-651): **a decoração tem causa, nunca sorteio** — e nada vem do nada (D-440): o que se vê dentro de um prédio está lá porque o
@@ -41,7 +41,8 @@ Um arquivo da onda, `js/dentro-<uso>.js`, posto no `index.html` **depois do `js/
   `conta`, `wear`, `why` (os porquês: acrescente os seus) — e `c.ler`, as portas das leituras de verdade (§4). Campo novo vem em
   `o.campos` com o seu valor vazio: **todo within tem todo campo** (nenhum leitor pergunta se existe). `o.conta(b)`: a conta do que o
   prédio queima pelo livro esta noite (`{ vela, azeite, lenha }`, como o `T.luz` da taverna). `o.dono(b)`: a casa cuja riqueza o prédio
-  mostra (a do taverneiro), ou `null`. Várias regras do mesmo uso valem na ordem em que chegaram. Um campo que nenhuma regra declarou é
+  mostra (a do taverneiro), ou `null` — sem dono, o prédio é do meio (`c.rico` 1): o valor da terra não é a bolsa de ninguém (L-2251,
+  L-2258). Várias regras do mesmo uso valem na ordem em que chegaram. Um campo que nenhuma regra declarou é
   recusado e contado (`G.Atmos.withinErr`; o verificador acusa). A chamada devolve a função que tira a regra (para as provas).
 - **O construtor** (`G.Dentro3D.builder(uso, fn)`): `fn(ctx, K)`; `ctx.b`, `ctx.p` (a planta), `ctx.W` (o within), `ctx.look` (o desenho
   dos móveis), `ctx.near` (o corpo perto: tudo; longe, só as luzes e o pano), `ctx.S` (as superfícies das peças: os tampos e as
@@ -86,7 +87,10 @@ G.Dentro3D.oficio('ferreiro', (ctx, K, q) => { K.pendura(ctx, q.ferramentas.map(
 - **Uma coisa no material do povo** — `c.ler.coisa(tipo, fid)`: a chave `tipo.material` no melhor material que o povo tem (`G.Inv.madeBy`),
   ou `null` (o povo nunca teve o material: nada vem do nada).
 - **Os anos** — `c.wear` (`G.Atmos.wear`: os anos, a umidade, o cuidado) e `G.Atmos.years(b)`: as marcas dos anos de um prédio (a teia, os
-  riscos dos dias do preso, as marcas do quartel) saem deles e das contas do mundo, nunca de um número inventado.
+  riscos dos dias do preso, as marcas do quartel) saem deles e das contas do mundo, nunca de um número inventado. O cuidado é o de quem
+  mora em volta — o perfil do bairro, a bandeira da casa mercante, o barraco, a casa vazia —, todo no save (D-1015): **nenhuma leitura de
+  uma onda pergunta ao retrato do dia da cidade** (`G.Urban.peek`, `valueAt`, o valor da terra), que é derivado, não vai no save e só
+  volta no dia de cada cidade — o que a vista mostrava mudava com um save (L-2261).
 
 ## 5. A coisa nova (o modelo)
 
@@ -149,12 +153,13 @@ levantamento D (§1.4, §19.2):
 
 - A parte da onda no `qa/dentro.js` (ou a prova da onda) com o cenário e os casos ruins: o save no meio (o mesmo plano antes e depois),
   a pessoa que morre no meio, a mão do deus que muda o estoque, o prédio que cai (a ruína não tem dentro).
-- `ONLY=d1,d7,d16,d17,d18 node qa/dentro.js` (puro; o verificador limpo e de olhos abertos; a regra, o construtor e o ofício com os
-  casos ruins; a luz de cada povo; o pano com dono) e `node qa/dentro-igual.js PASTA` contra uma cópia do jogo de antes (`git archive` da
+- `ONLY=d1,d7,d16,d17,d18,d19 node qa/dentro.js` (puro; o verificador limpo e de olhos abertos; a regra, o construtor e o ofício com os
+  casos ruins; a luz de cada povo; o pano com dono; o desgaste e a riqueza iguais num load, com o mundo vivido) e `node qa/dentro-igual.js PASTA` contra uma cópia do jogo de antes (`git archive` da
   ponta numa pasta): o within, as coisas, as luzes e o enchimento de todo prédio dos três mundos prontos iguais — e, com `MUDA=campo,…`,
   iguais fora do que a onda diz que muda (`SEMPORQUE=1` compara as coisas sem as palavras do porquê: o que muda de lugar ou de forma).
 - `ONLY=l1,l2,l3 node qa/luz.js` quando a onda acende alguma coisa (a l3 cobra a causa de cada fonte, o lampadário com o que queimar).
 - As regras do guard: 290 a 299 e 410 a 413 (o within e o dentro3d.js), 500 (toda regra e todo construtor, em qualquer arquivo, só leem e
   só desenham: a regra lê o livro pelo `c` — `c.D`, `c.O`, `c.ler` —, o construtor só o `W`), 501 (o enchimento das peças é o do livro),
   502 (o pano tem dono), 503 (a luz de cada povo: o `G.Atmos.LUZ`, o `G.Luz3D.LAMPS`, cada modelo na `TABLE`), 504 (o lampadário com o que
-  o seu povo queima), 505 (o volume segue toda fonte) e 506 (a chama de dentro do tamanho da peça).
+  o seu povo queima), 505 (o volume segue toda fonte), 506 (a chama de dentro do tamanho da peça) e 507 (o cuidado e a riqueza não leem o
+  retrato do dia da cidade).

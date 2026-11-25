@@ -36,7 +36,10 @@
 //      povo queima neles; cada luz pelo G.Luz3D.LAMPS; o sal, o óleo e a cera tirados pela mão do deus; o save no meio; as palavras da
 //      luz pela assinatura (L-2253); a luz desenhada em toda casa onde o within a diz acesa, a cabana redonda na face do anel (L-2254)
 //  d18 o pano tem dono (L-2251): com a terra mais cara posta em todo prédio, o tapete e a tapeçaria só de uma casa ou da taverna; a
-//      terra cara de um prédio não é a riqueza de ninguém
+//      terra de um prédio não é a riqueza de ninguém, e o within de todo prédio sai igual com ela e sem ela (L-2258)
+//  d19 o desgaste e a riqueza não mudam num load (L-2261, L-2258): o mundo vivido até toda cidade ter o retrato do dia; o desgaste, a
+//      riqueza e a teia de cada prédio iguais depois de salvar e carregar, e o within inteiro igual com os retratos escondidos (a última
+//      parte: ela vive o mundo)
 //   node qa/dentro.js            ONLY=d1,d2 …
 'use strict';
 const path = require('path'), fs = require('fs');
@@ -589,22 +592,48 @@ if (want('d18')) {
   // ---- the rug and the hanging only of a household (the house, the seat) or of a building whose use says whose wealth it shows (the
   // tavern: its keeper's house): every building of the world read with its ground at its dearest — the town's portrait of the day,
   // planted (G.Urban.peek): the square, the market, the granary, the storehouse of a people that weaves had the rug of their ground —;
-  // the rich house and the tavern keep theirs; the verifier clean on them; the portrait given back, all as it was
+  // the rich house and the tavern keep theirs; the verifier clean on them. And the land is nobody's purse at all: a building nobody owns
+  // is not made rich by it (L-2258) — the within of every building the same with the dearest land planted as without; the portrait
+  // given back, all as it was
   const U = G.Urban; const peek0 = U.peek; const dear = Object.freeze({ cells: { get: () => ({ value: 90 }) } });
   const all = [...S().buildings.values()].filter(q => q.built && q.type !== 'ruin' && plan(q)).sort((a, c) => a.id - c.id);
   const owned = q => G.Village.bedsOf(q) > 0 || At.rulesOf(q).some(r => r.dono);
-  const read = () => { fresh(); const out = { rugs: {}, bad: [], weave: 0, rich: 0, ownedPano: 0, whyBad: [] };
-    for (const q of all) { const W = At.within(q); const L = D.plan(q, plan(q), true).list; const n = L.filter(t => t.k === 'tapete' || t.k === 'tapecaria').length; if (n) out.rugs[q.type] = (out.rugs[q.type] || 0) + n;
-      if (owned(q)) { if (W.pano) out.ownedPano++; continue; } if (W.weave) out.weave++; if (W.rico >= 2) out.rich++;
+  const read = () => { fresh(); const out = { rugs: {}, bad: [], weave: 0, rich: 0, free: 0, ownedPano: 0, whyBad: [], W: new Map() };
+    for (const q of all) { const W = At.within(q); out.W.set(q.id, JSON.stringify(W)); const L = D.plan(q, plan(q), true).list; const n = L.filter(t => t.k === 'tapete' || t.k === 'tapecaria').length; if (n) out.rugs[q.type] = (out.rugs[q.type] || 0) + n;
+      if (owned(q)) { if (W.pano) out.ownedPano++; continue; } out.free++; if (W.weave) out.weave++; if (W.rico >= 2) out.rich++;
       if (W.pano || n) out.bad.push(`${q.type}#${q.id}`); if (!/de ninguém/.test(W.why.riqueza || '')) out.whyBad.push(`${q.type}#${q.id}`); }
     return out; };
   const before = read(); U.peek = () => dear; let dearR = null, qa1 = [];
   try { dearR = read(); const sample = all.filter(q => !owned(q) && At.within(q).weave).slice(0, 12).concat(all.filter(q => owned(q) && At.within(q).pano).slice(0, 8)); qa1 = QA.dentro(sample).filter(q => q[0] <= 3); }
   finally { U.peek = peek0; fresh(); }
   const after = read(); const same = JSON.stringify(before.rugs) === JSON.stringify(after.rugs);
-  const good = dearR.weave > 5 && dearR.rich > 5 && !dearR.bad.length && !before.bad.length && !dearR.whyBad.length && dearR.ownedPano > 0 && !qa1.length && same;
-  ok('d18 o pano tem dono: o tapete e a tapeçaria só de uma casa ou da taverna de quem a toca; a terra cara de um prédio não é riqueza de ninguém (L-2251)', good,
-    `a terra mais cara posta em todo prédio: ${dearR.rich} prédios sem dono «ricos» pela terra (${dearR.weave} de povo que tece) → ${dearR.bad.length ? 'com pano: ' + dearR.bad.slice(0, 5).join(', ') : 'nenhum pano neles'}; ${dearR.ownedPano} casas e tavernas com o seu pano; tapetes e tapeçarias por tipo ${JSON.stringify(dearR.rugs)}; o porquê da terra ${dearR.whyBad.length ? 'ERRADO em ' + dearR.whyBad.slice(0, 3).join(', ') : '«de ninguém»'}; o verificador ${qa1.length ? qa1.map(q => q[1]).slice(0, 3).join(' | ') : 'limpo'}; o retrato devolvido: ${same ? 'tudo como era' : 'DIFERENTE'} (${JSON.stringify(after.rugs)})`);
+  const moved = all.filter(q => before.W.get(q.id) !== dearR.W.get(q.id)).map(q => `${q.type}#${q.id}`);
+  const good = dearR.free > 100 && dearR.weave > 5 && !dearR.rich && !moved.length && !dearR.bad.length && !before.bad.length && !dearR.whyBad.length && dearR.ownedPano > 0 && !qa1.length && same;
+  ok('d18 o pano tem dono: o tapete e a tapeçaria só de uma casa ou da taverna de quem a toca; a terra de um prédio não é riqueza de ninguém, e o within não lê o retrato do dia (L-2251, L-2258)', good,
+    `a terra mais cara posta em todo prédio: ${dearR.free} prédios sem dono (${dearR.weave} de povo que tece), ${dearR.rich ? dearR.rich + ' «RICOS» pela terra' : 'nenhum rico pela terra'} → ${dearR.bad.length ? 'com pano: ' + dearR.bad.slice(0, 5).join(', ') : 'nenhum pano neles'}; ${dearR.ownedPano} casas e tavernas com o seu pano; tapetes e tapeçarias por tipo ${JSON.stringify(dearR.rugs)}; o within de ${all.length} prédios ${moved.length ? 'MUDOU pela terra em ' + moved.length + ': ' + moved.slice(0, 4).join(', ') : 'igual com a terra mais cara e sem ela'}; o porquê ${dearR.whyBad.length ? 'ERRADO em ' + dearR.whyBad.slice(0, 3).join(', ') : '«riqueza de ninguém»'}; o verificador ${qa1.length ? qa1.map(q => q[1]).slice(0, 2).join(' | ') : 'limpo'}; o retrato devolvido: ${same ? 'tudo como era' : 'DIFERENTE'} (${JSON.stringify(after.rugs)})`);
+}
+
+// ------------------------------ the wear and the wealth the same across a load (the interiors 3, the front L — L-2261, L-2258) ------------------------------
+if (want('d19')) {
+  // ---- the world lived until every town has its portrait of the day (G.Urban.peek: derived, never saved — what a world just opened or
+  // loaded has none of); of every building, the wear (its years, its damp, its care: the cobweb of the within, the soot of the shell, the
+  // drip of an old roof) and what of the within the care and the wealth make (rico, the cobweb, the reason of the wealth) read; saved and
+  // loaded — the portraits gone — and read again: the same; and the portraits hidden in the lived world: the whole within the same. The
+  // care is of who lives round it and the wealth of who pays: all of it in the save. Last of the parts: it lives the world
+  const U = G.Urban; const sets = () => [...S().settlements.values()]; let k = 0; while (sets().some(s => !U.peek(s.id)) && k < 600) { G.debug.step(0.1); k++; }
+  const all = () => [...S().buildings.values()].filter(b => b.built && b.type !== 'ruin').sort((a, c) => a.id - c.id);
+  const read = whole => { fresh(); const m = new Map(); for (const b of all()) { const w = At.wear(b); const W = plan(b) ? At.within(b) : null;
+    m.set(b.id, `${w ? w.lv : '-'}|${W ? (whole ? JSON.stringify(W) : `${W.rico}|${W.teia ? W.teia.n : 0}|${W.why.riqueza}`) : '-'}`); } return m; };
+  const hidden = whole => { const pk = U.peek; U.peek = () => null; try { return read(whole); } finally { U.peek = pk; fresh(); } };
+  const a = read(false), aw = read(true), ah = hidden(true); const care = [0, 0, 0]; let teias = 0, sem = 0;
+  for (const b of all()) { const w = At.wear(b); if (!w) { sem++; continue; } care[w.care]++; if (w.ageLv >= 3 && w.care === 0) teias++; }
+  const tv = taverns().find(b => b.id === 7778) || taverns()[0]; const tw = tv ? At.wear(tv) : null; const tt = tv ? At.within(tv).teia : null;
+  M.salvarCarregar(); const back = sets().filter(s => U.peek(s.id)).length; const c = read(false);
+  const dif = (x, y) => [...x].filter(([id, v]) => y.has(id) && y.get(id) !== v).map(([id]) => `${S().buildings.get(id).type}#${id}`);
+  const d1 = dif(a, c), d2 = dif(aw, ah); const lost = [...a.keys()].filter(id => !c.has(id)).length;
+  ok('d19 o desgaste e a riqueza não mudam num load: o cuidado é de quem mora em volta e a riqueza de quem paga, tudo no save; o retrato do dia da cidade não entra (L-2261, L-2258)',
+    k < 600 && a.size > 300 && !back && !d1.length && !d2.length && !lost && care[0] > 0 && care[2] > 0 && teias > 0 && !!tw,
+    `${a.size} prédios (${sem} sem anos), os retratos das ${sets().length} cidades em ${k} passos; o cuidado 0/1/2 ${care.join('/')}, ${teias} teia(s); salvo e carregado (${back} retratos logo depois): ${d1.length ? d1.length + ' DIFERENTES: ' + d1.slice(0, 4).join(', ') : 'o desgaste, a riqueza e a teia de todos iguais'}${lost ? `, ${lost} sumidos` : ''}; com os retratos escondidos, o within inteiro ${d2.length ? 'DIFERENTE em ' + d2.length + ': ' + d2.slice(0, 4).join(', ') : 'igual'}; a taverna ${tv ? `${tv.type}#${tv.id}: cuidado ${tw.care}, ${tt ? tt.n + ' teia(s)' : 'sem teia'}` : '-'}`);
 }
 
 const e = M.erros(); if (!M.limpo()) console.log('  erros:', JSON.stringify(e.mod), e.console.slice(0, 5).join(' | '));

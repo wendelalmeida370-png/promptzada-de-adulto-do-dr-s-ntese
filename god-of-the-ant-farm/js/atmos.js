@@ -167,15 +167,15 @@
     wet.set(b.id, [S.typeVer, b.x, b.y, d]); if (wet.size > 6000) wet.clear();
     return d;
   }
-  // (the care: 2 a kept house — a rich quarter, a dear patch of land, a house of rank —, 0 a neglected one — a quarter in
-  // decline or empty, a poor one, the cheapest land, a house nobody lives in, a shack —, 1 the rest)
+  // (the care of who lives round it: 2 a kept house — a rich quarter, a house of rank —, 0 a neglected one — a quarter in decline
+  // or empty, a poor one, a house nobody lives in, a shack —, 1 the rest. All of it in the save: the quarters' profiles, the merchant's
+  // flag, who lives where. Never the worth of the ground: the town's portrait of the day is derived and never saved — gone after a load
+  // until each town had its look again, and the wear of a building changed with a save (104 of the 692 of the metropolis, 67 cobwebs:
+  // L-2261) —, and the land's worth is nobody's care, as it is nobody's purse (L-2251))
   function careOf(b) {
     const U = G.Urban; const cx = b.x + b.w / 2, cy = b.y + b.h / 2; let care = 1;
     const q = U && U.at ? U.at(cx, cy) : null;
     if (q) { if (U.is(q, 'decadencia') || U.is(q, 'vazio') || U.is(q, 'pobre')) care = 0; else if (U.is(q, 'nobre')) care = 2; }
-    // (the land's worth, from the day's portrait of the town — derived, never saved: none until a town's first day after a load)
-    const sn = care === 1 && U && U.peek ? U.peek(b.set) : null; const c = sn && sn.cells ? sn.cells.get(U.cellOf(cx, cy)) : null;
-    if (c) { if (c.value >= 62) care = 2; else if (c.value < 28) care = 0; }
     if (b.elite) care = 2;
     if (b.type === 'barraco') care = 0;
     else if (housing(b)) { const h = census().homes.get(b.id); if (!h || !h.res) care = 0; }
@@ -491,7 +491,9 @@
   const firstOf = (b, k) => { for (const r of RULES.get(usoOf(b)) || NONE) if (r[k]) return r[k]; return null; };
   // how rich a building is now (D-661: the wealth inside is today's, never the land's at its founding): 0 poor, 1 middling, 2
   // rich — a house by its coins and its merchant's flag; a building whose use says whose wealth it shows (the tavern: its keeper's
-  // house) by that house; the seat of who rules, rich; any other by the worth of its ground today (G.Urban's portrait of the day).
+  // house) by that house; the seat of who rules, rich; any other middling: nobody's purse keeps it (L-2251), and the worth of its
+  // ground — the town's portrait of the day, derived and never saved — changed with a save (L-2258). A wave whose building shows the
+  // wealth of a house says which by the rule dono of its use (G.Atmos.withinRule), as the tavern says its keeper's.
   // The same thresholds as the furniture's (G.Movel3D.rico)
   const ofHouse = h => (!h ? 1 : h.elite ? 2 : (h.coin || 0) >= 150 ? 2 : (h.coin || 0) >= 40 ? 1 : 0);
   At.rich = function (b) {
@@ -499,8 +501,7 @@
     if (housing(b)) return ofHouse(b);
     if (G.Casa && G.Casa.isSeat && G.Casa.isSeat(b)) return 2;
     const dn = firstOf(b, 'dono'); if (dn) { const h = dn(b); if (h !== undefined) return ofHouse(h); }
-    const U = G.Urban; const sn = U && U.peek ? U.peek(b.set) : null; const c = sn && sn.cells ? sn.cells.get(U.cellOf(b.x + b.w / 2, b.y + b.h / 2)) : null;
-    return c ? (c.value >= 62 ? 2 : c.value >= 28 ? 1 : 0) : 1;
+    return 1;
   };
   // ------------------------------ the light of each people (the interiors 3, the front L — D-1012) ------------------------------
   // How a people lights itself at night is a rule of the world, not an ornament (planos/levantamentos/interiores3-D-referencias.md §1.4,
@@ -630,9 +631,10 @@
     why.pano = weave ? 'o povo tece (um tear de pé, ou pano no armazém)' : 'o povo não tece: couro e pele, nenhum pano';
     const home = G.Village.bedsOf(b) > 0; const ref = (home ? 'h:' : 'b:') + b.id;
     // (whose purse the wealth a building shows is: a household's — the house, the seat —, or the house a use says it is (the tavern's
-    // keeper's); any other is read by the worth of its ground today, which is nobody's purse: L-2251)
+    // keeper's); any other is nobody's — the worth of its ground is nobody's purse (L-2251), and was not even the same after a save
+    // (L-2258): middling)
     const owned = home || !!firstOf(b, 'dono');
-    why.riqueza = !owned ? `${rico === 2 ? 'terra cara' : rico === 1 ? 'terra de valor médio' : 'terra barata'} hoje (o retrato da cidade), riqueza de ninguém`
+    why.riqueza = !owned ? 'riqueza de ninguém: nem casa nem dono (o valor da terra não é a bolsa de ninguém)'
       : rico === 2 ? 'rica agora (as moedas da casa, a bandeira da casa mercante, a sede)' : rico === 1 ? 'remediada agora' : 'pobre agora';
     const rules = RULES.get(usoOf(b)) || NONE; const cf = firstOf(b, 'conta');
     // ---- the drink of its book: each whole unit a vessel on the shelf (the amphora pours ten cups, the jar four); a broken one, open

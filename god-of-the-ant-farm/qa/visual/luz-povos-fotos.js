@@ -24,6 +24,9 @@ const TAG = process.env.TAG || (/^(base|antes)$/.test(path.basename(path.dirname
   await page.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   await page.goto('file://' + path.join(ROOT, 'index.html')); await page.waitForTimeout(900);
   await page.waitForFunction(() => !(window.G && G.Ground3D && G.Ground3D.texReady) || G.Ground3D.texReady(), null, { timeout: 120000 });
+  // (the packs of the models of the insides all in before the world opens — the photo of an inside taken in the turn the world opens
+  // sees the boxes, T-2164; a copy of the game of before has no packs: nothing to wait for)
+  await page.waitForFunction(() => !(window.G && G.Movel3D && G.Movel3D.wantAll) || G.Movel3D.wantAll(), null, { polling: 200, timeout: 120000 });
   const W = process.env.WORLD || 'metropole'; const CL = !!process.env.CLASSICO;
   if (!CL) await page.addScriptTag({ path: path.join(ROOT, 'worlds', W + '.js') });
   const info = await page.evaluate(env => {

@@ -3106,5 +3106,12 @@ for (const f of files) src[f].forEach((l, k) => { const c = l.replace(/(^|\s)\/\
   const a = lz.indexOf('const LAMPS = {'), z = lz.indexOf('\n  };', a); const LM = a < 0 ? '' : lz.slice(a, z);
   for (const mm of LM.matchAll(/^\s*('?[\w-]+'?): \{([^}]*)\}/gm)) { const nm = mm[1].replace(/'/g, ''), body = mm[2]; if (/\bpeca: 1\b/.test(body) && nm === 'altar') continue;
     if (!/\bchama: [\d.]+/.test(body) || !/\bkind: '[\w-]+'/.test(body)) fails.push(`a chama de dentro do tamanho da peça: a luz ${nm} do G.Luz3D.LAMPS sem o tamanho da sua chama (chama) ou a chama que é (kind) (L-1882, D-1013)`); } }
+// 507. "o que a vista lê de um prédio está no save" (L-2261, L-2258): o cuidado do desgaste (o careOf do G.Atmos.wear) e a riqueza de um
+// prédio (o G.Atmos.rich) não leem o retrato do dia da cidade (G.Urban.peek, valueAt: o valor da terra) — derivado, nunca no save: depois
+// de um load ele só volta no dia de cada cidade, e o desgaste e a riqueza que a vista mostrava mudavam com um save
+{ const at = (src['atmos.js'] || []).join('\n'); const fnOf = head => { const i = at.indexOf(head); return i < 0 ? null : at.slice(i, at.indexOf('\n  }', i)); };
+  const care = fnOf('function careOf(b) {'), rich = fnOf('At.rich = function (b) {');
+  if (care === null || rich === null) fails.push('o que a vista lê de um prédio está no save: o careOf ou o G.Atmos.rich sumiu do atmos.js (L-2261, L-2258)');
+  else for (const [nm, f] of [['o cuidado do desgaste (careOf)', care], ['o G.Atmos.rich', rich]]) if (/\.peek\(|valueAt\(|\.cells\b|\.value\b/.test(f)) fails.push(`o que a vista lê de um prédio está no save: ${nm} lê o retrato do dia da cidade (G.Urban.peek, valueAt), que não vai no save (L-2261, L-2258)`); }
 if (fails.length) { console.log(fails.join('\n')); console.log(`FALHOU: ${fails.length}`); process.exit(1); }
 console.log(`PASSOU (${files.length} arquivos)`);
