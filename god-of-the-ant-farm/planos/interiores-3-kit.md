@@ -206,7 +206,10 @@ if (G1.seats < 5) P.errs.push(`só ${G1.seats} lugares no conselho`);
 - **O guloso erra o meio**: quando o primeiro grupo toma o meio do chão e os lugares não chegam, a taverna arma de novo sem ele
   (`reset`, `banidos`: quatro vezes, mais barato que a planta inteira de novo).
 - **O tempo**: o salão de 110 m² no quadriculado de 25 cm é quatro vezes o trabalho; a meta da taverna é 400 ms por planta (o t3 do
-  `taverna-padrao`). Meça o seu tipo (a frente O tem a prova padrão, `qa/padrao.js`).
+  `taverna-padrao`). Meça o seu tipo (a frente O tem a prova padrão, `qa/padrao.js`) **em toda a varredura**: todo povo, todo
+  contexto do catálogo (o frio, o úmido, as densidades, as artes) e muitos ids — a taverna passa no t3, que mede um clima só, e
+  tem três plantas de 1,6 a 2,1 s na varredura do `qa/plantas.js` (a `taberna.salao` grega de 8 m que só se arma na sexta
+  tentativa, T-2133). Uma planta que precisa de várias tentativas custa todas elas.
 - O empacotador **não sabe o padrão**: quantos lugares o cômodo pede é da receita (a taverna: 8, 16 e 30), e o erro também.
 
 ## 7. Os postos: quem trabalha ali (para a frente O e as ondas)
@@ -294,7 +297,7 @@ de um save de antes é julgado ao abrir (a porta, os moradores). Depois, a vers�
 **Como** (o passo a passo de uma onda):
 
 ```sh
-node qa/plantas-iguais.js grava /tmp/antes.json          # antes de mexer (≈ 1 min nos três mundos; MUNDOS=… outros; TIPOS=… as provas do catálogo)
+node qa/plantas-iguais.js grava /tmp/antes.json          # antes de mexer (≈ 1,5 min nos três mundos com as provas do catálogo da taverna, o dobro com a máquina ocupada; TIPOS=… as provas do catálogo de outros tipos, TIPOS=- nenhuma; MUNDOS=… outros mundos, os sete ≈ 2,5 min)
 # … a mudança …
 node qa/plantas-iguais.js compara /tmp/antes.json       # os tipos cujas plantas mudaram (FALHOU com a lista)
 # no js/interiors.js: In.VERSION_T = { forja: 1, … }     # cada tipo que mudou, um número acima
@@ -306,7 +309,7 @@ node qa/catalogo.js confere forja && node qa/plantas.js
 **Cuidados.** A versão subida **sem o catálogo** faz o jogo provar as famílias do tipo ao vivo e travar (R14): o `confere` e o
 `qa/plantas.js` acusam («as linhas de forja são da gramática 6, a de agora é 6.1»). Junte as subidas de uma onda numa só por tipo. A
 casa e os tipos de morar pedem também o `node qa/casa-dentro.js 2` (21 min). Os mundos prontos se geram de novo uma vez por onda (o
-supervisor). `node qa/plantas-iguais.js sobe forja` é a prova da própria versão por tipo (≈ 1 min).
+supervisor). `node qa/plantas-iguais.js sobe forja` é a prova da própria versão por tipo (≈ 1 min; 2 com a máquina ocupada).
 
 ## 10. Os cuidados gerais (os riscos da taverna, C §4)
 

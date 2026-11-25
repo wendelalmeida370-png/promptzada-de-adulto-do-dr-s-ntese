@@ -1052,7 +1052,7 @@
       // (the way the groups keep open is the corridor's: with no raster of the room or no start of the way, nothing laid — said)
       if (!P.rooms[room] || !K || !start) { P.errs.push('os grupos de mesa sem o cômodo, o quadriculado do corredor (o.K) ou o começo do caminho (o.start)'); return { pack() {}, reset() {}, seats: 0, groups: [], first: null }; }
       const R = P.rooms[room].r;
-      const half = o.half || 0.5, thalf = o.thalf || 0.55, cap = o.cap || Infinity; const G0 = Object.assign({}, GRP, o.measure || {});
+      const half = o.half || 0.5, thalf = o.thalf || 0.55, cap = o.cap || Infinity; const G0 = Object.assign({}, GRP, o.measure || {}); const nr = G0.near, sg = G0.snug, fo = G0.falloff; // (the measures the hot loops read, once — as the tavern's own numbers were —, and the seats of a shape by a plain loop: read at each turn, the kit's packer cost the tavern 7 % of its plan time, T-2133)
       // (the models whose seats are pieces one sits on: the others refused, said — nobody seated in the air)
       const M = {}; for (const name of Object.keys(o.models || {})) { const T = o.models[name]; const bad = T.seats.filter(([k, , , w, d]) => !seatPiece(k, w, d)).map(q => q[0]);
         if (bad.length) { P.errs.push(`o grupo ${name}: ${[...new Set(bad)].join(', ')} não é peça de sentar (ninguém sentado no ar — D-722)`); continue; }
@@ -1062,14 +1062,14 @@
       // (a group's own rectangles in the plan's frame at a middle and a turn: the table, each seat with the way behind it)
       const shape = (tp, cu, cv, rot) => {
         const T = M[tp]; const tw = rot ? T.d : T.w, td = rot ? T.w : T.d; const tab = [cu - tw / 2, cv - td / 2, cu + tw / 2, cv + td / 2];
-        const out = []; T.seats.forEach(([k, a, b, w, d], qi) => { const su = rot ? cu + b : cu + a, sv = rot ? cv + a : cv + b; const along = Math.abs(b) > Math.abs(a) ? !rot : rot; // (a seat on a long side lies along it)
+        const out = []; for (let qi = 0; qi < T.seats.length; qi++) { const [k, a, b, w, d] = T.seats[qi]; const su = rot ? cu + b : cu + a, sv = rot ? cv + a : cv + b; const along = Math.abs(b) > Math.abs(a) ? !rot : rot; // (a seat on a long side lies along it)
           const ww = along ? w : d, dd = along ? d : w; const r = [su - ww / 2, sv - dd / 2, su + ww / 2, sv + dd / 2];
           // (it faces the table: its front toward the table's middle)
           const fu = Math.abs(su - cu) > Math.abs(sv - cv) ? (su > cu ? -1 : 1) : 0, fv = fu ? 0 : (sv > cv ? -1 : 1);
           // (the ways onto it: behind it, and at its ends)
           const hw = (fu ? dd : ww) / 2, hd = (fu ? ww : dd) / 2; const at = e => [[su - fu * (hd + e), sv - fv * (hd + e)], [su + fv * (hw + e), sv + fu * (hw + e)], [su - fv * (hw + e), sv - fu * (hw + e)]];
           // (and where the middle of one a metre and a tenth wide stands to get onto it: 0.6 m off it — the floor its own seats leave)
-          out.push({ k, r, fu, fv, acc: at(0.35), deep: at(0.6), n: T.places[qi] }); });
+          out.push({ k, r, fu, fv, acc: at(0.35), deep: at(0.6), n: T.places[qi] }); }
         // (none where the group's own table or seats leave no room for that middle)
         const own2 = [tab].concat(out.map(q => q.r)); const off = (p, q) => Math.hypot(Math.max(q[0] - p[0], 0, p[0] - q[2]), Math.max(q[1] - p[1], 0, p[1] - q[3]));
         for (const se of out) se.deep = se.deep.filter(p => own2.every(q => off(p, q) >= G0.deep - 1e-6));
@@ -1087,14 +1087,14 @@
         // rooms alike in all else lay their groups otherwise, D-662)
         let cands = []; let ci = 0;
         const step = fine ? 0.125 : o.step || 0.25; const ou = P.choose(31, [0, step / 2]), ov0 = P.choose(37, [0, step / 2]), rot1 = P.choose(41, [0, 1]);
-        for (const tp of mix) for (const rot of [rot1, 1 - rot1]) for (let cv = R[1] + G0.margin + ov0; cv <= R[3] - G0.margin + 1e-6; cv += step) for (let cu = R[0] + G0.margin + ou; cu <= R[2] - G0.margin + 1e-6; cu += step) cands.push({ tp, rot, cu: r2(cu), cv: r2(cv), h: P.hashOf(500 + ci++) + (rot === rot1 ? 0.5 : 0), w: mix.indexOf(tp), dead: ban && ban.has(`${tp}|${rot}|${r2(cu)}|${r2(cv)}`) ? 1 : 0 });
+        const mg = G0.margin; for (const tp of mix) for (const rot of [rot1, 1 - rot1]) for (let cv = R[1] + mg + ov0; cv <= R[3] - mg + 1e-6; cv += step) for (let cu = R[0] + mg + ou; cu <= R[2] - mg + 1e-6; cu += step) cands.push({ tp, rot, cu: r2(cu), cv: r2(cv), h: P.hashOf(500 + ci++) + (rot === rot1 ? 0.5 : 0), w: mix.indexOf(tp), dead: ban && ban.has(`${tp}|${rot}|${r2(cu)}|${r2(cv)}`) ? 1 : 0 });
         let tries = 0;
         while (seats < cap && tries < 150) {
           // (what stands now: the solids, the corridor, the groups laid with the way behind their seats — each rectangle in the cells
           // of a metre it touches: a candidate asks only the ones within its reach, all its seats, the ways onto them and the snug's)
           const S0 = solids(); const claims = groups.map(g => g.claim); const cell = new Map(); const seen = new Uint32Array(S0.length); let stamp = 0;
           S0.forEach((q, i) => { for (let a = Math.floor(q[0]); a <= Math.floor(q[2]); a++) for (let b = Math.floor(q[1]); b <= Math.floor(q[3]); b++) { const l = cell.get(a * 1024 + b); if (l) l.push(i); else cell.set(a * 1024 + b, [i]); } });
-          const nearOf = (u, v) => { stamp++; const out = []; for (let a = Math.floor(u - G0.near); a <= Math.floor(u + G0.near); a++) for (let b = Math.floor(v - G0.near); b <= Math.floor(v + G0.near); b++) { const l = cell.get(a * 1024 + b); if (l) for (const i of l) if (seen[i] !== stamp) { seen[i] = stamp; out.push(S0[i]); } } return out; };
+          const nearOf = (u, v) => { stamp++; const out = []; const a1 = Math.floor(u + nr), b0 = Math.floor(v - nr), b1 = Math.floor(v + nr); for (let a = Math.floor(u - nr); a <= a1; a++) for (let b = b0; b <= b1; b++) { const l = cell.get(a * 1024 + b); if (l) for (const i of l) if (seen[i] !== stamp) { seen[i] = stamp; out.push(S0[i]); } } return out; };
           let best = null; cands = cands.filter(c => !c.dead); // (the dead ones out: the round goes on over the few left)
           const reach1 = floodK(K, start, thalf); // (where the groups' way goes now: a group none of whose ways onto it it reaches never will)
           for (const c of cands) {
@@ -1119,8 +1119,8 @@
             // (a side against the corridor counts less than one against a wall, a piece or a group: the floor filled from the walls in)
             const sideGap = (k) => { let g = k === 0 ? box[0] - R[0] : k === 1 ? box[1] - R[1] : k === 2 ? R[2] - box[2] : R[3] - box[3]; let ga = Infinity;
               for (const q of S) { const across = k % 2 === 0 ? q[1] < box[3] && box[1] < q[3] : q[0] < box[2] && box[0] < q[2]; if (!across) continue; const d = k === 0 ? box[0] - q[2] : k === 1 ? box[1] - q[3] : k === 2 ? q[0] - box[2] : q[1] - box[3]; if (d > -0.05) { if (q.aisle) ga = Math.min(ga, Math.max(0, d)); else g = Math.min(g, Math.max(0, d)); } }
-              for (const g0 of groups) { const q = g0.box; const across = k % 2 === 0 ? q[1] < box[3] && box[1] < q[3] : q[0] < box[2] && box[0] < q[2]; if (!across) continue; const d = k === 0 ? box[0] - q[2] : k === 1 ? box[1] - q[3] : k === 2 ? q[0] - box[2] : q[1] - box[3]; if (d > -0.05) g = Math.min(g, Math.abs(Math.max(0, d) - G0.snug)); }
-              return Math.max(Math.max(0, 1 - g / G0.falloff), 0.4 * Math.max(0, 1 - ga / G0.falloff)); };
+              for (const g0 of groups) { const q = g0.box; const across = k % 2 === 0 ? q[1] < box[3] && box[1] < q[3] : q[0] < box[2] && box[0] < q[2]; if (!across) continue; const d = k === 0 ? box[0] - q[2] : k === 1 ? box[1] - q[3] : k === 2 ? q[0] - box[2] : q[1] - box[3]; if (d > -0.05) g = Math.min(g, Math.abs(Math.max(0, d) - sg)); }
+              return Math.max(Math.max(0, 1 - g / fo), 0.4 * Math.max(0, 1 - ga / fo)); };
             let snug = 0; for (let k = 0; k < 4; k++) snug += sideGap(k);
             const sc = ok.reduce((s, se) => s + se.n, 0) * 1.0 + snug * 0.9 - 0.5 * Math.min(box[0] - R[0], box[1] - R[1], R[2] - box[2], R[3] - box[3]) - c.w * wt + c.h * 0.3 + (P.attempt ? P.rnd() * 0.5 : 0);
             c.ev = { c, sp, ok, box, sc }; if (!best || sc > best.sc) best = c.ev;
