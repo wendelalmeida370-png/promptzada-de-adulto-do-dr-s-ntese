@@ -47,7 +47,7 @@ o coral, o marfim, a seda, o incenso são bens com preço em todo o mundo (`js/e
 ao mercado asteca a vende pelo valor dela, em grãos de cacau. E era assim na história: na feira de Tlatelolco o pó de ouro corria em canudos
 de pena transparentes, como dinheiro das compras grandes.
 
-**O apreço de cada povo** (proposta do supervisor, com a W): o mesmo precioso vale mais num povo do que noutro, pelo gosto e pela raridade
+**O apreço de cada povo** (proposta do supervisor, **aprovada pelo dono em 25/11/2026**: «gostei da ideia da tabela, tudo deferido»; com a W): o mesmo precioso vale mais num povo do que noutro, pelo gosto e pela raridade
 de cada um — o asteca punha o jade e as penas de quetzal acima do ouro; o egípcio das primeiras dinastias tinha a prata por mais rara que o
 ouro, que vinha da Núbia; o nórdico media tudo em prata e amava o âmbar; o romano e o grego, o ouro e a prata. Uma tabela só, pura, do
 apreço de cada povo por cada precioso, que o preço da feira e do mercador lê — e que dá ao mercador o seu jogo: comprar onde abunda e vender
